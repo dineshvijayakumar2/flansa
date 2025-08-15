@@ -18,7 +18,7 @@ def add_computed_field_to_relationship(relationship_name, computed_field):
         relationship = frappe.get_doc("Flansa Relationship", relationship_name)
         
         # Check if field name already exists in relationship
-        existing_names = [cf.field_name for cf in relationship.computed_fields]
+        existing_names = [cf.field_name for cf in getattr(relationship, 'computed_fields', [])]
         if computed_field.get("field_name") in existing_names:
             return {
                 "success": False,
@@ -88,9 +88,9 @@ def remove_computed_field_from_relationship(relationship_name, field_name):
         
         # Find and remove the field
         removed = False
-        for i, cf in enumerate(relationship.computed_fields):
+        for i, cf in enumerate(getattr(relationship, 'computed_fields', [])):
             if cf.field_name == field_name:
-                relationship.computed_fields.pop(i)
+                getattr(relationship, 'computed_fields', []).pop(i)
                 removed = True
                 break
         
@@ -129,7 +129,7 @@ def get_suggested_computed_fields(relationship_name):
             return {"success": False, "error": "Target DocType not found"}
         
         # Get existing computed field names to avoid duplicates
-        existing_names = [cf.field_name for cf in relationship.computed_fields]
+        existing_names = [cf.field_name for cf in getattr(relationship, 'computed_fields', [])]
         
         suggestions = []
         

@@ -159,7 +159,9 @@ def create_simplified_relationship(config: Dict) -> Dict:
                     "success": False,
                     "error": name_validation.get("error"),
                     "duplicate_name": True,
-                    "existing_relationship": name_validation.get("existing_relationship")
+                    "existing_relationship": name_validation.get("existing_relationship"),
+                    "existing_rel_details": name_validation.get("existing_rel_details"),
+                    "suggested_names": name_validation.get("suggested_names")
                 }
         
         # Create the relationship document
@@ -1122,7 +1124,7 @@ def get_relationship_fields_detail(relationship_name):
             if hasattr(relationship, "computed_fields") and not computed_fields:
                 parent_doctype = frappe.db.get_value("Flansa Table", parent_table, "doctype_name")
                 
-                for cf in relationship.computed_fields:
+                for cf in getattr(relationship, 'computed_fields', []):
                     # Verify the computed field actually exists in the parent DocType
                     field_exists = False
                     if parent_doctype and frappe.db.exists("DocType", parent_doctype):

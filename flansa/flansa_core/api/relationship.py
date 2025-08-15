@@ -57,7 +57,7 @@ def generate_computed_fields(relationship_name):
         # Update the relationship with computed fields
         if computed_fields:
             # Clear existing and add new
-            relationship.computed_fields = []
+            getattr(relationship, 'computed_fields', []) = []
             for cf in computed_fields:
                 relationship.append("computed_fields", cf)
             

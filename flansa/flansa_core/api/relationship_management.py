@@ -10,9 +10,23 @@ def get_table_name_for_field(table_id):
     """Get the actual table name from table ID for field naming"""
     try:
         table_doc = frappe.get_doc("Flansa Table", table_id)
-        return table_doc.table_name or table_id.lower()
-    except:
-        return table_id.lower()
+        # Prefer table_name, then table_label, avoid using table ID
+        if table_doc.table_name and not table_doc.table_name.startswith('FT-'):
+            return table_doc.table_name.lower()
+        elif table_doc.table_label and not table_doc.table_label.startswith('FT-'):
+            # Convert table label to snake_case for field naming
+            import re
+            clean_name = re.sub(r'[^a-zA-Z0-9]', '_', table_doc.table_label.lower())
+            clean_name = re.sub(r'_+', '_', clean_name).strip('_')
+            return clean_name
+        else:
+            # Last resort: use a generic name based on doctype
+            if table_doc.doctype_name:
+                return table_doc.doctype_name.lower().replace('fls', '').replace('flansa', '')
+            return 'table'
+    except Exception as e:
+        frappe.log_error(f"Error getting table name for field: {str(e)}", "Table Name Resolution")
+        return 'table'  # Fallback to generic name
 
 def pluralize_to_singular(word):
     """Convert plural word to singular form for field names"""
@@ -140,7 +154,9 @@ def create_relationship(relationship_data):
                 "success": False, 
                 "error": name_validation.get("error"),
                 "duplicate_name": True,
-                "existing_relationship": name_validation.get("existing_relationship")
+                "existing_relationship": name_validation.get("existing_relationship"),
+                "existing_rel_details": name_validation.get("existing_rel_details"),
+                "suggested_names": name_validation.get("suggested_names")
             }
         
         # Create the relationship document
@@ -253,9 +269,11 @@ def create_link_field(table_name, field_name, link_to_table, label):
             return True
         
         # Create the link field using native API
+        # Generate a meaningful label from target table
+        meaningful_label = get_meaningful_table_label(target_table)
         field_config = {
             "field_name": field_name,
-            "field_label": label,
+            "field_label": meaningful_label,
             "field_type": "Link",
             "options": target_table.doctype_name,
             "required": 0,
@@ -374,11 +392,13 @@ def generate_relationship_specific_field_name(relationship_name, parent_table_na
         # Sanitize relationship name for use in field name
         sanitized_rel_name = sanitize_relationship_name_for_field(relationship_name)
         
+        frappe.logger().info(f"Generating field name: relationship='{relationship_name}', parent_table='{parent_table_name}', parent_singular='{parent_singular}', sanitized='{sanitized_rel_name}'")
+        
         # Base field name
         base_field = f"{parent_singular}_link"
         
-        # If relationship name provides meaningful context, use it
-        if sanitized_rel_name and sanitized_rel_name != parent_singular:
+        # Prevent redundant prefixes (e.g., avoid 'class_classes_schedule_link')
+        if sanitized_rel_name and sanitized_rel_name != parent_singular and not sanitized_rel_name.startswith(parent_singular):
             # Create a more descriptive field name
             context_field = f"{parent_singular}_{sanitized_rel_name}_link"
             
@@ -429,6 +449,60 @@ def sanitize_relationship_name_for_field(relationship_name):
         frappe.log_error(f"Error sanitizing relationship name: {str(e)}", "Field Naming")
         return ""
 
+
+
+def get_meaningful_table_label(table_doc):
+    """Get a meaningful label for a table field"""
+    try:
+        # Prefer table_label, then table_name, avoid table IDs
+        if table_doc.table_label and not table_doc.table_label.startswith('FT-'):
+            return table_doc.table_label
+        elif table_doc.table_name and not table_doc.table_name.startswith('FT-'):
+            return table_doc.table_name.replace('_', ' ').title()
+        elif table_doc.doctype_name:
+            # Clean up the doctype name for display
+            clean_name = table_doc.doctype_name.replace('FLS', '').replace('Flansa', '')
+            return clean_name if clean_name else 'Related Table'
+        else:
+            return 'Related Table'
+    except:
+        return 'Related Table'
+
+
+@frappe.whitelist()
+def generate_relationship_field_name(relationship_name, parent_table, child_table):
+    """Generate a proper field name for a relationship"""
+    try:
+        # Get meaningful table names
+        parent_name = get_table_name_for_field(parent_table)
+        parent_singular = pluralize_to_singular(parent_name)
+        
+        # Generate context-aware field name
+        field_name = generate_relationship_specific_field_name(
+            relationship_name, parent_name, parent_singular
+        )
+        
+        # Get target doctype for uniqueness check
+        child_doctype = frappe.db.get_value("Flansa Table", child_table, "doctype_name")
+        if child_doctype:
+            unique_field_name = get_unique_field_name(child_doctype, field_name)
+        else:
+            unique_field_name = field_name
+        
+        return {
+            "success": True,
+            "field_name": unique_field_name,
+            "base_name": field_name,
+            "parent_singular": parent_singular
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error generating relationship field name: {str(e)}", "Field Name Generation")
+        return {
+            "success": False,
+            "error": str(e),
+            "field_name": "relationship_link"
+        }
 def _field_already_exists(doctype_name, field_name):
     """Check if a field already exists in a DocType to prevent duplicates"""
     try:

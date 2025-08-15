@@ -390,7 +390,7 @@ class FlansaRelationship(Document):
     
     def generate_default_computed_fields(self):
         """Generate default computed fields based on relationship type"""
-        if self.computed_fields:
+        if getattr(self, "computed_fields", []):
             return  # Already has computed fields
         
         # Get target table to analyze fields
@@ -451,7 +451,7 @@ class FlansaRelationship(Document):
     
     def apply_computed_fields(self):
         """Apply computed fields to the parent DocType"""
-        if not self.computed_fields:
+        if not getattr(self, "computed_fields", []):
             return
         
         from_doctype = frappe.db.get_value("Flansa Table", self.from_table, "doctype_name")
@@ -465,7 +465,7 @@ class FlansaRelationship(Document):
         existing_fields = existing_docfields + existing_custom_fields
         
         fields_added = 0
-        for cf in self.computed_fields:
+        for cf in getattr(self, "computed_fields", []):
             if cf.auto_add and cf.field_name not in existing_fields:
                 # Determine field type based on computation
                 field_type = "Int"  # Default for Count, Distinct Count
@@ -644,8 +644,8 @@ class FlansaRelationship(Document):
             fields_removed = 0
             
             # Method 1: Remove fields tracked in computed_fields child table
-            if self.computed_fields:
-                for computed_field in self.computed_fields:
+            if getattr(self, "computed_fields", []):
+                for computed_field in getattr(self, "computed_fields", []):
                     try:
                         # Check if custom field exists
                         custom_field_name = frappe.db.get_value("Custom Field", {
@@ -769,7 +769,7 @@ class FlansaRelationship(Document):
                 doctype_doc.save()
             
             # Clean up any Property Setters (shouldn't exist for DocType fields, but just in case)
-            computed_field_names = [cf.field_name for cf in (self.computed_fields or [])]
+            computed_field_names = [cf.field_name for cf in (getattr(self, "computed_fields", []) or [])]
             for field_name in computed_field_names:
                 try:
                     frappe.db.sql("""
@@ -805,8 +805,8 @@ class FlansaRelationship(Document):
                 return
             
             # Remove lookup fields that were created for this relationship
-            if self.lookup_fields:
-                for lookup_field in self.lookup_fields:
+            if getattr(self, "lookup_fields", []):
+                for lookup_field in getattr(self, "lookup_fields", []):
                     self._remove_specific_field_from_doctype(from_doctype, lookup_field.field_name)
                     
             frappe.logger().info(f"Cleaned up relationship fields for {self.name}")
@@ -1081,3 +1081,31 @@ def calculate_computed_field_extended(doctype, name, relationship_name, computat
 
 # Removed: sync_relationship_fields_to_json - fields_json approach deprecated
 # Fields are now managed directly via DocType and Custom Fields
+    def get_lookup_fields(self):
+        """Get lookup fields associated with this relationship"""
+        try:
+            # Get lookup fields from the lookup_fields_management API
+            from flansa.flansa_core.api.lookup_fields_management import get_relationship_lookup_fields
+            return get_relationship_lookup_fields(self.name)
+        except:
+            return []
+    
+    def get_computed_fields(self):
+        """Get computed fields associated with this relationship"""
+        try:
+            # Get computed fields from the computed_fields_management API
+            from flansa.flansa_core.api.computed_fields_management import get_relationship_computed_fields
+            return get_relationship_computed_fields(self.name)
+        except:
+            return []
+    
+    @property
+    def lookup_fields(self):
+        """Property to access lookup fields safely"""
+        return self.get_lookup_fields()
+    
+    @property
+    def computed_fields(self):
+        """Property to access computed fields safely"""
+        return self.get_computed_fields()
+

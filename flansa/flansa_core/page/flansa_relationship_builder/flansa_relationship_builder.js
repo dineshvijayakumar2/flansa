@@ -170,7 +170,72 @@ class SimplifiedRelationshipBuilder {
         }
     }
     
-    show_create_dialog() {
+    
+    
+    // Real-time relationship name validation
+    validate_relationship_name(dialog, relationship_name) {
+        if (!relationship_name) {
+            this.update_validation_status(dialog, '', 'info');
+            return;
+        }
+        
+        // Call backend validation
+        frappe.call({
+            method: 'flansa.flansa_core.api.relationship_management.validate_unique_relationship_name',
+            args: {
+                relationship_name: relationship_name
+            },
+            callback: (r) => {
+                if (r.message) {
+                    if (r.message.valid) {
+                        this.update_validation_status(dialog, '✅ Relationship name is available', 'success');
+                    } else {
+                        let error_msg = `❌ ${r.message.error}`;
+                        if (r.message.suggested_names && r.message.suggested_names.length > 0) {
+                            error_msg += `<br><strong>Suggestions:</strong> ${r.message.suggested_names.join(', ')}`;
+                        }
+                        this.update_validation_status(dialog, error_msg, 'error');
+                    }
+                }
+            }
+        });
+    }
+    
+    // Update validation status display
+    update_validation_status(dialog, message, type) {
+        const validation_field = dialog.fields_dict.validation_status;
+        if (validation_field) {
+            let color = type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue';
+            let html = message ? `<div style="color: ${color}; font-size: 12px; margin-top: 5px;">${message}</div>` : '';
+            validation_field.$wrapper.html(html);
+        }
+    }
+    
+    // Generate and set link field name
+    generate_and_set_link_field_name(dialog) {
+        const parent_table = dialog.get_value('parent_table');
+        const child_table = dialog.get_value('child_table');
+        const relationship_name = dialog.get_value('relationship_name');
+        
+        if (parent_table && child_table && relationship_name) {
+            // Call backend to generate field name
+            frappe.call({
+                method: 'flansa.flansa_core.api.relationship_management.generate_relationship_field_name',
+                args: {
+                    relationship_name: relationship_name,
+                    parent_table: parent_table,
+                    child_table: child_table
+                },
+                callback: (r) => {
+                    if (r.message && r.message.field_name) {
+                        dialog.set_value('link_field_name', r.message.field_name);
+                    }
+                }
+            });
+        }
+    }
+    
+show_create_dialog() {
         const dialog = new frappe.ui.Dialog({
             title: 'Create Relationship',
             size: 'large',
@@ -307,7 +372,29 @@ class SimplifiedRelationshipBuilder {
             }
         });
         
+        // Store dialog reference for duplicate name handling
+        window.current_relationship_dialog = dialog;
         dialog.show();
+        
+        
+        // Add field change handlers for auto-generation and validation
+        dialog.fields_dict.relationship_name.$input.on('input', () => {
+            const relationship_name = dialog.get_value('relationship_name');
+            this.validate_relationship_name(dialog, relationship_name);
+            this.generate_and_set_link_field_name(dialog);
+        });
+        
+        dialog.fields_dict.parent_table.$input.on('change', () => {
+            this.generate_and_set_link_field_name(dialog);
+            this.auto_generate_name(dialog);
+        });
+        
+        dialog.fields_dict.child_table.$input.on('change', () => {
+            this.generate_and_set_link_field_name(dialog);
+            this.auto_generate_name(dialog);
+        });
+        
+
     }
     
     auto_generate_name(dialog) {
@@ -456,6 +543,7 @@ class SimplifiedRelationshipBuilder {
                     dialog.hide();
                     this.load_data();
                 } else {
+                    // Show error directly since validation is now handled inline
                     frappe.show_alert({
                         message: `❌ ${r.message?.error || 'Failed to create relationship'}`,
                         indicator: 'red'

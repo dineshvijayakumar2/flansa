@@ -1059,6 +1059,67 @@ def sync_doctype_to_json(table_name, doctype_name):
             "error": str(e)
         }
 
+
+def _check_duplicate_link_field(doctype_name, field_name, target_doctype):
+    """Check if a duplicate link field already exists - enhanced for relationship-specific fields"""
+    try:
+        # Clear cache to get latest fields
+        frappe.clear_cache(doctype=doctype_name)
+        
+        # Check if exact field name exists
+        if frappe.db.exists("Custom Field", {"dt": doctype_name, "fieldname": field_name}):
+            return True
+        
+        # For relationship-specific fields, be more selective about what constitutes a duplicate
+        if target_doctype:
+            existing_link_fields = frappe.get_all("Custom Field",
+                filters={
+                    "dt": doctype_name,
+                    "fieldtype": "Link",
+                    "options": target_doctype
+                },
+                fields=["fieldname"]
+            )
+            
+            if existing_link_fields:
+                existing_names = [f.fieldname for f in existing_link_fields]
+                frappe.logger().info(f"Found existing link fields to {target_doctype}: {existing_names}")
+                
+                # Only consider it a duplicate if:
+                # 1. It's an exact match, OR
+                # 2. It's a very basic field name (like "classes_link") and new field is also basic
+                # 3. Allow relationship-specific names (with context) to coexist
+                
+                import difflib
+                for existing_name in existing_names:
+                    # Check for exact similarity (typos, etc.)
+                    similarity = difflib.SequenceMatcher(None, field_name, existing_name).ratio()
+                    
+                    # If it's a very high similarity (95%+), likely a typo or duplicate
+                    if similarity > 0.95:
+                        frappe.logger().warning(f"Very high similarity duplicate detected: {field_name} vs {existing_name} (similarity: {similarity:.2f})")
+                        return True
+                    
+                    # If both are basic field names (no context), and similar, it's a duplicate
+                    is_new_basic = '_link' in field_name and field_name.count('_') <= 1
+                    is_existing_basic = '_link' in existing_name and existing_name.count('_') <= 1
+                    
+                    if is_new_basic and is_existing_basic and similarity > 0.8:
+                        frappe.logger().warning(f"Basic field duplicate detected: {field_name} vs {existing_name} (similarity: {similarity:.2f})")
+                        return True
+                
+                # If new field has context (multiple underscores), allow it even if similar to existing basic field
+                has_context = field_name.count('_') > 1 and '_link' in field_name
+                if has_context:
+                    frappe.logger().info(f"Allowing relationship-specific field: {field_name} (has context)")
+                    return False
+        
+        return False
+        
+    except Exception as e:
+        frappe.log_error(f"Error checking duplicate link field: {str(e)}", "Duplicate Check")
+        return False
+
 def reverse_map_field_type(frappe_type):
     """Reverse map Frappe field types to Flansa types"""
     reverse_mapping = {

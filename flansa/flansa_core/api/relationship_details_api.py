@@ -33,8 +33,8 @@ def get_relationship_details(relationship_name):
         
         # Get computed fields details
         computed_fields_details = []
-        if relationship.computed_fields:
-            for cf in relationship.computed_fields:
+        if getattr(relationship, 'computed_fields', []):
+            for cf in getattr(relationship, 'computed_fields', []):
                 computed_fields_details.append({
                     "field_name": cf.field_name,
                     "field_label": cf.field_label,
@@ -252,7 +252,7 @@ def update_relationship(relationship_name, updates):
         # Update computed fields if allowed
         if "computed_fields" in updates and editable["computed_fields"]:
             # Clear existing computed fields
-            relationship.computed_fields = []
+            getattr(relationship, 'computed_fields', []) = []
             
             # Add new computed fields
             for cf in updates["computed_fields"]:
