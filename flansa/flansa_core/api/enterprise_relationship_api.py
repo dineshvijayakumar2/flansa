@@ -222,17 +222,31 @@ def create_simplified_relationship(config: Dict) -> Dict:
                     if config.get("relationship_type") == "One to Many":
                         from_table = config.get("from_table") or config.get("parent_table")
                         if from_table:
-                            # Always use the table-based field name, never the relationship ID
-                            # Sanitize the table name to create a valid field name
-                            sanitized_table_name = frappe.scrub(from_table)
-                            proper_field_name = f"{sanitized_table_name}_link"
+                            # Get the actual table name, not the ID
+                            from flansa.flansa_core.api.relationship_management import get_table_name_for_field, pluralize_to_singular
+                            
+                            # Get the proper table name (not ID)
+                            parent_table_name = get_table_name_for_field(from_table)
+                            parent_singular = pluralize_to_singular(parent_table_name)
+                            
+                            # Check for existing fields with same base name and add counter if needed
+                            to_table = config.get("to_table") or config.get("child_table")
+                            if to_table:
+                                to_doctype = frappe.db.get_value("Flansa Table", to_table, "doctype_name")
+                                if to_doctype:
+                                    base_field_name = f"{parent_singular}_link"
+                                    proper_field_name = get_unique_field_name(to_doctype, base_field_name)
+                                else:
+                                    proper_field_name = f"{parent_singular}_link"
+                            else:
+                                proper_field_name = f"{parent_singular}_link"
                             
                             # Only set if not already set correctly
                             current_field = config.get("child_reference_field") or config.get("to_field")
                             if not current_field or current_field.startswith(("FT-", "REL-")):
                                 config["child_reference_field"] = proper_field_name
                                 config["to_field"] = proper_field_name
-                                frappe.log_error(f"Corrected field name from '{current_field}' to '{proper_field_name}' for relationship", "Field Name Fix")
+                                frappe.log_error(f"Set field name to '{proper_field_name}' for relationship from {parent_table_name}", "Field Name Generation")
                     
                     # Create the relationship fields
                     create_relationship_fields(config, enterprise_type)
@@ -1353,6 +1367,31 @@ def _field_exists_in_doctype(doctype_name, field_name):
         return False
     except Exception:
         return False
+
+
+
+def get_unique_field_name(doctype_name, base_field_name):
+    """Get a unique field name by adding counter suffix if needed"""
+    try:
+        # Check if base field name exists
+        if not _field_exists_in_doctype(doctype_name, base_field_name):
+            return base_field_name
+        
+        # Field exists, add counter
+        counter = 2
+        while counter < 100:  # Safety limit
+            field_name_with_counter = f"{base_field_name}{counter}"
+            if not _field_exists_in_doctype(doctype_name, field_name_with_counter):
+                return field_name_with_counter
+            counter += 1
+        
+        # Fallback with timestamp if too many duplicates
+        import time
+        return f"{base_field_name}_{int(time.time())}"
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting unique field name: {str(e)}", "Field Name Generation")
+        return base_field_name
 
 print("Enterprise Relationship API loaded!")
 print("Features:")

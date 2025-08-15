@@ -131,7 +131,16 @@ def create_link_field(table_name, field_name, link_to_table, label):
         if not source_table.doctype_name or not target_table.doctype_name:
             frappe.throw(f"DocTypes not generated for tables: {table_name} -> {source_table.doctype_name}, {link_to_table} -> {target_table.doctype_name}")
         
-        # Check if field already exists to prevent duplicates
+        # Get a unique field name by adding counter if needed
+        unique_field_name = get_unique_field_name(source_table.doctype_name, field_name)
+        
+        # Check if we had to modify the field name
+        if unique_field_name != field_name:
+            frappe.logger().info(f"Field {field_name} already exists, using {unique_field_name} instead")
+            frappe.msgprint(f"Link field '{field_name}' already exists, creating '{unique_field_name}' instead", alert=True)
+            field_name = unique_field_name
+        
+        # Check if field already exists to prevent duplicates (shouldn't happen with unique name)
         if _field_already_exists(source_table.doctype_name, field_name):
             frappe.logger().info(f"Field {field_name} already exists in {source_table.doctype_name}, skipping creation")
             frappe.msgprint(f"Link field '{field_name}' already exists in table '{source_table.table_name}'", alert=True)
@@ -216,6 +225,40 @@ def delete_relationship(relationship_name):
     except Exception as e:
         frappe.log_error(f"Error deleting relationship: {str(e)}", "Delete Relationship")
         return {"success": False, "error": str(e)}
+
+
+def get_unique_field_name(doctype_name, base_field_name):
+    """
+    Get a unique field name by adding counter suffix if needed.
+    
+    Examples:
+    - classes_link (if doesn't exist)
+    - classes_link2 (if classes_link exists)
+    - classes_link3 (if classes_link and classes_link2 exist)
+    """
+    try:
+        # Check if base field name exists
+        if not _field_already_exists(doctype_name, base_field_name):
+            return base_field_name
+        
+        # Field exists, add counter starting from 2
+        counter = 2
+        while counter < 100:  # Safety limit to prevent infinite loop
+            field_name_with_counter = f"{base_field_name}{counter}"
+            if not _field_already_exists(doctype_name, field_name_with_counter):
+                frappe.logger().info(f"Generated unique field name: {field_name_with_counter}")
+                return field_name_with_counter
+            counter += 1
+        
+        # Fallback with timestamp if too many duplicates (very unlikely)
+        import time
+        timestamp_field = f"{base_field_name}_{int(time.time())}"
+        frappe.logger().warning(f"Too many duplicate fields, using timestamp: {timestamp_field}")
+        return timestamp_field
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting unique field name: {str(e)}", "Field Name Generation")
+        return base_field_name
 
 def _field_already_exists(doctype_name, field_name):
     """Check if a field already exists in a DocType to prevent duplicates"""
