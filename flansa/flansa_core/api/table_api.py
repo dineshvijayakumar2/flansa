@@ -599,3 +599,121 @@ def get_table_meta(table_name):
             "error": str(e),
             "fields": []
         }
+
+@frappe.whitelist()
+def get_link_options(doctype, search_term="", limit=20):
+    """
+    Get available options for a link field
+    
+    Args:
+        doctype (str): The target doctype for the link field
+        search_term (str): Search term to filter options
+        limit (int): Maximum number of options to return
+    
+    Returns:
+        dict: Response with success status and options list
+    """
+    try:
+        # Validate doctype exists
+        if not frappe.db.exists("DocType", doctype):
+            return {
+                "success": False,
+                "error": f"DocType '{doctype}' does not exist"
+            }
+        
+        # Get meta information for the doctype
+        meta = frappe.get_meta(doctype)
+        
+        # Determine which field to use for display (title field or name)
+        title_field = meta.get_title_field()
+        search_fields = []
+        
+        # Build search fields list
+        if title_field:
+            search_fields.append(title_field)
+        
+        # Add other searchable fields
+        for field in meta.fields:
+            if field.fieldtype in ['Data', 'Text', 'Small Text'] and field.fieldname not in search_fields:
+                search_fields.append(field.fieldname)
+                if len(search_fields) >= 3:  # Limit to avoid too many fields
+                    break
+        
+        # Always include name field
+        if 'name' not in search_fields:
+            search_fields.append('name')
+        
+        # Build query
+        fields = ['name']
+        if title_field and title_field != 'name':
+            fields.append(title_field)
+        
+        # Build filters
+        filters = {}
+        or_filters = []
+        
+        if search_term:
+            # Create OR filters for searching across multiple fields
+            for field in search_fields[:3]:  # Limit to avoid too complex queries
+                or_filters.append([field, 'like', f'%{search_term}%'])
+        
+        # Query the records
+        try:
+            if or_filters:
+                records = frappe.get_all(
+                    doctype,
+                    fields=fields,
+                    or_filters=or_filters,
+                    limit=limit,
+                    order_by='modified desc'
+                )
+            else:
+                records = frappe.get_all(
+                    doctype,
+                    fields=fields,
+                    limit=limit,
+                    order_by='modified desc'
+                )
+        except Exception as e:
+            # Fallback to simpler query if complex query fails
+            records = frappe.get_all(
+                doctype,
+                fields=['name'],
+                limit=limit,
+                order_by='modified desc'
+            )
+        
+        # Format options
+        options = []
+        for record in records:
+            name = record.get('name', '')
+            title = record.get(title_field) if title_field else name
+            
+            option = {
+                'name': name,
+                'value': name,
+                'title': title or name,
+                'label': title or name
+            }
+            
+            # Add description if available
+            if hasattr(record, 'description'):
+                option['description'] = record.get('description', '')
+            
+            options.append(option)
+        
+        return {
+            "success": True,
+            "options": options,
+            "total": len(options),
+            "search_term": search_term,
+            "doctype": doctype
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link options for {doctype}: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Error loading options: {str(e)}"
+        }
+

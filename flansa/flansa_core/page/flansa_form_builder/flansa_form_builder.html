@@ -104,19 +104,35 @@
                             <button class="btn btn-sm btn-info" id="refresh-fields-btn" title="Refresh Fields from Table">
                                 <i class="fa fa-refresh"></i> Sync
                             </button>
-                            <button class="btn btn-sm btn-warning" id="force-reload-fields-btn" title="Force Reload Fields (Bypass Cache)">
-                                <i class="fa fa-bolt"></i> Force Reload
-                            </button>
                             <button class="btn btn-sm btn-success" id="smart-organize-btn" title="Smart Organize Fields">
                                 <i class="fa fa-magic"></i> Auto-Organize
                             </button>
-                            <button class="btn btn-sm btn-light" id="add-section-btn" title="Add Section">
-                                <i class="fa fa-plus"></i> Section
-                            </button>
-                            <button class="btn btn-sm btn-light" id="add-column-btn" title="Add Column">
-                                <i class="fa fa-columns"></i> Column
-                            </button>
-                            <button class="btn btn-sm btn-light" id="clear-canvas-btn" title="Clear All">
+                            <div class="btn-group" style="margin-left: 8px;">
+                                <button class="btn btn-sm btn-primary" id="add-section-btn" title="Add New Section">
+                                    <i class="fa fa-plus"></i> Section
+                                </button>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary dropdown-toggle" data-toggle="dropdown" title="Column Layout Options">
+                                        <i class="fa fa-columns"></i> Columns
+                                    </button>
+                                    <div class="dropdown-menu">
+                                        <a class="dropdown-item" href="#" id="set-1-column">
+                                            <i class="fa fa-square"></i> 1 Column
+                                        </a>
+                                        <a class="dropdown-item" href="#" id="set-2-columns">
+                                            <i class="fa fa-columns"></i> 2 Columns
+                                        </a>
+                                        <a class="dropdown-item" href="#" id="set-3-columns">
+                                            <i class="fa fa-th"></i> 3 Columns
+                                        </a>
+                                        <div class="dropdown-divider"></div>
+                                        <a class="dropdown-item" href="#" id="custom-columns">
+                                            <i class="fa fa-cog"></i> Custom Layout
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger" id="clear-canvas-btn" title="Clear All">
                                 <i class="fa fa-trash"></i>
                             </button>
                         </div>
@@ -125,7 +141,7 @@
                         <div class="empty-canvas" id="empty-canvas-message" style="text-align: center; padding: 60px 20px; color: var(--flansa-text-secondary, #6c757d);">
                             <i class="fa fa-mouse-pointer fa-2x" style="margin-bottom: 16px; opacity: 0.5;"></i>
                             <h5 style="margin-bottom: 8px;">Start Building Your Form</h5>
-                            <p style="margin: 0;">Drag fields from the left panel or click "Add Section" to begin</p>
+                            <p style="margin: 0;">Drag fields from the left panel or click "Section" to add your first section</p>
                         </div>
                         <!-- Form sections will be added here -->
                     </div>
@@ -381,5 +397,15 @@
 .properties-form .form-control {
     font-size: 14px;
     padding: 6px 8px;
+}
+
+.form-section.selected {
+    border-color: var(--flansa-primary, #007bff) !important;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+}
+
+.form-section:hover {
+    border-color: var(--flansa-primary, #007bff);
+    transition: all 0.2s ease;
 }
 </style>

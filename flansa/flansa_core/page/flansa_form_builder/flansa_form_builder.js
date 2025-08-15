@@ -47,12 +47,26 @@ class FlansaFormBuilder {
         this.form_config = {};
         this.current_fields = [];
         this.selected_field_index = -1;
+        this._adding_field = false; // Track field addition to prevent duplicates
         
         this.init();
     }
     
     
-    init() {
+    // Debounce utility to prevent rapid successive additions
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+    
+        init() {
         // Store global reference for drop handlers
         window.form_builder_instance = this;
         
@@ -134,39 +148,12 @@ class FlansaFormBuilder {
             
             <div class="palette-section" style="margin-bottom: 20px;">
                 <h6 style="margin-bottom: 12px; color: var(--flansa-text-primary, #495057); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
-                    <i class="fa fa-th-large"></i> Layout Elements
+                    <i class="fa fa-info-circle"></i> Layout Tools
                 </h6>
-                <div class="layout-elements" style="margin-bottom: 16px;">
-                    <div class="field-item layout-item" data-field-type="Section Break" draggable="true"
-                         style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: #e3f2fd; transition: all 0.2s ease;"
-                         onmouseover="this.style.borderColor='var(--flansa-primary, #007bff)'; this.style.backgroundColor='#bbdefb';"
-                         onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='#e3f2fd';">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center;">
-                                <i class="fa fa-th-large" style="margin-right: 8px; color: var(--flansa-primary, #007bff); width: 16px;"></i>
-                                <div>
-                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">Section Break</div>
-                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">New form section</div>
-                                </div>
-                            </div>
-                            <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
-                        </div>
-                    </div>
-                    <div class="field-item layout-item" data-field-type="Column Break" draggable="true"
-                         style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: #f3e5f5; transition: all 0.2s ease;"
-                         onmouseover="this.style.borderColor='var(--flansa-secondary, #6f42c1)'; this.style.backgroundColor='#e1bee7';"
-                         onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='#f3e5f5';">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center;">
-                                <i class="fa fa-columns" style="margin-right: 8px; color: var(--flansa-secondary, #6f42c1); width: 16px;"></i>
-                                <div>
-                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">Column Break</div>
-                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">Start new column</div>
-                                </div>
-                            </div>
-                            <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
-                        </div>
-                    </div>
+                <div style="padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #e0e6ed;">
+                    <p style="margin: 0; font-size: 12px; color: #6c757d; line-height: 1.4;">
+                        Use the <strong>Section</strong> and <strong>Column</strong> buttons in the form header above to organize your fields.
+                    </p>
                 </div>
             </div>
             
@@ -283,10 +270,33 @@ class FlansaFormBuilder {
     }
 
     add_existing_field_to_form(fieldName) {
+        // Prevent duplicate additions
+        if (this._adding_field) {
+            console.log('Field addition already in progress, skipping duplicate');
+            return;
+        }
+        
+        this._adding_field = true;
+        
+        // Check if field already exists
+        const fieldExists = this.current_fields.some(field => 
+            field.field_name === fieldName && !field.is_layout_element
+        );
+        
+        if (fieldExists) {
+            frappe.show_alert({
+                message: `Field "${fieldName}" is already in the form`,
+                indicator: 'orange'
+            });
+            this._adding_field = false;
+            return;
+        }
+        
         // Find the field in table_fields
         const field = this.table_fields.find(f => f.field_name === fieldName);
         if (!field) {
             frappe.show_alert('Field not found', 'red');
+            this._adding_field = false;
             return;
         }
 
@@ -300,9 +310,14 @@ class FlansaFormBuilder {
         this.load_available_fields();
 
         frappe.show_alert({
-            message: `Added "${field.field_label}" to form`,
+            message: `"${field.field_label}" added to form`,
             indicator: 'green'
         });
+        
+        // Reset the flag after a short delay
+        setTimeout(() => {
+            this._adding_field = false;
+        }, 500);
     }
 
     generate_auto_field_name(fieldType) {
@@ -356,10 +371,7 @@ class FlansaFormBuilder {
                 const itemData = e.dataTransfer.getData('text/plain');
                 const itemType = e.dataTransfer.getData('item-type');
                 
-                if (itemType === 'layout') {
-                    // Handle Section Break or Column Break
-                    this.add_layout_item_to_canvas(itemData);
-                } else if (itemType === 'field') {
+                if (itemType === 'field') {
                     // Handle existing field from available fields
                     this.add_existing_field_to_form(itemData);
                 } else if (itemType === 'form-field') {
@@ -377,12 +389,7 @@ class FlansaFormBuilder {
         $(document).on('dragstart', '.field-item', function(e) {
             const $item = $(this);
             
-            if ($item.hasClass('layout-item')) {
-                // Layout items (Section Break, Column Break)
-                const fieldType = $item.data('field-type');
-                e.originalEvent.dataTransfer.setData('text/plain', fieldType);
-                e.originalEvent.dataTransfer.setData('item-type', 'layout');
-            } else if ($item.hasClass('available-field')) {
+            if ($item.hasClass('available-field')) {
                 // Available existing fields
                 const fieldName = $item.data('field-name');
                 e.originalEvent.dataTransfer.setData('text/plain', fieldName);
@@ -415,22 +422,55 @@ class FlansaFormBuilder {
     
     setup_section_drop_zones() {
         // Make individual sections droppable for cross-section field movement
-        $(document).on('dragover', '.section-content', function(e) {
+        $(document).on('dragover', '.section-content, .droppable-section', function(e) {
             e.preventDefault();
             e.stopPropagation();
             $(this).addClass('drag-over');
+            $(this).css({
+                'border-color': 'var(--flansa-primary, #007bff)',
+                'background-color': 'rgba(0, 123, 255, 0.05)'
+            });
+            
+            // Hide placeholder during drag
+            $(this).find('.empty-section-placeholder').hide();
         });
         
-        $(document).on('dragleave', '.section-content', function(e) {
+        $(document).on('dragleave', '.section-content, .droppable-section', function(e) {
             if (!$(this)[0].contains(e.relatedTarget)) {
                 $(this).removeClass('drag-over');
+                $(this).css({
+                    'border-color': 'transparent',
+                    'background-color': ''
+                });
+                
+                // Show placeholder if section is empty
+                if ($(this).find('.form-field').length === 0) {
+                    $(this).find('.empty-section-placeholder').show();
+                }
             }
         });
         
-        $(document).on('drop', '.section-content', function(e) {
+        $(document).on('drop', '.section-content, .droppable-section', function(e) {
+            // Prevent duplicate drops
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if ($(this).hasClass('drop-processing')) {
+                return; // Already processing a drop
+            }
+            $(this).addClass('drop-processing');
+            
+            setTimeout(() => {
+                $(this).removeClass('drop-processing');
+            }, 1000);
+
             e.preventDefault();
             e.stopPropagation();
             $(this).removeClass('drag-over');
+            $(this).css({
+                'border-color': 'transparent',
+                'background-color': ''
+            });
             
             const itemType = e.originalEvent.dataTransfer.getData('item-type');
             const itemData = e.originalEvent.dataTransfer.getData('text/plain');
@@ -564,6 +604,25 @@ class FlansaFormBuilder {
     }
     
     add_field_to_section_by_index(fieldName, sectionFieldIndex) {
+        // Skip if another field addition is in progress
+        if (this._adding_field) {
+            console.log('Field addition already in progress, skipping section-specific addition');
+            return;
+        }
+        
+        // Check if field already exists in this section or form
+        const fieldExists = this.current_fields.some(field => 
+            field.field_name === fieldName && !field.is_layout_element
+        );
+        
+        if (fieldExists) {
+            frappe.show_alert({
+                message: `Field "${fieldName}" is already in the form`,
+                indicator: 'orange'
+            });
+            return;
+        }
+
         // Add field from palette to specific section by section field index
         const field = this.table_fields.find(f => f.field_name === fieldName);
         if (!field) return;
@@ -584,7 +643,7 @@ class FlansaFormBuilder {
         const sectionName = sectionField?.field_label || 'Section';
         
         frappe.show_alert({
-            message: `Added "${field.field_label}" to "${sectionName}"`,
+            message: `"${field.field_label}" added to "${sectionName}"`,
             indicator: 'green'
         });
     }
@@ -639,7 +698,9 @@ class FlansaFormBuilder {
         });
         
         // Click on available field to add to form
-        $(document).on('click', '.available-field', function() {
+        $(document).on('click', '.available-field', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             const fieldName = $(this).data('field-name');
             self.add_existing_field_to_form(fieldName);
         });
@@ -680,16 +741,29 @@ class FlansaFormBuilder {
             self.refresh_table_fields();
         });
         
-        $(document).on('click', '#force-reload-fields-btn', function() {
-            self.force_reload_fields();
-        });
-        
         $(document).on('click', '#add-section-btn', function() {
             self.add_section();
         });
         
-        $(document).on('click', '#add-column-btn', function() {
-            self.add_column();
+        // Visual Column Layout Handlers
+        $(document).on('click', '#set-1-column', function(e) {
+            e.preventDefault();
+            self.set_section_columns(1);
+        });
+        
+        $(document).on('click', '#set-2-columns', function(e) {
+            e.preventDefault();
+            self.set_section_columns(2);
+        });
+        
+        $(document).on('click', '#set-3-columns', function(e) {
+            e.preventDefault();
+            self.set_section_columns(3);
+        });
+        
+        $(document).on('click', '#custom-columns', function(e) {
+            e.preventDefault();
+            self.show_custom_column_dialog();
         });
         
         $(document).on('click', '#clear-canvas-btn', function() {
@@ -870,17 +944,27 @@ class FlansaFormBuilder {
                     form_html += '</div></div>';
                 }
                 
-                // Start new section
+                // Start new section with visual column layout
+                const columnLayout = field.column_layout || 'grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));';
+                const columnCount = field.column_count || 'auto';
+                const sectionClass = field.field_index === this.selected_field_index ? 'form-section selected' : 'form-section';
+                
                 form_html += `
-                    <div class="form-section" data-field-index="${index}" style="margin-bottom: 20px; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; background: white;">
+                    <div class="${sectionClass}" data-field-index="${index}" data-section-id="section-${index}" onclick="window.form_builder_instance.select_section(${index})" style="margin-bottom: 20px; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; overflow: hidden; cursor: pointer;">
                         <div class="section-header" style="background: var(--flansa-background, #f8f9fa); padding: 12px 16px; border-bottom: 1px solid var(--flansa-border, #e0e6ed); display: flex; justify-content: space-between; align-items: center;">
-                            <h6 style="margin: 0; font-weight: 600; color: var(--flansa-text-primary, #495057);">${field.field_label || 'Section'}</h6>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fa fa-grip-vertical" style="color: var(--flansa-text-secondary, #6c757d); cursor: move;"></i>
+                                <strong style="color: var(--flansa-text-primary, #495057);">${field.field_label || 'Section'}</strong>
+                                <span class="column-indicator" style="background: var(--flansa-primary, #007bff); color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px;">
+                                    ${columnCount === 'auto' ? 'Auto' : columnCount + ' Col'}
+                                </span>
+                            </div>
                             <div class="section-actions">
                                 <button class="btn btn-xs btn-light edit-section" title="Edit Section"><i class="fa fa-edit"></i></button>
                                 <button class="btn btn-xs btn-danger remove-section" title="Remove Section"><i class="fa fa-trash"></i></button>
                             </div>
                         </div>
-                        <div class="section-content" style="padding: 16px; min-height: 60px;">
+                        <div class="section-content droppable-section" data-field-index="${index}" data-section-id="section-${index}" style="padding: 16px; display: grid; gap: 16px; ${columnLayout}; min-height: 60px; border: 2px dashed transparent; transition: all 0.2s;">
                 `;
                 current_section = field;
             } else if (field.is_layout_element && field.layout_type === 'Column Break') {
@@ -893,8 +977,8 @@ class FlansaFormBuilder {
                 if (!current_section) {
                     // Start default section
                     form_html += `
-                        <div class="form-section default-section" style="margin-bottom: 20px; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; background: white;">
-                            <div class="section-content" style="padding: 16px;">
+                        <div class="form-section default-section" data-field-index="-1" style="margin-bottom: 20px; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; background: white;">
+                            <div class="section-content droppable-section" data-field-index="-1" style="padding: 16px; min-height: 60px; border: 2px dashed transparent; transition: all 0.2s;">
                     `;
                     current_section = { field_label: 'Form Fields' };
                 }
@@ -909,6 +993,9 @@ class FlansaFormBuilder {
         }
         
         $('#form-canvas-content').html(form_html);
+        
+        // Add empty section placeholders for better UX
+        this.add_empty_section_placeholders();
         
         // Bind field interaction events
         this.bind_field_events();
@@ -1292,10 +1379,139 @@ class FlansaFormBuilder {
     
     add_section() {
         this.add_layout_item_to_canvas('Section Break');
+        frappe.show_alert({
+            message: 'New section added to form',
+            indicator: 'green'
+        });
     }
     
-    add_column() {
-        this.add_layout_item_to_canvas('Column Break');
+    set_section_columns(columnCount) {
+        const selectedSectionIndex = this.get_selected_section_index();
+        if (selectedSectionIndex === -1) {
+            frappe.show_alert({
+                message: 'Please select a section first',
+                indicator: 'orange'
+            });
+            return;
+        }
+        
+        // Update the section's column configuration
+        const section = this.current_fields[selectedSectionIndex];
+        if (section && section.is_layout_element && section.layout_type === 'Section Break') {
+            section.column_count = columnCount;
+            section.column_layout = this.get_column_layout_css(columnCount);
+            
+            this.render_form_canvas();
+            
+            frappe.show_alert({
+                message: `Section set to ${columnCount} column${columnCount > 1 ? 's' : ''}`,
+                indicator: 'green'
+            });
+        }
+    }
+    
+    get_column_layout_css(columnCount) {
+        switch(columnCount) {
+            case 1:
+                return 'grid-template-columns: 1fr;';
+            case 2:
+                return 'grid-template-columns: 1fr 1fr;';
+            case 3:
+                return 'grid-template-columns: 1fr 1fr 1fr;';
+            default:
+                return 'grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));';
+        }
+    }
+    
+    get_selected_section_index() {
+        // Find the currently selected section
+        const $selectedSection = $('.form-section.selected');
+        if ($selectedSection.length === 0) {
+            // If no section is selected, use the last section
+            for (let i = this.current_fields.length - 1; i >= 0; i--) {
+                if (this.current_fields[i].is_layout_element && 
+                    this.current_fields[i].layout_type === 'Section Break') {
+                    return i;
+                }
+            }
+            return -1;
+        }
+        
+        const sectionIndex = parseInt($selectedSection.data('field-index'));
+        return sectionIndex;
+    }
+    
+    show_custom_column_dialog() {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Custom Column Layout',
+            fields: [
+                {
+                    fieldname: 'column_count',
+                    fieldtype: 'Int',
+                    label: 'Number of Columns',
+                    default: 2,
+                    description: 'Enter number of columns (1-6)'
+                },
+                {
+                    fieldname: 'column_widths',
+                    fieldtype: 'Data',
+                    label: 'Column Widths',
+                    description: 'e.g., "2fr 1fr" or "300px auto 1fr"',
+                    depends_on: 'eval:doc.column_count > 1'
+                },
+                {
+                    fieldname: 'responsive',
+                    fieldtype: 'Check',
+                    label: 'Responsive Layout',
+                    default: 1,
+                    description: 'Automatically adjust on smaller screens'
+                }
+            ],
+            primary_action_label: 'Apply Layout',
+            primary_action: (values) => {
+                this.apply_custom_column_layout(values);
+                dialog.hide();
+            }
+        });
+        
+        dialog.show();
+    }
+    
+    apply_custom_column_layout(values) {
+        const selectedSectionIndex = this.get_selected_section_index();
+        if (selectedSectionIndex === -1) {
+            frappe.show_alert({
+                message: 'Please select a section first',
+                indicator: 'orange'
+            });
+            return;
+        }
+        
+        const section = this.current_fields[selectedSectionIndex];
+        if (section && section.is_layout_element && section.layout_type === 'Section Break') {
+            section.column_count = values.column_count;
+            
+            let columnLayout;
+            if (values.column_widths && values.column_count > 1) {
+                columnLayout = `grid-template-columns: ${values.column_widths};`;
+            } else {
+                columnLayout = this.get_column_layout_css(values.column_count);
+            }
+            
+            if (values.responsive) {
+                columnLayout += ' @media (max-width: 768px) { grid-template-columns: 1fr; }';
+            }
+            
+            section.column_layout = columnLayout;
+            section.responsive = values.responsive;
+            
+            this.render_form_canvas();
+            
+            frappe.show_alert({
+                message: `Custom ${values.column_count} column layout applied`,
+                indicator: 'green'
+            });
+        }
     }
     
     refresh_table_fields() {
@@ -1779,10 +1995,66 @@ class FlansaFormBuilder {
         }
     }
     
+    
+
+    add_empty_section_placeholders() {
+        // Add drop zones to empty sections
+        $('.section-content').each(function() {
+            const $section = $(this);
+            const fieldsInSection = $section.find('.form-field').length;
+            
+            if (fieldsInSection === 0) {
+                if (!$section.find('.empty-section-placeholder').length) {
+                    $section.append(`
+                        <div class="empty-section-placeholder" style="
+                            text-align: center;
+                            padding: 40px 20px;
+                            color: var(--flansa-text-secondary, #6c757d);
+                            border: 2px dashed var(--flansa-border, #e0e6ed);
+                            border-radius: 8px;
+                            background: var(--flansa-background, #f8f9fa);
+                            margin: 8px;
+                            transition: all 0.2s;
+                        ">
+                            <i class="fa fa-mouse-pointer fa-2x" style="margin-bottom: 12px; opacity: 0.5;"></i>
+                            <p style="margin: 0; font-size: 14px;">Drop fields here</p>
+                            <small style="opacity: 0.7;">or drag fields from the left panel</small>
+                        </div>
+                    `);
+                }
+            } else {
+                $section.find('.empty-section-placeholder').remove();
+            }
+        });
+    }
+    
+    select_section(sectionIndex) {
+        // Remove previous selection
+        $('.form-section').removeClass('selected');
+        
+        // Add selection to clicked section
+        $(`.form-section[data-field-index="${sectionIndex}"]`).addClass('selected');
+        
+        this.selected_field_index = sectionIndex;
+        
+        // Update property panel if visible
+        this.show_section_properties(sectionIndex);
+    }
+    
+    show_section_properties(sectionIndex) {
+        const section = this.current_fields[sectionIndex];
+        if (!section || !section.is_layout_element) return;
+        
+        // You can expand this to show a properties panel
+        console.log('Selected section:', section);
+    }
 }
 // Apply theme on page load
 $(document).ready(function() {
     if (window.page_instance && window.page_instance.apply_theme) {
         window.page_instance.apply_theme();
     }
+
+
+
 });

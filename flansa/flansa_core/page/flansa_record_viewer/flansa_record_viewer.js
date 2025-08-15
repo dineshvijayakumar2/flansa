@@ -35,6 +35,8 @@ class FlansaRecordViewer {
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
+        this.form_config = {};
+        this.form_sections = [];
         
         this.init();
     }
@@ -60,7 +62,16 @@ class FlansaRecordViewer {
                     if (response.message) {
                         resolve(response.message);
                     } else {
-
+                        resolve({ success: false, error: 'No response' });
+                    }
+                },
+                error: (error) => {
+                    reject(error);
+                }
+            });
+        });
+    }
+    
     // Load form builder configuration
     async load_form_configuration() {
         try {
@@ -86,15 +97,6 @@ class FlansaRecordViewer {
             this.form_sections = [];
             return false;
         }
-    }
-                        resolve({ success: false, error: 'No response' });
-                    }
-                },
-                error: (error) => {
-                    reject(error);
-                }
-            });
-        });
     }
     
     // Gallery field detection
@@ -254,6 +256,191 @@ class FlansaRecordViewer {
                     transform: scale(1.05);
                     transition: transform 0.2s ease;
                 }
+                .wysiwyg-form-container {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                }
+                
+                .form-section {
+                    transition: all 0.2s ease;
+                }
+                
+                .form-section:hover {
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+                }
+                
+                .section-header {
+                    background: linear-gradient(135deg, #f8f9fc 0%, #e9ecef 100%);
+                }
+                
+                .form-column {
+                    display: flex;
+                    flex-direction: column;
+                }
+                
+                .wysiwyg-field {
+                    transition: all 0.2s ease;
+                }
+                
+                .wysiwyg-field:hover {
+                    background: rgba(102, 126, 234, 0.02);
+                    border-radius: 6px;
+                    margin: -4px;
+                    padding: 4px;
+                }
+                
+                .wysiwyg-input:focus,
+                .wysiwyg-textarea:focus,
+                .wysiwyg-select:focus {
+                    outline: none;
+                    border-color: #667eea !important;
+                    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1) !important;
+                }
+                
+                .wysiwyg-display {
+                    word-break: break-word;
+                    line-height: 1.5;
+                }
+                
+                @media (max-width: 768px) {
+                    .section-content {
+                        padding: 16px !important;
+                    }
+                    
+                    .form-column {
+                        flex: 1 !important;
+                        min-width: auto !important;
+                        padding-right: 0 !important;
+                        margin-bottom: 16px;
+                    }
+                    
+                    .fields-grid {
+                        grid-template-columns: 1fr !important;
+                        gap: 16px !important;
+                    }
+                }
+                
+                @media (max-width: 1024px) {
+                    .fields-grid[style*="repeat(3"] {
+                        grid-template-columns: repeat(2, 1fr) !important;
+                    }
+                }
+                
+                .fields-grid {
+                    transition: all 0.3s ease;
+                }
+                
+                .form-group {
+                    min-width: 0; /* Prevent grid items from overflowing */
+                }
+                
+                .enhanced-field-label {
+                    position: relative;
+                }
+                
+                .form-group:hover {
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+                }
+                
+                .form-group:hover .enhanced-field-label {
+                    color: #667eea;
+                }
+                
+                .wysiwyg-display {
+                    word-break: break-word;
+                    line-height: 1.6;
+                    padding: 12px 0;
+                    font-size: 15px;
+                    color: #495057;
+                }
+                
+                .form-control-static {
+                    padding: 12px 0;
+                    font-size: 15px;
+                    line-height: 1.6;
+                    color: #495057;
+                    border-bottom: 1px solid transparent;
+                    transition: all 0.2s ease;
+                }
+                
+                .form-control-static:hover {
+                    border-bottom-color: #e9ecef;
+                }
+                
+                /* Simple field type indicators */
+                .form-group[data-field-type="Date"]::before,
+                .form-group[data-field-type="Datetime"]::before {
+                    content: "📅";
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    font-size: 12px;
+                    opacity: 0.5;
+                }
+                
+                .form-group[data-field-type="Link"]::before {
+                    content: "🔗";
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    font-size: 12px;
+                    opacity: 0.5;
+                }
+                
+                .form-group[data-field-type="Long Text"]::before,
+                .form-group[data-field-type="Text Editor"]::before {
+                    content: "📝";
+                    position: absolute;
+                    top: 12px;
+                    right: 12px;
+                    font-size: 12px;
+                    opacity: 0.5;
+                }
+                
+                /* Frappe native link field styling */
+                .frappe-link-field-container {
+                    position: relative;
+                }
+                
+                .frappe-link-field {
+                    width: 100%;
+                }
+                
+                .link-suggestions {
+                    z-index: 1050 !important;
+                }
+                
+                .link-suggestion-item {
+                    font-size: 14px;
+                }
+                
+                .link-suggestion-item:last-child {
+                    border-bottom: none;
+                }
+                
+                /* Frappe control container styling */
+                .frappe-link-field-container .form-group {
+                    margin-bottom: 0;
+                }
+                
+                .frappe-link-field-container .control-input-wrapper {
+                    width: 100%;
+                }
+                
+                /* Gallery field special styling */
+                .gallery-view {
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: inset 0 2px 4px rgba(0,0,0,0.06);
+                }
+                
+                .gallery-item {
+                    transition: transform 0.2s ease;
+                }
+                
+                .gallery-item:hover {
+                    transform: scale(1.02);
+                    z-index: 10;
+                }
             </style>
         `);
     }
@@ -279,24 +466,11 @@ class FlansaRecordViewer {
 
     
     load_table_structure() {
-        // Load both table metadata and form layout
-        Promise.all([
-            this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name }),
-            this.call_api('flansa.flansa_core.api.form_builder.get_form_layout', { table_name: this.table_name })
-        ]).then(([metaResponse, layoutResponse]) => {
+        this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name })
+        .then(metaResponse => {
             if (metaResponse.success) {
                 this.table_fields = metaResponse.fields || [];
                 this.doctype_name = metaResponse.doctype_name;
-                
-                // Use form builder layout if available
-                if (layoutResponse.success && layoutResponse.layout) {
-                    this.form_layout = layoutResponse.layout;
-                    console.log('📋 Using form builder layout');
-                } else {
-                    this.form_layout = null;
-                    console.log('📋 Using default field layout');
-                }
-                
                 this.render_new_record_form();
             } else {
                 this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
@@ -308,28 +482,15 @@ class FlansaRecordViewer {
     }
     
     load_record_data() {
-        // Load both record data and form layout
-        Promise.all([
-            this.call_api('flansa.flansa_core.api.table_api.get_record', { 
-                table_name: this.table_name, 
-                record_id: this.record_id 
-            }),
-            this.call_api('flansa.flansa_core.api.form_builder.get_form_layout', { table_name: this.table_name })
-        ]).then(([recordResponse, layoutResponse]) => {
+        this.call_api('flansa.flansa_core.api.table_api.get_record', { 
+            table_name: this.table_name, 
+            record_id: this.record_id 
+        })
+        .then(recordResponse => {
             if (recordResponse.success) {
                 this.record_data = recordResponse.record || {};
                 this.table_fields = recordResponse.fields || [];
                 this.doctype_name = recordResponse.doctype_name;
-                
-                // Use form builder layout if available
-                if (layoutResponse.success && layoutResponse.layout) {
-                    this.form_layout = layoutResponse.layout;
-                    console.log('📋 Using form builder layout');
-                } else {
-                    this.form_layout = null;
-                    console.log('📋 Using default field layout');
-                }
-                
                 this.render_record();
             } else {
                 this.show_error('Record not found: ' + (recordResponse.error || 'Unknown error'));
@@ -350,9 +511,14 @@ class FlansaRecordViewer {
             let actionHtml = '';
             if (this.mode === 'view') {
                 actionHtml = `
-                    <button type="button" class="btn btn-sm btn-primary edit-record" style="display: flex; align-items: center; gap: 6px;">
-                        <i class="fa fa-edit"></i> Edit Record
-                    </button>
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-sm btn-primary edit-record" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-edit"></i> Edit Record
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary form-builder-btn" style="display: flex; align-items: center; gap: 6px;" onclick="window.open('/app/flansa-form-builder?table=${this.table_name}', '_blank')">
+                            <i class="fa fa-paint-brush"></i> Customize Form
+                        </button>
+                    </div>
                 `;
             } else if (this.mode === 'edit') {
                 actionHtml = `
@@ -379,25 +545,7 @@ class FlansaRecordViewer {
             }
             actionsContainer.innerHTML = actionHtml;
             
-            // Add Form Builder button for view mode
-        if (this.mode === 'view') {
-            const formBuilderBtn = document.createElement('button');
-            formBuilderBtn.type = 'button';
-            formBuilderBtn.className = 'btn btn-sm btn-outline-primary form-builder-btn';
-            formBuilderBtn.style.cssText = 'display: flex; align-items: center; gap: 6px; margin-left: 8px;';
-            formBuilderBtn.innerHTML = '<i class="fa fa-paint-brush"></i> Customize Form';
-            formBuilderBtn.title = 'Open Form Builder to customize this form layout';
-            
-            formBuilderBtn.addEventListener('click', (e) => {
-                e.preventDefault();
-                window.open(`/app/flansa-form-builder?table=${this.table_name}`, '_blank');
-            });
-            
-            // Only add if it doesn't already exist
-            if (!actionsContainer.querySelector('.form-builder-btn')) {
-                actionsContainer.appendChild(formBuilderBtn);
-            }
-        }
+
         }
         
         // Update status message
@@ -422,7 +570,22 @@ class FlansaRecordViewer {
                 </div>
                 
                 <div class="record-fields" style="padding: 24px;">
+                    ${this.render_form_header()}
+                </div>
+            </div>
+        `;
         
+        content.innerHTML = html;
+        
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            this.bind_record_events();
+            this.apply_form_builder_styles();
+        }, 50);
+    }
+    
+
+    render_form_header() {
         // Add form title and description from form builder config
         if (this.form_config && (this.form_config.form_title || this.form_config.form_description)) {
             let headerHtml = '';
@@ -436,41 +599,75 @@ class FlansaRecordViewer {
             }
             
             if (headerHtml) {
-                html += `
+                return `
                     <div class="form-builder-header" style="margin-bottom: 20px; padding: 16px; background: #f8f9fc; border-radius: 6px; border-left: 4px solid #667eea;">
                         ${headerHtml}
+                        <div style="margin-top: 8px; font-size: 11px; color: #667eea; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-paint-brush"></i>
+                            <span>Form layout configured with Form Builder</span>
+                        </div>
                     </div>
                 `;
             }
         }
-        
         
         // Render fields with sections
         if (this.table_fields && this.table_fields.length > 0) {
             // Group fields into sections for better organization
             const sections = this.organize_fields_into_sections(this.table_fields);
             
+            let fieldsHtml = '';
             sections.forEach((section, sectionIndex) => {
-                html += `
+                fieldsHtml += `
                     <div class="field-section" style="margin-bottom: ${sectionIndex < sections.length - 1 ? '32px' : '0'};">
-                        ${section.title ? `<h5 style="margin: 0 0 16px 0; color: #495057; font-weight: 600; display: flex; align-items: center; gap: 8px;">
-                            <i class="fa fa-${section.icon || 'folder-o'}" style="color: #667eea;"></i>
+                        ${section.title ? `<h5 class="section-title-enhanced" style="
+                            margin: 0 0 16px 0; 
+                            color: #495057; 
+                            font-weight: 600; 
+                            font-size: 16px;
+                            display: flex; 
+                            align-items: center; 
+                            gap: 8px;
+                            padding: 12px 0 8px 0;
+                            border-bottom: 2px solid #e9ecef;
+                        ">
+                            <i class="fa fa-${section.icon || 'folder-o'}" style="
+                                color: #667eea; 
+                                font-size: 14px;
+                            "></i>
                             ${section.title}
+                            ${section.column_count && section.column_count > 1 ? 
+                                `<span style="
+                                    background: #f8f9fa; 
+                                    color: #6c757d; 
+                                    padding: 2px 8px; 
+                                    border-radius: 12px; 
+                                    font-size: 11px; 
+                                    font-weight: 500;
+                                    margin-left: auto;
+                                    border: 1px solid #e9ecef;
+                                ">${section.column_count} Col</span>` : ''}
                         </h5>` : ''}
                         <div class="fields-grid" style="display: grid; grid-template-columns: ${section.columns || 'repeat(auto-fit, minmax(300px, 1fr))'}; gap: 20px;">
                 `;
                 
                 section.fields.forEach(field => {
-                    html += this.render_field(field);
+                    fieldsHtml += this.render_field(field);
                 });
                 
-                html += `
+                fieldsHtml += `
                         </div>
+                        ${section.column_count && section.column_count > 1 ? 
+                            `<div class="column-indicator" style="margin-top: 8px; text-align: right; font-size: 11px; color: #6c757d; opacity: 0.7;">
+                                <i class="fa fa-columns"></i> ${section.column_count} columns
+                             </div>` : ''}
                     </div>
                 `;
             });
+            
+            return fieldsHtml;
         } else {
-            html += `
+            return `
                 <div class="empty-state" style="text-align: center; padding: 40px;">
                     <i class="fa fa-inbox fa-3x" style="color: #dee2e6; margin-bottom: 16px;"></i>
                     <h5 style="color: #6c757d; margin-bottom: 8px;">No Fields Defined</h5>
@@ -478,23 +675,9 @@ class FlansaRecordViewer {
                 </div>
             `;
         }
-        
-        html += `
-                </div>
-            </div>
-        `;
-        
-        content.innerHTML = html;
-        
-        // Small delay to ensure DOM is ready
-        setTimeout(() => {
-            this.bind_record_events();
-        this.apply_form_builder_styles();
-        }, 50);
     }
-
     
-    render_new_record_form() {
+        render_new_record_form() {
         // Use the same render_record method but with empty data
         this.record_data = {}; // Ensure empty data for new record
         this.render_record();
@@ -508,9 +691,13 @@ class FlansaRecordViewer {
         const fieldValue = value !== null ? value : (this.record_data[fieldName] || '');
         const isReadonly = this.mode === 'view' && !isEdit;
         
+        // Enhanced label styling with prominence and custom options
+        const labelStyle = this.getLabelStyle(field);
+        const fieldContainerStyle = this.getFieldContainerStyle(field);
+        
         let html = `
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label class="control-label">${fieldLabel}</label>
+            <div class="form-group" style="${fieldContainerStyle}">
+                <label class="control-label enhanced-field-label" style="${labelStyle}">${fieldLabel}</label>
         `;
         
         // Check if this is a gallery field
@@ -540,6 +727,9 @@ class FlansaRecordViewer {
                 case 'Date':
                     html += `<input type="date" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
                     break;
+                case 'Link':
+                    html += this.render_link_field(field, fieldValue, fieldName);
+                    break;
                 case 'Int':
                 case 'Float':
                     html += `<input type="number" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
@@ -550,7 +740,98 @@ class FlansaRecordViewer {
         }
         
         html += '</div>';
+        
+        // Add field type data attribute and enhanced styling to the container
+        const fieldType = field.fieldtype || field.field_type || 'Data';
+        html = html.replace('class="form-group"', `class="form-group" data-field-type="${fieldType}"`);
+        
         return html;
+    }
+    
+
+    getLabelStyle(field) {
+        // Simple clean label styling
+        let style = `
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #495057;
+        `;
+        
+        // Check if field has custom label styling from form builder
+        if (field.form_config && field.form_config.label_style) {
+            style += field.form_config.label_style;
+        }
+        
+        // Add emphasis for required fields
+        if (field.reqd || field.is_required) {
+            style += `
+                color: #dc3545;
+                font-weight: 700;
+            `;
+        }
+        
+        return style;
+    }
+    
+    getFieldContainerStyle(field) {
+        // Simple clean container styling
+        let style = `
+            margin-bottom: 20px;
+            padding: 12px;
+            background: white;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            transition: all 0.2s ease;
+        `;
+        
+        // Subtle left border for field type indication
+        const fieldType = field.fieldtype || field.field_type;
+        if (this.is_gallery_field(field)) {
+            style += `border-left: 3px solid #6f42c1;`;
+        } else if (fieldType === 'Long Text' || fieldType === 'Text Editor') {
+            style += `border-left: 3px solid #17a2b8;`;
+        } else if (fieldType === 'Date' || fieldType === 'Datetime') {
+            style += `border-left: 3px solid #28a745;`;
+        } else if (fieldType === 'Link') {
+            style += `border-left: 3px solid #fd7e14;`;
+        }
+        
+        // Check for custom container styling from form builder
+        if (field.form_config && field.form_config.container_style) {
+            style += field.form_config.container_style;
+        }
+        
+        return style;
+    }
+    
+
+    render_link_field(field, fieldValue, fieldName) {
+        const linkDoctype = field.options || field.link_doctype || '';
+        const uniqueId = `link_field_${fieldName}_${Date.now()}`;
+        
+        if (!linkDoctype) {
+            // Fallback to text input if no link doctype specified
+            return `<input type="text" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}" placeholder="Link target not specified">`;
+        }
+        
+        // Create a container for Frappe's native link field
+        return `
+            <div class="frappe-link-field-container" data-link-doctype="${linkDoctype}" data-field-name="${fieldName}">
+                <input type="text" 
+                       class="form-control frappe-link-field" 
+                       id="${uniqueId}"
+                       name="${fieldName}" 
+                       value="${this.escapeHtml(fieldValue)}" 
+                       placeholder="Search ${linkDoctype}..."
+                       data-field-name="${fieldName}"
+                       data-link-doctype="${linkDoctype}"
+                       data-fieldtype="Link"
+                       data-options="${linkDoctype}">
+                <small class="text-muted">Search and select from ${linkDoctype} records</small>
+            </div>
+        `;
     }
     
     // Gallery rendering methods
@@ -781,6 +1062,9 @@ class FlansaRecordViewer {
         
         // Gallery event handlers (these are in the content area)
         this.bind_gallery_events(content);
+        
+        // Link field event handlers
+        this.bind_link_field_events(content);
         
         console.log('✅ Event binding completed');
     }
@@ -1187,18 +1471,17 @@ class FlansaRecordViewer {
         return html;
     }
     
-    // Utility methods for UI organization
-    // Organize fields using form builder configuration
+// Organize fields into sections using only form builder configuration
     organize_fields_into_sections(fields) {
-        // If we have form builder sections, use them
+        // If we have form builder sections, use only those fields
         if (this.form_sections && this.form_sections.length > 0) {
-            console.log('📋 Using form builder sections for field organization');
+            console.log('📋 Using form builder sections exclusively');
             return this.organize_fields_with_form_config(fields);
         }
         
-        // Fallback to automatic organization
-        console.log('📋 Using automatic field organization');
-        return this.organize_fields_automatically(fields);
+        // If no form builder configuration, show empty state
+        console.log('📋 No form builder configuration - showing empty state');
+        return [];
     }
     
     organize_fields_with_form_config(fields) {
@@ -1222,6 +1505,8 @@ class FlansaRecordViewer {
                     title: sectionField.field_label || 'Section',
                     icon: this.getSectionIcon(sectionField.field_label),
                     columns: this.getSectionColumns(sectionField),
+                    column_count: sectionField.column_count,
+                    column_layout: sectionField.column_layout,
                     fields: []
                 };
             } else if (sectionField.is_layout_element && sectionField.layout_type === 'Column Break') {
@@ -1259,69 +1544,6 @@ class FlansaRecordViewer {
             sections.push(currentSection);
         }
         
-        // Add any fields not included in form builder config to a default section
-        const usedFieldNames = new Set();
-        sections.forEach(section => {
-            section.fields.forEach(field => {
-                usedFieldNames.add(field.fieldname);
-            });
-        });
-        
-        const unusedFields = fields.filter(field => !usedFieldNames.has(field.fieldname));
-        if (unusedFields.length > 0) {
-            sections.push({
-                title: 'Additional Fields',
-                icon: 'plus-circle',
-                columns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                fields: unusedFields
-            });
-        }
-        
-        return sections;
-    }
-    
-    organize_fields_automatically(fields) {
-        const sections = [];
-        let currentSection = {
-            title: 'General Information',
-            icon: 'info-circle',
-            columns: 'repeat(auto-fit, minmax(300px, 1fr))',
-            fields: []
-        };
-        
-        fields.forEach(field => {
-            if (field.fieldtype === 'Section Break') {
-                // Start new section
-                if (currentSection.fields.length > 0) {
-                    sections.push(currentSection);
-                }
-                currentSection = {
-                    title: field.label || 'Section',
-                    icon: 'folder-o',
-                    columns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                    fields: []
-                };
-            } else if (field.fieldtype !== 'Column Break') {
-                // Add field to current section
-                currentSection.fields.push(field);
-            }
-        });
-        
-        // Add the last section
-        if (currentSection.fields.length > 0) {
-            sections.push(currentSection);
-        }
-        
-        // If no sections were created, create a default one
-        if (sections.length === 0) {
-            sections.push({
-                title: null,
-                icon: 'folder-o',
-                columns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                fields: fields.filter(f => f.fieldtype !== 'Section Break' && f.fieldtype !== 'Column Break')
-            });
-        }
-        
         return sections;
     }
     
@@ -1342,12 +1564,31 @@ class FlansaRecordViewer {
     }
     
     getSectionColumns(sectionField) {
-        // Check if this section has column breaks or specific layout preferences
-        if (this.form_config.column_layout === 'two-column') {
+        // First check if the specific section has column_count configured
+        if (sectionField && sectionField.column_count) {
+            const columnCount = parseInt(sectionField.column_count);
+            if (columnCount === 1) {
+                return '1fr';
+            } else if (columnCount === 2) {
+                return 'repeat(2, 1fr)';
+            } else if (columnCount === 3) {
+                return 'repeat(3, 1fr)';
+            } else if (columnCount > 3) {
+                return `repeat(${columnCount}, 1fr)`;
+            }
+        }
+        
+        // Check if section has custom column_layout CSS
+        if (sectionField && sectionField.column_layout) {
+            return sectionField.column_layout;
+        }
+        
+        // Fall back to global form config
+        if (this.form_config && this.form_config.column_layout === 'two-column') {
             return 'repeat(2, 1fr)';
-        } else if (this.form_config.column_layout === 'three-column') {
+        } else if (this.form_config && this.form_config.column_layout === 'three-column') {
             return 'repeat(3, 1fr)';
-        } else if (this.form_config.column_layout === 'single') {
+        } else if (this.form_config && this.form_config.column_layout === 'single') {
             return '1fr';
         }
         
@@ -1355,7 +1596,6 @@ class FlansaRecordViewer {
         return 'repeat(auto-fit, minmax(300px, 1fr))';
     }
 
-    
     update_status(message) {
         const statusElement = document.getElementById('status-message');
         if (statusElement) {
@@ -1415,8 +1655,6 @@ class FlansaRecordViewer {
             console.error('Error adding elements to lightbox:', error);
             return;
         }
-
-        lightbox.appendChild(closeBtn);
         
         // Add event listeners
         const closeLightbox = () => {
@@ -1472,15 +1710,170 @@ class FlansaRecordViewer {
         }
     }
     
-    // Safe DOM operation helper
-    safe_dom_operation(operation, errorMessage = 'DOM operation failed') {
+
+
+    bind_link_field_events(content) {
+        // Initialize Frappe's native link fields
+        const linkInputs = content.querySelectorAll('.frappe-link-field');
+        linkInputs.forEach(input => {
+            this.init_frappe_link_field(input);
+        });
+    }
+    
+    init_frappe_link_field(input) {
+        const linkDoctype = input.dataset.linkDoctype;
+        const fieldName = input.dataset.fieldName;
+        
+        if (!linkDoctype || !window.frappe) return;
+        
         try {
-            return operation();
+            // Create Frappe link field using frappe.ui.form.make_control
+            const linkField = frappe.ui.form.make_control({
+                df: {
+                    fieldtype: 'Link',
+                    fieldname: fieldName,
+                    options: linkDoctype,
+                    placeholder: `Search ${linkDoctype}...`
+                },
+                parent: input.parentElement,
+                render_input: true
+            });
+            
+            // Set initial value
+            if (input.value) {
+                linkField.set_input(input.value);
+            }
+            
+            // Hide the original input and show the Frappe control
+            input.style.display = 'none';
+            
+            // Handle value changes
+            linkField.$input.on('change', () => {
+                input.value = linkField.get_value();
+                input.dispatchEvent(new Event('change'));
+            });
+            
+            console.log(`✅ Initialized Frappe link field for ${fieldName} -> ${linkDoctype}`);
+            
         } catch (error) {
-            console.error(errorMessage, error);
-            return null;
+            console.warn('Failed to initialize Frappe link field, falling back to simple input:', error);
+            // Fallback: add basic autocomplete
+            this.add_basic_link_autocomplete(input);
         }
     }
+    
+    add_basic_link_autocomplete(input) {
+        const linkDoctype = input.dataset.linkDoctype;
+        
+        // Add basic search functionality
+        let searchTimeout;
+        input.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                this.suggest_link_values(e.target);
+            }, 300);
+        });
+    }
+    
+    async suggest_link_values(input) {
+        const linkDoctype = input.dataset.linkDoctype;
+        const searchTerm = input.value;
+        
+        if (!searchTerm || searchTerm.length < 2) return;
+        
+        try {
+            // Use Frappe's native search API
+            const response = await frappe.call({
+                method: 'frappe.desk.search.search_link',
+                args: {
+                    doctype: linkDoctype,
+                    txt: searchTerm,
+                    page_length: 10
+                }
+            });
+            
+            if (response.message && response.message.length > 0) {
+                this.show_link_suggestions(input, response.message);
+            }
+        } catch (error) {
+            console.warn('Error fetching link suggestions:', error);
+        }
+    }
+    
+    show_link_suggestions(input, suggestions) {
+        // Remove existing suggestions
+        const existingSuggestions = input.parentElement.querySelector('.link-suggestions');
+        if (existingSuggestions) {
+            existingSuggestions.remove();
+        }
+        
+        if (!suggestions || suggestions.length === 0) return;
+        
+        // Create suggestions dropdown
+        const suggestionsEl = document.createElement('div');
+        suggestionsEl.className = 'link-suggestions';
+        suggestionsEl.style.cssText = `
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            max-height: 200px;
+            overflow-y: auto;
+        `;
+        
+        suggestions.forEach(suggestion => {
+            const item = document.createElement('div');
+            item.className = 'link-suggestion-item';
+            item.style.cssText = `
+                padding: 8px 12px;
+                cursor: pointer;
+                border-bottom: 1px solid #f8f9fa;
+                transition: background 0.2s;
+            `;
+            item.textContent = suggestion.value || suggestion;
+            
+            item.addEventListener('click', () => {
+                input.value = suggestion.value || suggestion;
+                input.dispatchEvent(new Event('change'));
+                suggestionsEl.remove();
+            });
+            
+            item.addEventListener('mouseenter', () => {
+                item.style.background = '#f8f9fa';
+            });
+            
+            item.addEventListener('mouseleave', () => {
+                item.style.background = '';
+            });
+            
+            suggestionsEl.appendChild(item);
+        });
+        
+        // Position relative container
+        input.parentElement.style.position = 'relative';
+        input.parentElement.appendChild(suggestionsEl);
+        
+        // Close suggestions on outside click
+        setTimeout(() => {
+            document.addEventListener('click', function closeSuggestions(e) {
+                if (!suggestionsEl.contains(e.target) && e.target !== input) {
+                    suggestionsEl.remove();
+                    document.removeEventListener('click', closeSuggestions);
+                }
+            });
+        }, 100);
+    }
+    
+    
+    
+    
+    
+    
     
     show_error(message) {
         const content = document.getElementById('record-content');
