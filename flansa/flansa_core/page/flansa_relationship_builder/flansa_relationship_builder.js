@@ -312,7 +312,12 @@ show_create_dialog() {
                     fieldname: 'relationship_name',
                     fieldtype: 'Data',
                     reqd: 1,
-                    description: 'Descriptive name for this relationship (auto-generated)'
+                    description: 'Descriptive name for this relationship (auto-generated)',
+                    change: () => {
+                        const relationship_name = dialog.get_value('relationship_name');
+                        this.validate_relationship_name(dialog, relationship_name);
+                        this.generate_and_set_link_field_name(dialog);
+                    }
                 },
                 {
                     fieldtype: 'Section Break',
@@ -361,9 +366,29 @@ show_create_dialog() {
                     description: 'Also create the reverse relationship (e.g., if creating Order→Customer, also create Customer→Orders)'
                 },
                 {
+                    fieldtype: 'Section Break',
+                    label: 'Field Configuration'
+                },
+                {
+                    fieldname: 'link_field_name',
+                    fieldtype: 'Data',
+                    label: 'Link Field Name',
+                    description: 'The name of the link field that will be created (auto-generated, but can be customized)',
+                    read_only: 0
+                },
+                {
+                    fieldname: 'validation_status',
+                    fieldtype: 'HTML',
+                    label: 'Validation Status'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Preview'
+                },
+                {
                     fieldtype: 'HTML',
                     fieldname: 'relationship_preview',
-                    label: 'Preview'
+                    label: 'Relationship Preview'
                 }
             ],
             primary_action_label: 'Create Relationship',
@@ -376,23 +401,10 @@ show_create_dialog() {
         window.current_relationship_dialog = dialog;
         dialog.show();
         
+        // Initialize validation status
+        this.update_validation_status(dialog, '', 'info');
         
-        // Add field change handlers for auto-generation and validation
-        dialog.fields_dict.relationship_name.$input.on('input', () => {
-            const relationship_name = dialog.get_value('relationship_name');
-            this.validate_relationship_name(dialog, relationship_name);
-            this.generate_and_set_link_field_name(dialog);
-        });
-        
-        dialog.fields_dict.parent_table.$input.on('change', () => {
-            this.generate_and_set_link_field_name(dialog);
-            this.auto_generate_name(dialog);
-        });
-        
-        dialog.fields_dict.child_table.$input.on('change', () => {
-            this.generate_and_set_link_field_name(dialog);
-            this.auto_generate_name(dialog);
-        });
+
         
 
     }
