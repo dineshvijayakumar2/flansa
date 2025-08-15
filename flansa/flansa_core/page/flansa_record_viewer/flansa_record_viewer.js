@@ -50,6 +50,47 @@ class FlansaRecordViewer {
         }
     }
     
+    // Helper method for API calls
+    call_api(method, args) {
+        return new Promise((resolve, reject) => {
+            frappe.call({
+                method: method,
+                args: args,
+                callback: (response) => {
+                    if (response.message) {
+                        resolve(response.message);
+                    } else {
+                        resolve({ success: false, error: 'No response' });
+                    }
+                },
+                error: (error) => {
+                    reject(error);
+                }
+            });
+        });
+    }
+    
+    // Gallery field detection
+    is_gallery_field(field) {
+        if (!field || field.fieldtype !== 'Long Text') {
+            return false;
+        }
+        
+        // Check field name for gallery keywords
+        const fieldName = (field.fieldname || '').toLowerCase();
+        if (fieldName.includes('gallery') || fieldName.includes('image') || fieldName.includes('photo')) {
+            return true;
+        }
+        
+        // Check field label for gallery keywords
+        const fieldLabel = (field.label || '').toLowerCase();
+        if (fieldLabel.includes('gallery') || fieldLabel.includes('image') || fieldLabel.includes('photo')) {
+            return true;
+        }
+        
+        return false;
+    }
+    
     get_route_params() {
         const route = frappe.get_route();
         this.table_name = route[1];
@@ -91,1176 +132,974 @@ class FlansaRecordViewer {
         
         this.page.set_title(modeTitle);
         
-        // Use the same consistent UI structure as report viewer
         this.page.main.html(`
             <div class="flansa-record-viewer-page">
-                
                 <!-- Compact Modern Header -->
-                <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
+                <div class="flansa-compact-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
                     <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
-                        <i class="fa fa-edit" style="font-size: 18px; opacity: 0.9;"></i>
-                        <span style="font-size: 16px; font-weight: 600;" id="app-name-display">Loading...</span>
-                    </div>
-                    <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
-                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;" id="page-mode-title">${modeTitle}</h3>
-                        <div class="context-menu-wrapper" style="position: relative;">
-                            <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
-                                ⋯
-                            </button>
-                            <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
-                                <div class="context-menu-item" data-action="form-builder" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-th-large" style="width: 16px;"></i>
-                                    <span>Form Builder</span>
-                                </div>
-                                <div class="context-menu-item" data-action="view-table" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-table" style="width: 16px;"></i>
-                                    <span>View All Records</span>
-                                </div>
-                            </div>
+                        <i class="fa fa-file-text-o" style="font-size: 20px; opacity: 0.9;"></i>
+                        <div>
+                            <h3 style="margin: 0; font-size: 18px; font-weight: 600;">${modeTitle}</h3>
+                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Table: ${this.table_name || 'Unknown'}</p>
                         </div>
+                    </div>
+                    <div class="header-right" style="display: flex; align-items: center; gap: 8px;">
+                        <span class="mode-badge" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                            ${this.mode.toUpperCase()}
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Navigation Breadcrumbs -->
+                <div class="flansa-breadcrumbs" style="padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #f0f3f7;">
+                    <nav style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6c757d;">
+                        <a href="/app/flansa-dashboard" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                            <i class="fa fa-home"></i> Dashboard
+                        </a>
+                        <span style="color: #dee2e6;">→</span>
+                        <a href="/app/flansa-report-viewer/${this.table_name}" style="color: #667eea; text-decoration: none;">
+                            ${this.table_name}
+                        </a>
+                        <span style="color: #dee2e6;">→</span>
+                        <span style="color: #6c757d;">${this.record_id ? 'Record ' + this.record_id : 'New Record'}</span>
+                    </nav>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="flansa-action-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 12px 16px; background: #f8f9fc; border-radius: 6px; border: 1px solid #e3e6f0;">
+                    <div class="action-left" style="display: flex; align-items: center; gap: 12px;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary back-to-list" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-arrow-left"></i> Back to List
+                        </button>
+                    </div>
+                    <div class="action-right" id="record-actions">
+                        <!-- Action buttons will be populated dynamically -->
+                    </div>
+                </div>
+
+                <!-- Main Content Area -->
+                <div class="record-content" id="record-content">
+                    <div class="text-center" style="padding: 50px;">
+                        <div class="loading-spinner" style="display: inline-block; width: 40px; height: 40px; border: 3px solid #f3f3f3; border-top: 3px solid #667eea; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                        <p class="text-muted" style="margin-top: 20px;">Loading record...</p>
                     </div>
                 </div>
                 
-                <!-- Modern Breadcrumb Navigation -->
-                <div class="flansa-breadcrumb-bar" style="background: rgba(255,255,255,0.95); padding: 8px 20px; margin: 0 -20px 0 -20px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; font-size: 14px;" id="breadcrumb-container">
-                    <!-- Breadcrumbs will be populated here -->
-                </div>
-                
-                <!-- Page Header for Record Details -->
-                <div id="page-header" style="padding: 20px 20px 10px 20px; margin: 0 -20px 16px -20px; background: white; border-bottom: 1px solid #e0e0e0;">
-                    <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #333;" id="record-title">Loading...</h2>
-                    <div style="margin: 5px 0 0 0; font-size: 14px; color: #666; display: flex; gap: 20px;" id="record-meta-info">
-                        <span id="record-subtitle">Loading...</span>
+                <!-- Status Bar -->
+                <div class="flansa-status-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e3e6f0; padding: 8px 20px; font-size: 12px; color: #6c757d; display: flex; justify-content: space-between; align-items: center; z-index: 99;">
+                    <div class="status-left">
+                        <span id="status-message">Ready</span>
+                    </div>
+                    <div class="status-right">
+                        <span>Flansa Platform</span>
                     </div>
                 </div>
-
-                <!-- Content Wrapper -->
-                <div class="flansa-workspace-content" style="padding: var(--flansa-spacing-xl) var(--flansa-spacing-xl) 0;">
-
-                    <!-- Loading State -->
-                    <div id="loading-container" style="display: none;">
-                        <div class="loading-container text-center" style="padding: 60px;">
-                            <div class="spinner"></div>
-                            <p class="text-muted">Loading record data...</p>
-                        </div>
-                    </div>
-
-                    <!-- Error State -->
-                    <div id="error-container" style="display: none;">
-                        <div class="error-container text-center" style="padding: 60px;">
-                            <i class="fa fa-exclamation-triangle text-danger" style="font-size: 48px;"></i>
-                            <h4>Error Loading Record</h4>
-                            <p class="text-muted" id="error-message">Something went wrong while loading this record.</p>
-                            <button class="btn btn-primary" onclick="location.reload()">
-                                <i class="fa fa-refresh"></i> Retry
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Record Form Content -->
-                    <div id="record-form" style="display: none;">
-                        
-                        <!-- Form Controls -->
-                        <div class="form-controls" style="margin-bottom: 20px;">
-                            <div style="float: right; display: flex; align-items: center; gap: 15px;">
-                                <div class="btn-group" role="group" id="action-buttons">
-                                    <!-- Action buttons will be added here -->
-                                </div>
-                            </div>
-                            <div class="clearfix"></div>
-                        </div>
-
-                        <!-- Form Fields Container -->
-                        <div class="form-content" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px;">
-                            <form id="record-data-form">
-                                <div id="fields-container">
-                                    <!-- Fields will be generated dynamically -->
-                                </div>
-                                
-                                <div class="form-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                                    <div id="form-buttons">
-                                        <!-- Action buttons will be added here -->
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div> <!-- Close flansa-workspace-content -->
             </div>
             
-            <!-- Consistent Styles -->
             <style>
-                .flansa-record-viewer-page {
-                    padding: 0;
-                    background: var(--flansa-background, #f8f9fa);
-                    min-height: 100vh;
-                }
-                
-                .page-head {
-                    display: none !important;
-                }
-                
-                #context-menu-btn:hover {
-                    background: rgba(255,255,255,0.3) !important;
-                }
-
-                .context-menu-item:hover {
-                    background-color: #f8f9fa !important;
-                }
-
-                .context-menu-item:last-child {
-                    border-bottom: none !important;
-                }
-                
-                .form-content {
-                    background: white;
-                    border-radius: 8px;
-                    padding: 20px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-                    min-height: 400px;
-                }
-                
-                .form-section {
-                    margin-bottom: 30px;
-                    background: white;
-                    border-radius: 8px;
-                    padding: 20px;
-                    border: 1px solid #e0e0e0;
-                }
-                
-                .section-title {
-                    margin-bottom: 20px;
-                    color: #495057;
-                    border-bottom: 2px solid #e9ecef;
-                    padding-bottom: 8px;
-                    font-size: 18px;
-                    font-weight: 600;
-                }
-                
-                .spinner {
-                    border: 4px solid #f3f3f3;
-                    border-top: 4px solid #3498db;
-                    border-radius: 50%;
-                    width: 50px;
-                    height: 50px;
-                    animation: spin 1s linear infinite;
-                    margin: 0 auto 20px;
-                }
-                
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
                 }
                 
-                .error-container, .loading-container {
-                    background: white;
-                    border-radius: 8px;
-                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                .flansa-record-viewer-page {
+                    padding-bottom: 60px; /* Space for status bar */
+                }
+                
+                .btn:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                
+                .form-group {
+                    transition: all 0.2s ease;
+                }
+                
+                .form-group:hover {
+                    background: rgba(102, 126, 234, 0.02);
+                    border-radius: 4px;
+                    padding: 8px;
+                    margin: -8px;
+                }
+                
+                .gallery-view img:hover,
+                .gallery-edit-item img:hover {
+                    transform: scale(1.05);
+                    transition: transform 0.2s ease;
                 }
             </style>
         `);
     }
+
     
     bind_events() {
-        const container = $(this.wrapper);
-        
-        // Context menu functionality
-        $(document).on('click', '#context-menu-btn', function(e) {
-            e.stopPropagation();
-            const menu = $('#context-menu');
-            menu.toggle();
-        });
-        
-        // Close context menu when clicking outside
-        $(document).on('click', function(e) {
-            if (!$(e.target).closest('#context-menu, #context-menu-btn').length) {
-                $('#context-menu').hide();
-            }
-        });
-        
-        // Context menu actions
-        $(document).on('click', '.context-menu-item', (e) => {
-            const action = $(e.currentTarget).data('action');
-            $('#context-menu').hide();
-            
-            switch (action) {
-                case 'form-builder':
-                    // Navigate to form builder for this table
-                    frappe.set_route('flansa-form-builder', { table: this.table_name });
-                    break;
-                case 'view-table':
-                    // Navigate to report viewer for this table
-                    frappe.set_route('flansa-report-viewer', this.table_name);
-                    break;
-            }
-        });
-        
-        // Gallery lightbox triggers
-        $(document).on('click', '.gallery-lightbox-trigger', (e) => {
-            e.preventDefault();
-            const img = $(e.target);
-            const gallery = img.closest('.gallery-view');
-            
-            let imageUrls = [];
-            try {
-                const encodedData = gallery.data('image-urls-encoded');
-                if (encodedData) {
-                    const decodedJson = atob(encodedData);
-                    imageUrls = JSON.parse(decodedJson);
-                }
-            } catch (e) {
-                console.error('❌ Error parsing image URLs:', e);
-            }
-            
-            const startIndex = parseInt(img.data('image-index') || 0);
-            const fieldName = gallery.data('field-name') || 'Gallery';
-            
-            this.open_image_lightbox(imageUrls, startIndex, `${fieldName} Images`);
-        });
-        
-        // Gallery edit mode events
-        $(document).on('click', '.add-gallery-images', (e) => {
-            e.preventDefault();
-            const fieldId = $(e.target).closest('.add-gallery-images').data('field-id');
-            $(`#${fieldId}_file_input`).click();
-        });
-        
-        $(document).on('change', 'input[type="file"][id$="_file_input"]', (e) => {
-            const input = e.target;
-            const fieldId = input.id.replace('_file_input', '');
-            const files = Array.from(input.files);
-            
-            if (files.length > 0) {
-                this.upload_gallery_images_edit_mode(fieldId, files);
-            }
-        });
-        
-        $(document).on('click', '.clear-gallery', (e) => {
-            e.preventDefault();
-            const fieldId = $(e.target).closest('.clear-gallery').data('field-id');
-            this.clear_gallery_edit_mode(fieldId);
-        });
-        
-        $(document).on('click', '.gallery-remove-image', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            const button = $(e.target).closest('.gallery-remove-image');
-            const fieldId = button.data('field-id');
-            const imageIndex = button.data('image-index');
-            
-            this.remove_gallery_image_edit_mode(fieldId, imageIndex);
-        });
+        // Event handlers will be added here as needed
+        console.log('🔗 Binding events for record viewer');
     }
     
-    async load_data() {
-        $('#loading-container').show();
-        $('#error-container').hide();
-        $('#record-form').hide();
+    load_data() {
+        console.log('📊 Loading data for record viewer');
         
-        try {
-            console.log('📡 Loading data:', {
-                table: this.table_name,
-                record_id: this.record_id,
-                mode: this.mode
-            });
-            
-            if (this.mode === 'new') {
-                // For new records, just load field structure
-                const response = await frappe.call({
-                    method: 'flansa.flansa_core.api.table_api.get_table_meta',
-                    args: {
-                        table_name: this.table_name
-                    }
-                });
-                
-                if (response.message && response.message.success) {
-                    this.table_fields = response.message.fields || [];
-                    this.doctype_name = response.message.doctype_name;
-                    this.record_data = {}; // Empty record for new
-                    
-                    console.log('✅ Loaded table structure for new record');
-                    
-                    // Load form builder configuration
-                    await this.load_form_layout();
-                    
-                    this.render_form();
-                } else {
-                    throw new Error(response.message?.error || 'Failed to load table structure');
-                }
-            } else {
-                // Load specific record
-                const response = await frappe.call({
-                    method: 'flansa.flansa_core.api.table_api.get_record',
-                    args: {
-                        table_name: this.table_name,
-                        record_id: this.record_id
-                    }
-                });
-                
-                if (response.message && response.message.success) {
-                    this.record_data = response.message.record || {};
-                    this.table_fields = response.message.fields || [];
-                    this.doctype_name = response.message.doctype_name;
-                    
-                    console.log('✅ Loaded single record:', this.record_data);
-                    
-                    // Load form builder configuration
-                    await this.load_form_layout();
-                    
-                    this.render_form();
-                } else {
-                    throw new Error(response.message?.error || 'Record not found');
-                }
-            }
-            
-        } catch (error) {
-            console.error('❌ Error loading record:', error);
-            this.show_error('Error loading record: ' + error.message);
-        } finally {
-            $('#loading-container').hide();
+        if (this.mode === 'new') {
+            this.load_table_structure();
+        } else {
+            this.load_record_data();
         }
     }
     
-    show_error(message) {
-        $('#error-message').text(message);
-        $('#error-container').show();
-        $('#loading-container').hide();
-        $('#record-form').hide();
-    }
-    
-    async load_form_layout() {
-        try {
-            console.log('📋 Loading form builder layout for:', this.table_name);
-            
-            const response = await frappe.call({
-                method: 'flansa.flansa_core.api.form_builder.get_table_form_config',
-                args: {
-                    table_name: this.table_name
+    load_table_structure() {
+        // Load both table metadata and form layout
+        Promise.all([
+            this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name }),
+            this.call_api('flansa.flansa_core.api.form_builder.get_form_layout', { table_name: this.table_name })
+        ]).then(([metaResponse, layoutResponse]) => {
+            if (metaResponse.success) {
+                this.table_fields = metaResponse.fields || [];
+                this.doctype_name = metaResponse.doctype_name;
+                
+                // Use form builder layout if available
+                if (layoutResponse.success && layoutResponse.layout) {
+                    this.form_layout = layoutResponse.layout;
+                    console.log('📋 Using form builder layout');
+                } else {
+                    this.form_layout = null;
+                    console.log('📋 Using default field layout');
                 }
-            });
-            
-            if (response.message && response.message.success) {
-                // Store the complete form configuration
-                this.form_config = response.message.form_config || {};
-                this.field_overrides = response.message.field_overrides || {};
-                this.table_fields = response.message.fields || []; // These fields already have overrides applied
                 
-                // Create form layout for rendering
-                this.form_layout = {
-                    sections: this.form_config.sections || [],
-                    layout_type: this.form_config.layout_type || 'standard',
-                    custom_css: this.form_config.custom_css || '',
-                    form_title: this.form_config.form_title || '',
-                    form_description: this.form_config.form_description || ''
-                };
-                
-                console.log('✅ Loaded form configuration:', this.form_config);
-                console.log('✅ Loaded field overrides:', this.field_overrides);
-                console.log('✅ Loaded table fields with overrides:', this.table_fields);
+                this.render_new_record_form();
             } else {
-                console.log('⚠️ No form configuration found, using default field layout');
-                this.form_layout = null;
-                this.form_config = {};
-                this.field_overrides = {};
+                this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
             }
-        } catch (error) {
-            console.error('❌ Error loading form layout:', error);
-            this.form_layout = null;
-        }
+        }).catch(error => {
+            console.error('Error loading table structure:', error);
+            this.show_error('Error loading table structure');
+        });
     }
     
-    render_form() {
-        console.log('🎨 Rendering form for mode:', this.mode);
-        
-        // Show/hide containers
-        $('#loading-container').hide();
-        $('#error-container').hide();
-        $('#record-form').show();
-        
-        // Update header based on mode and data
-        this.update_header();
-        
-        // Generate form fields
-        this.render_form_fields();
-        
-        // Add appropriate action buttons
-        this.render_action_buttons();
+    load_record_data() {
+        // Load both record data and form layout
+        Promise.all([
+            this.call_api('flansa.flansa_core.api.table_api.get_record', { 
+                table_name: this.table_name, 
+                record_id: this.record_id 
+            }),
+            this.call_api('flansa.flansa_core.api.form_builder.get_form_layout', { table_name: this.table_name })
+        ]).then(([recordResponse, layoutResponse]) => {
+            if (recordResponse.success) {
+                this.record_data = recordResponse.record || {};
+                this.table_fields = recordResponse.fields || [];
+                this.doctype_name = recordResponse.doctype_name;
+                
+                // Use form builder layout if available
+                if (layoutResponse.success && layoutResponse.layout) {
+                    this.form_layout = layoutResponse.layout;
+                    console.log('📋 Using form builder layout');
+                } else {
+                    this.form_layout = null;
+                    console.log('📋 Using default field layout');
+                }
+                
+                this.render_record();
+            } else {
+                this.show_error('Record not found: ' + (recordResponse.error || 'Unknown error'));
+            }
+        }).catch(error => {
+            console.error('Error loading record:', error);
+            this.show_error('Error loading record');
+        });
     }
     
-    update_header() {
-        // Update app name in header
-        $('#app-name-display').text(this.table_name);
+    render_record() {
+        const content = document.getElementById('record-content');
+        const actionsContainer = document.getElementById('record-actions');
+        if (!content) return;
         
-        // Use form title from form builder configuration if available
-        let recordTitle;
-        if (this.form_config && this.form_config.form_title) {
-            recordTitle = this.form_config.form_title;
-            if (this.mode === 'edit') {
-                recordTitle += ` - Edit: ${this.record_id}`;
+        // Update action buttons
+        if (actionsContainer) {
+            let actionHtml = '';
+            if (this.mode === 'view') {
+                actionHtml = `
+                    <button type="button" class="btn btn-sm btn-primary edit-record" style="display: flex; align-items: center; gap: 6px;">
+                        <i class="fa fa-edit"></i> Edit Record
+                    </button>
+                `;
+            } else if (this.mode === 'edit') {
+                actionHtml = `
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-sm btn-success save-record" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-save"></i> Save Changes
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary cancel-edit" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-times"></i> Cancel
+                        </button>
+                    </div>
+                `;
             } else if (this.mode === 'new') {
-                recordTitle += ' - New Record';
-            } else {
-                recordTitle += ` - View: ${this.record_id}`;
+                actionHtml = `
+                    <div style="display: flex; gap: 8px;">
+                        <button type="button" class="btn btn-sm btn-success save-record" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-plus"></i> Create Record
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary cancel-create" style="display: flex; align-items: center; gap: 6px;">
+                            <i class="fa fa-times"></i> Cancel
+                        </button>
+                    </div>
+                `;
             }
-        } else {
-            recordTitle = this.mode === 'new' ? 'New Record' :
-                         this.mode === 'edit' ? `Edit: ${this.record_id}` :
-                         `View: ${this.record_id}`;
+            actionsContainer.innerHTML = actionHtml;
         }
         
-        $('#record-title').text(recordTitle);
+        // Update status message
+        const statusMessage = this.mode === 'new' ? 'Creating new record' :
+                            this.mode === 'edit' ? `Editing record ${this.record_id}` : 
+                            `Viewing record ${this.record_id}`;
+        this.update_status(statusMessage);
         
-        // Use form description or default subtitle
-        const subtitle = (this.form_config && this.form_config.form_description) || `Table: ${this.table_name}`;
-        $('#record-subtitle').text(subtitle);
-        
-        // Add breadcrumb navigation
-        const breadcrumbs = [
-            { label: 'Workspace', url: '/app/flansa-workspace' },
-            { label: this.table_name, url: `/app/flansa-report-viewer/${this.table_name}` },
-            { label: this.record_id || 'New', url: '#', active: true }
-        ];
-        
-        let breadcrumbHtml = '';
-        breadcrumbs.forEach((crumb, index) => {
-            if (index > 0) {
-                breadcrumbHtml += '<i class="fa fa-chevron-right" style="margin: 0 8px; opacity: 0.5; font-size: 10px;"></i>';
-            }
-            if (crumb.active) {
-                breadcrumbHtml += `<span style="color: var(--flansa-primary, #007bff);">${crumb.label}</span>`;
-            } else {
-                breadcrumbHtml += `<a href="${crumb.url}" style="color: #666; text-decoration: none;">${crumb.label}</a>`;
-            }
-        });
-        
-        $('#breadcrumb-container').html(breadcrumbHtml);
-    }
-    
-    render_form_fields() {
-        const fieldsContainer = $('#fields-container');
-        fieldsContainer.empty();
-        
-        if (!this.table_fields || this.table_fields.length === 0) {
-            fieldsContainer.html('<p class="text-muted">No fields available</p>');
-            return;
-        }
-        
-        if (this.form_layout && this.form_layout.sections) {
-            this.render_form_builder_layout();
-        } else {
-            this.render_default_field_layout();
-        }
-    }
-    
-    render_default_field_layout() {
-        const fieldsContainer = $('#fields-container');
-        
-        // Filter out system fields for display
-        const systemFields = ['name', 'creation', 'modified', 'modified_by', 'owner', 'docstatus', 'idx'];
-        const displayFields = this.mode === 'view' ? 
-            this.table_fields : 
-            this.table_fields.filter(field => !systemFields.includes(field.fieldname));
-        
-        displayFields.forEach(field => {
-            const fieldValue = this.record_data[field.fieldname] || '';
-            const fieldId = `field_${field.fieldname}`;
-            const isReadonly = this.mode === 'view';
-            
-            const fieldHtml = this.render_single_field(field, fieldValue, fieldId, isReadonly);
-            fieldsContainer.append(fieldHtml);
-        });
-    }
-    
-    render_form_builder_layout() {
-        const fieldsContainer = $('#fields-container');
-        
-        // Parse the form builder layout with column handling
-        const sections = this.build_sections_with_columns();
-        
-        sections.forEach((section, sectionIndex) => {
-            let sectionHtml = `
-                <div class="form-section" data-section="${sectionIndex}">
-                    <h4 class="section-title" style="margin-bottom: 20px; color: #495057; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
-                        ${section.title}
-                    </h4>
-                    <div class="section-fields row">
-            `;
-            
-            // Process columns within the section
-            section.columns.forEach(column => {
-                sectionHtml += `<div class="col-md-${column.width}">`;
+        let html = `
+            <div class="record-form-container" style="background: white; border-radius: 8px; border: 1px solid #e3e6f0; overflow: hidden;">
+                <div class="record-header" style="background: #f8f9fc; padding: 16px 20px; border-bottom: 1px solid #e3e6f0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <h4 style="margin: 0; color: #2c3e50;">${this.mode === 'new' ? 'Create New' : this.mode === 'edit' ? 'Edit' : 'View'} Record</h4>
+                            <p style="margin: 4px 0 0 0; font-size: 13px; color: #6c757d;">${this.mode === 'new' ? 'New record creation' : `Record ID: ${this.record_id}`}</p>
+                        </div>
+                        <div class="record-meta" style="text-align: right; font-size: 12px; color: #6c757d;">
+                            ${this.record_data.creation ? `<div>Created: ${new Date(this.record_data.creation).toLocaleDateString()}</div>` : ''}
+                            ${this.record_data.modified ? `<div>Modified: ${new Date(this.record_data.modified).toLocaleDateString()}</div>` : ''}
+                        </div>
+                    </div>
+                </div>
                 
-                column.fields.forEach(fieldConfig => {
-                    // Find the actual field definition from table_fields
-                    const field = this.table_fields.find(f => f.field_name === fieldConfig.field_name);
-                    if (field) {
-                        const fieldValue = this.record_data[field.field_name] || '';
-                        const fieldId = `field_${field.field_name}`;
-                        const isReadonly = this.mode === 'view';
-                        
-                        // Use field from table_fields (which already has form builder overrides applied)
-                        const mergedField = {
-                            fieldname: field.field_name,
-                            label: field.field_label,
-                            fieldtype: field.field_type,
-                            options: field.options,
-                            reqd: field.is_required,
-                            read_only: field.is_readonly,
-                            description: field.description,
-                            default: field.default_value
-                        };
-                        
-                        // Render field content without column wrapper (since we're already in a column)
-                        const fieldContent = this.render_single_field_no_wrapper(mergedField, fieldValue, fieldId, isReadonly);
-                        sectionHtml += fieldContent;
-                    }
+                <div class="record-fields" style="padding: 24px;">
+        `;
+        
+        // Render fields with sections
+        if (this.table_fields && this.table_fields.length > 0) {
+            // Group fields into sections for better organization
+            const sections = this.organize_fields_into_sections(this.table_fields);
+            
+            sections.forEach((section, sectionIndex) => {
+                html += `
+                    <div class="field-section" style="margin-bottom: ${sectionIndex < sections.length - 1 ? '32px' : '0'};">
+                        ${section.title ? `<h5 style="margin: 0 0 16px 0; color: #495057; font-weight: 600; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa fa-${section.icon || 'folder-o'}" style="color: #667eea;"></i>
+                            ${section.title}
+                        </h5>` : ''}
+                        <div class="fields-grid" style="display: grid; grid-template-columns: ${section.columns || 'repeat(auto-fit, minmax(300px, 1fr))'}; gap: 20px;">
+                `;
+                
+                section.fields.forEach(field => {
+                    html += this.render_field(field);
                 });
                 
-                sectionHtml += `</div>`;
-            });
-            
-            sectionHtml += `</div></div>`;
-            fieldsContainer.append(sectionHtml);
-        });
-    }
-    
-    build_sections_from_form_layout() {
-        // Parse the form builder sections array to group fields by sections
-        const sections = [];
-        let currentSection = {
-            title: 'Form Fields',
-            fields: []
-        };
-        
-        if (!this.form_layout.sections || this.form_layout.sections.length === 0) {
-            // No form builder layout, use all fields in one section
-            currentSection.fields = this.table_fields.map(field => ({
-                field_name: field.field_name
-            }));
-            sections.push(currentSection);
-            return sections;
-        }
-        
-        // Process form builder sections array
-        this.form_layout.sections.forEach(item => {
-            if (item.is_layout_element && item.layout_type === 'Section Break') {
-                // Start a new section
-                if (currentSection.fields.length > 0) {
-                    sections.push(currentSection);
-                }
-                currentSection = {
-                    title: item.field_label || 'Section',
-                    fields: []
-                };
-            } else if (item.is_layout_element && item.layout_type === 'Column Break') {
-                // Column break - for now just continue in same section
-                // TODO: Implement column layout
-            } else if (item.field_name && !item.is_layout_element) {
-                // Regular field
-                currentSection.fields.push({
-                    field_name: item.field_name
-                });
-            }
-        });
-        
-        // Add the last section if it has fields
-        if (currentSection.fields.length > 0) {
-            sections.push(currentSection);
-        }
-        
-        // If no sections were created, create a default one with all fields
-        if (sections.length === 0) {
-            sections.push({
-                title: 'Form Fields',
-                fields: this.table_fields.map(field => ({
-                    field_name: field.field_name
-                }))
-            });
-        }
-        
-        return sections;
-    }
-    
-    build_sections_with_columns() {
-        // Parse form builder layout to handle column breaks properly
-        const sections = [];
-        let currentSection = {
-            title: 'Form Fields',
-            columns: [{ width: 12, fields: [] }] // Start with one full-width column
-        };
-        let currentColumnIndex = 0;
-        
-        if (!this.form_layout.sections || this.form_layout.sections.length === 0) {
-            // No form builder layout, create default structure
-            const allFields = this.table_fields.map(field => ({ field_name: field.field_name }));
-            
-            // Split fields into 2 columns by default
-            const midPoint = Math.ceil(allFields.length / 2);
-            currentSection.columns = [
-                { width: 6, fields: allFields.slice(0, midPoint) },
-                { width: 6, fields: allFields.slice(midPoint) }
-            ];
-            sections.push(currentSection);
-            return sections;
-        }
-        
-        this.form_layout.sections.forEach(item => {
-            if (item.is_layout_element && item.layout_type === 'Section Break') {
-                // Start a new section
-                if (currentSection.columns[0].fields.length > 0) {
-                    sections.push(currentSection);
-                }
-                currentSection = {
-                    title: item.field_label || 'Section',
-                    columns: [{ width: 12, fields: [] }]
-                };
-                currentColumnIndex = 0;
-            } else if (item.is_layout_element && item.layout_type === 'Column Break') {
-                // Start a new column
-                currentColumnIndex++;
-                // Adjust existing columns to make room for new column
-                const totalColumns = currentColumnIndex + 1;
-                const columnWidth = Math.floor(12 / totalColumns);
-                
-                // Update existing columns
-                for (let i = 0; i < currentSection.columns.length; i++) {
-                    currentSection.columns[i].width = columnWidth;
-                }
-                
-                // Add new column
-                currentSection.columns.push({ width: columnWidth, fields: [] });
-            } else if (item.field_name && !item.is_layout_element) {
-                // Add field to current column
-                if (currentSection.columns.length === 0) {
-                    currentSection.columns.push({ width: 12, fields: [] });
-                }
-                currentSection.columns[currentColumnIndex].fields.push({ field_name: item.field_name });
-            }
-        });
-        
-        // Add the last section if it has fields
-        if (currentSection.columns.some(col => col.fields.length > 0)) {
-            sections.push(currentSection);
-        }
-        
-        // If no sections were created, create a default one
-        if (sections.length === 0) {
-            const allFields = this.table_fields.map(field => ({ field_name: field.field_name }));
-            sections.push({
-                title: 'Form Fields',
-                columns: [{ width: 12, fields: allFields }]
-            });
-        }
-        
-        return sections;
-    }
-    
-    render_single_field_no_wrapper(field, value, fieldId, isReadonly) {
-        // Render field content without column wrapper (for use inside columns)
-        let fieldHtml = '';
-        
-        // Handle special field types
-        if (this.is_gallery_field(field)) {
-            fieldHtml = this.render_gallery_field(field, value, fieldId, isReadonly);
-        } else {
-            fieldHtml = this.render_standard_field(field, value, fieldId, isReadonly);
-        }
-        
-        return `
-            <div class="mb-3">
-                <label for="${fieldId}" class="form-label">
-                    ${field.label}
-                    ${field.reqd ? '<span class="text-danger">*</span>' : ''}
-                </label>
-                ${fieldHtml}
-                ${field.description ? `<small class="form-text text-muted">${field.description}</small>` : ''}
-            </div>
-        `;
-    }
-    
-    render_form_builder_gallery() {
-        const fieldsContainer = $('#fields-container');
-        
-        // Render gallery fields if any
-        if (this.form_layout.gallery_fields && this.form_layout.gallery_fields.length > 0) {
-            let galleryHtml = `
-                <div class="form-section gallery-section">
-                    <h4 class="section-title" style="margin-bottom: 20px; color: #495057; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
-                        Gallery Fields
-                    </h4>
-                    <div class="section-fields row">
-            `;
-            
-            this.form_layout.gallery_fields.forEach(galleryField => {
-                // Find matching field from table_fields
-                const field = this.table_fields.find(f => f.fieldname === galleryField.fieldname);
-                if (field) {
-                    const fieldValue = this.record_data[field.fieldname] || '';
-                    const fieldId = `field_${field.fieldname}`;
-                    const isReadonly = this.mode === 'view';
-                    
-                    galleryHtml += this.render_single_field(field, fieldValue, fieldId, isReadonly);
-                }
-            });
-            
-            galleryHtml += `</div></div>`;
-            fieldsContainer.append(galleryHtml);
-        }
-    }
-    
-    render_single_field(field, value, fieldId, isReadonly) {
-        let fieldHtml = '';
-        
-        // Handle special field types
-        if (this.is_gallery_field(field)) {
-            fieldHtml = this.render_gallery_field(field, value, fieldId, isReadonly);
-        } else {
-            fieldHtml = this.render_standard_field(field, value, fieldId, isReadonly);
-        }
-        
-        return `
-            <div class="col-md-6 mb-3">
-                <label for="${fieldId}" class="form-label">
-                    ${field.label}
-                    ${field.reqd ? '<span class="text-danger">*</span>' : ''}
-                </label>
-                ${fieldHtml}
-                ${field.description ? `<small class="form-text text-muted">${field.description}</small>` : ''}
-            </div>
-        `;
-    }
-    
-    render_standard_field(field, value, fieldId, isReadonly) {
-        const displayValue = this.format_field_value(value, field.fieldtype);
-        
-        if (isReadonly) {
-            // View mode - show formatted value
-            if (field.fieldtype === 'Attach Image' && value) {
-                return `<img src="${value}" class="img-fluid" style="max-width: 200px; max-height: 150px; object-fit: cover; border-radius: 4px;" alt="${field.label}">`;
-            } else if (field.fieldtype === 'Long Text') {
-                return `<div class="form-control-plaintext" style="white-space: pre-wrap; max-height: 150px; overflow-y: auto;">${displayValue}</div>`;
-            } else {
-                return `<div class="form-control-plaintext">${displayValue}</div>`;
-            }
-        } else {
-            // Edit mode - show input field
-            switch (field.fieldtype) {
-                case 'Long Text':
-                case 'Text Editor':
-                    return `<textarea class="form-control" id="${fieldId}" name="${field.fieldname}" rows="4" ${field.reqd ? 'required' : ''}>${value}</textarea>`;
-                case 'Check':
-                    return `<div class="form-check"><input class="form-check-input" type="checkbox" id="${fieldId}" name="${field.fieldname}" value="1" ${value ? 'checked' : ''}><label class="form-check-label" for="${fieldId}">Yes</label></div>`;
-                case 'Select':
-                    const options = field.options ? field.options.split('\n') : [];
-                    let selectHtml = `<select class="form-select" id="${fieldId}" name="${field.fieldname}" ${field.reqd ? 'required' : ''}><option value="">Select...</option>`;
-                    options.forEach(option => {
-                        selectHtml += `<option value="${option}" ${value === option ? 'selected' : ''}>${option}</option>`;
-                    });
-                    selectHtml += '</select>';
-                    return selectHtml;
-                case 'Date':
-                    return `<input type="date" class="form-control" id="${fieldId}" name="${field.fieldname}" value="${value}" ${field.reqd ? 'required' : ''}>`;
-                case 'Datetime':
-                    const datetimeValue = value ? new Date(value).toISOString().slice(0, 16) : '';
-                    return `<input type="datetime-local" class="form-control" id="${fieldId}" name="${field.fieldname}" value="${datetimeValue}" ${field.reqd ? 'required' : ''}>`;
-                case 'Int':
-                case 'Float':
-                case 'Currency':
-                    return `<input type="number" class="form-control" id="${fieldId}" name="${field.fieldname}" value="${value}" ${field.reqd ? 'required' : ''} step="${field.fieldtype === 'Float' || field.fieldtype === 'Currency' ? '0.01' : '1'}">`;
-                default:
-                    return `<input type="text" class="form-control" id="${fieldId}" name="${field.fieldname}" value="${value}" ${field.reqd ? 'required' : ''}>`;
-            }
-        }
-    }
-    
-    render_gallery_field(field, value, fieldId, isReadonly) {
-        if (isReadonly) {
-            // View mode - show gallery
-            return this.create_gallery_view_html(value, field.fieldname);
-        } else {
-            // Edit mode - show editable gallery
-            return `
-                <div class="gallery-edit-container" data-field-name="${field.fieldname}" data-field-id="${fieldId}">
-                    <div class="gallery-controls" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center;">
-                        <button type="button" class="btn btn-sm btn-primary add-gallery-images" data-field-id="${fieldId}">
-                            <i class="fa fa-plus"></i> Add Images
-                        </button>
-                        <button type="button" class="btn btn-sm btn-secondary clear-gallery" data-field-id="${fieldId}">
-                            <i class="fa fa-trash"></i> Clear All
-                        </button>
-                        <small class="text-muted">Click images to view or remove them</small>
+                html += `
+                        </div>
                     </div>
-                    <div id="${fieldId}_gallery_display">
-                        ${this.create_editable_gallery_html(value, field.fieldname, fieldId)}
-                    </div>
-                    <input type="hidden" id="${fieldId}_data" name="${field.fieldname}" value="${value ? value.replace(/"/g, '&quot;') : ''}">
-                    <input type="file" id="${fieldId}_file_input" multiple accept="image/*" style="display: none;">
+                `;
+            });
+        } else {
+            html += `
+                <div class="empty-state" style="text-align: center; padding: 40px;">
+                    <i class="fa fa-inbox fa-3x" style="color: #dee2e6; margin-bottom: 16px;"></i>
+                    <h5 style="color: #6c757d; margin-bottom: 8px;">No Fields Defined</h5>
+                    <p class="text-muted">This table doesn't have any fields configured yet.</p>
                 </div>
             `;
         }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        content.innerHTML = html;
+        
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            this.bind_record_events();
+        }, 50);
+    }
+
+    
+    render_new_record_form() {
+        // Use the same render_record method but with empty data
+        this.record_data = {}; // Ensure empty data for new record
+        this.render_record();
     }
     
-    format_field_value(value, fieldtype) {
-        if (!value) return '';
+    render_field(field, value = null, isEdit = false) {
+        if (!field) return '';
         
-        switch (fieldtype) {
-            case 'Date':
-                return new Date(value).toLocaleDateString();
-            case 'Datetime':
-                return new Date(value).toLocaleString();
-            case 'Currency':
-                return parseFloat(value).toFixed(2);
-            case 'Check':
-                return value ? 'Yes' : 'No';
-            case 'Long Text':
-                return String(value);
-            default:
-                return String(value);
-        }
-    }
-    
-    render_action_buttons() {
-        const actionButtons = $('#action-buttons');
-        const formButtons = $('#form-buttons');
-        actionButtons.empty();
-        formButtons.empty();
+        const fieldName = field.fieldname || 'unnamed_field';
+        const fieldLabel = field.label || fieldName;
+        const fieldValue = value !== null ? value : (this.record_data[fieldName] || '');
+        const isReadonly = this.mode === 'view' && !isEdit;
         
-        console.log('🎯 Rendering action buttons for mode:', this.mode);
+        let html = `
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label class="control-label">${fieldLabel}</label>
+        `;
         
-        if (this.mode === 'view') {
-            actionButtons.html(`
-                <button type="button" class="btn btn-primary" id="edit-record-btn">
-                    <i class="fa fa-edit"></i> Edit
-                </button>
-                <button type="button" class="btn btn-secondary" id="back-to-list-btn">
-                    <i class="fa fa-arrow-left"></i> Back to List
-                </button>
-            `);
-            
-            // Bind events
-            $('#edit-record-btn').on('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                console.log('🔧 Edit button clicked!', {
-                    table: this.table_name,
-                    record_id: this.record_id,
-                    FlansaNav: window.FlansaNav,
-                    button: $('#edit-record-btn').length
-                });
-                
-                // Simple direct navigation - most reliable approach
-                const newUrl = `/app/flansa-record-viewer/${this.table_name}/${this.record_id}?mode=edit`;
-                console.log('🔄 Navigating to:', newUrl);
-                
-                // Method 1: Try frappe.set_route with query parameter
-                frappe.set_route('flansa-record-viewer', this.table_name, this.record_id);
-                setTimeout(() => {
-                    window.history.replaceState({}, '', newUrl);
-                    // Force reload to ensure mode change is detected
-                    window.location.reload();
-                }, 50);
-            });
-        } else if (this.mode === 'edit') {
-            formButtons.html(`
-                <button type="submit" class="btn btn-success" id="save-record-btn">
-                    <i class="fa fa-save"></i> Save Changes
-                </button>
-                <button type="button" class="btn btn-secondary" id="cancel-edit-btn">
-                    <i class="fa fa-times"></i> Cancel
-                </button>
-            `);
-            
-            // Bind events
-            $('#cancel-edit-btn').on('click', () => {
-                window.FlansaNav.navigateToRecord(this.table_name, this.record_id, 'view');
-            });
-        } else if (this.mode === 'new') {
-            formButtons.html(`
-                <button type="submit" class="btn btn-success" id="create-record-btn">
-                    <i class="fa fa-plus"></i> Create Record
-                </button>
-                <button type="button" class="btn btn-secondary" id="cancel-new-btn">
-                    <i class="fa fa-times"></i> Cancel
-                </button>
-            `);
-            
-            // Bind events
-            $('#cancel-new-btn').on('click', () => {
-                window.FlansaNav.navigateToViewData(this.table_name);
-            });
-        }
-        
-        // Back to list button for all modes
-        $('#back-to-list-btn').on('click', () => {
-            window.FlansaNav.navigateToViewData(this.table_name);
-        });
-        
-        // Form submission
-        $('#record-data-form').off('submit').on('submit', (e) => {
-            e.preventDefault();
-            this.handle_form_submit();
-        });
-    }
-    
-    async handle_form_submit() {
-        try {
-            // Collect form data
-            const formData = new FormData(document.getElementById('record-data-form'));
-            const values = {};
-            
-            // Convert FormData to object
-            for (let [key, value] of formData.entries()) {
-                values[key] = value;
-            }
-            
-            // Handle gallery fields specially
-            this.table_fields.forEach(field => {
-                if (this.is_gallery_field(field)) {
-                    const fieldId = `field_${field.fieldname}`;
-                    const hiddenInput = $(`#${fieldId}_data`);
-                    if (hiddenInput.length > 0) {
-                        values[field.fieldname] = hiddenInput.val() || '';
-                    }
-                }
-            });
-            
-            console.log('💾 Form submission values:', values);
-            
-            if (this.mode === 'new') {
-                await this.create_record(values);
-            } else if (this.mode === 'edit') {
-                await this.save_record(this.record_id, values);
-            }
-            
-        } catch (error) {
-            console.error('❌ Form submission error:', error);
-            frappe.show_alert({
-                message: 'Error submitting form: ' + error.message,
-                indicator: 'red'
-            });
-        }
-    }
-    
-    async save_record(recordName, values) {
-        try {
-            frappe.show_alert({
-                message: 'Saving record...',
-                indicator: 'blue'
-            });
-            
-            const response = await frappe.call({
-                method: 'flansa.flansa_core.api.table_api.update_record',
-                args: {
-                    table_name: this.table_name,
-                    record_name: recordName,
-                    values: values
-                }
-            });
-            
-            if (response.message && response.message.success) {
-                frappe.show_alert({
-                    message: 'Record updated successfully',
-                    indicator: 'green'
-                });
-                // Navigate to view mode
-                window.FlansaNav.navigateToRecord(this.table_name, recordName, 'view');
+        // Check if this is a gallery field
+        if (this.is_gallery_field(field)) {
+            if (isReadonly) {
+                // View mode - show gallery
+                html += this.render_gallery_view(fieldValue);
             } else {
-                throw new Error(response.message?.error || 'Save failed');
+                // Edit mode - show editable gallery
+                html += this.render_gallery_edit(fieldValue, fieldName);
             }
+        } else if (isReadonly) {
+            // View mode for regular fields
+            html += `<div class="form-control-static">${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}</div>`;
+        } else {
+            // Edit mode for regular fields
+            const fieldType = field.fieldtype || 'Data';
             
-        } catch (error) {
-            frappe.show_alert({
-                message: 'Error saving record: ' + error.message,
-                indicator: 'red'
-            });
-            console.error('Save error details:', error);
+            switch (fieldType) {
+                case 'Long Text':
+                case 'Text Editor':
+                    html += `<textarea class="form-control" name="${fieldName}" rows="4">${this.escapeHtml(fieldValue)}</textarea>`;
+                    break;
+                case 'Check':
+                    html += `<input type="checkbox" name="${fieldName}" ${fieldValue ? 'checked' : ''}>`;
+                    break;
+                case 'Date':
+                    html += `<input type="date" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
+                    break;
+                case 'Int':
+                case 'Float':
+                    html += `<input type="number" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
+                    break;
+                default:
+                    html += `<input type="text" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
+            }
         }
+        
+        html += '</div>';
+        return html;
     }
     
-    async create_record(values) {
-        try {
-            frappe.show_alert({
-                message: 'Creating record...',
-                indicator: 'blue'
-            });
-            
-            const response = await frappe.call({
-                method: 'flansa.flansa_core.api.table_api.create_record',
-                args: {
-                    table_name: this.table_name,
-                    values: values
-                }
-            });
-            
-            if (response.message && response.message.success) {
-                const newRecordName = response.message.record_name;
-                frappe.show_alert({
-                    message: 'Record created successfully',
-                    indicator: 'green'
-                });
-                // Navigate to the new record in view mode
-                window.FlansaNav.navigateToRecord(this.table_name, newRecordName, 'view');
-            } else {
-                throw new Error(response.message?.error || 'Create failed');
-            }
-            
-        } catch (error) {
-            frappe.show_alert({
-                message: 'Error creating record: ' + error.message,
-                indicator: 'red'
-            });
-        }
-    }
-    
-    // Gallery field detection and rendering methods (reuse from existing code)
-    is_gallery_field(field) {
-        if (!field || field.fieldtype !== 'Long Text') {
-            return false;
-        }
-        
-        if (!field.description) {
-            // Check if field name suggests it's for images/gallery
-            if (field.fieldname.toLowerCase().includes('gallery') || 
-                field.fieldname.toLowerCase().includes('image') ||
-                field.fieldname.toLowerCase().includes('photo')) {
-                return true;
-            }
-            return false;
-        }
-        
-        // Check for gallery metadata in field description
-        if (field.description.includes('is_gallery')) {
-            return true;
-        }
-        
-        try {
-            const desc_data = JSON.parse(field.description);
-            if (desc_data.flansa_config && desc_data.flansa_config.config && 
-                desc_data.flansa_config.config.gallery_metadata) {
-                return desc_data.flansa_config.config.gallery_metadata.is_gallery;
-            }
-            if (desc_data.gallery_metadata) {
-                return desc_data.gallery_metadata.is_gallery;
-            }
-        } catch (e) {
-            // Not JSON
-        }
-        
-        return false;
-    }
-    
-    create_gallery_view_html(value, fieldname) {
+    // Gallery rendering methods
+    render_gallery_view(value) {
         if (!value) {
             return '<div class="text-muted" style="padding: 20px; text-align: center; border: 1px solid #ddd; border-radius: 4px;">No images uploaded</div>';
         }
         
-        try {
-            let images = [];
-            
-            // Parse gallery data
-            if (typeof value === 'string') {
-                if (value.startsWith('[') && value.endsWith(']')) {
-                    images = JSON.parse(value);
-                } else {
-                    images = [{ file_url: value }];
-                }
-            } else if (Array.isArray(value)) {
-                images = value;
-            }
-            
-            if (!Array.isArray(images) || images.length === 0) {
-                return '<div class="text-muted" style="padding: 20px; text-align: center; border: 1px solid #ddd; border-radius: 4px;">No images found</div>';
-            }
-            
-            // Convert to image URLs for lightbox
-            const imageUrls = images.map(image => this.get_image_url(image)).filter(url => 
-                url && url !== '/assets/frappe/images/default-avatar.png'
-            );
-            
-            if (imageUrls.length === 0) {
-                return '<div class="text-muted" style="padding: 20px; text-align: center; border: 1px solid #ddd; border-radius: 4px;">No valid images found</div>';
-            }
-            
-            // Create gallery grid with lightbox functionality
-            const encodedImageUrls = btoa(JSON.stringify(imageUrls));
-            
-            let html = `<div class="gallery-view" data-field-name="${fieldname}" data-image-urls-encoded="${encodedImageUrls}" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; max-height: 300px; overflow-y: auto;">`;
-            
-            imageUrls.forEach((imageUrl, index) => {
+        const images = this.parseGalleryData(value);
+        if (images.length === 0) {
+            return '<div class="text-muted" style="padding: 20px; text-align: center; border: 1px solid #ddd; border-radius: 4px;">No images found</div>';
+        }
+        
+        let html = '<div class="gallery-view" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 10px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; max-height: 300px; overflow-y: auto;">';
+        
+        images.forEach((image, index) => {
+            const imageUrl = this.safeImageUrl(image);
+            if (imageUrl && imageUrl !== '/assets/frappe/images/default-avatar.png') {
                 html += `
                     <div class="gallery-item" style="position: relative; aspect-ratio: 1; border-radius: 4px; overflow: hidden; border: 1px solid #eee;">
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             class="gallery-lightbox-trigger"
-                             data-image-index="${index}"
-                             title="Click to view in lightbox">
+                             onclick="frappe.utils.preview_image('${this.escapeJsString(imageUrl)}')"
+                             title="Click to view full size"
+                             onerror="this.src='/assets/frappe/images/default-avatar.png'">
                     </div>
                 `;
-            });
+            }
+        });
+        
+        html += '</div>';
+        html += `<div class="text-muted" style="margin-top: 8px; font-size: 12px;">${images.length} image(s) - Click to view full size</div>`;
+        
+        return html;
+    }
+    
+    render_gallery_edit(value, fieldName) {
+        let html = `
+            <div class="gallery-edit-container" data-field-name="${fieldName}">
+                <div class="gallery-controls" style="margin-bottom: 15px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-sm btn-primary add-gallery-images">
+                        <i class="fa fa-plus"></i> Add Images
+                    </button>
+                    <button type="button" class="btn btn-sm btn-secondary clear-gallery">
+                        <i class="fa fa-trash"></i> Clear All
+                    </button>
+                    <small class="text-muted">JPG, PNG, GIF supported • Click images to view or remove</small>
+                </div>
+                <div class="gallery-display-area">
+                    ${this.render_gallery_edit_content(value, fieldName)}
+                </div>
+                <input type="hidden" name="${fieldName}" value="${this.escapeHtml(value || '')}">
+                <input type="file" class="gallery-file-input" multiple accept="image/*" style="display: none;">
+            </div>
+        `;
+        
+        return html;
+    }
+
+    
+    // Helper methods for gallery functionality
+    parseGalleryData(value) {
+        if (!value) return [];
+        
+        try {
+            if (typeof value === 'string') {
+                if (value.startsWith('[') && value.endsWith(']')) {
+                    return JSON.parse(value);
+                } else if (value.includes('\n')) {
+                    // Handle newline-separated URLs
+                    return value.split('\n').filter(url => url.trim()).map(url => ({
+                        file_url: url.trim(),
+                        file_name: url.trim().split('/').pop(),
+                        description: 'Image'
+                    }));
+                } else if (value.trim()) {
+                    // Single URL
+                    return [{
+                        file_url: value.trim(),
+                        file_name: value.trim().split('/').pop(),
+                        description: 'Image'
+                    }];
+                }
+            } else if (Array.isArray(value)) {
+                return value;
+            }
+        } catch (e) {
+            console.error('Error parsing gallery data:', e);
+        }
+        
+        return [];
+    }
+    
+    safeImageUrl(image) {
+        if (!image) return '/assets/frappe/images/default-avatar.png';
+        
+        let url = '';
+        if (typeof image === 'object') {
+            url = image.file_url || image.url || image.name || '';
+        } else {
+            url = String(image).trim();
+        }
+        
+        if (!url) return '/assets/frappe/images/default-avatar.png';
+        
+        // Validate URL format
+        if (url.includes('<') || url.includes('>')) {
+            console.warn('Potentially unsafe image URL:', url);
+            return '/assets/frappe/images/default-avatar.png';
+        }
+        
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        } else if (url.startsWith('/files/')) {
+            return window.location.origin + url;
+        } else if (url.startsWith('/assets/')) {
+            return window.location.origin + url;
+        } else if (url && !url.includes(' ')) {
+            return window.location.origin + '/files/' + url;
+        }
+        
+        return '/assets/frappe/images/default-avatar.png';
+    }
+    
+    escapeJsString(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/\\/g, '\\\\')
+            .replace(/'/g, "\\'")
+            .replace(/"/g, '\\"')
+            .replace(/\n/g, '\\n')
+            .replace(/\r/g, '\\r');
+    }
+    
+    bind_record_events() {
+        console.log('🔗 Binding record events...');
+        
+        const content = document.getElementById('record-content');
+        const actionsContainer = document.getElementById('record-actions');
+        const page = document.querySelector('.flansa-record-viewer-page');
+        
+        console.log('Elements found:', { content: !!content, actionsContainer: !!actionsContainer, page: !!page });
+        
+        if (!content) {
+            console.error('Record content not found!');
+            return;
+        }
+        
+        // Bind action bar button events (these are in the action bar, not content)
+        if (actionsContainer) {
+            console.log('Binding action bar events...');
             
-            html += '</div>';
-            
-            if (imageUrls.length > 0) {
-                html += `<div class="text-muted" style="margin-top: 8px; font-size: 12px;">${imageUrls.length} image(s) - Click images to view in lightbox</div>`;
+            // Edit button
+            const editBtn = actionsContainer.querySelector('.edit-record');
+            console.log('Edit button found:', !!editBtn);
+            if (editBtn) {
+                editBtn.addEventListener('click', (e) => {
+                    console.log('Edit button clicked!');
+                    e.preventDefault();
+                    const currentUrl = new URL(window.location);
+                    currentUrl.searchParams.set('mode', 'edit');
+                    window.location.href = currentUrl.toString();
+                });
             }
             
-            return html;
+            // Save button
+            const saveBtn = actionsContainer.querySelector('.save-record');
+            console.log('Save button found:', !!saveBtn);
+            if (saveBtn) {
+                saveBtn.addEventListener('click', (e) => {
+                    console.log('Save button clicked!');
+                    e.preventDefault();
+                    this.save_record();
+                });
+            }
             
-        } catch (e) {
-            console.error('Error creating gallery view:', e);
-            return '<div class="text-danger" style="padding: 10px; text-align: center; border: 1px solid #ddd; border-radius: 4px;">Error loading gallery</div>';
+            // Cancel buttons
+            const cancelEdit = actionsContainer.querySelector('.cancel-edit');
+            console.log('Cancel edit button found:', !!cancelEdit);
+            if (cancelEdit) {
+                cancelEdit.addEventListener('click', (e) => {
+                    console.log('Cancel edit clicked!');
+                    e.preventDefault();
+                    const currentUrl = new URL(window.location);
+                    currentUrl.searchParams.set('mode', 'view');
+                    window.location.href = currentUrl.toString();
+                });
+            }
+            
+            const cancelCreate = actionsContainer.querySelector('.cancel-create');
+            console.log('Cancel create button found:', !!cancelCreate);
+            if (cancelCreate) {
+                cancelCreate.addEventListener('click', (e) => {
+                    console.log('Cancel create clicked!');
+                    e.preventDefault();
+                    frappe.set_route('flansa-report-viewer', this.table_name);
+                });
+        
+        // Gallery event handlers
+        this.bind_gallery_events(content);
+            }
+        } else {
+            console.error('Actions container not found!');
+        }
+        
+        // Bind navigation events (these are in the page container)
+        if (page) {
+            const backToListBtn = page.querySelector('.back-to-list');
+            console.log('Back to list button found:', !!backToListBtn);
+            if (backToListBtn) {
+                backToListBtn.addEventListener('click', (e) => {
+                    console.log('Back to list clicked!');
+                    e.preventDefault();
+                    frappe.set_route('flansa-report-viewer', this.table_name);
+                });
+            }
+        }
+        
+        // Bind lightbox events for gallery images
+        const lightboxImages = content.querySelectorAll('.gallery-lightbox-trigger, .gallery-view img, .gallery-edit-item img');
+        console.log('Lightbox images found:', lightboxImages.length);
+        lightboxImages.forEach(img => {
+            img.addEventListener('click', (e) => {
+                e.preventDefault();
+                const imageUrl = img.src;
+                console.log('Image clicked for lightbox:', imageUrl);
+                this.show_image_lightbox(imageUrl);
+            });
+        });
+        
+        // Gallery event handlers (these are in the content area)
+        this.bind_gallery_events(content);
+        
+        console.log('✅ Event binding completed');
+    }
+    
+    bind_gallery_events(content) {
+        // Add Images button
+        const addImagesBtns = content.querySelectorAll('.add-gallery-images');
+        addImagesBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const container = btn.closest('.gallery-edit-container');
+                const fieldName = container.dataset.fieldName;
+                this.add_gallery_images(fieldName);
+            });
+        });
+        
+        // Clear All button
+        const clearBtns = content.querySelectorAll('.clear-gallery');
+        clearBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const container = btn.closest('.gallery-edit-container');
+                const fieldName = container.dataset.fieldName;
+                this.clear_gallery_images(fieldName);
+            });
+        });
+        
+        // Remove individual image buttons
+        const removeBtns = content.querySelectorAll('.gallery-remove-image');
+        removeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const container = btn.closest('.gallery-edit-container');
+                const fieldName = container.dataset.fieldName;
+                const imageIndex = parseInt(btn.dataset.imageIndex);
+                this.remove_gallery_image(fieldName, imageIndex);
+            });
+        });
+    }
+
+    
+    save_record() {
+        const formData = this.collect_form_data();
+        
+        if (this.mode === 'new') {
+            // Create new record
+            frappe.call({
+                method: 'flansa.flansa_core.api.table_api.create_record',
+                args: {
+                    table_name: this.table_name,
+                    values: formData
+                },
+                callback: (response) => {
+                    if (response.message && response.message.success) {
+                        frappe.show_alert({
+                            message: 'Record created successfully',
+                            indicator: 'green'
+                        });
+                        
+                        // Redirect to view the new record
+                        frappe.set_route('flansa-record-viewer', this.table_name, response.message.record_name);
+                    } else {
+                        frappe.show_alert({
+                            message: 'Failed to create record: ' + (response.message?.error || 'Unknown error'),
+                            indicator: 'red'
+                        });
+                    }
+                },
+                error: (error) => {
+                    console.error('Error creating record:', error);
+                    frappe.show_alert({
+                        message: 'Error creating record',
+                        indicator: 'red'
+                    });
+                }
+            });
+        } else {
+            // Update existing record
+            frappe.call({
+                method: 'flansa.flansa_core.api.table_api.update_record',
+                args: {
+                    table_name: this.table_name,
+                    record_name: this.record_id,
+                    values: formData
+                },
+                callback: (response) => {
+                    if (response.message && response.message.success) {
+                        frappe.show_alert({
+                            message: 'Record updated successfully',
+                            indicator: 'green'
+                        });
+                        
+                        // Switch to view mode
+                        const currentUrl = new URL(window.location);
+                        currentUrl.searchParams.set('mode', 'view');
+                        window.location.href = currentUrl.toString();
+                    } else {
+                        frappe.show_alert({
+                            message: 'Failed to update record: ' + (response.message?.error || 'Unknown error'),
+                            indicator: 'red'
+                        });
+                    }
+                },
+                error: (error) => {
+                    console.error('Error updating record:', error);
+                    frappe.show_alert({
+                        message: 'Error updating record',
+                        indicator: 'red'
+                    });
+                }
+            });
         }
     }
     
-    create_editable_gallery_html(value, fieldname, fieldId) {
+    collect_form_data() {
+        const formData = {};
+        const content = document.getElementById('record-content');
+        if (!content) return formData;
+        
+        const inputs = content.querySelectorAll('input, textarea, select');
+        inputs.forEach(input => {
+            if (input.name) {
+                if (input.type === 'checkbox') {
+                    formData[input.name] = input.checked ? 1 : 0;
+                } else {
+                    formData[input.name] = input.value;
+                }
+            }
+        });
+        
+        return formData;
+    }
+    
+
+    // Gallery action methods
+    add_gallery_images(fieldName) {
+        console.log('🖼️ Adding images to gallery field:', fieldName);
+        
+        // Create file input dialog
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.multiple = true;
+        fileInput.accept = 'image/*';
+        
+        fileInput.addEventListener('change', (e) => {
+            const files = Array.from(e.target.files);
+            if (files.length === 0) return;
+            
+            this.upload_gallery_images(fieldName, files);
+        });
+        
+        fileInput.click();
+    }
+    
+    async upload_gallery_images(fieldName, files) {
+        console.log(`📤 Uploading ${files.length} images for field:`, fieldName);
+        
+        try {
+            frappe.show_alert({
+                message: `Uploading ${files.length} image(s)...`,
+                indicator: 'blue'
+            });
+            
+            const uploadedImages = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                console.log(`Uploading file ${i + 1}:`, file.name);
+                
+                const uploadResult = await this.upload_single_file(file);
+                if (uploadResult && uploadResult.file_url) {
+                    uploadedImages.push({
+                        file_url: uploadResult.file_url,
+                        file_name: uploadResult.file_name || file.name,
+                        description: 'Gallery Image'
+                    });
+                }
+            }
+            
+            if (uploadedImages.length > 0) {
+                // Get current gallery data
+                const currentValue = this.record_data[fieldName] || '';
+                const currentImages = this.parseGalleryData(currentValue);
+                
+                // Add new images
+                const allImages = [...currentImages, ...uploadedImages];
+                
+                // Update the field value
+                const newValue = JSON.stringify(allImages);
+                this.record_data[fieldName] = newValue;
+                
+                // Update the hidden input
+                const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+                if (hiddenInput) {
+                    hiddenInput.value = newValue;
+                }
+                
+                // Re-render the gallery
+                this.refresh_gallery_display(fieldName, newValue);
+                
+                frappe.show_alert({
+                    message: `Successfully uploaded ${uploadedImages.length} image(s)`,
+                    indicator: 'green'
+                });
+            }
+        } catch (error) {
+            console.error('Error uploading images:', error);
+            frappe.show_alert({
+                message: 'Error uploading images: ' + error.message,
+                indicator: 'red'
+            });
+        }
+    }
+    
+    upload_single_file(file) {
+        return new Promise((resolve, reject) => {
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('is_private', 0);
+            formData.append('folder', 'Home/Attachments');
+            formData.append('doctype', this.doctype_name || '');
+            formData.append('docname', this.record_id || '');
+            
+            // Use the correct Frappe upload API endpoint
+            fetch('/api/method/upload_file', {
+                method: 'POST',
+                headers: {
+                    'X-Frappe-CSRF-Token': frappe.csrf_token
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.message) {
+                    resolve(data.message);
+                } else {
+                    reject(new Error('Upload failed - no response'));
+                }
+            })
+            .catch(error => {
+                console.error('Upload error:', error);
+                reject(error);
+            });
+        });
+    }
+
+    
+    async clear_gallery_images(fieldName) {
+        console.log('🧹 Clearing gallery field:', fieldName);
+        
+        const currentValue = this.record_data[fieldName] || '';
+        const images = this.parseGalleryData(currentValue);
+        
+        if (images.length === 0) {
+            frappe.show_alert({
+                message: 'Gallery is already empty',
+                indicator: 'blue'
+            });
+            return;
+        }
+        
+        // Show confirmation dialog
+        const confirmDelete = await new Promise((resolve) => {
+            frappe.confirm(
+                `Are you sure you want to delete all ${images.length} images? This action cannot be undone.`,
+                () => resolve(true),
+                () => resolve(false)
+            );
+        });
+        
+        if (!confirmDelete) return;
+        
+        try {
+            frappe.show_alert({
+                message: `Deleting ${images.length} images...`,
+                indicator: 'blue'
+            });
+            
+            // Clear the field value
+            this.record_data[fieldName] = '';
+            
+            // Update the hidden input
+            const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+            if (hiddenInput) {
+                hiddenInput.value = '';
+            }
+            
+            // Re-render the gallery
+            this.refresh_gallery_display(fieldName, '');
+            
+            frappe.show_alert({
+                message: 'Gallery cleared successfully',
+                indicator: 'green'
+            });
+            
+        } catch (error) {
+            console.error('Error clearing gallery:', error);
+            frappe.show_alert({
+                message: 'Error clearing gallery: ' + error.message,
+                indicator: 'red'
+            });
+        }
+    }
+    
+    async remove_gallery_image(fieldName, imageIndex) {
+        console.log(`🗑️ Removing image ${imageIndex} from field:`, fieldName);
+        
+        try {
+            const currentValue = this.record_data[fieldName] || '';
+            const images = this.parseGalleryData(currentValue);
+            
+            if (imageIndex < 0 || imageIndex >= images.length) {
+                frappe.show_alert({
+                    message: 'Invalid image index',
+                    indicator: 'red'
+                });
+                return;
+            }
+            
+            // Remove the image from the array
+            images.splice(imageIndex, 1);
+            
+            // Update the field value
+            const newValue = images.length > 0 ? JSON.stringify(images) : '';
+            this.record_data[fieldName] = newValue;
+            
+            // Update the hidden input
+            const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+            if (hiddenInput) {
+                hiddenInput.value = newValue;
+            }
+            
+            // Re-render the gallery
+            this.refresh_gallery_display(fieldName, newValue);
+            
+            frappe.show_alert({
+                message: 'Image removed successfully',
+                indicator: 'green'
+            });
+            
+        } catch (error) {
+            console.error('Error removing image:', error);
+            frappe.show_alert({
+                message: 'Error removing image: ' + error.message,
+                indicator: 'red'
+            });
+        }
+    }
+    
+    refresh_gallery_display(fieldName, newValue) {
+        const container = document.querySelector(`.gallery-edit-container[data-field-name="${fieldName}"]`);
+        if (!container) return;
+        
+        const displayArea = container.querySelector('.gallery-display-area');
+        if (!displayArea) return;
+        
+        // Re-render the gallery content
+        const galleryHtml = this.render_gallery_edit_content(newValue, fieldName);
+        displayArea.innerHTML = galleryHtml;
+        
+        // Rebind events for the new content
+        this.bind_gallery_events(container);
+    }
+    
+    render_gallery_edit_content(value, fieldName) {
         if (!value) {
             return '<div class="gallery-empty text-muted" style="padding: 40px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa;">No images uploaded yet. Click "Add Images" to start.</div>';
         }
         
-        try {
-            let images = [];
-            
-            // Parse gallery data
-            if (typeof value === 'string') {
-                if (value.startsWith('[') && value.endsWith(']')) {
-                    images = JSON.parse(value);
-                } else {
-                    images = [{ file_url: value }];
-                }
-            } else if (Array.isArray(value)) {
-                images = value;
-            }
-            
-            if (!Array.isArray(images) || images.length === 0) {
-                return '<div class="gallery-empty text-muted" style="padding: 40px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa;">No valid images found</div>';
-            }
-            
-            // Convert to image URLs
-            const imageUrls = images.map(image => this.get_image_url(image)).filter(url => 
-                url && url !== '/assets/frappe/images/default-avatar.png'
-            );
-            
-            if (imageUrls.length === 0) {
-                return '<div class="gallery-empty text-muted" style="padding: 40px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa;">No valid images found</div>';
-            }
-            
-            // Create editable gallery grid
-            let html = `<div class="gallery-edit-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: white;">`;
-            
-            imageUrls.forEach((imageUrl, index) => {
+        const images = this.parseGalleryData(value);
+        if (images.length === 0) {
+            return '<div class="gallery-empty text-muted" style="padding: 40px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa;">No images found</div>';
+        }
+        
+        let html = '<div class="gallery-edit-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 15px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background: white;">';
+        
+        images.forEach((image, index) => {
+            const imageUrl = this.safeImageUrl(image);
+            if (imageUrl && imageUrl !== '/assets/frappe/images/default-avatar.png') {
                 html += `
                     <div class="gallery-edit-item" style="position: relative; aspect-ratio: 1; border-radius: 6px; overflow: hidden; border: 1px solid #eee; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             class="gallery-edit-image"
-                             data-image-index="${index}"
-                             data-field-id="${fieldId}"
-                             title="Click to view full size">
-                        <div class="gallery-item-actions" style="position: absolute; top: 5px; right: 5px; display: flex; gap: 5px;">
-                            <button type="button" class="gallery-remove-image" data-image-index="${index}" data-field-id="${fieldId}" 
+                             onclick="frappe.utils.preview_image('${this.escapeJsString(imageUrl)}')"
+                             title="Click to view full size"
+                             onerror="this.src='/assets/frappe/images/default-avatar.png'">
+                        <div class="gallery-item-actions" style="position: absolute; top: 5px; right: 5px;">
+                            <button type="button" class="gallery-remove-image" data-image-index="${index}" 
                                     style="background: rgba(220,53,69,0.95); border: 1px solid #dc3545; color: white; border-radius: 50%; width: 28px; height: 28px; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);"
                                     title="Remove image">
                                 <i class="fa fa-trash"></i>
@@ -1268,116 +1107,180 @@ class FlansaRecordViewer {
                         </div>
                     </div>
                 `;
-            });
-            
-            html += '</div>';
-            html += `<div class="text-muted mt-2" style="font-size: 12px;">${imageUrls.length} image(s) - Click <i class="fa fa-trash"></i> to remove</div>`;
-            
-            return html;
-            
-        } catch (e) {
-            console.error('Error creating editable gallery:', e);
-            return '<div class="text-danger" style="padding: 20px; text-align: center; border: 1px solid #ddd; border-radius: 4px;">Error loading gallery for editing</div>';
-        }
-    }
-    
-    get_image_url(image) {
-        if (!image) return '/assets/frappe/images/default-avatar.png';
-        
-        if (typeof image === 'object') {
-            return image.file_url || image.url || image.name || '/assets/frappe/images/default-avatar.png';
-        }
-        
-        const str_value = String(image).trim();
-        
-        if (str_value.startsWith('http://') || str_value.startsWith('https://')) {
-            return str_value;
-        } else if (str_value.startsWith('/files/')) {
-            return `${window.location.origin}${str_value}`;
-        } else if (str_value.startsWith('/assets/')) {
-            return `${window.location.origin}${str_value}`;
-        } else if (str_value && !str_value.includes(' ')) {
-            return `${window.location.origin}/files/${str_value}`;
-        }
-        
-        return '/assets/frappe/images/default-avatar.png';
-    }
-    
-    // Lightbox functionality (simplified)
-    open_image_lightbox(images, startingIndex = 0, title = 'Image Gallery') {
-        if (!images || images.length === 0) return;
-        
-        // Create simple lightbox modal
-        const lightboxHtml = `
-            <div class="image-lightbox-overlay" id="image-lightbox" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 9999; display: flex; align-items: center; justify-content: center;">
-                <div class="lightbox-content" style="position: relative; max-width: 90%; max-height: 90%; display: flex; flex-direction: column; background: white; border-radius: 8px; overflow: hidden;">
-                    <div class="lightbox-header" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; background: #f8f9fa; border-bottom: 1px solid #ddd;">
-                        <span class="lightbox-title" style="font-weight: 600; color: #495057;">${title}</span>
-                        <button class="lightbox-close" style="background: none; border: none; font-size: 20px; color: #6c757d; cursor: pointer; padding: 5px;" title="Close">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </div>
-                    <div class="lightbox-body" style="position: relative; display: flex; align-items: center; justify-content: center; min-height: 400px; max-height: 70vh; overflow: hidden;">
-                        <img src="${images[startingIndex]}" alt="Image" style="max-width: 100%; max-height: 100%; object-fit: contain;">
-                    </div>
-                </div>
-            </div>
-        `;
-        
-        // Remove any existing lightbox
-        $('#image-lightbox').remove();
-        
-        // Add to DOM
-        $('body').append(lightboxHtml);
-        
-        // Bind close events
-        $('#image-lightbox .lightbox-close').on('click', () => {
-            $('#image-lightbox').fadeOut(200, () => {
-                $('#image-lightbox').remove();
-            });
-        });
-        
-        // Click outside to close
-        $('#image-lightbox').on('click', (e) => {
-            if (e.target === $('#image-lightbox')[0]) {
-                $('#image-lightbox .lightbox-close').click();
             }
         });
         
-        // Show lightbox
-        $('#image-lightbox').fadeIn(200);
+        html += '</div>';
+        html += `<div class="text-muted mt-2" style="font-size: 12px;">${images.length} image(s) - Click <i class="fa fa-trash"></i> to remove</div>`;
+        
+        return html;
     }
     
-    // Gallery editing methods (simplified stubs - can be expanded)
-    async upload_gallery_images_edit_mode(fieldId, files) {
-        console.log(`📤 Upload ${files.length} files for ${fieldId}`);
-        // Implementation for file upload
-        frappe.show_alert({
-            message: 'Gallery upload functionality will be implemented',
-            indicator: 'blue'
+    // Utility methods for UI organization
+    organize_fields_into_sections(fields) {
+        // Use form builder layout if available
+        if (this.form_layout && this.form_layout.sections && this.form_layout.sections.length > 0) {
+            console.log('📋 Using form builder sections');
+            return this.form_layout.sections.map(section => ({
+                title: section.title,
+                icon: section.icon || 'folder-o',
+                columns: `repeat(${section.columns || 2}, 1fr)`,
+                fields: section.fields.map(fieldConfig => {
+                    // Find the actual field from table_fields
+                    const actualField = fields.find(f => f.fieldname === fieldConfig.fieldname);
+                    return actualField || fieldConfig;
+                })
+            }));
+        }
+        
+        // Fallback to default organization
+        const sections = [];
+        let currentSection = {
+            title: 'General Information',
+            icon: 'info-circle',
+            columns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            fields: []
+        };
+        
+        fields.forEach(field => {
+            if (field.fieldtype === 'Section Break') {
+                // Start new section
+                if (currentSection.fields.length > 0) {
+                    sections.push(currentSection);
+                }
+                currentSection = {
+                    title: field.label || 'Section',
+                    icon: 'folder-o',
+                    columns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                    fields: []
+                };
+            } else if (field.fieldtype !== 'Column Break') {
+                // Add field to current section
+                currentSection.fields.push(field);
+            }
         });
-    }
-    
-    clear_gallery_edit_mode(fieldId) {
-        console.log(`🧹 Clear gallery ${fieldId}`);
-        // Implementation for clearing gallery
-        this.update_gallery_field_data(fieldId, []);
-    }
-    
-    remove_gallery_image_edit_mode(fieldId, imageIndex) {
-        console.log(`🗑️ Remove image ${imageIndex} from ${fieldId}`);
-        // Implementation for removing single image
-    }
-    
-    update_gallery_field_data(fieldId, images) {
-        let valueToStore = images.length === 0 ? '' : JSON.stringify(images);
-        $(`#${fieldId}_data`).val(valueToStore);
         
-        const container = $(`.gallery-edit-container[data-field-id="${fieldId}"]`);
-        const fieldName = container.data('field-name');
+        // Add the last section
+        if (currentSection.fields.length > 0) {
+            sections.push(currentSection);
+        }
         
-        $(`#${fieldId}_gallery_display`).html(
-            this.create_editable_gallery_html(valueToStore, fieldName, fieldId)
-        );
+        // If no sections were created, create a default one
+        if (sections.length === 0) {
+            sections.push({
+                title: null,
+                icon: 'folder-o',
+                columns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                fields: fields.filter(f => f.fieldtype !== 'Section Break' && f.fieldtype !== 'Column Break')
+            });
+        }
+        
+        return sections;
+    }
+    
+    update_status(message) {
+        const statusElement = document.getElementById('status-message');
+        if (statusElement) {
+            statusElement.textContent = message;
+        }
+    }
+    
+    show_image_lightbox(imageUrl) {
+        console.log('📷 Showing lightbox for:', imageUrl);
+        
+        // Create lightbox overlay
+        const lightbox = document.createElement('div');
+        lightbox.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            cursor: pointer;
+        `;
+        
+        // Create image element
+        const img = document.createElement('img');
+        img.src = imageUrl;
+        img.style.cssText = `
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        `;
+        
+        // Create close button
+        const closeBtn = document.createElement('div');
+        closeBtn.innerHTML = '×';
+        closeBtn.style.cssText = `
+            position: absolute;
+            top: 20px;
+            right: 30px;
+            color: white;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+            z-index: 10001;
+        `;
+        
+        // Add elements to lightbox
+        lightbox.appendChild(img);
+        lightbox.appendChild(closeBtn);
+        
+        // Add event listeners
+        const closeLightbox = () => {
+            document.body.removeChild(lightbox);
+            document.body.style.overflow = '';
+        };
+        
+        lightbox.addEventListener('click', closeLightbox);
+        closeBtn.addEventListener('click', closeLightbox);
+        
+        // Prevent closing when clicking on image
+        img.addEventListener('click', (e) => e.stopPropagation());
+        
+        // Add to DOM
+        document.body.appendChild(lightbox);
+        document.body.style.overflow = 'hidden';
+        
+        // ESC key to close
+        const handleEscape = (e) => {
+            if (e.key === 'Escape') {
+                closeLightbox();
+                document.removeEventListener('keydown', handleEscape);
+            }
+        };
+        document.addEventListener('keydown', handleEscape);
+    }
+
+        show_error(message) {
+        const content = document.getElementById('record-content');
+        if (content) {
+            content.innerHTML = `
+                <div class="text-center" style="padding: 50px;">
+                    <i class="fa fa-exclamation-triangle fa-3x text-danger"></i>
+                    <h4 style="margin-top: 20px; color: #d9534f;">${message}</h4>
+                    <button class="btn btn-default" onclick="window.history.back()" style="margin-top: 20px;">
+                        ← Go Back
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    escapeHtml(unsafe) {
+        if (!unsafe) return '';
+        return String(unsafe)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
     }
 }
