@@ -229,13 +229,24 @@ def create_simplified_relationship(config: Dict) -> Dict:
                             parent_table_name = get_table_name_for_field(from_table)
                             parent_singular = pluralize_to_singular(parent_table_name)
                             
-                            # Check for existing fields with same base name and add counter if needed
+                            # Generate relationship-specific field name for multiple relationships
                             to_table = config.get("to_table") or config.get("child_table")
                             if to_table:
                                 to_doctype = frappe.db.get_value("Flansa Table", to_table, "doctype_name")
                                 if to_doctype:
-                                    base_field_name = f"{parent_singular}_link"
+                                    # Import the new naming function
+                                    from flansa.flansa_core.api.relationship_management import generate_relationship_specific_field_name
+                                    
+                                    # Generate context-aware field name
+                                    relationship_name = config.get("relationship_name", "")
+                                    base_field_name = generate_relationship_specific_field_name(
+                                        relationship_name, parent_table_name, parent_singular
+                                    )
+                                    
+                                    # Get unique field name with counter if needed
                                     proper_field_name = get_unique_field_name(to_doctype, base_field_name)
+                                    
+                                    frappe.logger().info(f"Generated relationship-specific field name: {proper_field_name} for relationship: {relationship_name}")
                                 else:
                                     proper_field_name = f"{parent_singular}_link"
                             else:

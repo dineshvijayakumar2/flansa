@@ -76,9 +76,25 @@ def create_relationship(relationship_data):
             parent_table_name = get_table_name_for_field(relationship.from_table)
             parent_singular = pluralize_to_singular(parent_table_name)
             
+            # Generate relationship-specific field name
+            if not relationship.to_field:
+                specific_field_name = generate_relationship_specific_field_name(
+                    relationship.relationship_name, 
+                    parent_table_name, 
+                    parent_singular
+                )
+                # Get unique field name (add counter if needed)
+                to_doctype = frappe.db.get_value("Flansa Table", relationship.to_table, "doctype_name")
+                if to_doctype:
+                    unique_field_name = get_unique_field_name(to_doctype, specific_field_name)
+                else:
+                    unique_field_name = specific_field_name
+            else:
+                unique_field_name = relationship.to_field
+            
             create_link_field(
                 table_name=relationship.to_table,  # Link field goes in child table
-                field_name=relationship.to_field or f"{parent_singular}_link",
+                field_name=unique_field_name,
                 link_to_table=relationship.from_table,  # Points to parent table
                 label=relationship.relationship_name
             )
@@ -259,6 +275,69 @@ def get_unique_field_name(doctype_name, base_field_name):
     except Exception as e:
         frappe.log_error(f"Error getting unique field name: {str(e)}", "Field Name Generation")
         return base_field_name
+
+
+
+def generate_relationship_specific_field_name(relationship_name, parent_table_name, parent_singular):
+    """Generate a unique field name based on relationship context"""
+    try:
+        # Sanitize relationship name for use in field name
+        sanitized_rel_name = sanitize_relationship_name_for_field(relationship_name)
+        
+        # Base field name
+        base_field = f"{parent_singular}_link"
+        
+        # If relationship name provides meaningful context, use it
+        if sanitized_rel_name and sanitized_rel_name != parent_singular:
+            # Create a more descriptive field name
+            context_field = f"{parent_singular}_{sanitized_rel_name}_link"
+            
+            # Ensure field name isn't too long (Frappe has limits)
+            if len(context_field) <= 140:  # Frappe field name limit
+                return context_field
+            else:
+                # Truncate but keep meaningful parts
+                max_context_length = 140 - len(f"{parent_singular}_link") - 1
+                truncated_context = sanitized_rel_name[:max_context_length]
+                return f"{parent_singular}_{truncated_context}_link"
+        
+        return base_field
+        
+    except Exception as e:
+        frappe.log_error(f"Error generating relationship-specific field name: {str(e)}", "Field Naming")
+        return f"{parent_singular}_link"
+
+def sanitize_relationship_name_for_field(relationship_name):
+    """Sanitize relationship name to be usable in field names"""
+    try:
+        if not relationship_name:
+            return ""
+        
+        # Extract meaningful words from relationship name
+        import re
+        
+        # Remove common relationship indicators
+        cleaned = relationship_name.lower()
+        cleaned = re.sub(r'(to|and|relationship|rel|link|connection)', '', cleaned)
+        cleaned = re.sub(r'[→←↔\-_\s]+', '_', cleaned)  # Replace arrows and separators
+        cleaned = re.sub(r'[^a-z0-9_]', '', cleaned)  # Remove special chars
+        cleaned = re.sub(r'_+', '_', cleaned)  # Collapse multiple underscores
+        cleaned = cleaned.strip('_')  # Remove leading/trailing underscores
+        
+        # Extract meaningful parts
+        words = [word for word in cleaned.split('_') if len(word) > 2]  # Skip short words
+        
+        # Take first 2-3 meaningful words
+        if len(words) >= 2:
+            return '_'.join(words[:2])
+        elif len(words) == 1:
+            return words[0]
+        else:
+            return ""
+            
+    except Exception as e:
+        frappe.log_error(f"Error sanitizing relationship name: {str(e)}", "Field Naming")
+        return ""
 
 def _field_already_exists(doctype_name, field_name):
     """Check if a field already exists in a DocType to prevent duplicates"""
