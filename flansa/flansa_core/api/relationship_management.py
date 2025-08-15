@@ -46,12 +46,102 @@ def pluralize_to_singular(word):
         return word
 
 @frappe.whitelist()
+
+def validate_unique_relationship_name(relationship_name):
+    """Validate that relationship name is unique"""
+    try:
+        if not relationship_name:
+            return {"valid": False, "error": "Relationship name is required"}
+        
+        # Check if relationship with same name already exists
+        existing_relationship = frappe.db.exists("Flansa Relationship", {"relationship_name": relationship_name})
+        
+        if existing_relationship:
+            # Get details of existing relationship for better error message
+            existing_rel_doc = frappe.get_doc("Flansa Relationship", existing_relationship)
+            
+            # Get table names for context
+            from_table_name = ""
+            to_table_name = ""
+            try:
+                from_table_doc = frappe.get_doc("Flansa Table", existing_rel_doc.from_table)
+                to_table_doc = frappe.get_doc("Flansa Table", existing_rel_doc.to_table)
+                from_table_name = from_table_doc.table_label or from_table_doc.table_name
+                to_table_name = to_table_doc.table_label or to_table_doc.table_name
+            except:
+                pass
+            
+            context_info = f" (between {from_table_name} and {to_table_name})" if from_table_name and to_table_name else ""
+            
+            frappe.logger().warning(f"Attempted to create duplicate relationship name: {relationship_name}")
+            return {
+                "valid": False, 
+                "error": f"A relationship with the name '{relationship_name}' already exists{context_info}. Please choose a different name.",
+                "existing_relationship": existing_relationship,
+                "existing_rel_details": {
+                    "name": existing_rel_doc.name,
+                    "relationship_name": existing_rel_doc.relationship_name,
+                    "relationship_type": existing_rel_doc.relationship_type,
+                    "from_table": existing_rel_doc.from_table,
+                    "to_table": existing_rel_doc.to_table,
+                    "from_table_name": from_table_name,
+                    "to_table_name": to_table_name
+                },
+                "suggested_names": generate_suggested_names(relationship_name)
+            }
+        
+        return {"valid": True}
+        
+    except Exception as e:
+        frappe.log_error(f"Error validating relationship name: {str(e)}", "Relationship Validation")
+        return {"valid": False, "error": f"Validation error: {str(e)}"}
+
+def generate_suggested_names(original_name):
+    """Generate suggested alternative names for duplicate relationships"""
+    try:
+        suggestions = []
+        base_name = original_name.strip()
+        
+        # Try with numbers
+        for i in range(2, 6):  # Generate 2-5 alternatives
+            suggested_name = f"{base_name} {i}"
+            if not frappe.db.exists("Flansa Relationship", {"relationship_name": suggested_name}):
+                suggestions.append(suggested_name)
+        
+        # Try with descriptive suffixes
+        suffixes = ["New", "Alt", "Secondary", "Additional", "Extended"]
+        for suffix in suffixes:
+            suggested_name = f"{base_name} ({suffix})"
+            if not frappe.db.exists("Flansa Relationship", {"relationship_name": suggested_name}):
+                suggestions.append(suggested_name)
+                if len(suggestions) >= 5:  # Limit to 5 suggestions
+                    break
+        
+        return suggestions[:3]  # Return top 3 suggestions
+        
+    except Exception as e:
+        frappe.log_error(f"Error generating suggested names: {str(e)}", "Name Suggestions")
+        return []
+
 def create_relationship(relationship_data):
     """Create a new relationship between two Flansa tables"""
     try:
         # Validate input
         if not relationship_data:
             return {"success": False, "error": "No relationship data provided"}
+        
+        # Validate unique relationship name
+        relationship_name = relationship_data.get("relationship_name")
+        name_validation = validate_unique_relationship_name(relationship_name)
+        
+        if not name_validation.get("valid"):
+            frappe.msgprint(name_validation.get("error"), alert=True, indicator="red")
+            return {
+                "success": False, 
+                "error": name_validation.get("error"),
+                "duplicate_name": True,
+                "existing_relationship": name_validation.get("existing_relationship")
+            }
         
         # Create the relationship document
         relationship = frappe.new_doc("Flansa Relationship")

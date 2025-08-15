@@ -144,6 +144,24 @@ def create_simplified_relationship(config: Dict) -> Dict:
     """Create a simplified relationship (One to Many, Many to Many, or Self Referential)"""
     
     try:
+
+        # Validate unique relationship name before creation
+        relationship_name = config.get("relationship_name")
+        if relationship_name:
+            # Import validation function from relationship_management
+            from flansa.flansa_core.api.relationship_management import validate_unique_relationship_name
+            
+            name_validation = validate_unique_relationship_name(relationship_name)
+            if not name_validation.get("valid"):
+                frappe.logger().warning(f"Enterprise API: Duplicate relationship name attempted: {relationship_name}")
+                frappe.msgprint(name_validation.get("error"), alert=True, indicator="red")
+                return {
+                    "success": False,
+                    "error": name_validation.get("error"),
+                    "duplicate_name": True,
+                    "existing_relationship": name_validation.get("existing_relationship")
+                }
+        
         # Create the relationship document
         relationship_doc = frappe.new_doc("Flansa Relationship")
         

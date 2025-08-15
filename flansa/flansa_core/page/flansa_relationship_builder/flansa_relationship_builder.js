@@ -1,3 +1,82 @@
+
+// Handle duplicate relationship name errors
+function handleDuplicateNameError(response) {
+    if (response && response.duplicate_name && response.existing_rel_details) {
+        const existing = response.existing_rel_details;
+        const suggestions = response.suggested_names || [];
+        
+        let message = `A relationship named "${existing.relationship_name}" already exists`;
+        if (existing.from_table_name && existing.to_table_name) {
+            message += ` between ${existing.from_table_name} and ${existing.to_table_name}`;
+        }
+        message += '.\n\n';
+        
+        if (suggestions.length > 0) {
+            message += 'Suggested alternative names:\n';
+            suggestions.forEach((name, index) => {
+                message += `${index + 1}. ${name}\n`;
+            });
+            message += '\nWould you like to use one of these suggestions?';
+            
+            // Show dialog with suggestions
+            const suggestionDialog = new frappe.ui.Dialog({
+                title: 'Duplicate Relationship Name',
+                fields: [
+                    {
+                        fieldtype: 'HTML',
+                        fieldname: 'info',
+                        options: `<div class="alert alert-warning">
+                            <strong>Duplicate Name Detected!</strong><br>
+                            ${message.replace(/\n/g, '<br>')}
+                        </div>`
+                    },
+                    {
+                        fieldtype: 'Select',
+                        fieldname: 'suggested_name',
+                        label: 'Select Alternative Name',
+                        options: suggestions.join('\n'),
+                        reqd: 1,
+                        default: suggestions[0]
+                    },
+                    {
+                        fieldtype: 'Data',
+                        fieldname: 'custom_name',
+                        label: 'Or Enter Custom Name',
+                        description: 'Leave blank to use selected suggestion above'
+                    }
+                ],
+                primary_action_label: 'Use This Name',
+                primary_action: function(values) {
+                    const newName = values.custom_name || values.suggested_name;
+                    if (newName) {
+                        // Update the relationship name field in the current dialog
+                        if (window.current_relationship_dialog) {
+                            window.current_relationship_dialog.set_value('relationship_name', newName);
+                        }
+                        suggestionDialog.hide();
+                        frappe.show_alert({
+                            message: `Relationship name updated to: ${newName}`,
+                            indicator: 'green'
+                        });
+                    }
+                }
+            });
+            
+            suggestionDialog.show();
+            
+        } else {
+            frappe.msgprint({
+                title: 'Duplicate Relationship Name',
+                message: message + '\nPlease choose a different name.',
+                indicator: 'red'
+            });
+        }
+        
+        return true; // Indicates we handled the error
+    }
+    return false; // Not a duplicate name error
+}
+
 frappe.pages['flansa-relationship-builder'].on_page_load = function(wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
