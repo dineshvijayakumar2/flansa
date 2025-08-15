@@ -134,6 +134,7 @@ def create_link_field(table_name, field_name, link_to_table, label):
         # Check if field already exists to prevent duplicates
         if _field_already_exists(source_table.doctype_name, field_name):
             frappe.logger().info(f"Field {field_name} already exists in {source_table.doctype_name}, skipping creation")
+            frappe.msgprint(f"Link field '{field_name}' already exists in table '{source_table.table_name}'", alert=True)
             return True
         
         # Create the link field using native API
@@ -222,10 +223,27 @@ def _field_already_exists(doctype_name, field_name):
         if not frappe.db.exists("DocType", doctype_name):
             return False
         
+        # Clear meta cache to ensure we get latest field info
+        frappe.clear_cache(doctype=doctype_name)
         meta = frappe.get_meta(doctype_name)
+        
+        # Check both regular fields and custom fields
         for field in meta.fields:
             if field.fieldname == field_name:
+                frappe.logger().info(f"Field {field_name} already exists in {doctype_name}")
                 return True
+        
+        # Also check custom fields table directly
+        custom_field_exists = frappe.db.exists("Custom Field", {
+            "dt": doctype_name,
+            "fieldname": field_name
+        })
+        
+        if custom_field_exists:
+            frappe.logger().info(f"Custom field {field_name} already exists in {doctype_name}")
+            return True
+        
         return False
-    except Exception:
+    except Exception as e:
+        frappe.log_error(f"Error checking field existence: {str(e)}", "Field Check")
         return False

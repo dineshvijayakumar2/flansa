@@ -2109,7 +2109,7 @@ class SimplifiedRelationshipBuilder {
         }
         
         // Open Visual Builder directly with the table ID
-        const url = `/app/flansa-visual-builder/${table_name}`;
+        const url = `/app/flansa-visual-builder?table=${table_name}`;
         window.open(url, '_blank');
         
         // Get table label for notification
@@ -2127,7 +2127,7 @@ class SimplifiedRelationshipBuilder {
         }
         
         // Open Visual Builder directly with the table ID
-        const url = `/app/flansa-visual-builder/${table_name}`;
+        const url = `/app/flansa-visual-builder?table=${table_name}`;
         window.open(url, '_blank');
         
         // Get table label for notification

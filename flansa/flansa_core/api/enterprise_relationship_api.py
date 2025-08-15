@@ -252,26 +252,42 @@ def create_simplified_relationship(config: Dict) -> Dict:
         # Create reverse relationship if requested
         if config.get("create_reverse") and config.get("relationship_type") == "One to Many":
             try:
-                # Swap parent and child for reverse relationship
-                reverse_config = {
-                    "relationship_name": f"{config.get('child_table')} → {config.get('parent_table')}",
-                    "relationship_type": "One to Many",
-                    "parent_table": config.get("child_table"),
-                    "child_table": config.get("parent_table"),
-                    "from_table": config.get("to_table") or config.get("child_table"),
-                    "to_table": config.get("from_table") or config.get("parent_table"),
-                    "description": f"Reverse relationship of {relationship_doc.relationship_name}",
-                    "cascade_delete": 0,  # Don't cascade delete in reverse
-                    "required_reference": 0,
-                    "create_parent_link": 1,
-                    "auto_create_fields": 1,
-                    "create_reverse": 0  # Don't create reverse of reverse
-                }
+                # Check if reverse relationship already exists
+                parent_table = config.get("child_table")
+                child_table = config.get("parent_table")
                 
-                # Create the reverse relationship
-                reverse_result = create_simplified_relationship(reverse_config)
-                if reverse_result.get("success"):
-                    frappe.msgprint(f"Also created reverse relationship: {reverse_config['relationship_name']}")
+                existing_reverse = frappe.get_all("Flansa Relationship",
+                    filters={
+                        "parent_table": parent_table,
+                        "child_table": child_table,
+                        "relationship_type": "One to Many"
+                    },
+                    limit=1
+                )
+                
+                if existing_reverse:
+                    print(f"⚠️ Reverse relationship already exists between {parent_table} and {child_table}, skipping", flush=True)
+                else:
+                    # Swap parent and child for reverse relationship
+                    reverse_config = {
+                        "relationship_name": f"{config.get('child_table')} → {config.get('parent_table')}",
+                        "relationship_type": "One to Many",
+                        "parent_table": parent_table,
+                        "child_table": child_table,
+                        "from_table": config.get("to_table") or config.get("child_table"),
+                        "to_table": config.get("from_table") or config.get("parent_table"),
+                        "description": f"Reverse relationship of {relationship_doc.relationship_name}",
+                        "cascade_delete": 0,  # Don't cascade delete in reverse
+                        "required_reference": 0,
+                        "create_parent_link": 1,
+                        "auto_create_fields": 1,
+                        "create_reverse": 0  # Don't create reverse of reverse
+                    }
+                    
+                    # Create the reverse relationship
+                    reverse_result = create_simplified_relationship(reverse_config)
+                    if reverse_result.get("success"):
+                        frappe.msgprint(f"Also created reverse relationship: {reverse_config['relationship_name']}")
             except Exception as e:
                 frappe.log_error(f"Failed to create reverse relationship: {str(e)}", "Reverse Relationship Error")
                 # Continue anyway - main relationship was created successfully
