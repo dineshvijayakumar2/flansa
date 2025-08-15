@@ -233,19 +233,37 @@ class FlansaFormBuilder {
 
     get_field_icon(field_type) {
         const icons = {
-            'Data': 'fa fa-font',
-            'Text': 'fa fa-align-left', 
-            'Long Text': 'fa fa-align-left',
-            'Int': 'fa fa-hashtag',
-            'Float': 'fa fa-calculator',
-            'Currency': 'fa fa-dollar-sign',
-            'Date': 'fa fa-calendar',
-            'Datetime': 'fa fa-clock',
-            'Check': 'fa fa-check-square',
+            'Data': 'fa fa-text-width',
+            'Text': 'fa fa-align-left',
+            'Text Editor': 'fa fa-edit',
+            'Long Text': 'fa fa-file-text-o',
+            'Small Text': 'fa fa-font',
             'Select': 'fa fa-list',
             'Link': 'fa fa-link',
+            'Check': 'fa fa-check-square',
+            'Date': 'fa fa-calendar',
+            'Datetime': 'fa fa-clock-o',
+            'Time': 'fa fa-clock-o',
+            'Float': 'fa fa-calculator',
+            'Int': 'fa fa-hashtag',
+            'Currency': 'fa fa-money',
+            'Phone': 'fa fa-phone',
+            'Email': 'fa fa-envelope',
+            'Password': 'fa fa-key',
+            'URL': 'fa fa-globe',
+            'HTML': 'fa fa-code',
+            'JSON': 'fa fa-database',
+            'Section Break': 'fa fa-minus',
+            'Column Break': 'fa fa-columns',
+            'Tab Break': 'fa fa-folder',
+            'Image': 'fa fa-image',
             'Attach': 'fa fa-paperclip',
-            'Attach Image': 'fa fa-image'
+            'Attach Image': 'fa fa-picture-o',
+            'Signature': 'fa fa-pencil-square-o',
+            'Color': 'fa fa-paint-brush',
+            'Rating': 'fa fa-star',
+            'Barcode': 'fa fa-barcode',
+            'Geolocation': 'fa fa-map-marker'
         };
         return icons[field_type] || 'fa fa-question-circle';
     }

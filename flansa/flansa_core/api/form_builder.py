@@ -285,9 +285,31 @@ def get_table_form_config(table_name, force_refresh=False):
         
         # Format fields for form builder
         formatted_fields = []
+        
+        # Define important standard fields that should be available in form builder
+        important_standard_fields = {
+            'title': 'Data',
+            'subject': 'Data', 
+            'description': 'Text Editor',
+            'status': 'Select',
+            'email_id': 'Data',
+            'phone': 'Data',
+            'mobile_no': 'Data',
+            'company': 'Link',
+            'department': 'Link',
+            'enabled': 'Check',
+            'disabled': 'Check',
+            'is_active': 'Check'
+        }
+        
         for field in native_result.get('fields', []):
-            # Only include fields created by Flansa (exclude standard Frappe fields)
-            if field.get('created_by_flansa'):
+            # Include fields created by Flansa OR important standard fields
+            include_field = (
+                field.get('created_by_flansa') or 
+                field.get('fieldname') in important_standard_fields
+            )
+            
+            if include_field:
                 formatted_fields.append({
                     'field_name': field['fieldname'],
                     'field_label': field['label'],

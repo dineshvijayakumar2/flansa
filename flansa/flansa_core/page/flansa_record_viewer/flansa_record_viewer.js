@@ -1106,8 +1106,38 @@ class FlansaRecordViewer {
     }
 
     
+
+    validate_form_data_before_save() {
+        const content = document.getElementById('record-content');
+        if (!content) return true;
+        
+        // Sync all Frappe link field values before saving
+        const linkFields = content.querySelectorAll('.frappe-link-field');
+        linkFields.forEach(input => {
+            if (input._frappe_link_field) {
+                const linkValue = input._frappe_link_field.get_value();
+                input.value = linkValue;
+                input.dataset.value = linkValue;
+                console.log(`🔄 Pre-save sync for ${input.name}: ${linkValue}`);
+            }
+        });
+        
+        return true;
+    }
+    
     save_record() {
+        // Validate and sync form data before saving
+        if (!this.validate_form_data_before_save()) {
+            return;
+        }
+        
         const formData = this.collect_form_data();
+        
+        console.log('💾 Saving record with form data:', formData);
+        frappe.show_alert({
+            message: 'Saving record...',
+            indicator: 'blue'
+        });
         
         if (this.mode === 'new') {
             // Create new record
@@ -1189,12 +1219,24 @@ class FlansaRecordViewer {
             if (input.name) {
                 if (input.type === 'checkbox') {
                     formData[input.name] = input.checked ? 1 : 0;
+                } else if (input.classList.contains('frappe-link-field')) {
+                    // Handle Frappe link fields specially
+                    if (input._frappe_link_field) {
+                        // Get value from the Frappe control
+                        const linkValue = input._frappe_link_field.get_value();
+                        formData[input.name] = linkValue || input.value;
+                        console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]}`);
+                    } else {
+                        // Fallback to input value or data attribute
+                        formData[input.name] = input.dataset.value || input.value;
+                    }
                 } else {
                     formData[input.name] = input.value;
                 }
             }
         });
         
+        console.log('📊 Collected form data:', formData);
         return formData;
     }
     
@@ -1742,16 +1784,39 @@ class FlansaRecordViewer {
             // Set initial value
             if (input.value) {
                 linkField.set_input(input.value);
+                linkField.set_value(input.value);
             }
+            
+            // Store reference to the link field on the input for later access
+            input._frappe_link_field = linkField;
             
             // Hide the original input and show the Frappe control
             input.style.display = 'none';
             
-            // Handle value changes
-            linkField.$input.on('change', () => {
-                input.value = linkField.get_value();
-                input.dispatchEvent(new Event('change'));
-            });
+            // Handle value changes with multiple event types
+            const updateValue = () => {
+                const newValue = linkField.get_value();
+                input.value = newValue;
+                input.dataset.value = newValue; // Store in data attribute as well
+                
+                // Trigger both change and input events for better compatibility
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                console.log(`🔄 Link field ${fieldName} value updated to: ${newValue}`);
+            };
+            
+            // Bind to multiple events to catch all value changes
+            linkField.$input.on('change', updateValue);
+            linkField.$input.on('awesomplete-selectcomplete', updateValue);
+            linkField.$input.on('blur', updateValue);
+            
+            // Also bind to the link field's change event if available
+            if (linkField.change) {
+                linkField.change = function() {
+                    updateValue();
+                };
+            }
             
             console.log(`✅ Initialized Frappe link field for ${fieldName} -> ${linkDoctype}`);
             
@@ -1838,9 +1903,21 @@ class FlansaRecordViewer {
             item.textContent = suggestion.value || suggestion;
             
             item.addEventListener('click', () => {
-                input.value = suggestion.value || suggestion;
-                input.dispatchEvent(new Event('change'));
+                const newValue = suggestion.value || suggestion;
+                input.value = newValue;
+                input.dataset.value = newValue;
+                
+                // Update Frappe link field if it exists
+                if (input._frappe_link_field) {
+                    input._frappe_link_field.set_value(newValue);
+                }
+                
+                // Trigger change events
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                
                 suggestionsEl.remove();
+                console.log(`🔄 Link suggestion selected: ${newValue}`);
             });
             
             item.addEventListener('mouseenter', () => {
