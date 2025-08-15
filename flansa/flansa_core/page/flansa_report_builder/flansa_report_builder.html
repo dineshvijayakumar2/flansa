@@ -1,0 +1,1043 @@
+<div class="flansa-report-builder-page">
+    <!-- Compact Modern Header - Now at absolute top -->
+    <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
+        <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-default" id="back-to-workspace-btn" title="Back to Workspace" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background-color 0.2s;">
+                <i class="fa fa-arrow-left" style="font-size: 14px;"></i>
+                <span>Workspace</span>
+            </button>
+            <i class="fa fa-cube" style="font-size: 18px; opacity: 0.9;"></i>
+            <span style="font-size: 16px; font-weight: 600;" id="app-name-display">Loading...</span>
+        </div>
+        <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;">📊 Report Builder</h3>
+            <div class="context-menu-wrapper" style="position: relative;">
+                <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
+                    ⋯
+                </button>
+                <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
+                    <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-paint-brush" style="width: 16px;"></i>
+                        <span>Theme Settings</span>
+                    </div>
+                    <div class="context-menu-item" data-action="refresh-cache" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-refresh" style="width: 16px;"></i>
+                        <span>Clear Cache</span>
+                    </div>
+                    <div class="context-menu-item" data-action="export-data" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-download" style="width: 16px;"></i>
+                        <span>Export Reports</span>
+                    </div>
+                    <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-keyboard-o" style="width: 16px;"></i>
+                        <span>Keyboard Shortcuts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modern Breadcrumb Navigation -->
+    <div class="flansa-breadcrumb-bar" style="background: rgba(255,255,255,0.95); padding: 8px 20px; margin: 0 -20px 0 -20px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; font-size: 14px;" id="breadcrumb-container">
+        <!-- Breadcrumbs will be populated here -->
+    </div>
+    
+    <!-- Page Header for Object Name -->
+    <div id="page-header" style="padding: 20px 20px 10px 20px; margin: 0 -20px 0 -20px; background: white; border-bottom: 1px solid #e0e0e0; display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+            <div>
+                <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #333;" id="object-name-display">Loading...</h2>
+                <p style="margin: 5px 0 0 0; font-size: 14px; color: #666;" id="object-description-display"></p>
+            </div>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <button class="btn btn-sm btn-primary" id="quick-nav-table-builder" title="Edit Tables">
+                    <i class="fa fa-table"></i> Tables
+                </button>
+                <button class="btn btn-sm btn-default" id="quick-nav-relationships" title="Table Relationships">
+                    <i class="fa fa-link"></i> Relationships
+                </button>
+                <button class="btn btn-sm btn-default" id="quick-nav-app-dashboard" title="App Dashboard">
+                    <i class="fa fa-tachometer"></i> Dashboard
+                </button>
+                <button class="btn btn-sm btn-default" id="quick-nav-workspace" title="Workspace">
+                    <i class="fa fa-home"></i> Workspace
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Content Wrapper -->
+    <div class="flansa-workspace-content" style="padding: var(--flansa-spacing-xl) var(--flansa-spacing-xl) 0;">
+
+    <!-- Saved Reports Section - Only this should be visible -->
+    <div class="section-card">
+        <div class="section-header">
+            <div>
+                <h4><i class="fa fa-bookmark"></i> Saved Reports</h4>
+                <small class="text-muted">Load existing reports or create new ones</small>
+            </div>
+            <div class="section-actions">
+                <div class="btn-group" id="filter-toggle-group" style="display: none; margin-right: 10px;">
+                    <button class="btn btn-sm btn-default" id="show-all-reports-btn" title="Show All Reports">
+                        <i class="fa fa-list"></i> All
+                    </button>
+                    <button class="btn btn-sm btn-primary" id="show-table-reports-btn" title="Show Table Reports">
+                        <i class="fa fa-filter"></i> <span id="filter-table-name">Table</span>
+                    </button>
+                </div>
+                <button class="btn btn-sm btn-flansa-primary" id="create-new-report-btn">
+                    <i class="fa fa-plus"></i> Create Report
+                </button>
+                <button class="btn btn-sm btn-default" id="refresh-reports-btn">
+                    <i class="fa fa-refresh"></i>
+                </button>
+            </div>
+        </div>
+        <div class="section-body">
+            <div id="saved-reports-list" class="saved-reports-list">
+                <div class="reports-loading text-center" style="padding: 40px;">
+                    <i class="fa fa-spinner fa-spin"></i>
+                    <p>Loading saved reports...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Builder Interface - Hidden since using modal -->
+    <div id="report-builder-container" class="report-builder-container" style="display: none;">
+
+        <!-- Table Selection - Hidden since using modal -->
+        <div class="section-card" style="display: none;">
+            <div class="section-header">
+                <h4><i class="fa fa-database"></i> 1. Select Table</h4>
+                <small class="text-muted">Choose the main table for your report</small>
+            </div>
+            <div class="section-body">
+                <div class="form-group">
+                    <select class="form-control" id="table-selector" style="max-width: 300px;">
+                        <option value="">-- Select a Table --</option>
+                    </select>
+                </div>
+                <div id="table-info" class="table-info" style="display: none;">
+                    <div class="info-card">
+                        <h5 id="selected-table-name"></h5>
+                        <p id="selected-table-details" class="text-muted"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Field Selection - Hidden since using modal -->
+        <div class="section-card" id="field-selection-section" style="display: none !important;">
+            <div class="section-header">
+                <h4><i class="fa fa-columns"></i> 2. Select Fields</h4>
+                <small class="text-muted">Choose which fields to display in your report</small>
+            </div>
+            <div class="section-body">
+                <div class="row">
+                    <!-- Available Fields -->
+                    <div class="col-md-5">
+                        <h6>Available Fields</h6>
+                        <div class="field-search-box">
+                            <input type="text" class="form-control" id="field-search" placeholder="Search fields...">
+                        </div>
+                        <div class="field-categories">
+                            <!-- Current Table Fields -->
+                            <div class="field-category">
+                                <div class="category-header" data-toggle="collapse" data-target="#current-fields" aria-expanded="true">
+                                    <i class="fa fa-chevron-down"></i>
+                                    <strong>Current Table Fields</strong>
+                                    <span class="badge" id="current-fields-count">0</span>
+                                </div>
+                                <div id="current-fields" class="field-list collapse in"></div>
+                            </div>
+                            
+                            <!-- Parent Table Fields -->
+                            <div class="field-category">
+                                <div class="category-header" data-toggle="collapse" data-target="#parent-fields" aria-expanded="true">
+                                    <i class="fa fa-chevron-down"></i>
+                                    <strong>Related Table Fields</strong>
+                                    <span class="badge" id="parent-fields-count">0</span>
+                                </div>
+                                <div id="parent-fields" class="field-list collapse in"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Transfer Buttons -->
+                    <div class="col-md-2 text-center" style="padding-top: 100px;">
+                        <button class="btn btn-flansa-primary btn-sm transfer-btn" id="add-field-btn" disabled>
+                            <i class="fa fa-chevron-right"></i>
+                        </button>
+                        <button class="btn btn-default btn-sm transfer-btn" id="add-all-btn">
+                            <i class="fa fa-chevron-double-right"></i>
+                        </button>
+                        <button class="btn btn-default btn-sm transfer-btn" id="remove-field-btn" disabled>
+                            <i class="fa fa-chevron-left"></i>
+                        </button>
+                        <button class="btn btn-default btn-sm transfer-btn" id="remove-all-btn">
+                            <i class="fa fa-chevron-double-left"></i>
+                        </button>
+                    </div>
+
+                    <!-- Selected Fields -->
+                    <div class="col-md-5">
+                        <h6>Selected Fields <span class="badge" id="selected-fields-count">0</span></h6>
+                        <div id="selected-fields" class="selected-field-list">
+                            <div class="empty-state text-center" style="padding: 40px;">
+                                <i class="fa fa-columns text-muted" style="font-size: 48px; opacity: 0.3;"></i>
+                                <p class="text-muted">No fields selected yet</p>
+                                <small class="text-muted">Select fields from the left panel to build your report</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters - Hidden since using modal -->
+        <div class="section-card" id="filters-section" style="display: none !important;">
+            <div class="section-header">
+                <h4><i class="fa fa-filter"></i> 3. Add Filters (Optional)</h4>
+                <small class="text-muted">Filter data based on field values</small>
+                <div class="section-actions">
+                    <button class="btn btn-sm btn-flansa-primary" id="add-filter-btn">
+                        <i class="fa fa-plus"></i> Add Filter
+                    </button>
+                </div>
+            </div>
+            <div class="section-body">
+                <div id="filters-container">
+                    <div class="empty-state text-center" style="padding: 30px;">
+                        <i class="fa fa-filter text-muted" style="font-size: 36px; opacity: 0.3;"></i>
+                        <p class="text-muted">No filters added</p>
+                        <small class="text-muted">Click "Add Filter" to filter your report data</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sort Options - Hidden since using modal -->
+        <div class="section-card" id="sort-section" style="display: none !important;">
+            <div class="section-header">
+                <h4><i class="fa fa-sort"></i> 4. Sort Options (Optional)</h4>
+                <small class="text-muted">Define how to sort your report data</small>
+                <div class="section-actions">
+                    <button class="btn btn-sm btn-flansa-primary" id="add-sort-btn">
+                        <i class="fa fa-plus"></i> Add Sort
+                    </button>
+                </div>
+            </div>
+            <div class="section-body">
+                <div id="sort-container">
+                    <div class="empty-state text-center" style="padding: 30px;">
+                        <i class="fa fa-sort text-muted" style="font-size: 36px; opacity: 0.3;"></i>
+                        <p class="text-muted">Default sort: Newest First</p>
+                        <small class="text-muted">Click "Add Sort" to customize sort order</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Results -->
+    <div id="report-results-container" class="report-results-container" style="display: none;">
+        <div class="section-card">
+            <div class="section-header">
+                <h4><i class="fa fa-table"></i> Report Results</h4>
+                <div class="section-actions">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-default view-mode-btn active" data-view="table">
+                            <i class="fa fa-table"></i> Table
+                        </button>
+                        <button class="btn btn-sm btn-default view-mode-btn" data-view="gallery" id="gallery-view-btn" style="display: none;">
+                            <i class="fa fa-th"></i> Gallery
+                        </button>
+                    </div>
+                    <button class="btn btn-sm btn-primary" id="edit-report-btn">
+                        <i class="fa fa-edit"></i> Edit Report
+                    </button>
+                </div>
+            </div>
+            <div class="section-body">
+                <!-- Search and Filters -->
+                <div class="report-controls" style="margin-bottom: 15px;">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="report-search" placeholder="Search in all fields...">
+                                <span class="input-group-btn">
+                                    <button class="btn btn-default" id="clear-search-btn">
+                                        <i class="fa fa-times"></i>
+                                    </button>
+                                </span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 text-right">
+                            <div class="report-info">
+                                <span id="record-count-info" class="text-muted"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Table View -->
+                <div id="table-view" class="report-view">
+                    <div class="table-responsive">
+                        <table class="table table-striped" id="report-table">
+                            <thead></thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Gallery View -->
+                <div id="gallery-view" class="report-view" style="display: none;">
+                    <div id="gallery-container" class="gallery-container">
+                        <!-- Gallery items will be loaded here -->
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="report-pagination" style="margin-top: 20px; text-align: center;">
+                    <nav>
+                        <ul class="pagination" id="report-pagination">
+                            <!-- Pagination will be generated dynamically -->
+                        </ul>
+                    </nav>
+                </div>
+
+                <!-- Loading State -->
+                <div id="report-loading" class="text-center" style="padding: 40px; display: none;">
+                    <i class="fa fa-spinner fa-spin" style="font-size: 24px;"></i>
+                    <p style="margin-top: 10px;">Loading report data...</p>
+                </div>
+
+                <!-- No Results State -->
+                <div id="no-results" class="text-center" style="padding: 40px; display: none;">
+                    <i class="fa fa-search text-muted" style="font-size: 48px; opacity: 0.3;"></i>
+                    <h4>No records found</h4>
+                    <p class="text-muted">Try adjusting your search or filter criteria</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div> <!-- Close flansa-workspace-content -->
+</div>
+
+<style>
+.flansa-report-builder-page {
+    padding: 0;  /* Remove padding to let banner extend to edges */
+    background: var(--flansa-background, #f8f9fa);
+    min-height: 100vh;
+}
+
+/* Add padding back to content areas, not the container */
+.flansa-report-builder-page > *:not(.flansa-compact-header):not(.flansa-breadcrumb-bar) {
+    margin-left: 20px;
+    margin-right: 20px;
+}
+
+/* Ensure main content sections have proper spacing */
+.flansa-report-builder-page .section-body,
+.flansa-report-builder-page #page-header {
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.page-head {
+    display: none !important; /* Hide default page header for cleaner look */
+}
+
+/* Context Menu Styles */
+#context-menu-btn:hover {
+    background: rgba(255,255,255,0.3) !important;
+}
+
+.context-menu-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.context-menu-item:last-child {
+    border-bottom: none !important;
+}
+
+.page-title-area {
+    flex: 1;
+}
+
+.page-title {
+    margin: 0 0 8px 0;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--flansa-text-primary, #2c3e50);
+    line-height: 1.2;
+}
+
+.page-subtitle {
+    margin: 0;
+    font-size: 14px;
+    color: var(--flansa-text-secondary, #666);
+    font-weight: 400;
+}
+
+.page-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.section-card {
+    background: var(--flansa-surface, white);
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-header h4 {
+    margin: 0;
+    color: var(--flansa-primary, #007bff);
+}
+
+.section-body {
+    padding: 20px;
+    width: 100%;
+}
+
+/* Full width for report results */
+#report-results-container .section-body {
+    padding: 0;
+    width: 100%;
+}
+
+#report-results-container .section-card {
+    width: 100%;
+    max-width: none;
+}
+
+.field-categories {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.field-category {
+    border-bottom: 1px solid #eee;
+}
+
+.category-header {
+    padding: 12px 15px;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-weight: 500;
+}
+
+.category-header:hover {
+    background: #e9ecef;
+}
+
+.field-list {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.field-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.field-item:hover {
+    background: #f8f9fa;
+}
+
+.field-item.selected {
+    background: #e3f2fd;
+}
+
+.selected-field-list {
+    min-height: 300px;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.selected-field-item {
+    display: flex;
+    justify-content: between;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid #eee;
+    background: white;
+}
+
+.selected-field-item:hover {
+    background: #f8f9fa;
+}
+
+.transfer-btn {
+    display: block;
+    margin: 5px auto;
+    width: 40px;
+}
+
+.filter-item, .sort-item {
+    background: #f8f9fa;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.gallery-container {
+    width: 100%;
+    padding: 20px 0;
+}
+
+.gallery-item {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.gallery-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.gallery-image-container {
+    position: relative;
+    overflow: hidden;
+}
+
+.gallery-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: #f8f9fa;
+    transition: transform 0.3s ease;
+}
+
+.gallery-item:hover .gallery-image {
+    transform: scale(1.05);
+}
+
+.gallery-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+
+.gallery-content {
+    padding: 15px;
+}
+
+.gallery-title {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.gallery-fields {
+    font-size: 13px;
+}
+
+.gallery-fields .field-row {
+    margin-bottom: 5px;
+    display: flex;
+    align-items: flex-start;
+}
+
+.gallery-fields .field-row strong {
+    color: #666;
+    margin-right: 8px;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.gallery-fields .field-row span {
+    color: #333;
+    flex: 1;
+    word-break: break-word;
+}
+
+.gallery-empty-state {
+    text-align: center;
+    padding: 60px 20px;
+}
+
+.gallery-empty-state i {
+    font-size: 64px;
+    color: #ddd;
+    margin-bottom: 20px;
+}
+
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+.gallery-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+}
+
+.gallery-count {
+    font-weight: 600;
+    color: #333;
+}
+
+.gallery-primary-field {
+    color: #666;
+    font-size: 13px;
+}
+
+.gallery-grid {
+    display: flex;
+    gap: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 10px 0 20px 0;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+    min-height: 300px;
+}
+
+.gallery-grid[data-size="small"] .gallery-card {
+    min-width: 220px;
+    max-width: 240px;
+    flex-shrink: 0;
+}
+
+.gallery-grid[data-size="medium"] .gallery-card {
+    min-width: 280px;
+    max-width: 320px;
+    flex-shrink: 0;
+}
+
+.gallery-grid[data-size="large"] .gallery-card {
+    min-width: 360px;
+    max-width: 400px;
+    flex-shrink: 0;
+}
+
+/* Custom scrollbar for horizontal gallery */
+.gallery-grid::-webkit-scrollbar {
+    height: 8px;
+}
+
+.gallery-grid::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.gallery-grid::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+}
+
+.gallery-grid::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Firefox scrollbar */
+.gallery-grid {
+    scrollbar-width: thin;
+    scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+.gallery-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.gallery-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.gallery-image-wrapper {
+    position: relative;
+    width: 100%;
+    height: 200px;
+    overflow: hidden;
+}
+
+.gallery-card-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.gallery-card:hover .gallery-card-image {
+    transform: scale(1.05);
+}
+
+.gallery-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+}
+
+.gallery-overlay-actions {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-card:hover .gallery-overlay-actions {
+    opacity: 1;
+}
+
+.gallery-action-btn {
+    border: none !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+}
+
+.gallery-card-content {
+    padding: 15px;
+}
+
+.gallery-card-title {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.gallery-metadata {
+    font-size: 12px;
+}
+
+.gallery-meta-item {
+    margin-bottom: 4px;
+    display: flex;
+    gap: 6px;
+}
+
+.meta-label {
+    color: #666;
+    font-weight: 500;
+    min-width: 80px;
+}
+
+.meta-value {
+    color: #333;
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.empty-state {
+    color: #6c757d;
+}
+
+.saved-reports-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.report-table-group {
+    margin-bottom: 20px;
+}
+
+.report-table-header {
+    background: #f8f9fa;
+    padding: 10px 15px;
+    margin: 0 0 10px 0;
+    border-radius: 4px;
+    font-weight: 600;
+    color: #333;
+    border-left: 3px solid var(--flansa-primary, #007bff);
+}
+
+.report-table-items {
+    padding-left: 10px;
+}
+
+.report-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.report-item:hover {
+    border-color: var(--flansa-primary, #007bff);
+    box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+    transform: translateY(-1px);
+}
+
+.report-info {
+    flex: 1;
+}
+
+.report-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+}
+
+.report-header i {
+    color: var(--flansa-primary, #007bff);
+}
+
+.report-meta {
+    font-size: 11px;
+}
+
+.report-actions {
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.report-item:hover .report-actions {
+    opacity: 1;
+}
+
+.report-action-btn {
+    border: none !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.report-controls {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+
+.info-card {
+    background: #e8f4fd;
+    border: 1px solid #bee5eb;
+    border-radius: 4px;
+    padding: 15px;
+    margin-top: 10px;
+}
+
+@media (max-width: 1200px) {
+    .gallery-grid[data-size="large"] .gallery-card {
+        min-width: 300px;
+    }
+    
+    .gallery-grid[data-size="medium"] .gallery-card {
+        min-width: 250px;
+    }
+}
+
+@media (max-width: 768px) {
+    .flansa-report-builder-page {
+        padding: 10px;
+    }
+    
+    .page-head {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .page-actions {
+        margin-top: 15px;
+    }
+    
+    .gallery-grid[data-size="small"] .gallery-card,
+    .gallery-grid[data-size="medium"] .gallery-card,
+    .gallery-grid[data-size="large"] .gallery-card {
+        min-width: 260px;
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-grid[data-size="small"] .gallery-card,
+    .gallery-grid[data-size="medium"] .gallery-card,
+    .gallery-grid[data-size="large"] .gallery-card {
+        min-width: 240px;
+    }
+    
+    .gallery-grid {
+        gap: 15px;
+    }
+}
+
+/* Gallery Navigation Styles */
+.gallery-navigation {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    transform: translateY(-50%);
+    display: flex;
+    justify-content: space-between;
+    padding: 0 10px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.gallery-card:hover .gallery-navigation {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.gallery-nav-btn {
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+    z-index: 10;
+    position: relative;
+}
+
+.gallery-nav-btn:hover {
+    background: rgba(0, 0, 0, 0.9);
+    transform: scale(1.1);
+}
+
+.gallery-nav-btn:active {
+    transform: scale(0.95);
+}
+
+.gallery-image-indicator {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.gallery-image-wrapper {
+    position: relative;
+}
+
+/* Animation for image transitions */
+.gallery-card-image {
+    transition: opacity 0.2s ease;
+}
+
+.gallery-card-image.transitioning {
+    opacity: 0.7;
+}
+
+/* Keyboard navigation hint */
+.gallery-card:focus-within .gallery-navigation {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.gallery-nav-btn:focus {
+    outline: 2px solid var(--flansa-primary, #007bff);
+    outline-offset: 2px;
+}
+
+/* Full-page viewing mode styles */
+.full-page-view .flansa-report-builder-page {
+    padding: 15px;
+}
+
+.full-page-view .page-head {
+    margin-bottom: 20px;
+}
+
+.full-page-view .page-title {
+    font-size: 24px;
+}
+
+.full-page-view #report-results-container {
+    margin-top: 0;
+}
+
+.full-page-view #report-results-container .section-body {
+    padding: 0;
+}
+
+/* Share button styles */
+#share-report-btn {
+    background: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+#share-report-btn:hover {
+    background: #218838;
+    border-color: #1e7e34;
+}
+</style>

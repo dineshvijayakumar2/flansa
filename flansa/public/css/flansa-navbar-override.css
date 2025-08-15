@@ -1,0 +1,149 @@
+
+/* Flansa Navbar Customization */
+
+/* Hide all duplicate Flansa elements in navbar */
+.navbar-nav .flansa-workspace-link {
+    display: none !important;
+}
+
+/* Hide any duplicate Flansa logos */
+.navbar .navbar-home a:not(:first-child) img[src*="flansa"] {
+    display: none !important;
+}
+
+/* Hide duplicate Flansa text/icons in navbar */
+.navbar-nav li a:contains("Flansa") {
+    display: none !important;
+}
+
+/* Replace Frappe text with Flansa */
+.navbar-brand:after {
+    content: 'Flansa';
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--navbar-text-color, #fff);
+}
+
+/* Hide original Frappe text */
+.navbar-brand {
+    font-size: 0 !important;
+}
+
+/* Style the primary Flansa logo in navbar - LARGER SIZE */
+.navbar .navbar-home img[src*="flansa"]:first-of-type {
+    height: 65px !important;  /* Much larger logo */
+    min-height: 65px !important;
+    width: auto;
+    margin-right: 8px;
+    object-fit: contain;
+}
+
+/* Fix banner spacing from navbar */
+.page-content .flansa-compact-header {
+    margin-top: 20px !important;
+}
+
+
+
+/* Theme-aware Breadcrumb Styling */
+.flansa-breadcrumb-bar {
+    background: rgba(255,255,255,0.95) !important;
+    padding: 8px 20px;
+    margin: 0 -20px 0 -20px;
+    border-bottom: 1px solid rgba(0,0,0,0.08);
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    /* Use CSS variable for theme-aware color */
+    color: var(--flansa-primary, #667eea) !important;
+}
+
+.flansa-breadcrumb-bar a {
+    /* Theme-aware link color */
+    color: var(--flansa-primary, #667eea) !important;
+    text-decoration: none;
+    font-weight: 600;
+    transition: opacity 0.2s;
+    opacity: 0.8;
+}
+
+.flansa-breadcrumb-bar a:hover {
+    opacity: 1;
+}
+
+/* Dark theme support for breadcrumbs */
+body.flansa-theme-dark .flansa-breadcrumb-bar {
+    background: rgba(26, 32, 44, 0.95) !important;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    color: var(--flansa-text-primary, #ffffff) !important;
+}
+
+body.flansa-theme-dark .flansa-breadcrumb-bar a {
+    color: var(--flansa-text-primary, #ffffff) !important;
+}
+
+/* Ensure banner doesn't overlap breadcrumb */
+.flansa-compact-header {
+    margin: 0 -20px 0 -20px !important;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Breadcrumb should be right below banner */
+.flansa-breadcrumb-bar {
+    position: relative;
+    z-index: 99;
+}
+
+
+/* Enhanced Logo Redirect Support */
+.navbar-home a,
+.navbar-brand {
+    cursor: pointer !important;
+    text-decoration: none !important;
+}
+
+.navbar-home a:hover,
+.navbar-brand:hover {
+    opacity: 0.8;
+    transition: opacity 0.2s;
+}
+
+/* Ensure Flansa logo is clickable */
+.navbar .navbar-home img[src*="flansa"] {
+    pointer-events: none; /* Let parent handle clicks */
+}
+
+/* Style for the main navbar link */
+.navbar-home a {
+    display: flex !important;
+    align-items: center !important;
+    color: inherit !important;
+}
+
+
+/* Universal Banner Positioning */
+.flansa-compact-header {
+    /* Ensure all banners extend to the very top */
+    margin: -20px -20px 0 -20px !important;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Special handling for pages with padding containers */
+.flansa-report-builder-page .flansa-compact-header,
+.flansa-report-viewer-page .flansa-compact-header {
+    /* These pages need to override container padding */
+    margin: -20px -20px 0 -20px !important;
+}
+
+/* Ensure breadcrumbs are properly positioned below banners */
+.flansa-breadcrumb-bar {
+    margin: 0 -20px 0 -20px !important;
+    position: relative;
+    z-index: 99;
+}

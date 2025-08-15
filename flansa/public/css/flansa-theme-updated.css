@@ -1,0 +1,372 @@
+/* 
+ * Flansa Platform Theme - Updated
+ * ===============================
+ * 
+ * Updated to use CSS custom properties for consistent theming.
+ * This file extends the base theme variables with component-specific styles.
+ */
+
+/* Import base theme variables */
+@import url('./flansa-theme-vars.css');
+
+/* Flansa Platform Custom Styles */
+.flansa-custom-page {
+    font-family: var(--flansa-font-family);
+    background: var(--flansa-background, var(--flansa-gray-100));
+    min-height: 100vh;
+    color: var(--flansa-text-primary, var(--flansa-gray-900));
+}
+
+.flansa-custom-page .layout-main-section {
+    padding: 0;
+    background: transparent;
+}
+
+/* Flansa Workspace Header */
+.flansa-workspace-header {
+    background: var(--flansa-gradient-primary);
+    color: var(--flansa-white);
+    padding: var(--flansa-spacing-xl);
+    margin-bottom: var(--flansa-spacing-xl);
+    border-radius: 0 0 var(--flansa-radius-xl) var(--flansa-radius-xl);
+    box-shadow: var(--flansa-shadow-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flansa-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--flansa-spacing-md);
+}
+
+.brand-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--flansa-spacing-sm);
+    font-size: var(--flansa-font-size-xl);
+    font-weight: var(--flansa-font-weight-semibold);
+}
+
+.brand-logo i {
+    font-size: 2rem;
+    opacity: 0.9;
+}
+
+.workspace-title h2 {
+    margin: 0;
+    font-size: var(--flansa-font-size-2xl);
+    font-weight: var(--flansa-font-weight-bold);
+    margin-bottom: 0.25rem;
+}
+
+.workspace-title p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: var(--flansa-font-size-base);
+}
+
+.flansa-quick-actions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.flansa-quick-actions .btn {
+    border: var(--flansa-border-width-md) solid rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    font-weight: var(--flansa-font-weight-medium);
+    border-radius: var(--flansa-radius-md);
+}
+
+.flansa-quick-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--flansa-shadow-md);
+    border-color: rgba(255, 255, 255, 0.4);
+}
+
+/* Workspace Content */
+.flansa-workspace-content {
+    padding: 0 var(--flansa-spacing-xl) var(--flansa-spacing-xl);
+}
+
+.workspace-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--flansa-spacing-xl);
+}
+
+.workspace-section {
+    background: var(--flansa-surface, var(--flansa-white));
+    border-radius: var(--flansa-radius-lg);
+    box-shadow: var(--flansa-shadow-sm);
+    overflow: hidden;
+    transition: all 0.3s ease;
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, transparent);
+}
+
+.workspace-section:hover {
+    box-shadow: var(--flansa-shadow-md);
+    transform: translateY(-2px);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--flansa-spacing-lg) var(--flansa-spacing-lg) var(--flansa-spacing-md);
+    border-bottom: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200));
+}
+
+.section-header h4 {
+    margin: 0;
+    color: var(--flansa-text-primary, var(--flansa-gray-800));
+    font-size: var(--flansa-font-size-lg);
+    font-weight: var(--flansa-font-weight-semibold);
+    display: flex;
+    align-items: center;
+    gap: var(--flansa-spacing-sm);
+}
+
+.section-header i {
+    color: var(--flansa-primary);
+}
+
+.section-action {
+    color: var(--flansa-primary);
+    text-decoration: none;
+    font-size: var(--flansa-font-size-sm);
+    font-weight: var(--flansa-font-weight-medium);
+    transition: color 0.2s ease;
+}
+
+.section-action:hover {
+    color: var(--flansa-secondary);
+    text-decoration: none;
+}
+
+.section-content {
+    padding: var(--flansa-spacing-lg);
+    min-height: 200px;
+}
+
+/* Grid Items */
+.items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: var(--flansa-spacing-md);
+}
+
+.grid-item {
+    background: var(--flansa-surface, var(--flansa-white));
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200));
+    border-radius: var(--flansa-radius-md);
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.grid-item:hover {
+    border-color: var(--flansa-primary);
+    box-shadow: var(--flansa-shadow-sm);
+    transform: translateY(-1px);
+}
+
+.item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.75rem;
+}
+
+.item-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--flansa-gradient-primary);
+    border-radius: var(--flansa-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--flansa-white);
+    font-size: 1.1rem;
+}
+
+.item-title {
+    font-weight: var(--flansa-font-weight-semibold);
+    color: var(--flansa-text-primary, var(--flansa-gray-800));
+    font-size: var(--flansa-font-size-base);
+    flex: 1;
+}
+
+/* Stats Cards */
+.stats-container {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--flansa-spacing-md);
+}
+
+.stat-card {
+    text-align: center;
+    padding: var(--flansa-spacing-lg);
+    background: var(--flansa-gradient-light);
+    border-radius: var(--flansa-radius-lg);
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200));
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--flansa-shadow-sm);
+}
+
+.stat-number {
+    font-size: var(--flansa-font-size-3xl);
+    font-weight: var(--flansa-font-weight-bold);
+    color: var(--flansa-primary);
+    margin-bottom: var(--flansa-spacing-sm);
+}
+
+.stat-label {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-sm);
+    font-weight: var(--flansa-font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Empty States */
+.empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+
+.empty-state-icon {
+    color: var(--flansa-gray-400);
+    font-size: 3rem;
+    margin-bottom: var(--flansa-spacing-md);
+}
+
+.empty-state-title {
+    color: var(--flansa-text-primary, var(--flansa-gray-700));
+    font-size: var(--flansa-font-size-lg);
+    font-weight: var(--flansa-font-weight-semibold);
+    margin-bottom: var(--flansa-spacing-sm);
+}
+
+.empty-state-description {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-sm);
+}
+
+/* Applications Workspace Specific Styles */
+.flansa-applications-workspace {
+    padding: 0;
+}
+
+.flansa-applications-workspace .workspace-header {
+    background: var(--flansa-gradient-primary);
+    color: var(--flansa-white);
+    padding: var(--flansa-spacing-xl);
+    margin: -20px -20px 20px -20px;
+    border-radius: 0 0 15px 15px;
+}
+
+.applications-grid {
+    padding: var(--flansa-spacing-md);
+}
+
+.applications-grid.view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--flansa-spacing-lg);
+}
+
+/* Application Card */
+.app-card {
+    background: var(--flansa-surface, var(--flansa-white));
+    border-radius: var(--flansa-radius-lg);
+    box-shadow: var(--flansa-shadow-sm);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    overflow: hidden;
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, transparent);
+}
+
+.app-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--flansa-shadow-md);
+    border-color: var(--flansa-primary);
+}
+
+.app-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--flansa-primary);
+    color: var(--flansa-white);
+    border-radius: var(--flansa-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+/* Dashboard specific styles with theme variables */
+.dashboard-header {
+    background: var(--flansa-gradient-primary);
+    color: var(--flansa-white);
+    padding: var(--flansa-spacing-xl);
+    border-radius: 0 0 var(--flansa-radius-lg) var(--flansa-radius-lg);
+}
+
+.table-card {
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200));
+    border-radius: var(--flansa-radius-md);
+    padding: var(--flansa-spacing-md);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    background: var(--flansa-surface, var(--flansa-white));
+}
+
+.table-card:hover {
+    border-color: var(--flansa-primary);
+    box-shadow: var(--flansa-shadow-sm);
+    transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .workspace-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .flansa-workspace-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--flansa-spacing-lg);
+        padding: var(--flansa-spacing-lg);
+    }
+    
+    .flansa-workspace-content {
+        padding: 0 var(--flansa-spacing-md) var(--flansa-spacing-xl);
+    }
+    
+    .items-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-container {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .flansa-quick-actions {
+        width: 100%;
+        justify-content: center;
+    }
+}

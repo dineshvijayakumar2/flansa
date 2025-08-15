@@ -1,0 +1,276 @@
+/* Modern Gallery Field Styles for Flansa Forms */
+
+.flansa-gallery-field {
+    border: 1px solid #e0e6ed;
+    border-radius: 8px;
+    padding: 16px;
+    background: #fafbfc;
+    margin: 8px 0;
+}
+
+.gallery-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #e0e6ed;
+}
+
+.gallery-header .control-label {
+    font-weight: 600;
+    color: #36414c;
+    margin: 0;
+}
+
+.add-gallery-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border: none;
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.add-gallery-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.gallery-container {
+    position: relative;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    min-height: 120px;
+}
+
+.gallery-item {
+    position: relative;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.gallery-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    border-color: #667eea;
+}
+
+.gallery-item.uploading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 150px;
+    background: #f8f9fa;
+    border-style: dashed;
+}
+
+.upload-progress {
+    text-align: center;
+    color: #667eea;
+}
+
+.upload-progress i {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 24px;
+}
+
+.gallery-image {
+    position: relative;
+    padding-bottom: 75%; /* 4:3 Aspect Ratio */
+    overflow: hidden;
+}
+
+.gallery-image img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.gallery-item:hover .gallery-image img {
+    transform: scale(1.05);
+}
+
+.gallery-overlay {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.gallery-item:hover .gallery-overlay {
+    opacity: 1;
+}
+
+.gallery-overlay .btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+    background: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.2s ease;
+}
+
+.gallery-overlay .btn:hover {
+    transform: scale(1.1);
+    background: rgba(255, 255, 255, 1);
+}
+
+.gallery-overlay .btn-danger:hover {
+    background: #dc3545;
+    color: white;
+}
+
+.gallery-meta {
+    padding: 12px;
+    background: white;
+}
+
+.description-input {
+    border: 1px solid #e0e6ed;
+    border-radius: 4px;
+    padding: 6px 8px;
+    font-size: 11px;
+    width: 100%;
+    transition: border-color 0.2s ease;
+}
+
+.description-input:focus {
+    border-color: #667eea;
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.gallery-drop-zone {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(102, 126, 234, 0.05);
+    border: 2px dashed #667eea;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+    transition: all 0.3s ease;
+}
+
+.gallery-drop-zone.dragover {
+    background: rgba(102, 126, 234, 0.1);
+    border-color: #4c63d2;
+    transform: scale(1.02);
+}
+
+.drop-zone-content {
+    text-align: center;
+    color: #667eea;
+    pointer-events: none;
+}
+
+.drop-zone-content i {
+    display: block;
+    margin-bottom: 12px;
+    opacity: 0.7;
+}
+
+.drop-zone-content p {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+}
+
+.drop-zone-content small {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 12px;
+    }
+    
+    .gallery-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    
+    .add-gallery-btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .gallery-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .flansa-gallery-field {
+        padding: 12px;
+    }
+}
+
+/* Animation for new items */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.gallery-item {
+    animation: slideInUp 0.3s ease-out;
+}
+
+/* Loading state */
+.gallery-item.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.gallery-item.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    100% {
+        left: 100%;
+    }
+}

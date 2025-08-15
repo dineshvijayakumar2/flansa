@@ -1,0 +1,304 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "FR-.#####",
+ "creation": "2025-01-31 10:00:00",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "relationship_name",
+  "relationship_type",
+  "column_break_1",
+  "status",
+  "description",
+  "tables_section",
+  "parent_table",
+  "column_break_2",
+  "child_table",
+  "child_reference_field",
+  "junction_section",
+  "junction_table",
+  "parent_junction_field",
+  "child_junction_field",
+  "relationship_options",
+  "cascade_delete",
+  "column_break_options",
+  "required_reference",
+  "create_parent_link",
+  "advanced_section",
+  "computed_fields",
+  "auto_create_fields",
+  "legacy_section",
+  "from_table",
+  "to_table",
+  "from_field",
+  "to_field",
+  "from_junction_field",
+  "to_junction_field"
+ ],
+ "fields": [
+  {
+   "fieldname": "relationship_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Relationship Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "relationship_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Relationship Type",
+   "options": "One to Many\nMany to Many\nSelf Referential",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Active",
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Active\nInactive"
+  },
+  {
+   "fieldname": "description",
+   "fieldtype": "Small Text",
+   "label": "Description"
+  },
+  {
+   "fieldname": "tables_section",
+   "fieldtype": "Section Break",
+   "label": "Tables"
+  },
+  {
+   "fieldname": "parent_table",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Parent Table",
+   "options": "Flansa Table",
+   "reqd": 1,
+   "description": "The table that will show a list/link to child records"
+  },
+  {
+   "fieldname": "column_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "child_table",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Child Table",
+   "options": "Flansa Table",
+   "reqd": 1,
+   "description": "The table that will have a reference field to parent"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'One to Many'",
+   "fieldname": "child_reference_field",
+   "fieldtype": "Data",
+   "label": "Child Reference Field",
+   "description": "Field name in child table that references parent (auto-generated if blank)"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'Many to Many'",
+   "fieldname": "junction_section",
+   "fieldtype": "Section Break",
+   "label": "Junction Table Settings"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'Many to Many'",
+   "fieldname": "junction_table",
+   "fieldtype": "Data",
+   "label": "Junction Table Name"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'Many to Many'",
+   "fieldname": "parent_junction_field",
+   "fieldtype": "Data",
+   "label": "Parent Junction Field",
+   "description": "Field in junction table referencing parent (auto-generated if blank)"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'Many to Many'",
+   "fieldname": "child_junction_field",
+   "fieldtype": "Data",
+   "label": "Child Junction Field",
+   "description": "Field in junction table referencing child (auto-generated if blank)"
+  },
+  {
+   "fieldname": "advanced_section",
+   "fieldtype": "Section Break",
+   "label": "Advanced Configuration"
+  },
+  {
+   "fieldname": "relationship_options",
+   "fieldtype": "Section Break",
+   "label": "Relationship Options"
+  },
+  {
+   "fieldname": "cascade_delete",
+   "fieldtype": "Check",
+   "label": "Cascade Delete",
+   "description": "Delete child records when parent is deleted"
+  },
+  {
+   "fieldname": "column_break_options",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'One to Many'",
+   "fieldname": "required_reference",
+   "fieldtype": "Check",
+   "label": "Required Reference",
+   "description": "Make the child reference field required"
+  },
+  {
+   "depends_on": "eval:doc.relationship_type == 'One to Many'",
+   "fieldname": "create_parent_link",
+   "fieldtype": "Check",
+   "label": "Create Parent Link Field",
+   "default": 1,
+   "description": "Create a hyperlink field in parent to show child records"
+  },
+  {
+   "fieldname": "auto_create_fields",
+   "fieldtype": "Check",
+   "label": "Auto Create Fields",
+   "default": "1",
+   "description": "Automatically create fields in tables"
+  },
+  {
+   "fieldname": "legacy_section",
+   "fieldtype": "Section Break",
+   "label": "Legacy Fields (Backward Compatibility)",
+   "collapsible": 1,
+   "collapsed": 1,
+   "description": "Old field names for backward compatibility - automatically populated"
+  },
+  {
+   "fieldname": "from_table",
+   "fieldtype": "Link",
+   "label": "From Table (Legacy)",
+   "options": "Flansa Table",
+   "read_only": 1,
+   "description": "Legacy field - use Parent Table instead"
+  },
+  {
+   "fieldname": "to_table",
+   "fieldtype": "Link", 
+   "label": "To Table (Legacy)",
+   "options": "Flansa Table",
+   "read_only": 1,
+   "description": "Legacy field - use Child Table instead"
+  },
+  {
+   "fieldname": "from_field",
+   "fieldtype": "Data",
+   "label": "From Field (Legacy)",
+   "read_only": 1,
+   "description": "Legacy field - automatically mapped"
+  },
+  {
+   "fieldname": "to_field",
+   "fieldtype": "Data",
+   "label": "To Field (Legacy)",
+   "read_only": 1,
+   "description": "Legacy field - use Child Reference Field instead"
+  },
+  {
+   "fieldname": "from_junction_field",
+   "fieldtype": "Data",
+   "label": "From Junction Field (Legacy)",
+   "read_only": 1,
+   "description": "Legacy field - use Parent Junction Field instead"
+  },
+  {
+   "fieldname": "to_junction_field",
+   "fieldtype": "Data",
+   "label": "To Junction Field (Legacy)",
+   "read_only": 1,
+   "description": "Legacy field - use Child Junction Field instead"
+  },
+  {
+   "fieldname": "behaviors",
+   "fieldtype": "Code",
+   "label": "Behaviors",
+   "options": "JSON",
+   "description": "Enterprise behavior configuration"
+  },
+  {
+   "fieldname": "trigger_code",
+   "fieldtype": "Code",
+   "label": "Trigger Code",
+   "options": "Python",
+   "description": "Custom trigger code for advanced relationships"
+  },
+  {
+   "fieldname": "ui_config",
+   "fieldtype": "Code",
+   "label": "UI Configuration",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "performance_config",
+   "fieldtype": "Code",
+   "label": "Performance Configuration",
+   "options": "JSON"
+  }
+ ],
+ "links": [],
+ "modified": "2025-08-05 14:26:55.159248",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "Flansa Relationship",
+ "naming_rule": "By \"Naming Series\" field",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Flansa Builder",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Flansa Admin",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

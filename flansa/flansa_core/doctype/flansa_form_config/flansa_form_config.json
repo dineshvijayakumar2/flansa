@@ -1,0 +1,127 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "autoname": "field:table_name",
+ "creation": "2024-01-01 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "table_name",
+  "form_title",
+  "form_description",
+  "layout_type",
+  "sections",
+  "custom_css",
+  "custom_js",
+  "field_overrides",
+  "created_by",
+  "modified_by"
+ ],
+ "fields": [
+  {
+   "fieldname": "table_name",
+   "fieldtype": "Link",
+   "label": "Table Name",
+   "options": "Flansa Table",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "form_title",
+   "fieldtype": "Data",
+   "label": "Form Title"
+  },
+  {
+   "fieldname": "form_description",
+   "fieldtype": "Text",
+   "label": "Form Description"
+  },
+  {
+   "fieldname": "layout_type",
+   "fieldtype": "Select",
+   "label": "Layout Type",
+   "options": "standard\ncompact\nwide",
+   "default": "standard"
+  },
+  {
+   "fieldname": "sections",
+   "fieldtype": "Long Text",
+   "label": "Form Sections (JSON)"
+  },
+  {
+   "fieldname": "custom_css",
+   "fieldtype": "Code",
+   "label": "Custom CSS"
+  },
+  {
+   "fieldname": "custom_js",
+   "fieldtype": "Code",
+   "label": "Custom JavaScript"
+  },
+  {
+   "fieldname": "field_overrides",
+   "fieldtype": "Long Text",
+   "label": "Field Display Overrides (JSON)",
+   "description": "JSON object to override field display properties like hiding descriptions, changing labels, etc."
+  },
+  {
+   "fieldname": "created_by",
+   "fieldtype": "Link",
+   "label": "Created By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "modified_by",
+   "fieldtype": "Link",
+   "label": "Modified By",
+   "options": "User",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 1,
+ "links": [],
+ "modified": "2024-01-01 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "Flansa Form Config",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Flansa Admin",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "read": 1,
+   "report": 1,
+   "role": "Flansa Builder",
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "track_changes": 1
+}

@@ -1,0 +1,601 @@
+import frappe
+from frappe import _
+
+@frappe.whitelist()
+def get_tables_list(app_name=None):
+    """Get list of Flansa tables for dropdown options, optionally filtered by app"""
+    
+    try:
+        # Build filters
+        filters = {"status": ["!=", "Deleted"]}
+        if app_name:
+            filters["application"] = app_name
+            
+        tables = frappe.get_all("Flansa Table", 
+            fields=["name", "table_name", "table_label", "description", "status", "application"],
+            filters=filters,
+            order_by="table_label asc"
+        )
+        
+        # Format for frontend consumption
+        formatted_tables = []
+        for table in tables:
+            formatted_tables.append({
+                "value": table.name,
+                "label": table.table_label or table.table_name,
+                "description": table.description or '',
+                "table_name": table.table_name,
+                "status": table.status
+            })
+        
+        return {
+            "success": True,
+            "tables": formatted_tables
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting tables list: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "tables": []
+        }
+
+@frappe.whitelist()
+def get_table_info(table_name):
+    """Get detailed information about a specific table"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        return {
+            "success": True,
+            "table": {
+                "name": table_doc.name,
+                "table_name": table_doc.table_name,
+                "table_label": table_doc.table_label,
+                "description": table_doc.description,
+                "status": table_doc.status,
+                "doctype_name": getattr(table_doc, "doctype_name", ""),
+                "application": getattr(table_doc, "application", "")
+            }
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting table info for {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def get_table_fields(table_name):
+    """Get fields for a specific table"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        # Get fields from DocType only - legacy JSON removed
+        fields = []
+        if hasattr(table_doc, "doctype_name") and table_doc.doctype_name:
+            if frappe.db.exists("DocType", table_doc.doctype_name):
+                doctype_meta = frappe.get_meta(table_doc.doctype_name)
+                fields = []
+                for field in doctype_meta.fields:
+                    if field.fieldtype not in ["Section Break", "Column Break", "Tab Break"]:
+                        fields.append({
+                            "fieldname": field.fieldname,
+                            "label": field.label,
+                            "fieldtype": field.fieldtype,
+                            "options": field.options,
+                            "reqd": field.reqd,
+                            "read_only": field.read_only
+                        })
+        
+        return {
+            "success": True,
+            "fields": fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting fields for table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "fields": []
+        }
+
+@frappe.whitelist()
+def get_table_records(table_name):
+    """Get records for a table"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        # Get records from DocType
+        records = []
+        fields = []
+        
+        if hasattr(table_doc, "doctype_name") and table_doc.doctype_name:
+            if frappe.db.exists("DocType", table_doc.doctype_name):
+                # Get fields
+                doctype_meta = frappe.get_meta(table_doc.doctype_name)
+                for field in doctype_meta.fields:
+                    if field.fieldtype not in ["Section Break", "Column Break", "Tab Break"]:
+                        fields.append({
+                            "fieldname": field.fieldname,
+                            "label": field.label,
+                            "fieldtype": field.fieldtype,
+                            "options": field.options,
+                            "reqd": field.reqd,
+                            "read_only": field.read_only
+                        })
+                
+                # Get records
+                records = frappe.get_all(table_doc.doctype_name, fields=['*'])
+        
+        return {
+            "success": True,
+            "records": records,
+            "fields": fields,
+            "doctype_name": table_doc.doctype_name
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting records for table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "records": [],
+            "fields": []
+        }
+
+@frappe.whitelist()
+def create_record(table_name, values):
+    """Create a new record"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not hasattr(table_doc, "doctype_name") or not table_doc.doctype_name:
+            return {
+                "success": False,
+                "error": "No doctype associated with table"
+            }
+        
+        # Create new document
+        doc = frappe.get_doc({
+            "doctype": table_doc.doctype_name,
+            **values
+        })
+        
+        doc.insert()
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "record_name": doc.name
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(f"Error creating record in table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def update_record(table_name, record_name, values):
+    """Update an existing record"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not hasattr(table_doc, "doctype_name") or not table_doc.doctype_name:
+            return {
+                "success": False,
+                "error": "No doctype associated with table"
+            }
+        
+        # Check if record exists
+        if not frappe.db.exists(table_doc.doctype_name, record_name):
+            return {
+                "success": False,
+                "error": "Record not found"
+            }
+        
+        # Update document
+        doc = frappe.get_doc(table_doc.doctype_name, record_name)
+        
+        # Debug: log what we received
+        frappe.logger().debug(f"Updating record {record_name} with values: {values} (type: {type(values)})")
+        
+        # Ensure values is a dictionary
+        if isinstance(values, str):
+            try:
+                import json
+                values = json.loads(values)
+            except:
+                frappe.logger().error(f"Failed to parse values string: {values}")
+                raise ValueError("Values must be a dictionary or valid JSON string")
+        
+        for field, value in values.items():
+            if hasattr(doc, field):
+                # Get field metadata to check field type
+                field_meta = doc.meta.get_field(field) if hasattr(doc.meta, 'get_field') else None
+                
+                # Handle empty gallery fields (Long Text fields)
+                if field_meta and field_meta.fieldtype == 'Long Text':
+                    if value == '' or value == 'null' or value == 'undefined' or value is None:
+                        # For Long Text fields, set to empty string
+                        setattr(doc, field, '')
+                        frappe.logger().debug(f"Clearing Long Text field {field}")
+                    else:
+                        setattr(doc, field, value)
+                else:
+                    # Regular fields
+                    setattr(doc, field, value)
+                
+                frappe.logger().debug(f"Set field {field} to {getattr(doc, field)} (was: {value})")
+        
+        doc.save()
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "record_name": doc.name
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(f"Error updating record {record_name} in table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def delete_record(table_name, record_name):
+    """Delete a record"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not hasattr(table_doc, "doctype_name") or not table_doc.doctype_name:
+            return {
+                "success": False,
+                "error": "No doctype associated with table"
+            }
+        
+        # Check if record exists
+        if not frappe.db.exists(table_doc.doctype_name, record_name):
+            return {
+                "success": False,
+                "error": "Record not found"
+            }
+        
+        # Delete document
+        frappe.delete_doc(table_doc.doctype_name, record_name)
+        frappe.db.commit()
+        
+        return {
+            "success": True
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(f"Error deleting record {record_name} in table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+# Additional API methods for enhanced functionality
+
+@frappe.whitelist()
+def get_records(table_name, filters=None, sort=None, page=1, page_size=20, fields=None):
+    """Enhanced get records with filtering, sorting, and pagination"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not hasattr(table_doc, "doctype_name") or not table_doc.doctype_name:
+            return {
+                "success": False,
+                "error": "No doctype associated with table"
+            }
+        
+        # Build filters
+        frappe_filters = {}
+        if filters:
+            for filter_item in filters:
+                if isinstance(filter_item, dict) and 'field' in filter_item:
+                    field = filter_item['field']
+                    operator = filter_item.get('operator', '=')
+                    value = filter_item.get('value')
+                    
+                    if operator == '=':
+                        frappe_filters[field] = value
+                    elif operator == 'like':
+                        frappe_filters[field] = ['like', f'%{value}%']
+                    else:
+                        frappe_filters[field] = [operator, value]
+        
+        # Build sort
+        order_by = 'modified desc'  # default
+        if sort and isinstance(sort, dict):
+            field = sort.get('field', 'modified')
+            order = sort.get('order', 'desc')
+            order_by = f'{field} {order}'
+        
+        # Get field list
+        field_list = ['*']
+        if fields and isinstance(fields, list):
+            field_list = fields
+        
+        # Calculate offset
+        offset = (int(page) - 1) * int(page_size)
+        
+        # Get records with pagination
+        records = frappe.get_all(
+            table_doc.doctype_name,
+            filters=frappe_filters,
+            fields=field_list,
+            order_by=order_by,
+            start=offset,
+            page_length=int(page_size) + 1  # Get one extra to check if there are more
+        )
+        
+        # Check if there are more records
+        has_more = len(records) > int(page_size)
+        if has_more:
+            records = records[:-1]  # Remove the extra record
+        
+        # Get total count
+        total = frappe.db.count(table_doc.doctype_name, filters=frappe_filters)
+        
+        return {
+            "success": True,
+            "records": records,
+            "total": total,
+            "page": int(page),
+            "page_size": int(page_size),
+            "has_more": has_more
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting records for table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "records": [],
+            "total": 0
+        }
+
+@frappe.whitelist()
+def get_record(table_name, record_id):
+    """Get a single record by ID"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not hasattr(table_doc, "doctype_name") or not table_doc.doctype_name:
+            return {
+                "success": False,
+                "error": "No doctype associated with table"
+            }
+        
+        # Check if record exists
+        if not frappe.db.exists(table_doc.doctype_name, record_id):
+            return {
+                "success": False,
+                "error": "Record not found"
+            }
+        
+        # Get the record
+        record = frappe.get_doc(table_doc.doctype_name, record_id).as_dict()
+        
+        # Get fields metadata (similar to get_table_meta)
+        fields = []
+        if frappe.db.exists("DocType", table_doc.doctype_name):
+            doctype_meta = frappe.get_meta(table_doc.doctype_name)
+            
+            for field in doctype_meta.fields:
+                fields.append({
+                    "fieldname": field.fieldname,
+                    "fieldtype": field.fieldtype,
+                    "label": field.label,
+                    "reqd": field.reqd,
+                    "options": field.options,
+                    "description": field.description,
+                    "read_only": field.read_only,
+                    "hidden": field.hidden,
+                    "default": field.default
+                })
+        
+        return {
+            "success": True,
+            "record": record,
+            "fields": fields,
+            "doctype_name": table_doc.doctype_name
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting record {record_id} from table {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def get_table_metadata(table_name):
+    """Get comprehensive table metadata"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        # Get fields metadata
+        fields = []
+        permissions = {}
+        settings = {}
+        
+        if hasattr(table_doc, "doctype_name") and table_doc.doctype_name:
+            if frappe.db.exists("DocType", table_doc.doctype_name):
+                # Get detailed field metadata
+                doctype_meta = frappe.get_meta(table_doc.doctype_name)
+                for field in doctype_meta.fields:
+                    if field.fieldtype not in ["Section Break", "Column Break", "Tab Break"]:
+                        fields.append({
+                            "fieldname": field.fieldname,
+                            "label": field.label,
+                            "fieldtype": field.fieldtype,
+                            "options": field.options,
+                            "reqd": field.reqd,
+                            "read_only": field.read_only,
+                            "hidden": field.hidden,
+                            "default": field.default,
+                            "description": field.description,
+                            "width": field.width,
+                            "precision": field.precision,
+                            "length": field.length
+                        })
+                
+                # Get permissions
+                permissions = {
+                    "read": frappe.has_permission(table_doc.doctype_name, "read"),
+                    "write": frappe.has_permission(table_doc.doctype_name, "write"),
+                    "create": frappe.has_permission(table_doc.doctype_name, "create"),
+                    "delete": frappe.has_permission(table_doc.doctype_name, "delete")
+                }
+                
+                # Get settings from DocType
+                settings = {
+                    "is_submittable": doctype_meta.is_submittable,
+                    "track_changes": doctype_meta.track_changes,
+                    "allow_copy": doctype_meta.allow_copy,
+                    "allow_import": doctype_meta.allow_import
+                }
+        
+        return {
+            "success": True,
+            "doctype_name": table_doc.doctype_name,
+            "fields": fields,
+            "permissions": permissions,
+            "settings": settings
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting table metadata for {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "fields": [],
+            "permissions": {},
+            "settings": {}
+        }
+
+@frappe.whitelist()
+def get_table_meta(table_name):
+    """Get table metadata for new record creation"""
+    
+    try:
+        if not frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": "Table not found"
+            }
+        
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not hasattr(table_doc, "doctype_name") or not table_doc.doctype_name:
+            return {
+                "success": False,
+                "error": "No doctype associated with table"
+            }
+        
+        # Get fields metadata
+        fields = []
+        if frappe.db.exists("DocType", table_doc.doctype_name):
+            doctype_meta = frappe.get_meta(table_doc.doctype_name)
+            
+            for field in doctype_meta.fields:
+                fields.append({
+                    "fieldname": field.fieldname,
+                    "fieldtype": field.fieldtype,
+                    "label": field.label,
+                    "reqd": field.reqd,
+                    "options": field.options,
+                    "description": field.description,
+                    "read_only": field.read_only,
+                    "hidden": field.hidden,
+                    "default": field.default
+                })
+        
+        return {
+            "success": True,
+            "doctype_name": table_doc.doctype_name,
+            "fields": fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting table meta for {table_name}: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "fields": []
+        }

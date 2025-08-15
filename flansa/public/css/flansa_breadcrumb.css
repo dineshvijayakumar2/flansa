@@ -1,0 +1,184 @@
+/* Flansa Breadcrumb Enhancements */
+
+/* Breadcrumb Container Overflow Handling */
+.page-breadcrumbs {
+    max-width: 100%;
+    overflow-x: auto;
+    white-space: nowrap;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
+}
+
+.page-breadcrumbs::-webkit-scrollbar {
+    height: 4px;
+}
+
+.page-breadcrumbs::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.page-breadcrumbs::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 2px;
+}
+
+.page-breadcrumbs::-webkit-scrollbar-thumb:hover {
+    background: rgba(0, 0, 0, 0.3);
+}
+
+/* Individual Breadcrumb Item Styling */
+.breadcrumb-item {
+    display: inline-block;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.breadcrumb-item a {
+    color: var(--flansa-primary, #007bff);
+    text-decoration: none;
+    transition: color 0.2s ease, background-color 0.2s ease;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+.breadcrumb-item a:hover {
+    color: var(--flansa-primary-dark, #0056b3);
+    background-color: rgba(0, 123, 255, 0.1);
+}
+
+.breadcrumb-item a:focus {
+    outline: 2px solid var(--flansa-primary, #007bff);
+    outline-offset: 2px;
+}
+
+/* Breadcrumb Separator */
+.breadcrumb-item + .breadcrumb-item::before {
+    content: "›";
+    color: #6c757d;
+    padding: 0 8px;
+    font-weight: normal;
+}
+
+/* Active/Current Breadcrumb */
+.breadcrumb-item.active {
+    color: #6c757d;
+    font-weight: 500;
+}
+
+/* Responsive Breadcrumbs */
+@media (max-width: 768px) {
+    .breadcrumb-item {
+        max-width: 120px;
+    }
+    
+    .breadcrumb-item:not(:last-child):not(:nth-last-child(2)) {
+        display: none;
+    }
+    
+    .breadcrumb-item:first-child {
+        display: inline-block !important;
+    }
+    
+    .breadcrumb-item:first-child::after {
+        content: "...";
+        padding: 0 8px;
+        color: #6c757d;
+    }
+}
+
+/* Keyboard Navigation Support */
+.breadcrumb-item a:focus-visible {
+    outline: 2px solid var(--flansa-primary, #007bff);
+    outline-offset: 2px;
+    border-radius: 3px;
+}
+
+/* Breadcrumb Tooltips for Truncated Text */
+.breadcrumb-item[title] {
+    cursor: help;
+}
+
+/* Animation for Breadcrumb Updates */
+.breadcrumb-item {
+    animation: breadcrumbSlideIn 0.3s ease-out;
+}
+
+@keyframes breadcrumbSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Collapsible Breadcrumbs for Long Paths */
+.breadcrumb-collapse-btn {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 0 4px;
+    background: rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #6c757d;
+    transition: all 0.2s ease;
+}
+
+.breadcrumb-collapse-btn:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: #495057;
+}
+
+/* Loading State for Breadcrumbs */
+.breadcrumb-loading {
+    display: inline-block;
+    padding: 0 8px;
+    color: #6c757d;
+}
+
+.breadcrumb-loading::after {
+    content: "...";
+    animation: ellipsis 1.5s infinite;
+}
+
+@keyframes ellipsis {
+    0% { content: "."; }
+    33% { content: ".."; }
+    66% { content: "..."; }
+}
+
+/* Breadcrumb Icons */
+.breadcrumb-item i {
+    margin-right: 4px;
+    font-size: 14px;
+    vertical-align: middle;
+}
+
+/* Dark Theme Support */
+@media (prefers-color-scheme: dark) {
+    .breadcrumb-item a {
+        color: var(--flansa-primary-light, #4dabff);
+    }
+    
+    .breadcrumb-item a:hover {
+        color: var(--flansa-primary-lighter, #80c1ff);
+        background-color: rgba(77, 171, 255, 0.1);
+    }
+    
+    .breadcrumb-item.active {
+        color: #adb5bd;
+    }
+    
+    .breadcrumb-collapse-btn {
+        background: rgba(255, 255, 255, 0.05);
+        border-color: rgba(255, 255, 255, 0.1);
+        color: #adb5bd;
+    }
+}

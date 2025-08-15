@@ -1,0 +1,13 @@
+"""
+DEPRECATED - Field Sync Utilities
+This file has been merged into auto_sync.py for better organization and to prevent conflicts.
+
+All field synchronization functionality has been consolidated into:
+/flansa/flansa_core/utils/auto_sync.py
+
+Date: 2025-08-08
+Reason: Duplicate functionality causing recursion errors and conflicts
+"""
+
+# This file is deprecated and should not be used
+# All functionality has been moved to auto_sync.py

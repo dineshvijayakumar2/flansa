@@ -1,0 +1,104 @@
+/*
+ * Flansa Platform Component Themes
+ * ===============================
+ * 
+ * Themed styles for Flansa platform components using design tokens.
+ */
+
+/* Buttons */
+.btn-flansa-primary {
+    background: var(--flansa-gradient-primary);
+    border: none;
+    color: var(--flansa-white);
+    border-radius: var(--flansa-radius-md);
+    font-weight: var(--flansa-font-weight-medium);
+    transition: all 0.2s ease;
+}
+
+.btn-flansa-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--flansa-shadow-md);
+    color: var(--flansa-white);
+}
+
+.btn-flansa-secondary {
+    background: var(--flansa-surface);
+    border: var(--flansa-border-width-md) solid var(--flansa-primary);
+    color: var(--flansa-primary);
+    border-radius: var(--flansa-radius-md);
+    font-weight: var(--flansa-font-weight-medium);
+    transition: all 0.2s ease;
+}
+
+.btn-flansa-secondary:hover {
+    background: var(--flansa-primary);
+    color: var(--flansa-white);
+    transform: translateY(-1px);
+    box-shadow: var(--flansa-shadow-md);
+}
+
+/* Cards */
+.flansa-card {
+    background: var(--flansa-surface);
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200));
+    border-radius: var(--flansa-radius-lg);
+    box-shadow: var(--flansa-shadow-sm);
+    transition: all 0.2s ease;
+}
+
+.flansa-card:hover {
+    box-shadow: var(--flansa-shadow-md);
+    transform: translateY(-2px);
+}
+
+/* Form Controls */
+.flansa-form-control {
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-300));
+    border-radius: var(--flansa-radius-md);
+    padding: var(--flansa-spacing-sm) var(--flansa-spacing-md);
+    font-family: var(--flansa-font-family);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.flansa-form-control:focus {
+    border-color: var(--flansa-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+/* Typography */
+.flansa-text-primary { color: var(--flansa-text-primary, var(--flansa-gray-900)); }
+.flansa-text-secondary { color: var(--flansa-text-secondary, var(--flansa-gray-600)); }
+.flansa-text-success { color: var(--flansa-success); }
+.flansa-text-warning { color: var(--flansa-warning); }
+.flansa-text-danger { color: var(--flansa-danger); }
+.flansa-text-info { color: var(--flansa-info); }
+
+/* Backgrounds */
+.flansa-bg-primary { background: var(--flansa-primary); color: var(--flansa-white); }
+.flansa-bg-secondary { background: var(--flansa-secondary); color: var(--flansa-white); }
+.flansa-bg-success { background: var(--flansa-success); color: var(--flansa-white); }
+.flansa-bg-warning { background: var(--flansa-warning); color: var(--flansa-gray-900); }
+.flansa-bg-danger { background: var(--flansa-danger); color: var(--flansa-white); }
+.flansa-bg-info { background: var(--flansa-info); color: var(--flansa-white); }
+.flansa-bg-surface { background: var(--flansa-surface); }
+.flansa-bg-gradient { background: var(--flansa-gradient-primary); color: var(--flansa-white); }
+
+/* Borders */
+.flansa-border { border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200)); }
+.flansa-border-primary { border: var(--flansa-border-width-sm) solid var(--flansa-primary); }
+.flansa-border-radius { border-radius: var(--flansa-radius-md); }
+.flansa-border-radius-lg { border-radius: var(--flansa-radius-lg); }
+
+/* Shadows */
+.flansa-shadow-sm { box-shadow: var(--flansa-shadow-sm); }
+.flansa-shadow-md { box-shadow: var(--flansa-shadow-md); }
+.flansa-shadow-lg { box-shadow: var(--flansa-shadow-lg); }
+.flansa-shadow-xl { box-shadow: var(--flansa-shadow-xl); }
+
+/* Layout */
+.flansa-container {
+    background: var(--flansa-background, var(--flansa-gray-50));
+    color: var(--flansa-text-primary, var(--flansa-gray-900));
+    font-family: var(--flansa-font-family);
+}

@@ -1,0 +1,681 @@
+<!-- Report Viewer Template -->
+<div class="flansa-report-viewer-page">
+    
+    <!-- Compact Modern Header -->
+    <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
+        <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
+            <i class="fa fa-file-text-o" style="font-size: 18px; opacity: 0.9;"></i>
+            <span style="font-size: 16px; font-weight: 600;" id="app-name-display">Loading...</span>
+        </div>
+        <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;">📄 Report Viewer</h3>
+            <div class="context-menu-wrapper" style="position: relative;">
+                <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
+                    ⋯
+                </button>
+                <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
+                    <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-paint-brush" style="width: 16px;"></i>
+                        <span>Theme Settings</span>
+                    </div>
+                    <div class="context-menu-item" data-action="refresh-cache" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-refresh" style="width: 16px;"></i>
+                        <span>Clear Cache</span>
+                    </div>
+                    <div class="context-menu-item" data-action="export-data" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-download" style="width: 16px;"></i>
+                        <span>Export Data</span>
+                    </div>
+                    <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-keyboard-o" style="width: 16px;"></i>
+                        <span>Keyboard Shortcuts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modern Breadcrumb Navigation -->
+    <div class="flansa-breadcrumb-bar" style="background: rgba(255,255,255,0.95); padding: 8px 20px; margin: 0 -20px 0 -20px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; font-size: 14px;" id="breadcrumb-container">
+        <!-- Breadcrumbs will be populated here -->
+    </div>
+    
+    <!-- Page Header for Report Name -->
+    <div id="page-header" style="padding: 20px 20px 10px 20px; margin: 0 -20px 16px -20px; background: white; border-bottom: 1px solid #e0e0e0; display: none;">
+        <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #333;" id="report-name-display">Loading...</h2>
+        <div style="margin: 5px 0 0 0; font-size: 14px; color: #666; display: flex; gap: 20px;" id="report-meta-info">
+            <span id="report-meta-display"></span>
+        </div>
+    </div>
+
+    <!-- Content Wrapper -->
+    <div class="flansa-workspace-content" style="padding: var(--flansa-spacing-xl) var(--flansa-spacing-xl) 0;">
+
+    <!-- Loading State -->
+    <div id="report-loading" style="display: none;">
+        <div class="loading-container text-center" style="padding: 60px;">
+            <div class="spinner"></div>
+            <p class="text-muted">Loading report data...</p>
+        </div>
+    </div>
+
+    <!-- Report Content -->
+    <div id="report-content" style="display: none;">
+        <!-- View Mode Toggle -->
+        <div class="view-controls" style="margin-bottom: 20px;">
+            <!-- Search Box on Left -->
+            <div class="search-container" style="float: left;">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="report-search" placeholder="Search records...">
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" id="clear-search-btn">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </span>
+                </div>
+            </div>
+            
+            <!-- View Toggle on Right -->
+            <div style="float: right; display: flex; align-items: center; gap: 15px;">
+                <!-- Tile Controls (shown only in tile view) -->
+                <div id="tile-controls" style="display: none;">
+                    <div class="btn-group" role="group" style="margin-right: 10px;">
+                        <button type="button" class="btn btn-default btn-sm tile-layout-btn active" data-layout="grid" title="Grid Layout">
+                            <i class="fa fa-th"></i>
+                        </button>
+                        <button type="button" class="btn btn-default btn-sm tile-layout-btn" data-layout="horizontal" title="Horizontal Layout">
+                            <i class="fa fa-bars"></i>
+                        </button>
+                    </div>
+                    
+                    <div class="btn-group" role="group" style="margin-right: 15px;">
+                        <button type="button" class="btn btn-default btn-sm tile-size-btn" data-size="small" title="Small Tiles">
+                            <i class="fa fa-compress"></i>
+                        </button>
+                        <button type="button" class="btn btn-default btn-sm tile-size-btn active" data-size="medium" title="Medium Tiles">
+                            <i class="fa fa-square-o"></i>
+                        </button>
+                        <button type="button" class="btn btn-default btn-sm tile-size-btn" data-size="large" title="Large Tiles">
+                            <i class="fa fa-expand"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Edit Report Button -->
+                <button type="button" class="btn btn-primary" id="edit-report-btn" style="margin-right: 15px;">
+                    <i class="fa fa-edit"></i> Edit Report
+                </button>
+                
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-default view-mode-btn active" data-view="table">
+                        <i class="fa fa-table"></i> Table
+                    </button>
+                    <button type="button" class="btn btn-default view-mode-btn" data-view="tile">
+                        <i class="fa fa-th"></i> Tile
+                    </button>
+                </div>
+            </div>
+            
+            <div class="clearfix"></div>
+        </div>
+
+        <!-- Record Count Info -->
+        <div class="record-info" style="margin-bottom: 15px;">
+            <span id="record-count-info" class="text-muted"></span>
+        </div>
+
+        <!-- Table View -->
+        <div id="table-view" class="report-view">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover" id="report-table">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Tile View -->
+        <div id="tile-view" class="report-view" style="display: none;">
+            <div id="tile-container" class="tile-grid"></div>
+        </div>
+
+        <!-- No Results -->
+        <div id="no-results" style="display: none;">
+            <div class="empty-state text-center" style="padding: 60px;">
+                <i class="fa fa-search text-muted" style="font-size: 48px; opacity: 0.3;"></i>
+                <h4>No Results Found</h4>
+                <p class="text-muted">No records match your current criteria.</p>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        <div id="pagination-container" style="margin-top: 20px;"></div>
+    </div>
+
+    <!-- Error State -->
+    <div id="report-error" style="display: none;">
+        <div class="error-container text-center" style="padding: 60px;">
+            <i class="fa fa-exclamation-triangle text-danger" style="font-size: 48px;"></i>
+            <h4>Error Loading Report</h4>
+            <p class="text-muted" id="error-message">Something went wrong while loading this report.</p>
+            <button class="btn btn-primary" onclick="location.reload()">
+                <i class="fa fa-refresh"></i> Retry
+            </button>
+        </div>
+    </div>
+    </div> <!-- Close flansa-workspace-content -->
+</div>
+
+<!-- Basic Styles Only -->
+<style>
+    .flansa-report-viewer-page {
+        padding: 0;  /* Remove padding to let banner extend to edges */
+        background: var(--flansa-background, #f8f9fa);
+        min-height: 100vh;
+    }
+
+    /* Add padding back to content areas, not the container */
+    .flansa-report-viewer-page > *:not(.flansa-compact-header):not(.flansa-breadcrumb-bar) {
+        margin-left: 20px;
+        margin-right: 20px;
+    }
+
+    /* Ensure main content sections have proper spacing */
+    .flansa-report-viewer-page .data-container,
+    .flansa-report-viewer-page #page-header {
+        margin-left: 0;
+        margin-right: 0;
+    }
+    
+    .page-head {
+        display: none !important; /* Hide default page header for cleaner look */
+    }
+    
+    /* Context Menu Styles */
+    #context-menu-btn:hover {
+        background: rgba(255,255,255,0.3) !important;
+    }
+
+    .context-menu-item:hover {
+        background-color: #f8f9fa !important;
+    }
+
+    .context-menu-item:last-child {
+        border-bottom: none !important;
+    }
+    
+    .page-title {
+        margin: 0;
+        color: #2c3e50;
+        font-weight: 600;
+    }
+    
+    .page-subtitle {
+        margin: 5px 0 0 0;
+        color: #7f8c8d;
+        font-size: 14px;
+    }
+    
+    .view-controls {
+        background: white;
+        border-radius: 8px;
+        padding: 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .search-container {
+        max-width: 300px;
+    }
+    
+    .record-info {
+        background: white;
+        border-radius: 8px;
+        padding: 10px 15px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    .report-view {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        min-height: 400px;
+    }
+    
+    .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #3498db;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    
+    .view-mode-btn.active {
+        background-color: #007bff;
+        color: white;
+        border-color: #007bff;
+    }
+    
+    .empty-state, .error-container {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    
+    /* Enhanced Gallery Card Styles with Entrance Animations */
+    .gallery-card {
+        position: relative;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+        margin-bottom: 20px;
+        transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        
+        /* Entrance animation */
+        animation: tileEntrance 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94) backwards;
+        cursor: pointer;
+    }
+    
+    /* Staggered entrance animation delays */
+    .gallery-card:nth-child(1) { animation-delay: 0.05s; }
+    .gallery-card:nth-child(2) { animation-delay: 0.1s; }
+    .gallery-card:nth-child(3) { animation-delay: 0.15s; }
+    .gallery-card:nth-child(4) { animation-delay: 0.2s; }
+    .gallery-card:nth-child(5) { animation-delay: 0.25s; }
+    .gallery-card:nth-child(6) { animation-delay: 0.3s; }
+    .gallery-card:nth-child(7) { animation-delay: 0.35s; }
+    .gallery-card:nth-child(8) { animation-delay: 0.4s; }
+    .gallery-card:nth-child(9) { animation-delay: 0.45s; }
+    .gallery-card:nth-child(10) { animation-delay: 0.5s; }
+    
+    @keyframes tileEntrance {
+        from {
+            opacity: 0;
+            transform: translateY(30px) scale(0.95);
+            filter: blur(5px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0);
+        }
+    }
+    
+    .gallery-card:hover {
+        box-shadow: 
+            0 12px 30px rgba(0,0,0,0.18),
+            0 6px 20px rgba(0,0,0,0.1);
+        transform: translateY(-6px) scale(1.01);
+        border-color: rgba(0,123,255,0.2);
+    }
+    
+    /* Subtle image enhancement on hover */
+    .gallery-card:hover .gallery-card-image {
+        transform: scale(1.05);
+        transition: transform 0.5s ease-out;
+    }
+    
+    .gallery-image-wrapper {
+        position: relative;
+        width: 100%;
+        height: 200px;
+        overflow: hidden;
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.1);
+    }
+    
+    /* Hide scrollbar by default, show only on hover */
+    .gallery-image-wrapper::-webkit-scrollbar {
+        width: 0px;
+        transition: width 0.3s ease;
+    }
+    
+    .gallery-image-wrapper:hover::-webkit-scrollbar {
+        width: 4px;
+    }
+    
+    .gallery-image-wrapper::-webkit-scrollbar-track {
+        background: rgba(255,255,255,0.1);
+    }
+    
+    .gallery-image-wrapper::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.4);
+        border-radius: 2px;
+    }
+    
+    .gallery-image-wrapper::-webkit-scrollbar-thumb:hover {
+        background: rgba(255,255,255,0.6);
+    }
+    
+    .gallery-card-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center; /* Default to center for grid view */
+    }
+    
+    .gallery-card-content {
+        padding: 15px;
+        background: linear-gradient(to bottom, rgba(255,255,255,0.1), rgba(255,255,255,0));
+        backdrop-filter: blur(1px);
+    }
+    
+    .gallery-card-title {
+        margin: 0 0 10px 0;
+        color: #2c3e50;
+        font-weight: 600;
+        font-size: 16px;
+    }
+    
+    .gallery-meta-item {
+        margin-bottom: 6px;
+        font-size: 14px;
+        color: #555;
+    }
+    
+    .gallery-meta-item strong {
+        color: #7f8c8d;
+        font-size: 12px;
+    }
+    
+    /* Grid Layouts */
+    .tile-grid {
+        padding: 20px 0;
+    }
+    
+    .tile-grid.layout-grid.size-small {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+    
+    .tile-grid.layout-grid.size-medium {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+    }
+    
+    .tile-grid.layout-grid.size-large {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 25px;
+    }
+    
+    .tile-grid.layout-horizontal {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-card {
+        display: flex;
+        flex-direction: row;
+        height: auto;
+        max-height: 150px;
+    }
+    
+    /* Horizontal layout image wrappers need center alignment */
+    .tile-grid.layout-horizontal .gallery-image-wrapper {
+        align-items: center;
+    }
+    
+    /* Horizontal layout image sizes based on tile size */
+    .tile-grid.layout-horizontal.size-small .gallery-image-wrapper {
+        width: 100px;
+        height: 80px;
+        flex-shrink: 0;
+    }
+    
+    .tile-grid.layout-horizontal.size-medium .gallery-image-wrapper {
+        width: 150px;
+        height: 120px;
+        flex-shrink: 0;
+    }
+    
+    .tile-grid.layout-horizontal.size-large .gallery-image-wrapper {
+        width: 200px;
+        height: 160px;
+        flex-shrink: 0;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-card-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: 15px;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-card-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: top; /* Keep top alignment for horizontal layout */
+    }
+    
+    /* Adjust card height for different sizes in horizontal layout */
+    .tile-grid.layout-horizontal.size-small .gallery-card {
+        max-height: 100px;
+    }
+    
+    .tile-grid.layout-horizontal.size-large .gallery-card {
+        max-height: 180px;
+    }
+    
+    /* Table image styles */
+    .table-image-cell {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .table-thumbnail {
+        cursor: pointer;
+    }
+    
+    .gallery-card.no-image {
+        min-height: 120px;
+    }
+    
+    .gallery-card.no-image .gallery-card-content {
+        padding: 20px;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    /* Gallery Navigation Controls */
+    .gallery-nav-controls {
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        padding: 0 10px;
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        pointer-events: none;
+    }
+    
+    .gallery-card:hover .gallery-nav-controls {
+        opacity: 1;
+    }
+    
+    .gallery-nav-btn {
+        background: rgba(0,0,0,0.7);
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        pointer-events: auto;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    .gallery-nav-btn:hover {
+        background: rgba(0,0,0,0.9);
+    }
+    
+    .gallery-image-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.7);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        z-index: 2;
+    }
+    
+    .gallery-progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: rgba(255,255,255,0.3);
+        z-index: 2;
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+    }
+    
+    .gallery-card:hover .gallery-progress-bar {
+        opacity: 1;
+    }
+    
+    .gallery-progress-fill {
+        height: 100%;
+        background: rgba(255,255,255,0.8);
+        border-radius: 0 1px 1px 0;
+        transition: width 0.3s ease-in-out;
+        box-shadow: 0 0 3px rgba(255,255,255,0.5);
+    }
+    
+    .gallery-card-image.transitioning {
+        opacity: 0.7;
+        filter: blur(1px);
+        transform: scale(0.98);
+    }
+    
+    /* Lightbox styles */
+    .image-lightbox-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 9999;
+        display: none;
+    }
+    
+    .lightbox-content {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .lightbox-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+    }
+    
+    .lightbox-title {
+        font-size: 18px;
+        font-weight: 600;
+    }
+    
+    .lightbox-counter {
+        font-size: 14px;
+        opacity: 0.8;
+    }
+    
+    .lightbox-close {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 8px;
+        border-radius: 4px;
+        transition: background-color 0.3s ease;
+    }
+    
+    .lightbox-close:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+    
+    .lightbox-body {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    }
+    
+    .lightbox-image-container {
+        position: relative;
+        max-width: 100%;
+        max-height: 100%;
+    }
+    
+    .lightbox-image {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        border-radius: 8px;
+    }
+    
+    .lightbox-nav {
+        position: fixed;
+        top: 50%;
+        transform: translateY(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        border: none;
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        opacity: 0.8;
+        z-index: 10001;
+    }
+    
+    .lightbox-nav:hover {
+        background: rgba(0, 0, 0, 0.9);
+        opacity: 1;
+        transform: translateY(-50%) scale(1.1);
+    }
+    
+    .lightbox-prev {
+        left: 20px;
+    }
+    
+    .lightbox-next {
+        right: 20px;
+    }
+</style>

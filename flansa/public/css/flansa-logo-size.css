@@ -1,0 +1,86 @@
+/* Force Flansa Logo to be MUCH LARGER */
+
+/* Target all possible logo locations */
+.navbar-brand img,
+.navbar-home img,
+.navbar img[alt="Logo"],
+.navbar img[alt="Flansa"],
+.navbar img[src*="Flansa"],
+.navbar img[src*="flansa"],
+.navbar img[src*="logo"],
+img.app-logo,
+img.navbar-logo,
+header img[src*="Flansa"],
+#navbar-breadcrumbs img,
+.page-head img[src*="Flansa"] {
+    height: 65px !important;
+    min-height: 65px !important;
+    max-height: none !important;
+    width: auto !important;
+    object-fit: contain !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Increase navbar height to accommodate larger logo */
+.navbar,
+nav.navbar {
+    min-height: 80px !important;
+    height: auto !important;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+}
+
+/* Ensure navbar brand container can hold larger logo */
+.navbar-brand,
+.navbar-home,
+.navbar-header {
+    height: 66px !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 !important;
+}
+
+/* Fix navbar items alignment with larger logo */
+.navbar-nav > li > a {
+    line-height: 66px !important;
+    padding-top: 7px !important;
+    padding-bottom: 7px !important;
+}
+
+/* Target Frappe's specific logo wrapper */
+.navbar-brand.navbar-home {
+    height: 66px !important;
+}
+
+.navbar-brand.navbar-home > img,
+.navbar-brand.navbar-home a > img {
+    height: 65px !important;
+    min-height: 65px !important;
+}
+
+/* Override any max-height restrictions */
+* img[src*="Flansa"] {
+    max-height: none !important;
+    height: 65px !important;
+}
+
+/* Mobile responsive - keep logo large even on small screens */
+@media (max-width: 768px) {
+    .navbar-brand img,
+    .navbar img[src*="Flansa"] {
+        height: 55px !important;
+        min-height: 55px !important;
+    }
+    
+    .navbar {
+        min-height: 70px !important;
+    }
+}
+
+/* Print styles to show logo is configured */
+@media print {
+    .navbar-brand img {
+        height: 65px !important;
+    }
+}

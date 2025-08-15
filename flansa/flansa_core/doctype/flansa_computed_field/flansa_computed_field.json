@@ -1,0 +1,80 @@
+{
+ "actions": [],
+ "allow_rename": 1,
+ "creation": "2025-08-04 22:42:41.993685",
+ "disabled": 1,
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "field_name",
+  "field_label",
+  "computation_type",
+  "target_field",
+  "condition",
+  "formula",
+  "auto_add"
+ ],
+ "fields": [
+  {
+   "fieldname": "field_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Field Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "field_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Field Label",
+   "reqd": 1
+  },
+  {
+   "fieldname": "computation_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Type",
+   "options": "Count\nDistinct Count\nSum\nAverage\nMin\nMax\nCombine Text\nLookup\nPercent\nFormula",
+   "reqd": 1
+  },
+  {
+   "depends_on": "eval:!['Count'].includes(doc.computation_type)",
+   "fieldname": "target_field",
+   "fieldtype": "Data",
+   "label": "Target Field"
+  },
+  {
+   "fieldname": "condition",
+   "fieldtype": "Data",
+   "label": "Condition"
+  },
+  {
+   "depends_on": "eval:doc.computation_type == 'Formula'",
+   "fieldname": "formula",
+   "fieldtype": "Code",
+   "label": "Formula"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_add",
+   "fieldtype": "Check",
+   "label": "Auto Add",
+   "description": "Automatically add this field to the parent DocType"
+  }
+ ],
+ "grid_page_length": 50,
+ "index_web_pages_for_search": 1,
+ "istable": 1,
+ "links": [],
+ "modified": "2025-08-04 22:42:41.993685",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "Flansa Computed Field",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

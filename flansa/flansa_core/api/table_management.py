@@ -1,0 +1,253 @@
+"""
+Table Management API for Flansa Platform - TIMESTAMP CONFLICT FIXED
+Handles table activation, deactivation, and DocType creation
+"""
+
+import frappe
+from frappe import _
+import json
+
+@frappe.whitelist()
+def activate_table(table_name):
+    """Activate a Flansa Table and create its DocType"""
+    try:
+        print(f"Activating table: {table_name}")
+        
+        # Get the table document with fresh data
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if table_doc.status == "Active":
+            frappe.msgprint("Table is already active", indicator="orange")
+            return {
+                "success": False,
+                "error": "Table is already active"
+            }
+        
+        # Generate DocType name if not exists
+        if not table_doc.doctype_name:
+            # Create a cleaner DocType name
+            clean_name = (table_doc.table_label or table_doc.name).replace(" ", "").replace("-", "")
+            base_name = f"FLS{clean_name}"
+            doctype_name = base_name
+            counter = 1
+            
+            while frappe.db.exists("DocType", doctype_name):
+                doctype_name = f"{base_name}{counter}"
+                counter += 1
+            
+            table_doc.doctype_name = doctype_name
+            print(f"Generated DocType name: {doctype_name}")
+        
+        # Parse fields from JSON
+        fields_data = []
+        if table_doc.fields_json:
+            try:
+                fields_data = json.loads(table_doc.fields_json)
+                print(f"Found {len(fields_data)} fields in JSON")
+            except json.JSONDecodeError:
+                frappe.msgprint("Invalid fields JSON format", indicator="red")
+                return {
+                    "success": False,
+                    "error": "Invalid fields JSON format"
+                }
+        
+        # Create DocType first
+        doctype = create_doctype_from_table(table_doc, fields_data)
+        
+        if doctype:
+            # REFRESH the table document to get latest timestamp
+            table_doc.reload()
+            
+            # Update table status
+            table_doc.status = "Active"
+            
+            # Save with ignore_permissions and handle timestamp conflicts
+            table_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            frappe.msgprint(f"Table activated successfully! DocType '{doctype.name}' created.", indicator="green")
+            print(f"DocType created: {doctype.name}")
+            
+            return {
+                "success": True,
+                "message": f"Table activated successfully. DocType '{doctype.name}' created.",
+                "doctype_name": doctype.name
+            }
+        else:
+            frappe.msgprint("Failed to create DocType", indicator="red")
+            return {
+                "success": False,
+                "error": "Failed to create DocType"
+            }
+            
+    except frappe.TimestampMismatchError:
+        # Handle timestamp mismatch specifically
+        print("Timestamp mismatch detected, retrying with fresh document...")
+        try:
+            # Get fresh document and try again
+            fresh_table_doc = frappe.get_doc("Flansa Table", table_name)
+            fresh_table_doc.status = "Active"
+            fresh_table_doc.save(ignore_permissions=True)
+            frappe.db.commit()
+            
+            return {
+                "success": True,
+                "message": f"Table activated successfully after refresh.",
+                "doctype_name": fresh_table_doc.doctype_name
+            }
+        except Exception as retry_error:
+            print(f"Retry failed: {retry_error}")
+            return {
+                "success": False,
+                "error": f"Retry failed: {str(retry_error)}"
+            }
+            
+    except Exception as e:
+        print(f"Error activating table: {str(e)}")
+        frappe.msgprint(f"Error activating table: {str(e)}", indicator="red")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+def create_doctype_from_table(table_doc, fields_data):
+    """Create a DocType from Flansa Table definition"""
+    try:
+        print(f"Creating DocType: {table_doc.doctype_name}")
+        
+        # Check if DocType already exists and delete it
+        if frappe.db.exists("DocType", table_doc.doctype_name):
+            print("Existing DocType found, deleting...")
+            frappe.delete_doc("DocType", table_doc.doctype_name, force=True, ignore_permissions=True)
+            frappe.db.commit()  # Commit the deletion
+        
+        # Create new DocType
+        doctype = frappe.new_doc("DocType")
+        doctype.name = table_doc.doctype_name
+        doctype.module = "Flansa Core"
+        doctype.custom = 1
+        doctype.naming_rule = "Random"
+        
+        # Basic settings - simplified
+        doctype.track_changes = 0
+        doctype.allow_rename = 0
+        doctype.quick_entry = 0
+        doctype.is_submittable = 0
+        doctype.allow_import = 0
+        
+        # Add basic fields first
+        if not fields_data:
+            # Add a default field if no fields provided
+            doctype.append("fields", {
+                "fieldname": "title",
+                "label": "Title",
+                "fieldtype": "Data",
+                "reqd": 1,
+                "in_list_view": 1,
+                "in_standard_filter": 1
+            })
+            print("Added default title field")
+        else:
+            # Add fields from table definition
+            field_count = 0
+            for field_data in fields_data:
+                field_name = field_data.get("field_name", "")
+                if not field_name:
+                    continue
+                    
+                field_dict = {
+                    "fieldname": frappe.scrub(field_name),
+                    "label": field_data.get("field_label", field_name),
+                    "fieldtype": map_field_type(field_data.get("field_type", "Data")),
+                    "reqd": field_data.get("is_required", 0),
+                    "in_list_view": 1 if field_count < 3 else 0,
+                    "in_standard_filter": 1 if field_count < 2 else 0
+                }
+                
+                # Add options for select fields
+                if field_data.get("options"):
+                    field_dict["options"] = field_data.get("options")
+                
+                doctype.append("fields", field_dict)
+                field_count += 1
+                print(f"Added field: {field_name}")
+        
+        # Set basic permissions
+        doctype.append("permissions", {
+            "role": "System Manager",
+            "read": 1,
+            "write": 1,
+            "create": 1,
+            "delete": 1,
+            "submit": 0,
+            "cancel": 0,
+            "amend": 0,
+            "print": 1,
+            "email": 1,
+            "export": 1,
+            "import": 0,
+            "share": 1,
+            "report": 1
+        })
+        
+        # Save the DocType
+        doctype.insert(ignore_permissions=True)
+        frappe.db.commit()
+        
+        print(f"DocType {doctype.name} created successfully")
+        return doctype
+        
+    except Exception as e:
+        print(f"Error creating DocType: {str(e)}")
+        return None
+
+def map_field_type(flansa_type):
+    """Map Flansa field types to Frappe field types"""
+    type_mapping = {
+        "Text": "Data",
+        "Data": "Data",
+        "Number": "Int", 
+        "Decimal": "Float",
+        "Currency": "Currency",
+        "Date": "Date",
+        "DateTime": "Datetime",
+        "Time": "Time",
+        "Select": "Select",
+        "Multi-Select": "Small Text",
+        "Link": "Data",
+        "Check": "Check",
+        "Text Area": "Text",
+        "Long Text": "Long Text",
+        "HTML": "Text Editor",
+        "Image": "Data",
+        "File": "Data",
+        "Gallery": "Long Text",
+        "JSON": "Long Text",
+        "Code": "Code",
+        "Signature": "Data"
+    }
+    
+    return type_mapping.get(flansa_type, "Data")
+
+@frappe.whitelist()
+def force_activate_table(table_name):
+    """Force activate table by updating directly in database"""
+    try:
+        # Update status directly in database to avoid timestamp conflicts
+        frappe.db.set_value("Flansa Table", table_name, "status", "Active")
+        frappe.db.commit()
+        
+        # Get the updated document
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        return {
+            "success": True,
+            "message": f"Table {table_name} force activated",
+            "doctype_name": table_doc.doctype_name
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }

@@ -1,0 +1,609 @@
+/**
+ * Flansa Application Dashboard - Individual App Home Page
+ * Shows overview, stats, and quick actions for a specific application
+ */
+
+frappe.pages['flansa-app-dashboard'].on_page_load = function(wrapper) {
+    var page = frappe.ui.make_app_page({
+        parent: wrapper,
+        title: 'Application Dashboard',
+        single_column: true
+    });
+    
+    // Initialize Application Dashboard
+    new FlansaApplicationDashboard(page);
+};
+
+class FlansaApplicationDashboard {
+    constructor(page) {
+        this.page = page;
+        this.wrapper = page.wrapper;
+        this.$container = $(this.wrapper).find('.layout-main-section');
+        this.view_mode = 'tiles'; // Default view mode
+        
+        // Get route parameter (application ID)
+        this.app_id = this.get_route_parameter();
+        
+        if (!this.app_id) {
+            this.show_error('No application specified');
+            return;
+        }
+        
+        this.setup_page();
+        this.load_application_data();
+    }
+    
+    get_route_parameter() {
+        const route = frappe.get_route();
+        return route[1] || null; // Get second part of route
+    }
+    
+    setup_page() {
+        // Add consistent Flansa Home button at top-left
+        this.page.set_secondary_action('🏠 Flansa Home', () => {
+            window.location.href = '/app/flansa-workspace';
+        }, 'octicon octicon-home');
+        
+        // Add navigation menu items
+        // Removed Visual Builder menu since we're focusing on single table editing
+        
+        this.page.add_menu_item('🔗 Relationship Builder', () => {
+            window.location.href = `/app/flansa-relationship-builder/${this.app_id}`;
+        });
+        
+        this.page.add_menu_item('⚙️ Application Settings', () => {
+            frappe.set_route('Form', 'Flansa Application', this.app_id);
+        });
+        
+        // Add refresh button
+        this.page.add_button('🔄 Refresh', () => {
+            this.load_application_data();
+        });
+        
+        // Create main container
+        this.$container.html(`
+            <div class="application-dashboard-container">
+                <div class="loading-state text-center">
+                    <i class="fa fa-spinner fa-spin fa-3x text-muted"></i>
+                    <p class="mt-3 text-muted">Loading application dashboard...</p>
+                </div>
+            </div>
+        `);
+    }
+    
+    load_application_data() {
+        frappe.call({
+            method: 'flansa.flansa_core.api.workspace_api.get_application_details',
+            args: { app_name: this.app_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    this.render_dashboard(r.message);
+                } else {
+                    this.show_error('Failed to load application data');
+                }
+            },
+            error: (r) => {
+                this.show_error('Error loading application data');
+            }
+        });
+    }
+    
+    render_dashboard(data) {
+        const app = data.application;
+        const tables = data.tables || [];
+        
+        // Store current tables for reference in action methods
+        this.current_tables = tables;
+        
+        // Update page title
+        this.page.set_title(`${app.app_title} - Dashboard`);
+        
+        const dashboard_html = `
+            <div class="application-dashboard-container">
+                <!-- Header Section -->
+                <div class="dashboard-header" style="padding: 15px 0; border-bottom: 1px solid #e0e0e0;">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <h3 style="margin: 0; color: #333; font-weight: normal;">${app.app_title}</h3>
+                            <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">${app.description || 'No description provided'}</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Quick Actions Section -->
+                <div class="dashboard-quick-actions mt-4" style="padding: 20px 0; border-bottom: 1px solid #e0e0e0;">
+                    <div class="row">
+                        <div class="col-md-12 text-center">
+                            <div class="btn-group" role="group">
+                                <button class="btn btn-default" onclick="window.app_dashboard.view_relationships()">
+                                    Manage Relationships
+                                </button>
+                                <button class="btn btn-default" onclick="window.app_dashboard.view_data()">
+                                    View Data
+                                </button>
+                                <button class="btn btn-default" onclick="window.app_dashboard.export_app()">
+                                    Export
+                                </button>
+                                <button class="btn btn-default" onclick="window.app_dashboard.import_data()">
+                                    Import
+                                </button>
+                                <button class="btn btn-default" onclick="window.app_dashboard.app_settings()">
+                                    Settings
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Stats Strip -->
+                <div class="dashboard-stats-strip mt-3" style="padding: 15px 0; background: #f8f9fa;">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            <h3 style="margin: 0; font-weight: normal; color: #333;">${tables.length}</h3>
+                            <small style="color: #666;">Tables</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h3 style="margin: 0; font-weight: normal; color: #333;">${this.get_total_fields(tables)}</h3>
+                            <small style="color: #666;">Total Fields</small>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            <h3 style="margin: 0; font-weight: normal; color: #333;">${tables.filter(t => t.status === 'Active').length}</h3>
+                            <small style="color: #666;">Active</small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Content -->
+                <div class="dashboard-content mt-4">
+                    <div class="row">
+                        <!-- Tables Section -->
+                        <div class="col-md-12">
+                            <div class="content-section">
+                                <div class="section-header d-flex justify-content-between align-items-center" style="border-bottom: 1px solid #e0e0e0; padding-bottom: 10px; margin-bottom: 20px;">
+                                    <div>
+                                        <h4 style="display: inline-block; margin: 0; font-weight: normal;">Tables</h4>
+                                        <button class="btn btn-primary btn-sm" style="margin-left: 15px;" onclick="window.app_dashboard.show_quick_table_dialog()">
+                                            Create Table
+                                        </button>
+                                    </div>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-default ${this.view_mode === 'tiles' ? 'active' : ''}" onclick="window.app_dashboard.switch_view('tiles')">
+                                            Grid
+                                        </button>
+                                        <button class="btn btn-default ${this.view_mode === 'table' ? 'active' : ''}" onclick="window.app_dashboard.switch_view('table')">
+                                            List
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="section-content" id="tables-container">
+                                    ${this.view_mode === 'table' ? this.render_tables_table(tables) : this.render_tables_tiles(tables)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        this.$container.html(dashboard_html);
+        
+        // Store reference for button callbacks
+        window.app_dashboard = this;
+    }
+    
+    render_tables_tiles(tables) {
+        if (tables.length === 0) {
+            return this.render_empty_state();
+        }
+        
+        return `
+            <div class="row mt-3">
+                ${tables.map(table => this.render_table_tile(table)).join('')}
+            </div>
+        `;
+    }
+    
+    render_tables_table(tables) {
+        if (tables.length === 0) {
+            return this.render_empty_state();
+        }
+        
+        return `
+            <div class="table-responsive mt-3">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Fields</th>
+                            <th>Status</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tables.map(table => `
+                            <tr>
+                                <td>
+                                    <strong>${table.table_label || table.table_name}</strong>
+                                    <br><small class="text-muted">${table.name}</small>
+                                </td>
+                                <td>${table.fields_count || 0}</td>
+                                <td>
+                                    ${table.status === 'Active' ? 
+                                        '<span class="badge badge-success">Active</span>' : 
+                                        '<span class="badge badge-warning">' + (table.status || 'Draft') + '</span>'}
+                                </td>
+                                <td>${this.format_date(table.creation)}</td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-primary" onclick="window.app_dashboard.edit_table('${table.name}')" title="Edit Table">
+                                            <i class="fa fa-edit"></i> Edit
+                                        </button>
+                                        <button class="btn btn-info" onclick="window.app_dashboard.view_table_data('${table.name}')" title="View Data">
+                                            <i class="fa fa-eye"></i> Data
+                                        </button>
+                                        <button class="btn btn-danger" onclick="window.app_dashboard.delete_table('${table.name}')" title="Delete Table">
+                                            <i class="fa fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    
+    render_table_tile(table) {
+        const is_active = table.status === 'Active';
+        
+        return `
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                <div class="card table-card h-100" style="border: 1px solid #e0e0e0; transition: all 0.2s ease;" 
+                     onmouseover="this.style.borderColor='#999'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)';" 
+                     onmouseout="this.style.borderColor='#e0e0e0'; this.style.boxShadow='';">
+                    <div class="card-body">
+                        <h5 class="card-title" style="font-weight: normal; margin-bottom: 10px;">
+                            ${table.table_label || table.table_name}
+                        </h5>
+                        <p class="card-text text-muted" style="font-size: 13px;">
+                            ${table.fields_count || 0} fields ${is_active ? '• Active' : '• Draft'}
+                        </p>
+                        <div style="margin-top: 15px;">
+                            <button class="btn btn-sm btn-default" style="margin-right: 5px;" onclick="window.app_dashboard.edit_table('${table.name}')">
+                                Edit
+                            </button>
+                            ${is_active ? `
+                                <button class="btn btn-sm btn-default" onclick="window.app_dashboard.view_table_data('${table.name}')">
+                                    View Data
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    render_create_table_tile() {
+        return `
+            <div class="col-lg-3 col-md-4 col-sm-6 mb-3">
+                <div class="card table-card h-100" style="border: 2px dashed #dee2e6; cursor: pointer;" 
+                     onclick="window.app_dashboard.show_quick_table_dialog()"
+                     onmouseover="this.style.borderColor='#007bff'; this.style.backgroundColor='#f8f9ff';" 
+                     onmouseout="this.style.borderColor='#dee2e6'; this.style.backgroundColor='';">
+                    <div class="card-body text-center d-flex align-items-center justify-content-center">
+                        <div>
+                            <i class="fa fa-plus fa-2x text-muted mb-2"></i>
+                            <h5 class="card-title text-muted">Create Table</h5>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    render_empty_state() {
+        return `
+            <div class="empty-state text-center mt-5">
+                <i class="fa fa-table fa-4x text-muted"></i>
+                <h4 class="mt-3">No Tables Yet</h4>
+                <p class="text-muted">Create your first table to get started using the button above</p>
+            </div>
+        `;
+    }
+    
+    render_relationships_list(relationships) {
+        if (relationships.length === 0) {
+            return `
+                <div class="empty-state text-center">
+                    <i class="fa fa-link fa-3x text-muted"></i>
+                    <h4>No Relationships</h4>
+                    <p class="text-muted">Connect your tables with relationships</p>
+                    <button class="btn btn-info" onclick="window.app_dashboard.view_relationships()">
+                        <i class="fa fa-plus"></i> Create First Relationship
+                    </button>
+                </div>
+            `;
+        }
+        
+        return `
+            <div class="relationships-list">
+                ${relationships.map(rel => `
+                    <div class="relationship-item">
+                        <div class="relationship-header">
+                            <h6><i class="fa fa-link"></i> ${rel.display_name || rel.name}</h6>
+                            <span class="badge badge-info">${rel.relationship_type}</span>
+                        </div>
+                        <div class="relationship-body">
+                            <small class="text-muted">
+                                ${this.get_table_display_name(rel.from_table)} 
+                                <i class="fa fa-arrow-right mx-1"></i> 
+                                ${this.get_table_display_name(rel.to_table)}
+                            </small>
+                        </div>
+                    </div>
+                `).join('')}
+                <div class="text-center mt-2">
+                    <button class="btn btn-sm btn-outline-info" onclick="window.app_dashboard.view_relationships()">
+                        <i class="fa fa-eye"></i> View All (${relationships.length})
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+    
+    get_table_display_name(table_id) {
+        // This should be populated during data loading
+        return this.table_names_map && this.table_names_map[table_id] || table_id;
+    }
+    
+    get_total_fields(tables) {
+        return tables.reduce((total, table) => total + (table.fields_count || 0), 0);
+    }
+    
+    format_date(date_string) {
+        if (!date_string) return 'N/A';
+        const date = new Date(date_string);
+        const now = new Date();
+        const diff = now - date;
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        
+        if (days === 0) return 'Today';
+        if (days === 1) return 'Yesterday';
+        if (days < 7) return `${days} days ago`;
+        return date.toLocaleDateString();
+    }
+    
+    show_error(message) {
+        this.$container.html(`
+            <div class="text-center" style="padding: 50px;">
+                <h4><i class="fa fa-exclamation-triangle text-warning"></i> Error</h4>
+                <p>${message}</p>
+                <button class="btn btn-primary" onclick="window.location.href='/app/flansa-workspace'">
+                    <i class="fa fa-home"></i> Back to Home
+                </button>
+            </div>
+        `);
+    }
+    
+    // Action methods
+    show_quick_table_dialog() {
+        const dialog = new frappe.ui.Dialog({
+            title: '📋 Create New Table',
+            size: 'large',
+            fields: [
+                {
+                    fieldtype: 'Section Break',
+                    label: '✨ Quick Table Creation',
+                    description: 'Create a new table with just the essential information'
+                },
+                {
+                    label: 'Display Label',
+                    fieldname: 'table_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'User-friendly name for your table (e.g., "Customer Orders")',
+                    placeholder: 'Enter a descriptive label...',
+                    change: () => {
+                        // Auto-populate table name based on label
+                        const label = dialog.get_value('table_label');
+                        if (label) {
+                            const tableName = this.generate_table_name(label);
+                            dialog.set_value('table_name', tableName);
+                        }
+                    }
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Table Name',
+                    fieldname: 'table_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Technical name (auto-generated, can be edited)',
+                    placeholder: 'Auto-generated from label...'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: '📝 Optional Details'
+                },
+                {
+                    label: 'Description',
+                    fieldname: 'description',
+                    fieldtype: 'Text',
+                    description: 'Optional: Brief description of what this table stores'
+                }
+            ],
+            primary_action_label: '🚀 Create Table',
+            primary_action: (values) => {
+                this.create_table_quick(values, dialog);
+            },
+            secondary_action_label: '📋 View All Tables',
+            secondary_action: () => {
+                dialog.hide();
+                this.open_table_builder();
+            }
+        });
+        
+        dialog.show();
+        
+        // Focus on the first field
+        setTimeout(() => {
+            dialog.fields_dict.table_label.set_focus();
+        }, 500);
+    }
+    
+    generate_table_name(label) {
+        // Convert label to valid table name
+        return label
+            .replace(/[^a-zA-Z0-9\s]/g, '') // Remove special characters
+            .replace(/\s+/g, '_') // Replace spaces with underscores
+            .toLowerCase() // Convert to lowercase
+            .substring(0, 50); // Limit length
+    }
+    
+    create_table_quick(values, dialog) {
+        // Show loading state
+        dialog.set_primary_action('Creating...', null);
+        dialog.$wrapper.find('.btn-primary').prop('disabled', true);
+        
+        // Create the table via API
+        frappe.call({
+            method: 'flansa.flansa_core.api.workspace_api.create_flansa_table',
+            args: {
+                app_name: this.app_id,
+                table_data: {
+                    table_name: values.table_name,
+                    table_label: values.table_label,
+                    description: values.description || '',
+                    status: 'Draft'
+                }
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: `✅ Table "${values.table_label}" created successfully!`,
+                        indicator: 'green'
+                    });
+                    
+                    dialog.hide();
+                    
+                    // Ask user what to do next
+                    frappe.confirm(
+                        'Table created successfully! What would you like to do next?',
+                        () => {
+                            // Go to Visual Builder to add fields
+                            window.location.href = `/app/flansa-visual-builder/${this.app_id}?table=${r.message.table_name}`;
+                        },
+                        () => {
+                            // Stay on dashboard and refresh
+                            this.load_application_data();
+                        },
+                        'Add Fields Now',
+                        'Stay Here'
+                    );
+                } else {
+                    frappe.show_alert({
+                        message: `❌ ${r.message?.error || 'Failed to create table'}`,
+                        indicator: 'red'
+                    });
+                    
+                    // Reset button
+                    dialog.set_primary_action('🚀 Create Table', () => {
+                        this.create_table_quick(values, dialog);
+                    });
+                    dialog.$wrapper.find('.btn-primary').prop('disabled', false);
+                }
+            },
+            error: () => {
+                frappe.show_alert({
+                    message: '❌ Error creating table. Please try again.',
+                    indicator: 'red'
+                });
+                
+                // Reset button
+                dialog.set_primary_action('🚀 Create Table', () => {
+                    this.create_table_quick(values, dialog);
+                });
+                dialog.$wrapper.find('.btn-primary').prop('disabled', false);
+            }
+        });
+    }
+    
+    open_table_builder() {
+        window.location.href = `/app/flansa-visual-builder/${this.app_id}`;
+    }
+    
+    open_table(table_id) {
+        window.location.href = `/app/flansa-visual-builder/${table_id}`;
+    }
+    
+    view_relationships() {
+        window.location.href = `/app/flansa-relationship-builder/${this.app_id}`;
+    }
+    
+    view_data() {
+        frappe.msgprint('Data viewer coming soon!');
+    }
+    
+    export_app() {
+        frappe.msgprint('Export functionality coming soon!');
+    }
+    
+    app_settings() {
+        frappe.set_route('Form', 'Flansa Application', this.app_id);
+    }
+    
+    // Additional table action methods
+    edit_table(table_name) {
+        // Navigate to visual builder for this specific table
+        window.location.href = `/app/flansa-visual-builder/${table_name}`;
+    }
+    
+    view_table_data(table_name) {
+        // Get the table's doctype name to view data
+        const table = this.current_tables?.find(t => t.name === table_name);
+        if (table && table.doctype_name) {
+            const doctype_slug = table.doctype_name.toLowerCase().replace(/\s+/g, '_');
+            window.location.href = `/app/${doctype_slug}`;
+        } else {
+            frappe.show_alert('Table not activated yet. Please add fields first.', 'orange');
+        }
+    }
+    
+    delete_table(table_name) {
+        frappe.confirm(
+            'Are you sure you want to delete this table? This action cannot be undone.',
+            () => {
+                frappe.call({
+                    method: 'frappe.client.delete',
+                    args: {
+                        doctype: 'Flansa Table',
+                        name: table_name
+                    },
+                    callback: (r) => {
+                        if (r && !r.exc) {
+                            frappe.show_alert('Table deleted successfully', 'green');
+                            this.load_application_data();
+                        } else {
+                            frappe.show_alert('Failed to delete table', 'red');
+                        }
+                    }
+                });
+            }
+        );
+    }
+    
+    switch_view(mode) {
+        this.view_mode = mode;
+        this.load_application_data();
+    }
+    
+    import_data() {
+        frappe.msgprint('Import functionality coming soon!');
+    }
+    
+}

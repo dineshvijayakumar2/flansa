@@ -1,0 +1,155 @@
+/* Flansa Platform Styles */
+
+/* Table Builder Styles */
+.flansa-table-builder {
+	padding: 20px;
+}
+
+.table-preview-container,
+.field-properties {
+	background: #fff;
+	border: 1px solid #d1d8dd;
+	border-radius: 4px;
+	padding: 20px;
+	min-height: 400px;
+}
+
+.field-list {
+	min-height: 300px;
+}
+
+.field-item {
+	background: #f5f7fa;
+	border: 1px solid #d1d8dd;
+	border-radius: 4px;
+	padding: 12px;
+	margin-bottom: 8px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	cursor: move;
+	transition: all 0.2s ease;
+}
+
+.field-item:hover {
+	background: #e9ecef;
+	border-color: #b8c2cc;
+}
+
+.field-item.selected {
+	background: #e3f2fd;
+	border-color: #2196f3;
+}
+
+.field-item.field-break {
+	background: #fff3cd;
+	border-color: #ffeaa7;
+}
+
+.field-content {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	flex: 1;
+}
+
+.field-icon {
+	color: #6c757d;
+	width: 20px;
+	text-align: center;
+}
+
+.field-label {
+	font-weight: 500;
+	flex: 1;
+}
+
+.field-type {
+	font-size: 12px;
+	color: #6c757d;
+	background: #e9ecef;
+	padding: 2px 8px;
+	border-radius: 3px;
+}
+
+.required-indicator {
+	color: #dc3545;
+	font-weight: bold;
+	margin-left: 4px;
+}
+
+.field-actions {
+	display: flex;
+	gap: 4px;
+}
+
+.fields-toolbar {
+	display: flex;
+	gap: 10px;
+	padding: 15px;
+	background: #f5f7fa;
+	border-radius: 4px;
+}
+
+/* Sortable styles */
+.sortable-ghost {
+	opacity: 0.4;
+}
+
+.sortable-drag {
+	background: #fff;
+	box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* Empty state */
+.empty-state {
+	color: #6c757d;
+}
+
+/* Workspace Styles */
+.flansa-workspace-card {
+	background: #fff;
+	border: 1px solid #d1d8dd;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 20px;
+	transition: all 0.2s ease;
+}
+
+.flansa-workspace-card:hover {
+	box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+	transform: translateY(-2px);
+}
+
+/* Relationship Builder Styles */
+.relationship-diagram {
+	background: #f8f9fa;
+	border: 1px solid #dee2e6;
+	border-radius: 4px;
+	padding: 20px;
+	min-height: 400px;
+	position: relative;
+}
+
+.table-node {
+	background: #fff;
+	border: 2px solid #007bff;
+	border-radius: 4px;
+	padding: 15px;
+	position: absolute;
+	min-width: 150px;
+	cursor: move;
+}
+
+.table-node-title {
+	font-weight: bold;
+	margin-bottom: 10px;
+	border-bottom: 1px solid #e9ecef;
+	padding-bottom: 5px;
+}
+
+.relationship-line {
+	stroke: #6c757d;
+	stroke-width: 2;
+	fill: none;
+}

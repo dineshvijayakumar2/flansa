@@ -1,0 +1,385 @@
+<div class="flansa-form-builder-page">
+    <!-- Compact Modern Header -->
+    <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
+        <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
+            <button class="btn btn-default" id="back-to-tables-btn" title="Back to Tables" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 6px 12px; border-radius: 4px; display: flex; align-items: center; gap: 6px; cursor: pointer; transition: background-color 0.2s;">
+                <i class="fa fa-arrow-left" style="font-size: 14px;"></i>
+                <span>Back</span>
+            </button>
+            <i class="fa fa-edit" style="font-size: 18px; opacity: 0.9;"></i>
+            <span style="font-size: 16px; font-weight: 600;" id="table-name-display">Form Builder</span>
+        </div>
+        <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
+            <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;" id="page-title">📝 Form Builder</h3>
+            <div class="context-menu-wrapper" style="position: relative;">
+                <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
+                    ⋯
+                </button>
+                <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
+                    <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-paint-brush" style="width: 16px;"></i>
+                        <span>Theme Settings</span>
+                    </div>
+                    <div class="context-menu-item" data-action="preview" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-eye" style="width: 16px;"></i>
+                        <span>Preview Form</span>
+                    </div>
+                    <div class="context-menu-item" data-action="save" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-save" style="width: 16px;"></i>
+                        <span>Save Form</span>
+                    </div>
+                    <div class="context-menu-item" data-action="help" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
+                        <i class="fa fa-question-circle" style="width: 16px;"></i>
+                        <span>Help</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Breadcrumb Navigation -->
+    <div class="flansa-breadcrumb-bar" style="background: var(--flansa-background, #f8f9fa); padding: 12px 20px; margin: 0 -20px 0 -20px; border-bottom: 1px solid var(--flansa-border, #e0e6ed); display: flex; align-items: center; gap: 8px; font-size: 14px;">
+        <a href="/app/flansa-workspace" style="color: var(--flansa-primary, #007bff); text-decoration: none; font-weight: 600;">🏠 Workspace</a>
+        <span style="color: var(--flansa-text-secondary, #6c757d);"> / </span>
+        <a href="#" id="app-breadcrumb" style="color: var(--flansa-primary, #007bff); text-decoration: none; font-weight: 600;">📱 App</a>
+        <span style="color: var(--flansa-text-secondary, #6c757d);"> / </span>
+        <span style="color: var(--flansa-text-primary, #495057); font-weight: 600;" id="table-breadcrumb">📝 Form Builder</span>
+    </div>
+
+    <!-- Mode Toggle -->
+    <div class="mode-toggle-bar" style="background: white; padding: 16px 20px; margin: 0 -20px 20px -20px; border-bottom: 1px solid var(--flansa-border, #e0e6ed); display: flex; align-items: center; justify-content: space-between;">
+        <div class="mode-buttons" style="display: flex; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; overflow: hidden;">
+            <button class="mode-btn active" data-mode="design" style="padding: 8px 16px; border: none; background: var(--flansa-primary, #007bff); color: white; cursor: pointer; transition: all 0.2s;">
+                <i class="fa fa-edit"></i> Design
+            </button>
+            <button class="mode-btn" data-mode="preview" style="padding: 8px 16px; border: none; background: white; color: var(--flansa-text-primary, #495057); cursor: pointer; transition: all 0.2s;">
+                <i class="fa fa-eye"></i> Preview
+            </button>
+            <button class="mode-btn" data-mode="settings" style="padding: 8px 16px; border: none; background: white; color: var(--flansa-text-primary, #495057); cursor: pointer; transition: all 0.2s;">
+                <i class="fa fa-cog"></i> Settings
+            </button>
+        </div>
+        <div class="action-buttons" style="display: flex; gap: 12px;">
+            <button class="btn btn-default" id="reset-form-btn">
+                <i class="fa fa-refresh"></i> Reset
+            </button>
+            <button class="btn btn-primary" id="save-form-btn">
+                <i class="fa fa-save"></i> Save Form
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-container" style="text-align: center; padding: 60px 20px; display: none;">
+        <i class="fa fa-spinner fa-spin fa-2x" style="color: var(--flansa-primary, #007bff); margin-bottom: 16px;"></i>
+        <p style="color: var(--flansa-text-secondary, #6c757d); margin: 0;">Loading form builder...</p>
+    </div>
+
+    <!-- Main Content -->
+    <div id="form-builder-content" style="padding: 0 20px;">
+        
+        <!-- Design Mode -->
+        <div id="design-mode" class="form-mode active" style="display: block;">
+            <div class="form-builder-layout" style="display: grid; grid-template-columns: 250px 1fr 300px; gap: 20px; height: calc(100vh - 300px);">
+                
+                <!-- Fields Palette -->
+                <div class="fields-palette" style="background: white; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; overflow: hidden;">
+                    <div class="palette-header" style="background: var(--flansa-background, #f8f9fa); padding: 16px; border-bottom: 1px solid var(--flansa-border, #e0e6ed);">
+                        <h6 style="margin: 0; font-weight: 600; color: var(--flansa-text-primary, #495057);">
+                            <i class="fa fa-puzzle-piece"></i> Available Fields
+                        </h6>
+                    </div>
+                    <div class="palette-content" id="fields-palette-content" style="padding: 16px; max-height: calc(100vh - 400px); overflow-y: auto;">
+                        <!-- Available fields will be populated here -->
+                    </div>
+                </div>
+
+                <!-- Form Canvas -->
+                <div class="form-canvas" style="background: white; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; overflow: hidden;">
+                    <div class="canvas-header" style="background: var(--flansa-background, #f8f9fa); padding: 16px; border-bottom: 1px solid var(--flansa-border, #e0e6ed); display: flex; justify-content: between; align-items: center;">
+                        <h6 style="margin: 0; font-weight: 600; color: var(--flansa-text-primary, #495057);">
+                            <i class="fa fa-layout"></i> Form Layout
+                        </h6>
+                        <div class="canvas-tools" style="margin-left: auto; display: flex; gap: 8px;">
+                            <button class="btn btn-sm btn-info" id="refresh-fields-btn" title="Refresh Fields from Table">
+                                <i class="fa fa-refresh"></i> Sync
+                            </button>
+                            <button class="btn btn-sm btn-warning" id="force-reload-fields-btn" title="Force Reload Fields (Bypass Cache)">
+                                <i class="fa fa-bolt"></i> Force Reload
+                            </button>
+                            <button class="btn btn-sm btn-success" id="smart-organize-btn" title="Smart Organize Fields">
+                                <i class="fa fa-magic"></i> Auto-Organize
+                            </button>
+                            <button class="btn btn-sm btn-light" id="add-section-btn" title="Add Section">
+                                <i class="fa fa-plus"></i> Section
+                            </button>
+                            <button class="btn btn-sm btn-light" id="add-column-btn" title="Add Column">
+                                <i class="fa fa-columns"></i> Column
+                            </button>
+                            <button class="btn btn-sm btn-light" id="clear-canvas-btn" title="Clear All">
+                                <i class="fa fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="canvas-content" id="form-canvas-content" style="padding: 20px; min-height: 400px; max-height: calc(100vh - 450px); overflow-y: auto;">
+                        <div class="empty-canvas" id="empty-canvas-message" style="text-align: center; padding: 60px 20px; color: var(--flansa-text-secondary, #6c757d);">
+                            <i class="fa fa-mouse-pointer fa-2x" style="margin-bottom: 16px; opacity: 0.5;"></i>
+                            <h5 style="margin-bottom: 8px;">Start Building Your Form</h5>
+                            <p style="margin: 0;">Drag fields from the left panel or click "Add Section" to begin</p>
+                        </div>
+                        <!-- Form sections will be added here -->
+                    </div>
+                </div>
+
+                <!-- Properties Panel -->
+                <div class="properties-panel" style="background: white; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; overflow: hidden;">
+                    <div class="properties-header" style="background: var(--flansa-background, #f8f9fa); padding: 16px; border-bottom: 1px solid var(--flansa-border, #e0e6ed);">
+                        <h6 style="margin: 0; font-weight: 600; color: var(--flansa-text-primary, #495057);">
+                            <i class="fa fa-sliders-h"></i> Properties
+                        </h6>
+                    </div>
+                    <div class="properties-content" id="properties-content" style="padding: 16px; max-height: calc(100vh - 400px); overflow-y: auto;">
+                        <div class="no-selection" style="text-align: center; padding: 40px 20px; color: var(--flansa-text-secondary, #6c757d);">
+                            <i class="fa fa-hand-pointer-o fa-2x" style="margin-bottom: 16px; opacity: 0.5;"></i>
+                            <p style="margin: 0;">Select a field or section to edit properties</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Mode -->
+        <div id="preview-mode" class="form-mode" style="display: none;">
+            <div class="preview-container" style="background: white; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; padding: 30px; max-width: 800px; margin: 0 auto;">
+                <div class="preview-header" style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid var(--flansa-border, #e0e6ed);">
+                    <h4 style="margin: 0; color: var(--flansa-text-primary, #495057);" id="preview-form-title">Form Preview</h4>
+                    <p style="margin: 8px 0 0 0; color: var(--flansa-text-secondary, #6c757d);" id="preview-form-description">Preview how your form will look to users</p>
+                </div>
+                <div id="preview-form-content">
+                    <!-- Form preview will be rendered here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Settings Mode -->
+        <div id="settings-mode" class="form-mode" style="display: none;">
+            <div class="settings-container" style="background: white; border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 8px; padding: 30px; max-width: 600px; margin: 0 auto;">
+                <h5 style="margin-bottom: 20px; color: var(--flansa-text-primary, #495057);">Form Settings</h5>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--flansa-text-primary, #495057);">Form Title</label>
+                    <input type="text" class="form-control" id="form-title-input" placeholder="Enter form title">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--flansa-text-primary, #495057);">Form Description</label>
+                    <textarea class="form-control" id="form-description-input" rows="3" placeholder="Enter form description"></textarea>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--flansa-text-primary, #495057);">Layout Type</label>
+                    <select class="form-control" id="layout-type-select">
+                        <option value="standard">Standard</option>
+                        <option value="compact">Compact</option>
+                        <option value="wide">Wide</option>
+                    </select>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--flansa-text-primary, #495057);">Column Layout</label>
+                    <select class="form-control" id="column-layout-select">
+                        <option value="auto">Smart Layout (Recommended)</option>
+                        <option value="single">Single Column</option>
+                        <option value="two-column">Two Columns</option>
+                        <option value="three-column">Three Columns</option>
+                        <option value="custom">Custom Layout</option>
+                    </select>
+                    <small class="form-text text-muted">Smart Layout automatically organizes fields based on field types and best practices</small>
+                </div>
+                
+                <div class="form-group" id="smart-layout-options" style="margin-bottom: 20px; display: none;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--flansa-text-primary, #495057);">Smart Layout Options</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="group-related-fields" checked>
+                        <label class="form-check-label" for="group-related-fields">Group related fields together</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="prioritize-required" checked>
+                        <label class="form-check-label" for="prioritize-required">Prioritize required fields</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="responsive-breakpoints" checked>
+                        <label class="form-check-label" for="responsive-breakpoints">Responsive breakpoints</label>
+                    </div>
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600; color: var(--flansa-text-primary, #495057);">Custom CSS</label>
+                    <textarea class="form-control" id="custom-css-input" rows="6" placeholder="Enter custom CSS styles..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Selector (shown when no table is specified) -->
+        <div id="table-selector" style="display: none; text-align: center; padding: 60px 20px;">
+            <i class="fa fa-table fa-3x" style="color: var(--flansa-text-secondary, #6c757d); margin-bottom: 16px; opacity: 0.5;"></i>
+            <h4 style="color: var(--flansa-text-primary, #495057); margin-bottom: 8px;">Select a Table</h4>
+            <p style="color: var(--flansa-text-secondary, #6c757d); margin-bottom: 20px;">Choose a table to build a form for.</p>
+            <button class="btn btn-primary" id="back-to-workspace-btn">
+                <i class="fa fa-arrow-left"></i> Back to Workspace
+            </button>
+        </div>
+
+        <!-- Error State -->
+        <div id="error-container" style="display: none; text-align: center; padding: 60px 20px;">
+            <i class="fa fa-exclamation-triangle fa-3x" style="color: #dc3545; margin-bottom: 16px;"></i>
+            <h4 style="color: #dc3545; margin-bottom: 8px;">Error Loading Form Builder</h4>
+            <p style="color: var(--flansa-text-secondary, #6c757d); margin-bottom: 20px;" id="error-message">An error occurred while loading the form builder.</p>
+            <button class="btn btn-primary" id="retry-btn">
+                <i class="fa fa-refresh"></i> Retry
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.flansa-form-builder-page {
+    background: var(--flansa-background, #f8f9fa);
+    min-height: 100vh;
+}
+
+.mode-btn.active {
+    background: var(--flansa-primary, #007bff) !important;
+    color: white !important;
+}
+
+.mode-btn:hover:not(.active) {
+    background: var(--flansa-secondary, #f8f9fa) !important;
+}
+
+.context-menu-item:hover {
+    background: var(--flansa-secondary, #f8f9fa) !important;
+}
+
+.flansa-compact-header button:hover {
+    background: rgba(255,255,255,0.3) !important;
+}
+
+.form-mode {
+    transition: all 0.3s ease;
+}
+
+.field-item {
+    padding: 12px;
+    margin-bottom: 8px;
+    border: 1px solid var(--flansa-border, #e0e6ed);
+    border-radius: 6px;
+    cursor: move;
+    transition: all 0.2s;
+    background: white;
+}
+
+.field-item:hover {
+    border-color: var(--flansa-primary, #007bff);
+    box-shadow: 0 2px 4px rgba(0,123,255,0.1);
+}
+
+.field-item.dragging {
+    opacity: 0.5;
+    transform: rotate(2deg);
+}
+
+.form-section {
+    margin-bottom: 20px;
+    border: 1px solid var(--flansa-border, #e0e6ed);
+    border-radius: 8px;
+    background: white;
+}
+
+.section-header {
+    background: var(--flansa-background, #f8f9fa);
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--flansa-border, #e0e6ed);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.section-content {
+    padding: 16px;
+    min-height: 60px;
+    border: 2px dashed transparent;
+    transition: all 0.2s;
+}
+
+.section-content.drag-over {
+    border-color: var(--flansa-primary, #007bff);
+    background: rgba(0,123,255,0.05);
+}
+
+.form-field {
+    margin-bottom: 16px;
+    padding: 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+
+.form-field:hover {
+    border-color: var(--flansa-border, #e0e6ed);
+    background: var(--flansa-background, #f8f9fa);
+}
+
+.form-field.selected {
+    border-color: var(--flansa-primary, #007bff);
+    background: rgba(0,123,255,0.05);
+}
+
+.field-label {
+    font-weight: 600;
+    margin-bottom: 4px;
+    color: var(--flansa-text-primary, #495057);
+}
+
+.field-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--flansa-border, #e0e6ed);
+    border-radius: 4px;
+}
+
+.drop-zone {
+    min-height: 100px;
+    border: 2px dashed var(--flansa-border, #e0e6ed);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--flansa-text-secondary, #6c757d);
+    transition: all 0.2s;
+}
+
+.drop-zone.drag-over {
+    border-color: var(--flansa-primary, #007bff);
+    background: rgba(0,123,255,0.05);
+    color: var(--flansa-primary, #007bff);
+}
+
+.properties-form .form-group {
+    margin-bottom: 16px;
+}
+
+.properties-form label {
+    display: block;
+    margin-bottom: 4px;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    color: var(--flansa-text-secondary, #6c757d);
+}
+
+.properties-form .form-control {
+    font-size: 14px;
+    padding: 6px 8px;
+}
+</style>

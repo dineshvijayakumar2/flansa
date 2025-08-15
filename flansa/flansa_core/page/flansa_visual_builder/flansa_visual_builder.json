@@ -1,0 +1,27 @@
+{
+ "content": null,
+ "creation": "2025-08-04 02:25:57.055269",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "fa fa-paint-brush",
+ "idx": 0,
+ "modified": "2025-08-04 02:25:57.055269",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "flansa-visual-builder",
+ "owner": "Administrator",
+ "page_name": "flansa-visual-builder",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Flansa Admin"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Visual Application Builder"
+}

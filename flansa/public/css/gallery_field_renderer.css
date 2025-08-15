@@ -1,0 +1,222 @@
+/**
+ * Gallery Field Renderer Styles
+ * Provides Airtable-like gallery styling for Flansa multi-image fields
+ */
+
+.flansa-gallery-enhanced .control-input {
+    position: relative;
+}
+
+.flansa-gallery-container {
+    border-radius: 6px;
+    background: var(--control-bg, #f8f9fa);
+    transition: all 0.2s ease;
+}
+
+.gallery-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color, #e9ecef);
+}
+
+.gallery-controls .btn {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 4px;
+}
+
+.add-images-btn {
+    background: var(--primary-color, #007bff);
+    border: none;
+    color: white;
+}
+
+.add-images-btn:hover {
+    background: var(--primary-dark, #0056b3);
+}
+
+.clear-gallery-btn {
+    background: var(--secondary-color, #6c757d);
+    border: none;
+    color: white;
+}
+
+.clear-gallery-btn:hover {
+    background: var(--secondary-dark, #545b62);
+}
+
+.gallery-info {
+    font-size: 11px;
+    color: var(--text-muted, #6c757d);
+    margin-left: auto;
+}
+
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    padding: 16px;
+    border: 2px dashed var(--border-color, #dee2e6);
+    border-radius: 6px;
+    min-height: 100px;
+    background: white;
+    transition: border-color 0.2s ease;
+}
+
+.gallery-grid:hover {
+    border-color: var(--primary-light, #80bdff);
+}
+
+.gallery-item {
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: white;
+    border: 1px solid var(--border-color, #e9ecef);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: pointer;
+}
+
+.gallery-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+
+.gallery-item:hover img {
+    transform: scale(1.05);
+}
+
+.gallery-item-overlay {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0, 0, 0, 0.7);
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.gallery-item:hover .gallery-item-overlay {
+    opacity: 1;
+}
+
+.remove-image-btn {
+    border: none;
+    background: none;
+    color: white;
+    padding: 4px 6px;
+    font-size: 10px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: background 0.2s ease;
+}
+
+.remove-image-btn:hover {
+    background: rgba(255, 0, 0, 0.8);
+}
+
+.gallery-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted, #6c757d);
+    font-size: 14px;
+    grid-column: 1 / -1;
+    padding: 40px 20px;
+    text-align: center;
+    border-radius: 4px;
+    background: var(--light-bg, #f8f9fa);
+}
+
+.gallery-placeholder i {
+    margin-right: 8px;
+    font-size: 18px;
+    opacity: 0.7;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+        gap: 8px;
+        padding: 12px;
+    }
+    
+    .gallery-controls {
+        flex-wrap: wrap;
+        gap: 6px;
+    }
+    
+    .gallery-controls .btn {
+        font-size: 11px;
+        padding: 3px 8px;
+    }
+}
+
+/* Dark theme support */
+[data-theme="dark"] .flansa-gallery-container {
+    background: var(--bg-color, #2d3748);
+    border-color: var(--border-color, #4a5568);
+}
+
+[data-theme="dark"] .gallery-grid {
+    background: var(--card-bg, #1a202c);
+    border-color: var(--border-color, #4a5568);
+}
+
+[data-theme="dark"] .gallery-placeholder {
+    background: var(--card-bg, #1a202c);
+    color: var(--text-color, #e2e8f0);
+}
+
+/* Animation for new images */
+@keyframes gallery-item-enter {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+.gallery-item.new-item {
+    animation: gallery-item-enter 0.3s ease;
+}
+
+/* Loading state */
+.gallery-grid.loading {
+    position: relative;
+}
+
+.gallery-grid.loading::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    border: 2px solid var(--border-color, #dee2e6);
+    border-top-color: var(--primary-color, #007bff);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

@@ -1,0 +1,177 @@
+/*
+ * Flansa Dashboard Theme-Aware Components
+ * =====================================
+ * 
+ * Additional CSS classes for dashboard components that use theme variables.
+ */
+
+/* Dashboard Headers */
+.flansa-dashboard-header {
+    padding: 15px 0;
+    border-bottom: 1px solid var(--flansa-border, var(--flansa-gray-200));
+}
+
+.flansa-dashboard-header h3 {
+    margin: 0;
+    color: var(--flansa-text-primary, var(--flansa-gray-900));
+    font-weight: normal;
+}
+
+.flansa-dashboard-header p {
+    margin: 5px 0 0 0;
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: 14px;
+}
+
+/* Quick Actions Section */
+.flansa-dashboard-quick-actions {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--flansa-border, var(--flansa-gray-200));
+}
+
+.flansa-dashboard-quick-actions .btn-group .btn {
+    transition: all 0.2s ease;
+}
+
+.flansa-dashboard-quick-actions .btn-group .btn:hover {
+    background: var(--flansa-primary);
+    color: var(--flansa-white);
+    border-color: var(--flansa-primary);
+}
+
+/* Stats Strip */
+.flansa-dashboard-stats-strip {
+    padding: 15px 0;
+    background: var(--flansa-surface-variant, var(--flansa-gray-100));
+}
+
+.flansa-dashboard-stats-strip h3 {
+    margin: 0;
+    font-weight: normal;
+    color: var(--flansa-text-primary, var(--flansa-gray-900));
+}
+
+.flansa-dashboard-stats-strip small {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+}
+
+/* Table Cards */
+.flansa-table-card {
+    border: 1px solid var(--flansa-border, var(--flansa-gray-200));
+    transition: all 0.2s ease;
+    background: var(--flansa-surface, var(--flansa-white));
+    border-radius: var(--flansa-radius-md, 8px);
+}
+
+.flansa-table-card:hover {
+    border-color: var(--flansa-primary);
+    box-shadow: var(--flansa-shadow-sm);
+    background: var(--flansa-white);
+}
+
+/* Content Sections */
+.flansa-content-section {
+    background: var(--flansa-surface, var(--flansa-white));
+    border-radius: var(--flansa-radius-lg, 12px);
+    box-shadow: var(--flansa-shadow-sm);
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    border: 1px solid var(--flansa-border, transparent);
+}
+
+.flansa-content-section:hover {
+    border-color: var(--flansa-gray-300);
+}
+
+.flansa-section-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--flansa-border, var(--flansa-gray-200));
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--flansa-surface-variant, var(--flansa-gray-50));
+}
+
+.flansa-section-header h4 {
+    margin: 0;
+    color: var(--flansa-text-primary, var(--flansa-gray-900));
+    font-size: 18px;
+    font-weight: 600;
+}
+
+/* Theme Toggle Integration */
+.navbar .flansa-theme-toggle {
+    margin-right: 10px;
+}
+
+.flansa-theme-toggle .dropdown-menu {
+    min-width: 150px;
+}
+
+.flansa-theme-toggle .dropdown-menu a {
+    padding: 8px 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.flansa-theme-toggle .dropdown-menu a:hover {
+    background: var(--flansa-primary);
+    color: var(--flansa-white);
+}
+
+/* Dark theme adjustments */
+.flansa-theme-dark .card {
+    background: var(--flansa-surface);
+    border-color: var(--flansa-border);
+    color: var(--flansa-text-primary);
+}
+
+.flansa-theme-dark .btn-default {
+    background: var(--flansa-surface);
+    border-color: var(--flansa-border);
+    color: var(--flansa-text-primary);
+}
+
+.flansa-theme-dark .btn-default:hover {
+    background: var(--flansa-primary);
+    border-color: var(--flansa-primary);
+    color: var(--flansa-white);
+}
+
+.flansa-theme-dark .table {
+    background: var(--flansa-surface);
+    color: var(--flansa-text-primary);
+}
+
+.flansa-theme-dark .table th,
+.flansa-theme-dark .table td {
+    border-color: var(--flansa-border);
+}
+
+.flansa-theme-dark .table-hover tbody tr:hover {
+    background: var(--flansa-gray-800);
+}
+
+/* Responsive Theme Utilities */
+@media (max-width: 768px) {
+    .flansa-dashboard-header {
+        text-align: center;
+        padding: 20px 15px;
+    }
+    
+    .flansa-dashboard-quick-actions {
+        padding: 15px;
+    }
+    
+    .flansa-dashboard-quick-actions .btn-group {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 5px;
+    }
+    
+    .flansa-dashboard-stats-strip {
+        padding: 20px 15px;
+    }
+}

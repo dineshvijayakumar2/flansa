@@ -1,0 +1,414 @@
+/*
+ * Flansa Unified Tile Components
+ * =============================
+ * 
+ * Modern, consistent tile design system for all Flansa pages
+ * Provides unified grid items, cards, and interactive elements
+ */
+
+/* Unified Grid System */
+.flansa-grid-container {
+    padding: var(--flansa-spacing-md);
+}
+
+.flansa-grid-container .items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--flansa-spacing-lg);
+}
+
+.flansa-grid-container.compact .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--flansa-spacing-md);
+}
+
+.flansa-grid-container.wide .items-grid {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+}
+
+/* Unified Grid Item - Modern Tile Design */
+.grid-item.flansa-card {
+    background: var(--flansa-surface, var(--flansa-white));
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-200));
+    border-radius: var(--flansa-radius-lg);
+    padding: var(--flansa-spacing-lg);
+    box-shadow: var(--flansa-shadow-sm);
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.grid-item.flansa-card:hover {
+    box-shadow: var(--flansa-shadow-md);
+    transform: translateY(-2px);
+    border-color: var(--flansa-primary);
+}
+
+.grid-item.flansa-card:active {
+    transform: translateY(-1px);
+}
+
+/* Item Header */
+.grid-item .item-header {
+    display: flex;
+    align-items: center;
+    gap: var(--flansa-spacing-sm);
+    margin-bottom: var(--flansa-spacing-md);
+}
+
+.grid-item .item-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--flansa-gradient-primary);
+    border-radius: var(--flansa-radius-md);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--flansa-white);
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+
+.grid-item .item-title {
+    font-weight: var(--flansa-font-weight-semibold);
+    color: var(--flansa-text-primary, var(--flansa-gray-900));
+    font-size: var(--flansa-font-size-lg);
+    flex: 1;
+    line-height: 1.3;
+}
+
+/* Item Meta Information */
+.grid-item .item-meta {
+    display: flex;
+    gap: var(--flansa-spacing-md);
+    margin-bottom: var(--flansa-spacing-sm);
+    flex-wrap: wrap;
+}
+
+.grid-item .item-meta small {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-xs);
+    font-weight: var(--flansa-font-weight-medium);
+}
+
+.grid-item .status-badge {
+    font-weight: var(--flansa-font-weight-semibold);
+}
+
+/* Item Description */
+.grid-item .item-description {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-sm);
+    line-height: 1.5;
+    margin-bottom: var(--flansa-spacing-md);
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    display: -webkit-box;
+}
+
+/* Item Actions */
+.grid-item .item-actions {
+    display: flex;
+    gap: var(--flansa-spacing-sm);
+    margin-top: auto;
+}
+
+.grid-item .item-actions .btn {
+    flex: 1;
+    font-size: var(--flansa-font-size-sm);
+    padding: var(--flansa-spacing-sm) var(--flansa-spacing-md);
+    border-radius: var(--flansa-radius-md);
+    font-weight: var(--flansa-font-weight-medium);
+    transition: all 0.2s ease;
+}
+
+.grid-item .item-actions .btn:hover {
+    transform: translateY(-1px);
+}
+
+.grid-item .item-actions .btn i {
+    margin-right: var(--flansa-spacing-xs);
+}
+
+/* Special Tile Types */
+
+/* Create/Add New Tile */
+.grid-item.create-table-tile,
+.grid-item.create-app-tile,
+.grid-item.add-item-tile {
+    border: 2px dashed var(--flansa-border, var(--flansa-gray-300));
+    background: var(--flansa-gray-50);
+    cursor: pointer;
+    min-height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.grid-item.create-table-tile:hover,
+.grid-item.create-app-tile:hover,
+.grid-item.add-item-tile:hover {
+    border-color: var(--flansa-primary);
+    background: var(--flansa-primary);
+    background-opacity: 0.05;
+    transform: scale(1.02);
+}
+
+.grid-item.create-table-tile .empty-state-icon,
+.grid-item.create-app-tile .empty-state-icon,
+.grid-item.add-item-tile .empty-state-icon {
+    color: var(--flansa-primary);
+    font-size: 2rem;
+    margin-bottom: var(--flansa-spacing-sm);
+}
+
+.grid-item.create-table-tile:hover .empty-state-icon,
+.grid-item.create-app-tile:hover .empty-state-icon,
+.grid-item.add-item-tile:hover .empty-state-icon {
+    color: var(--flansa-white);
+}
+
+.grid-item.create-table-tile:hover .empty-state-title,
+.grid-item.create-app-tile:hover .empty-state-title,
+.grid-item.add-item-tile:hover .empty-state-title,
+.grid-item.create-table-tile:hover .empty-state-description,
+.grid-item.create-app-tile:hover .empty-state-description,
+.grid-item.add-item-tile:hover .empty-state-description {
+    color: var(--flansa-white);
+}
+
+/* Active/Selected States */
+.grid-item.flansa-card.selected {
+    border-color: var(--flansa-primary);
+    box-shadow: var(--flansa-shadow-md);
+    background: rgba(102, 126, 234, 0.02);
+}
+
+.grid-item.flansa-card.active {
+    border-color: var(--flansa-success);
+    background: rgba(76, 217, 196, 0.02);
+}
+
+.grid-item.flansa-card.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.grid-item.flansa-card.disabled:hover {
+    transform: none;
+    box-shadow: var(--flansa-shadow-sm);
+    border-color: var(--flansa-border, var(--flansa-gray-200));
+}
+
+/* Status Indicators */
+.grid-item .status-indicator {
+    position: absolute;
+    top: var(--flansa-spacing-sm);
+    right: var(--flansa-spacing-sm);
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--flansa-gray-400);
+}
+
+.grid-item .status-indicator.active {
+    background: var(--flansa-success);
+}
+
+.grid-item .status-indicator.draft {
+    background: var(--flansa-warning);
+}
+
+.grid-item .status-indicator.inactive {
+    background: var(--flansa-gray-400);
+}
+
+/* List View Variation */
+.flansa-grid-container.view-list .items-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--flansa-spacing-md);
+}
+
+.flansa-grid-container.view-list .grid-item.flansa-card {
+    display: flex;
+    align-items: center;
+    padding: var(--flansa-spacing-md);
+    min-height: auto;
+}
+
+.flansa-grid-container.view-list .item-header {
+    margin-bottom: 0;
+    flex-shrink: 0;
+    width: 200px;
+}
+
+.flansa-grid-container.view-list .item-description {
+    flex: 1;
+    margin: 0 var(--flansa-spacing-md);
+    -webkit-line-clamp: 1;
+}
+
+.flansa-grid-container.view-list .item-actions {
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+.flansa-grid-container.view-list .item-meta {
+    display: none;
+}
+
+/* Loading States */
+.grid-item.flansa-card.loading {
+    position: relative;
+    overflow: hidden;
+}
+
+.grid-item.flansa-card.loading::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.6), transparent);
+    animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+    100% {
+        left: 100%;
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .flansa-grid-container .items-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: var(--flansa-spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .flansa-grid-container {
+        padding: var(--flansa-spacing-sm);
+    }
+    
+    .flansa-grid-container .items-grid {
+        grid-template-columns: 1fr;
+        gap: var(--flansa-spacing-md);
+    }
+    
+    .grid-item .item-actions {
+        flex-direction: column;
+    }
+    
+    .grid-item .item-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .flansa-grid-container.view-list .grid-item.flansa-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .flansa-grid-container.view-list .item-header {
+        width: auto;
+        margin-bottom: var(--flansa-spacing-sm);
+    }
+    
+    .flansa-grid-container.view-list .item-description {
+        margin: var(--flansa-spacing-sm) 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .grid-item.flansa-card {
+        padding: var(--flansa-spacing-md);
+    }
+    
+    .grid-item .item-header {
+        gap: var(--flansa-spacing-xs);
+    }
+    
+    .grid-item .item-icon {
+        width: 32px;
+        height: 32px;
+        font-size: 1rem;
+    }
+    
+    .grid-item .item-title {
+        font-size: var(--flansa-font-size-base);
+    }
+    
+    .grid-item .item-meta {
+        gap: var(--flansa-spacing-sm);
+    }
+}
+
+/* Dark Theme Support */
+.flansa-theme-dark .grid-item.flansa-card {
+    background: var(--flansa-surface);
+    border-color: var(--flansa-border);
+    color: var(--flansa-text-primary);
+}
+
+.flansa-theme-dark .grid-item.flansa-card:hover {
+    border-color: var(--flansa-primary);
+}
+
+.flansa-theme-dark .grid-item.create-table-tile,
+.flansa-theme-dark .grid-item.create-app-tile,
+.flansa-theme-dark .grid-item.add-item-tile {
+    background: var(--flansa-gray-800);
+    border-color: var(--flansa-border);
+}
+
+.flansa-theme-dark .grid-item.create-table-tile:hover,
+.flansa-theme-dark .grid-item.create-app-tile:hover,
+.flansa-theme-dark .grid-item.add-item-tile:hover {
+    background: var(--flansa-primary);
+}
+
+/* Animation for new items */
+.grid-item.flansa-card {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Utility Classes */
+.flansa-tile-compact {
+    padding: var(--flansa-spacing-md) !important;
+}
+
+.flansa-tile-large {
+    padding: var(--flansa-spacing-xl) !important;
+    min-height: 250px;
+}
+
+.flansa-tile-clickable {
+    cursor: pointer;
+}
+
+.flansa-tile-static {
+    cursor: default;
+}
+
+.flansa-tile-static:hover {
+    transform: none;
+    box-shadow: var(--flansa-shadow-sm);
+    border-color: var(--flansa-border, var(--flansa-gray-200));
+}

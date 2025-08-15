@@ -1,0 +1,452 @@
+/*
+ * Flansa Workspace - Minimalistic Design
+ * =====================================
+ * 
+ * Clean, minimal workspace design matching the app-dashboard style
+ */
+
+/* Workspace Container */
+.flansa-applications-workspace {
+    padding: 0;
+    font-family: var(--flansa-font-family);
+    background: var(--flansa-background, var(--flansa-gray-50));
+    min-height: 100vh;
+}
+
+/* Clean Header matching app-dashboard style */
+.flansa-applications-workspace .flansa-workspace-header {
+    background: var(--flansa-gradient-primary);
+    color: var(--flansa-white);
+    padding: var(--flansa-spacing-xl);
+    margin: -20px -20px 0 -20px;
+    border-radius: 0 0 var(--flansa-radius-xl) var(--flansa-radius-xl);
+    box-shadow: var(--flansa-shadow-lg);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.flansa-applications-workspace .flansa-workspace-header .flansa-brand {
+    display: flex;
+    align-items: center;
+    gap: var(--flansa-spacing-md);
+}
+
+.flansa-applications-workspace .flansa-workspace-header .brand-logo {
+    display: flex;
+    align-items: center;
+    gap: var(--flansa-spacing-sm);
+    font-size: var(--flansa-font-size-lg);
+    font-weight: var(--flansa-font-weight-semibold);
+}
+
+.flansa-applications-workspace .flansa-workspace-header .brand-logo i {
+    font-size: 1.5rem;
+    opacity: 0.9;
+}
+
+.flansa-applications-workspace .workspace-title h2 {
+    margin: 0;
+    font-size: var(--flansa-font-size-2xl);
+    font-weight: var(--flansa-font-weight-bold);
+    margin-bottom: 0.25rem;
+}
+
+.flansa-applications-workspace .workspace-title p {
+    margin: 0;
+    opacity: 0.8;
+    font-size: var(--flansa-font-size-base);
+}
+
+/* Workspace Stats Section */
+.flansa-applications-workspace .workspace-stats {
+    display: flex;
+    gap: var(--flansa-spacing-lg);
+    align-items: center;
+}
+
+.flansa-applications-workspace .stat-item {
+    text-align: center;
+    padding: var(--flansa-spacing-md);
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: var(--flansa-radius-lg);
+    backdrop-filter: blur(10px);
+    min-width: 120px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.flansa-applications-workspace .stat-number {
+    font-size: var(--flansa-font-size-3xl);
+    font-weight: var(--flansa-font-weight-bold);
+    color: var(--flansa-white);
+    line-height: 1;
+    margin-bottom: 0.25rem;
+}
+
+.flansa-applications-workspace .stat-label {
+    font-size: var(--flansa-font-size-sm);
+    color: var(--flansa-white);
+    opacity: 0.9;
+    font-weight: var(--flansa-font-weight-medium);
+}
+
+.flansa-applications-workspace .flansa-quick-actions {
+    display: flex;
+    gap: var(--flansa-spacing-sm);
+}
+
+.flansa-applications-workspace .flansa-quick-actions .btn {
+    backdrop-filter: blur(10px);
+    transition: all 0.3s ease;
+    font-weight: var(--flansa-font-weight-medium);
+    border-radius: var(--flansa-radius-md);
+}
+
+.flansa-applications-workspace .flansa-quick-actions .btn:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--flansa-shadow-md);
+}
+
+/* Content Area */
+.flansa-applications-workspace .flansa-workspace-content {
+    padding: var(--flansa-spacing-xl) var(--flansa-spacing-xl) 0;
+}
+
+/* Toolbar - cleaner design */
+.flansa-applications-workspace .applications-toolbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
+    gap: var(--flansa-spacing-lg);
+    margin-bottom: var(--flansa-spacing-xl);
+    padding: var(--flansa-spacing-md);
+    background: var(--flansa-surface, var(--flansa-white));
+    border-radius: var(--flansa-radius-lg);
+    box-shadow: var(--flansa-shadow-sm);
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, transparent);
+}
+
+.flansa-applications-workspace .toolbar-left {
+    display: flex;
+    gap: var(--flansa-spacing-sm);
+}
+
+.flansa-applications-workspace .toolbar-center {
+    display: flex;
+    justify-content: center;
+    max-width: 400px;
+    width: 100%;
+}
+
+.flansa-applications-workspace .search-wrapper {
+    position: relative;
+}
+
+.flansa-applications-workspace .search-input {
+    padding-left: 40px;
+    border-radius: var(--flansa-radius-md);
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-300));
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    font-family: var(--flansa-font-family);
+}
+
+.flansa-applications-workspace .search-input:focus {
+    border-color: var(--flansa-primary);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    outline: none;
+}
+
+.flansa-applications-workspace .search-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--flansa-text-secondary, var(--flansa-gray-500));
+}
+
+.flansa-applications-workspace .toolbar-right {
+    display: flex;
+    gap: var(--flansa-spacing-md);
+    align-items: center;
+}
+
+.flansa-applications-workspace .filter-select {
+    min-width: 150px;
+    border-radius: var(--flansa-radius-md);
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-300));
+}
+
+.flansa-applications-workspace .view-toggle {
+    display: flex;
+    border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-300));
+    border-radius: var(--flansa-radius-md);
+    overflow: hidden;
+}
+
+.flansa-applications-workspace .view-btn {
+    border: none;
+    border-radius: 0;
+    padding: 6px 12px;
+    transition: all 0.2s ease;
+}
+
+.flansa-applications-workspace .view-btn.active {
+    background: var(--flansa-primary);
+    color: var(--flansa-white);
+}
+
+/* Applications Container */
+.flansa-applications-workspace .applications-container {
+    padding: 0 var(--flansa-spacing-md);
+}
+
+/* Applications Grid - using theme grid items */
+.flansa-applications-workspace .applications-grid.view-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: var(--flansa-spacing-lg);
+}
+
+.flansa-applications-workspace .applications-grid.view-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--flansa-spacing-md);
+}
+
+.flansa-applications-workspace .applications-grid.view-list .grid-item {
+    display: flex;
+    align-items: center;
+    padding: var(--flansa-spacing-md);
+}
+
+.flansa-applications-workspace .applications-grid.view-list .item-header {
+    margin-bottom: 0;
+    flex-shrink: 0;
+    width: 200px;
+}
+
+.flansa-applications-workspace .applications-grid.view-list .item-description {
+    flex: 1;
+    margin: 0 var(--flansa-spacing-md);
+}
+
+.flansa-applications-workspace .applications-grid.view-list .item-actions {
+    margin-top: 0;
+    flex-shrink: 0;
+}
+
+.flansa-applications-workspace .applications-grid.view-list .item-meta {
+    display: none;
+}
+
+/* Item styling updates */
+.flansa-applications-workspace .grid-item {
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.flansa-applications-workspace .grid-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--flansa-shadow-md);
+    border-color: var(--flansa-primary);
+}
+
+.flansa-applications-workspace .item-description {
+    margin: var(--flansa-spacing-sm) 0;
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-sm);
+    line-height: 1.5;
+}
+
+.flansa-applications-workspace .item-meta {
+    display: flex;
+    gap: var(--flansa-spacing-md);
+    margin-bottom: var(--flansa-spacing-sm);
+}
+
+.flansa-applications-workspace .item-meta small {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-xs);
+}
+
+.flansa-applications-workspace .status-badge {
+    font-weight: var(--flansa-font-weight-medium);
+}
+
+.flansa-applications-workspace .item-actions {
+    margin-top: var(--flansa-spacing-md);
+    display: flex;
+    gap: var(--flansa-spacing-sm);
+}
+
+/* Loading placeholder matching theme */
+.flansa-applications-workspace .loading-placeholder {
+    text-align: center;
+    padding: var(--flansa-spacing-2xl) var(--flansa-spacing-xl);
+    color: var(--flansa-text-secondary, var(--flansa-gray-500));
+}
+
+.flansa-applications-workspace .loading-placeholder i {
+    font-size: 2rem;
+    margin-bottom: var(--flansa-spacing-md);
+    color: var(--flansa-primary);
+}
+
+/* Empty state matching theme */
+.flansa-applications-workspace .empty-state {
+    text-align: center;
+    padding: var(--flansa-spacing-2xl) var(--flansa-spacing-xl);
+}
+
+.flansa-applications-workspace .empty-state-icon {
+    color: var(--flansa-gray-400);
+    font-size: 4rem;
+    margin-bottom: var(--flansa-spacing-lg);
+}
+
+.flansa-applications-workspace .empty-state-title {
+    color: var(--flansa-text-primary, var(--flansa-gray-700));
+    font-size: var(--flansa-font-size-xl);
+    font-weight: var(--flansa-font-weight-semibold);
+    margin-bottom: var(--flansa-spacing-sm);
+}
+
+.flansa-applications-workspace .empty-state-description {
+    color: var(--flansa-text-secondary, var(--flansa-gray-600));
+    font-size: var(--flansa-font-size-base);
+    margin-bottom: var(--flansa-spacing-lg);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .flansa-applications-workspace .applications-grid.view-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: var(--flansa-spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .flansa-applications-workspace .flansa-workspace-header {
+        flex-direction: column;
+        text-align: center;
+        gap: var(--flansa-spacing-lg);
+        padding: var(--flansa-spacing-lg);
+    }
+    
+    .flansa-applications-workspace .workspace-stats {
+        justify-content: center;
+    }
+    
+    .flansa-applications-workspace .stat-item {
+        min-width: 100px;
+    }
+    
+    .flansa-applications-workspace .flansa-workspace-content {
+        padding: var(--flansa-spacing-md);
+    }
+    
+    .flansa-applications-workspace .applications-toolbar {
+        flex-direction: column;
+        gap: var(--flansa-spacing-md);
+        align-items: stretch;
+    }
+    
+    .flansa-applications-workspace .toolbar-left {
+        max-width: none;
+    }
+    
+    .flansa-applications-workspace .toolbar-right {
+        justify-content: space-between;
+    }
+    
+    .flansa-applications-workspace .applications-grid.view-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .flansa-applications-workspace .applications-grid.view-list .item-header {
+        width: auto;
+        margin-bottom: var(--flansa-spacing-sm);
+    }
+    
+    .flansa-applications-workspace .applications-grid.view-list .grid-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .flansa-applications-workspace .applications-grid.view-list .item-description {
+        margin: var(--flansa-spacing-sm) 0;
+    }
+    
+    .flansa-applications-workspace .flansa-quick-actions {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .flansa-applications-workspace .applications-container {
+        padding: 0;
+    }
+    
+    .flansa-applications-workspace .grid-item {
+        margin: 0 calc(-1 * var(--flansa-spacing-sm));
+        border-radius: var(--flansa-radius-md);
+    }
+    
+    .flansa-applications-workspace .item-actions {
+        flex-direction: column;
+    }
+    
+    .flansa-applications-workspace .item-actions .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Dark theme adjustments */
+.flansa-theme-dark .flansa-applications-workspace {
+    background: var(--flansa-background);
+}
+
+.flansa-theme-dark .flansa-applications-workspace .applications-toolbar {
+    background: var(--flansa-surface);
+    border-color: var(--flansa-border);
+}
+
+.flansa-theme-dark .flansa-applications-workspace .search-input,
+.flansa-theme-dark .flansa-applications-workspace .filter-select {
+    background: var(--flansa-surface);
+    color: var(--flansa-text-primary);
+    border-color: var(--flansa-border);
+}
+
+.flansa-theme-dark .flansa-applications-workspace .view-toggle {
+    border-color: var(--flansa-border);
+}
+
+.flansa-theme-dark .flansa-applications-workspace .view-btn {
+    background: transparent;
+    color: var(--flansa-text-primary);
+}
+
+.flansa-theme-dark .flansa-applications-workspace .grid-item {
+    background: var(--flansa-surface);
+    border-color: var(--flansa-border);
+    color: var(--flansa-text-primary);
+}
+
+/* Animation classes */
+.flansa-applications-workspace .grid-item {
+    animation: fadeInUp 0.3s ease-out;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

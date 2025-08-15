@@ -1,0 +1,27 @@
+{
+    "creation": "2025-08-12 10:00:00.000000",
+    "doctype": "Page",
+    "idx": 0,
+    "modified": "2025-08-12 10:00:00.000000",
+    "modified_by": "Administrator",
+    "module": "Flansa Core",
+    "name": "flansa-report-viewer",
+    "owner": "Administrator",
+    "page_name": "flansa-report-viewer",
+    "roles": [
+        {
+            "role": "System Manager"
+        },
+        {
+            "role": "Flansa User"
+        },
+        {
+            "role": "Flansa Admin"
+        }
+    ],
+    "script": null,
+    "standard": "Yes",
+    "style": null,
+    "system_page": 0,
+    "title": "Report Viewer"
+}

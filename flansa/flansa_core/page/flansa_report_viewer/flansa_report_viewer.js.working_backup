@@ -1,0 +1,788 @@
+class FlansaReportViewer {
+    constructor() {
+        this.report_id = null;
+        this.is_temp_report = false;
+        this.current_report_data = null;
+        this.current_view = 'table';
+        this.current_page = 1;
+        this.page_size = 20;
+        this.search_term = '';
+        this.tile_layout = 'grid';
+        this.tile_size = 'medium';
+        
+        this.init();
+    }
+    
+    init() {
+        console.log('Report Viewer: Initializing...');
+        this.extract_url_parameters();
+        this.bind_events();
+        this.load_report();
+    }
+    
+    extract_url_parameters() {
+        // Extract report ID from URL path: /app/flansa-report-viewer/[report-id]
+        const path = window.location.pathname;
+        const pathParts = path.split('/');
+        
+        // URL structure: /app/flansa-report-viewer/REPORT_ID
+        if (pathParts.length >= 4) {
+            this.report_id = pathParts[3];
+        }
+        
+        // Check for query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        this.is_temp_report = urlParams.get('temp') === '1';
+        
+        console.log('Report Viewer: URL parameters:', {
+            report_id: this.report_id,
+            is_temp_report: this.is_temp_report
+        });
+    }
+    
+    bind_events() {
+        // View mode switching
+        $('.view-mode-btn').on('click', (e) => {
+            const view = $(e.currentTarget).data('view');
+            this.switch_view(view);
+        });
+        
+        // Back to reports button
+        $('#back-to-reports-btn').on('click', () => {
+            window.location.href = '/app/flansa-report-builder';
+        });
+        
+        // Tile layout controls
+        $(document).on('click', '.tile-layout-btn', (e) => {
+            const layout = $(e.currentTarget).data('layout');
+            this.change_tile_layout(layout);
+        });
+        
+        // Tile size controls
+        $(document).on('click', '.tile-size-btn', (e) => {
+            const size = $(e.currentTarget).data('size');
+            this.change_tile_size(size);
+        });
+        
+        // Image click events - use event delegation for dynamically created elements
+        $(document).on('click', '.table-thumbnail', (e) => {
+            const recordIndex = $(e.target).closest('tr').index();
+            const fieldIndex = $(e.target).closest('td').index();
+            const field = this.current_report_config.selected_fields[fieldIndex];
+            this.open_image_lightbox(recordIndex, field.fieldname);
+        });
+        
+        $(document).on('click', '.gallery-card-image', (e) => {
+            const card = $(e.target).closest('.gallery-card');
+            const recordName = card.data('record-name');
+            const recordIndex = this.current_report_data.data.findIndex(r => r.name === recordName);
+            const image_fields = this.current_report_config.selected_fields.filter(f => 
+                ['Attach Image', 'Attach'].includes(f.fieldtype) || 
+                f.fieldname.toLowerCase().includes('image')
+            );
+            if (image_fields.length > 0) {
+                this.open_image_lightbox(recordIndex, image_fields[0].fieldname);
+            }
+        });
+    }
+    
+    async load_report() {
+        if (!this.report_id) {
+            this.show_error('No report ID provided in URL');
+            return;
+        }
+        
+        this.show_loading();
+        
+        try {
+            // Load report configuration
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.load_report',
+                args: { report_id: this.report_id }
+            });
+            
+            if (response.message && response.message.success) {
+                const report = response.message.report;
+                this.update_page_title(report);
+                this.add_action_buttons(report);
+                await this.execute_report(report);
+            } else {
+                this.show_error(response.message?.error || 'Failed to load report');
+            }
+            
+        } catch (error) {
+            console.error('Error loading report:', error);
+            this.show_error('Error loading report: ' + error.message);
+        }
+    }
+    
+    update_page_title(report) {
+        $('#report-title').text(report.title);
+        $('#report-subtitle').text(`Table: ${report.base_table} • Created: ${moment(report.created_on).format('MMM DD, YYYY')}`);
+        document.title = `${report.title} - Flansa Reports`;
+    }
+    
+    add_action_buttons(report) {
+        const pageActions = $('.page-actions');
+        pageActions.empty();
+        
+        const editBtn = $(`
+            <button class="btn btn-primary" id="edit-report-btn">
+                <i class="fa fa-edit"></i> Edit Report
+            </button>
+        `);
+        
+        editBtn.on('click', () => {
+            window.location.href = `/app/flansa-report-builder?edit=${this.report_id}`;
+        });
+        
+        pageActions.append(editBtn);
+    }
+    
+    async execute_report(report) {
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.report_builder_api.execute_report',
+                args: {
+                    report_config: {
+                        base_table: report.base_table,
+                        selected_fields: report.config.selected_fields || [],
+                        filters: report.config.filters || [],
+                        sort: report.config.sort || []
+                    },
+                    view_options: {
+                        page: this.current_page,
+                        page_size: this.page_size,
+                        view_type: this.current_view,
+                        search: this.search_term
+                    }
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                this.current_report_data = response.message;
+                this.current_report_config = report.config;
+                this.display_results();
+            } else {
+                throw new Error(response.message?.error || 'Failed to execute report');
+            }
+            
+        } catch (error) {
+            console.error('Error executing report:', error);
+            this.show_error('Error executing report: ' + error.message);
+        }
+    }
+    
+    display_results() {
+        this.hide_loading();
+        
+        if (!this.current_report_data.data || this.current_report_data.data.length === 0) {
+            this.show_no_results();
+            return;
+        }
+        
+        $('#record-count-info').text(
+            `Showing ${this.current_report_data.data.length} of ${this.current_report_data.total} records`
+        );
+        
+        $('#report-content').show();
+        
+        if (this.current_view === 'table') {
+            this.display_table_view();
+        } else if (this.current_view === 'tile') {
+            this.display_tile_view();
+        }
+    }
+    
+    display_table_view() {
+        const table = $('#report-table');
+        const thead = table.find('thead');
+        const tbody = table.find('tbody');
+        
+        thead.empty();
+        tbody.empty();
+        
+        if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
+            tbody.append('<tr><td colspan="100%" class="text-center text-muted">No fields configured for this report</td></tr>');
+            return;
+        }
+        
+        // Create header
+        const header_row = $('<tr></tr>');
+        this.current_report_config.selected_fields.forEach(field => {
+            const display_label = field.custom_label || field.label;
+            header_row.append(`<th>${display_label}</th>`);
+        });
+        thead.append(header_row);
+        
+        // Create rows  
+        this.current_report_data.data.forEach((record, recordIndex) => {
+            const row = $('<tr></tr>');
+            this.current_report_config.selected_fields.forEach(field => {
+                const value = record[field.fieldname] || '';
+                let formatted_value = this.format_field_value(value, field.fieldtype);
+                
+                // Add image rendering for image fields in table view
+                if (['Attach Image', 'Attach'].includes(field.fieldtype) || 
+                    field.fieldname.toLowerCase().includes('image')) {
+                    const images = this.extract_all_image_urls(value);
+                    if (images.length > 0) {
+                        formatted_value = `
+                            <div class="table-image-cell">
+                                <img src="${images[0]}" alt="Image" class="table-thumbnail" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
+                                ${images.length > 1 ? `<span class="badge badge-info">${images.length}</span>` : ''}
+                            </div>
+                        `;
+                    }
+                }
+                
+                const cell = $('<td>');
+                if (['Attach Image', 'Attach'].includes(field.fieldtype) || field.fieldname.toLowerCase().includes('image')) {
+                    cell.html(formatted_value);
+                } else {
+                    cell.text(formatted_value);
+                }
+                row.append(cell);
+            });
+            tbody.append(row);
+        });
+        
+        $('#table-view').show();
+        $('#tile-view').hide();
+    }
+    
+    display_tile_view() {
+        const tileContainer = $('#tile-container');
+        tileContainer.empty();
+        
+        if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
+            tileContainer.append('<div class="text-center text-muted">No fields configured for this report</div>');
+            return;
+        }
+        
+        // Apply tile settings
+        this.apply_tile_settings();
+        
+        // Create tiles for each record
+        this.current_report_data.data.forEach(record => {
+            const tileCard = this.create_tile_card(record);
+            tileContainer.append(tileCard);
+        });
+        
+        $('#table-view').hide();
+        $('#tile-view').show();
+    }
+    
+    create_tile_card(record) {
+        // Check for image fields
+        const image_fields = this.current_report_config.selected_fields.filter(f => 
+            ['Attach Image', 'Attach'].includes(f.fieldtype) || 
+            f.fieldname.toLowerCase().includes('image')
+        );
+        
+        // Collect all valid image URLs from image fields
+        const image_urls = [];
+        if (image_fields && image_fields.length > 0) {
+            image_fields.forEach(field => {
+                const raw_image_value = record[field.fieldname];
+                const field_image_urls = this.extract_all_image_urls(raw_image_value);
+                field_image_urls.forEach(url => {
+                    if (url && url !== '/assets/frappe/images/default-avatar.png') {
+                        image_urls.push(url);
+                    }
+                });
+            });
+        }
+        
+        // Find title field
+        const title_field = this.current_report_config.selected_fields.find(f => 
+            !['Attach Image', 'Attach', 'Long Text', 'Text Editor'].includes(f.fieldtype) && 
+            f.fieldname !== 'name'
+        );
+        const title = title_field ? record[title_field.fieldname] : record.name || 'Untitled';
+        
+        // Get metadata fields
+        const metadata_fields = this.current_report_config.selected_fields.filter(f => 
+            !['Attach Image', 'Attach', 'Long Text', 'Text Editor'].includes(f.fieldtype) && 
+            f.fieldname !== 'name' &&
+            f.fieldname !== (title_field ? title_field.fieldname : null)
+        ).slice(0, 4);
+        
+        // Create tile with or without image
+        const hasImage = image_urls.length > 0;
+        
+        const tileCardHtml = hasImage ? `
+            <div class="gallery-card" data-record-name="${record.name}" data-current-image="0">
+                ${image_urls.length > 1 ? `
+                    <div class="gallery-image-indicator">
+                        <span class="current-image">1</span> / <span class="total-images">${image_urls.length}</span>
+                    </div>
+                    <div class="gallery-progress-bar">
+                        <div class="gallery-progress-fill" style="width: ${100/image_urls.length}%"></div>
+                    </div>
+                ` : ''}
+                <div class="gallery-image-wrapper">
+                    <img src="${image_urls[0]}" alt="${title}" class="gallery-card-image" 
+                         onerror="this.src='/assets/frappe/images/default-avatar.png'">
+                    ${image_urls.length > 1 ? `
+                        <div class="gallery-nav-controls">
+                            <button class="gallery-nav-btn prev-btn" title="Previous Image">
+                                <i class="fa fa-chevron-left"></i>
+                            </button>
+                            <button class="gallery-nav-btn next-btn" title="Next Image">
+                                <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+                <div class="gallery-card-content">
+                    <h6 class="gallery-card-title">${title}</h6>
+                    ${metadata_fields.map(field => {
+                        const value = record[field.fieldname] || '';
+                        const formatted_value = this.format_field_value(value, field.fieldtype);
+                        const display_label = field.custom_label || field.label;
+                        return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
+                    }).join('')}
+                </div>
+            </div>
+        ` : `
+            <div class="gallery-card no-image" data-record-name="${record.name}">
+                <div class="gallery-card-content">
+                    <h6 class="gallery-card-title">${title}</h6>
+                    ${metadata_fields.map(field => {
+                        const value = record[field.fieldname] || '';
+                        const formatted_value = this.format_field_value(value, field.fieldtype);
+                        const display_label = field.custom_label || field.label;
+                        return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+        
+        const tile_card = $(tileCardHtml);
+        
+        // Store image data for navigation if images exist
+        if (image_urls.length > 0) {
+            tile_card.data('imageUrls', image_urls);
+            
+            // Bind navigation events if multiple images
+            if (image_urls.length > 1) {
+                tile_card.find('.prev-btn').on('click', (e) => {
+                    e.stopPropagation();
+                    this.navigate_gallery_image(tile_card, -1);
+                });
+                
+                tile_card.find('.next-btn').on('click', (e) => {
+                    e.stopPropagation();
+                    this.navigate_gallery_image(tile_card, 1);
+                });
+            }
+        }
+        
+        return tile_card;
+    }
+    
+    extract_all_image_urls(image_value) {
+        if (!image_value) return [];
+        
+        // Handle different data formats
+        if (typeof image_value === 'object') {
+            if (Array.isArray(image_value)) {
+                const urls = [];
+                image_value.forEach((item) => {
+                    const url = this.get_single_image_url(item);
+                    if (url && url !== '/assets/frappe/images/default-avatar.png') {
+                        urls.push(url);
+                    }
+                });
+                return urls;
+            } else {
+                const url = this.get_single_image_url(image_value);
+                return url && url !== '/assets/frappe/images/default-avatar.png' ? [url] : [];
+            }
+        }
+        
+        // Convert to string and process
+        const processed_value = String(image_value).trim();
+        
+        // Handle JSON strings that contain arrays
+        if (processed_value.startsWith('[') && processed_value.endsWith(']')) {
+            try {
+                const parsed = JSON.parse(processed_value);
+                if (Array.isArray(parsed)) {
+                    const urls = [];
+                    parsed.forEach((item) => {
+                        const url = this.get_single_image_url(item);
+                        if (url && url !== '/assets/frappe/images/default-avatar.png') {
+                            urls.push(url);
+                        }
+                    });
+                    return urls;
+                }
+            } catch (e) {
+                // Failed to parse
+            }
+        }
+        
+        // Handle single image case
+        const single_url = this.get_single_image_url(processed_value);
+        return single_url && single_url !== '/assets/frappe/images/default-avatar.png' ? [single_url] : [];
+    }
+    
+    get_single_image_url(image_value) {
+        if (!image_value) return '/assets/frappe/images/default-avatar.png';
+        
+        // If it's an object, extract file_url
+        if (typeof image_value === 'object') {
+            return image_value.file_url || image_value.url || image_value.name || '/assets/frappe/images/default-avatar.png';
+        }
+        
+        // Convert to string and process
+        const str_value = String(image_value).trim();
+        
+        // Handle JSON object strings
+        if (str_value.startsWith('{') && str_value.endsWith('}')) {
+            try {
+                const parsed = JSON.parse(str_value);
+                return parsed.file_url || parsed.url || parsed.name || '/assets/frappe/images/default-avatar.png';
+            } catch (e) {
+                // Try regex extraction for Python-style dicts
+                const fileUrlMatch = str_value.match(/'file_url':\s*'([^']+)'/);
+                if (fileUrlMatch) {
+                    return fileUrlMatch[1];
+                }
+            }
+        }
+        
+        // Handle direct file paths
+        if (str_value.startsWith('http://') || str_value.startsWith('https://')) {
+            return str_value;
+        } else if (str_value.startsWith('/files/')) {
+            return `${window.location.origin}${str_value}`;
+        } else if (str_value.startsWith('/assets/') || str_value.startsWith('/images/')) {
+            return `${window.location.origin}${str_value}`;
+        } else if (str_value && !str_value.includes(' ')) {
+            // Assume it's a file path if it doesn't contain spaces
+            return `${window.location.origin}/files/${str_value}`;
+        }
+        
+        return '/assets/frappe/images/default-avatar.png';
+    }
+    
+    format_field_value(value, fieldtype) {
+        if (!value) return '';
+        
+        switch (fieldtype) {
+            case 'Date':
+                return moment(value).format('MMM DD, YYYY');
+            case 'Datetime':
+                return moment(value).format('MMM DD, YYYY HH:mm');
+            case 'Currency':
+                return frappe.format(value, {fieldtype: 'Currency'});
+            default:
+                return value;
+        }
+    }
+    
+    switch_view(view) {
+        this.current_view = view;
+        
+        $('.view-mode-btn').removeClass('active');
+        $(`.view-mode-btn[data-view="${view}"]`).addClass('active');
+        
+        if (view === 'tile') {
+            $('#tile-controls').show();
+        } else {
+            $('#tile-controls').hide();
+        }
+        
+        this.display_results();
+    }
+    
+    apply_tile_settings() {
+        const container = $('#tile-container');
+        container.removeClass('layout-grid layout-horizontal size-small size-medium size-large');
+        container.addClass(`layout-${this.tile_layout} size-${this.tile_size}`);
+    }
+    
+    change_tile_layout(layout) {
+        this.tile_layout = layout;
+        
+        // Update button states
+        $('.tile-layout-btn').removeClass('active');
+        $(`.tile-layout-btn[data-layout="${layout}"]`).addClass('active');
+        
+        // Apply settings if in tile view
+        if (this.current_view === 'tile') {
+            this.apply_tile_settings();
+        }
+    }
+    
+    change_tile_size(size) {
+        this.tile_size = size;
+        
+        // Update button states
+        $('.tile-size-btn').removeClass('active');
+        $(`.tile-size-btn[data-size="${size}"]`).addClass('active');
+        
+        // Apply settings if in tile view
+        if (this.current_view === 'tile') {
+            this.apply_tile_settings();
+        }
+    }
+    
+    show_loading() {
+        $('#report-loading').show();
+        $('#report-content, #report-error').hide();
+    }
+    
+    hide_loading() {
+        $('#report-loading').hide();
+    }
+    
+    show_error(message) {
+        $('#error-message').text(message);
+        $('#report-error').show();
+        $('#report-loading, #report-content').hide();
+    }
+    
+    show_no_results() {
+        $('#no-results').show();
+        $('#table-view, #tile-view').hide();
+        $('#report-content').show();
+    }
+    
+    open_image_lightbox(recordIndex, fieldName) {
+        console.log('Opening lightbox for record:', recordIndex, 'field:', fieldName);
+        
+        const record = this.current_report_data.data[recordIndex];
+        const value = record[fieldName];
+        const images = this.extract_all_image_urls(value);
+        
+        if (images.length === 0) {
+            frappe.msgprint('No images found');
+            return;
+        }
+        
+        // Create lightbox modal using safe DOM creation
+        const lightboxHtml = `
+            <div class="image-lightbox-overlay" id="image-lightbox">
+                <div class="lightbox-content">
+                    <div class="lightbox-header">
+                        <span class="lightbox-title">${record.name || 'Image Gallery'}</span>
+                        <span class="lightbox-counter">
+                            <span class="current-img">1</span> / <span class="total-imgs">${images.length}</span>
+                        </span>
+                        <button class="lightbox-close" title="Close (Esc)">
+                            <i class="fa fa-times"></i>
+                        </button>
+                    </div>
+                    <div class="lightbox-body">
+                        <div class="lightbox-image-container">
+                            <img src="" alt="Image" class="lightbox-image" id="lightbox-img">
+                            ${images.length > 1 ? `
+                                <button class="lightbox-nav lightbox-prev" title="Previous (←)">
+                                    <i class="fa fa-chevron-left"></i>
+                                </button>
+                                <button class="lightbox-nav lightbox-next" title="Next (→)">
+                                    <i class="fa fa-chevron-right"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove any existing lightbox
+        $('#image-lightbox').remove();
+        
+        // Add to DOM
+        $('body').append(lightboxHtml);
+        
+        // Store current state
+        this.lightbox_images = images;
+        this.lightbox_current_index = 0;
+        
+        // Bind events
+        this.bind_lightbox_events();
+        
+        // Show lightbox and load first image
+        $('#image-lightbox').fadeIn(200, () => {
+            $('#lightbox-img').attr('src', images[0]);
+        });
+    }
+    
+    bind_lightbox_events() {
+        const lightbox = $('#image-lightbox');
+        
+        // Close events
+        lightbox.find('.lightbox-close').on('click', () => this.close_lightbox());
+        
+        // Click outside to close
+        lightbox.on('click', (e) => {
+            if (e.target === lightbox[0] || $(e.target).hasClass('lightbox-body') || $(e.target).hasClass('lightbox-image-container')) {
+                this.close_lightbox();
+            }
+        });
+        
+        // Navigation events
+        lightbox.find('.lightbox-prev').on('click', () => this.navigate_lightbox(-1));
+        lightbox.find('.lightbox-next').on('click', () => this.navigate_lightbox(1));
+        
+        // Keyboard events
+        $(document).off('keydown.lightbox').on('keydown.lightbox', (e) => {
+            switch(e.key) {
+                case 'Escape':
+                    this.close_lightbox();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.navigate_lightbox(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.navigate_lightbox(1);
+                    break;
+            }
+        });
+    }
+    
+    navigate_lightbox(direction) {
+        if (!this.lightbox_images || this.lightbox_images.length <= 1) return;
+        
+        let newIndex = this.lightbox_current_index + direction;
+        
+        // Handle wraparound
+        if (newIndex < 0) {
+            newIndex = this.lightbox_images.length - 1;
+        } else if (newIndex >= this.lightbox_images.length) {
+            newIndex = 0;
+        }
+        
+        this.lightbox_current_index = newIndex;
+        
+        // Update image with fade effect
+        const img = $('#lightbox-img');
+        img.fadeOut(100, () => {
+            img.attr('src', this.lightbox_images[newIndex]);
+            img.fadeIn(100);
+        });
+        
+        // Update counter
+        $('#image-lightbox .current-img').text(newIndex + 1);
+    }
+    
+    close_lightbox() {
+        $('#image-lightbox').fadeOut(200, () => {
+            $('#image-lightbox').remove();
+        });
+        
+        // Clean up event handlers
+        $(document).off('keydown.lightbox');
+        
+        // Clean up state
+        this.lightbox_images = null;
+        this.lightbox_current_index = 0;
+    }
+    
+    navigate_gallery_image(gallery_card, direction) {
+        console.log('Gallery navigation called with direction:', direction);
+        
+        const image_urls = gallery_card.data('imageUrls');
+        const current_index = parseInt(gallery_card.data('current-image')) || 0;
+        
+        if (!image_urls || image_urls.length <= 1) return;
+        
+        let new_index = current_index + direction;
+        
+        // Handle wraparound
+        if (new_index < 0) {
+            new_index = image_urls.length - 1;
+        } else if (new_index >= image_urls.length) {
+            new_index = 0;
+        }
+        
+        // Update image with slide animation
+        const img_element = gallery_card.find('.gallery-card-image');
+        console.log('Updating image with slide animation. Direction:', direction > 0 ? 'right' : 'left');
+        
+        img_element.addClass('transitioning');
+        
+        // Create slide animations with different directions
+        const slideOutTransform = direction > 0 ? 'translateX(100%) scale(0.95)' : 'translateX(-100%) scale(0.95)';
+        const slideInStart = direction > 0 ? 'translateX(-100%) scale(0.95)' : 'translateX(100%) scale(0.95)';
+        
+        // Slide out current image
+        img_element.css({
+            'transform': slideOutTransform,
+            'opacity': '0.3',
+            'transition': 'transform 0.3s ease-out, opacity 0.3s ease-out'
+        });
+        
+        setTimeout(() => {
+            // Update image source and data
+            img_element.attr('src', image_urls[new_index]);
+            gallery_card.data('current-image', new_index);
+            gallery_card.attr('data-current-image', new_index);
+            
+            // Position new image offscreen from opposite direction
+            img_element.css({
+                'transform': slideInStart,
+                'opacity': '0.3'
+            });
+            
+            // Slide in new image
+            setTimeout(() => {
+                img_element.css({
+                    'transform': 'translateX(0) scale(1)',
+                    'opacity': '1',
+                    'transition': 'transform 0.4s ease-in, opacity 0.4s ease-in'
+                });
+                
+                // Clean up after animation completes
+                setTimeout(() => {
+                    img_element.removeClass('transitioning').css({
+                        'transform': '',
+                        'opacity': '',
+                        'transition': ''
+                    });
+                }, 400);
+            }, 50);
+            
+            // Update indicator
+            const indicator = gallery_card.find('.current-image');
+            if (indicator.length > 0) {
+                indicator.text(new_index + 1);
+            }
+            
+            // Update progress bar
+            const progressFill = gallery_card.find('.gallery-progress-fill');
+            if (progressFill.length > 0) {
+                const progressPercent = ((new_index + 1) / image_urls.length) * 100;
+                progressFill.css({
+                    'width': progressPercent + '%',
+                    'transition': 'width 0.3s ease-in-out'
+                });
+            }
+            
+        }, 150);
+    }
+}
+
+// Initialize the Report Viewer when page loads
+frappe.pages['flansa-report-viewer'].on_page_load = function(wrapper) {
+    var page = frappe.ui.make_app_page({
+        parent: wrapper,
+        title: 'Report Viewer',
+        single_column: true
+    });
+    
+    // Load the HTML template
+    $(page.body).html(frappe.render_template('flansa_report_viewer'));
+    
+    // Initialize the viewer
+    window.report_viewer = new FlansaReportViewer();
+};
+
+console.log("Basic Flansa Report Viewer loaded successfully!");
