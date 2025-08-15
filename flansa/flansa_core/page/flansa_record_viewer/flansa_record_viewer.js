@@ -112,10 +112,6 @@ class FlansaRecordViewer {
                                     <i class="fa fa-th-large" style="width: 16px;"></i>
                                     <span>Form Builder</span>
                                 </div>
-                                <div class="context-menu-item" data-action="refresh-data" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-refresh" style="width: 16px;"></i>
-                                    <span>Refresh Data</span>
-                                </div>
                                 <div class="context-menu-item" data-action="view-table" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
                                     <i class="fa fa-table" style="width: 16px;"></i>
                                     <span>View All Records</span>
@@ -291,10 +287,6 @@ class FlansaRecordViewer {
                 case 'form-builder':
                     // Navigate to form builder for this table
                     frappe.set_route('flansa-form-builder', { table: this.table_name });
-                    break;
-                case 'refresh-data':
-                    // Reload the record data
-                    this.load_data();
                     break;
                 case 'view-table':
                     // Navigate to report viewer for this table
@@ -582,9 +574,8 @@ class FlansaRecordViewer {
     render_form_builder_layout() {
         const fieldsContainer = $('#fields-container');
         
-        // The form builder stores fields in a flat array with layout elements (Section Break, Column Break)
-        // We need to group them into sections for rendering
-        const sections = this.build_sections_from_form_layout();
+        // Parse the form builder layout with column handling
+        const sections = this.build_sections_with_columns();
         
         sections.forEach((section, sectionIndex) => {
             let sectionHtml = `
@@ -595,29 +586,37 @@ class FlansaRecordViewer {
                     <div class="section-fields row">
             `;
             
-            section.fields.forEach(fieldConfig => {
-                // Find the actual field definition from table_fields
-                const field = this.table_fields.find(f => f.field_name === fieldConfig.field_name);
-                if (field) {
-                    const fieldValue = this.record_data[field.field_name] || '';
-                    const fieldId = `field_${field.field_name}`;
-                    const isReadonly = this.mode === 'view';
-                    
-                    // Use field from table_fields (which already has form builder overrides applied)
-                    // but map the field structure for rendering
-                    const mergedField = {
-                        fieldname: field.field_name,
-                        label: field.field_label,
-                        fieldtype: field.field_type,
-                        options: field.options,
-                        reqd: field.is_required,
-                        read_only: field.is_readonly,
-                        description: field.description,
-                        default: field.default_value
-                    };
-                    
-                    sectionHtml += this.render_single_field(mergedField, fieldValue, fieldId, isReadonly);
-                }
+            // Process columns within the section
+            section.columns.forEach(column => {
+                sectionHtml += `<div class="col-md-${column.width}">`;
+                
+                column.fields.forEach(fieldConfig => {
+                    // Find the actual field definition from table_fields
+                    const field = this.table_fields.find(f => f.field_name === fieldConfig.field_name);
+                    if (field) {
+                        const fieldValue = this.record_data[field.field_name] || '';
+                        const fieldId = `field_${field.field_name}`;
+                        const isReadonly = this.mode === 'view';
+                        
+                        // Use field from table_fields (which already has form builder overrides applied)
+                        const mergedField = {
+                            fieldname: field.field_name,
+                            label: field.field_label,
+                            fieldtype: field.field_type,
+                            options: field.options,
+                            reqd: field.is_required,
+                            read_only: field.is_readonly,
+                            description: field.description,
+                            default: field.default_value
+                        };
+                        
+                        // Render field content without column wrapper (since we're already in a column)
+                        const fieldContent = this.render_single_field_no_wrapper(mergedField, fieldValue, fieldId, isReadonly);
+                        sectionHtml += fieldContent;
+                    }
+                });
+                
+                sectionHtml += `</div>`;
             });
             
             sectionHtml += `</div></div>`;
@@ -680,6 +679,103 @@ class FlansaRecordViewer {
         }
         
         return sections;
+    }
+    
+    build_sections_with_columns() {
+        // Parse form builder layout to handle column breaks properly
+        const sections = [];
+        let currentSection = {
+            title: 'Form Fields',
+            columns: [{ width: 12, fields: [] }] // Start with one full-width column
+        };
+        let currentColumnIndex = 0;
+        
+        if (!this.form_layout.sections || this.form_layout.sections.length === 0) {
+            // No form builder layout, create default structure
+            const allFields = this.table_fields.map(field => ({ field_name: field.field_name }));
+            
+            // Split fields into 2 columns by default
+            const midPoint = Math.ceil(allFields.length / 2);
+            currentSection.columns = [
+                { width: 6, fields: allFields.slice(0, midPoint) },
+                { width: 6, fields: allFields.slice(midPoint) }
+            ];
+            sections.push(currentSection);
+            return sections;
+        }
+        
+        this.form_layout.sections.forEach(item => {
+            if (item.is_layout_element && item.layout_type === 'Section Break') {
+                // Start a new section
+                if (currentSection.columns[0].fields.length > 0) {
+                    sections.push(currentSection);
+                }
+                currentSection = {
+                    title: item.field_label || 'Section',
+                    columns: [{ width: 12, fields: [] }]
+                };
+                currentColumnIndex = 0;
+            } else if (item.is_layout_element && item.layout_type === 'Column Break') {
+                // Start a new column
+                currentColumnIndex++;
+                // Adjust existing columns to make room for new column
+                const totalColumns = currentColumnIndex + 1;
+                const columnWidth = Math.floor(12 / totalColumns);
+                
+                // Update existing columns
+                for (let i = 0; i < currentSection.columns.length; i++) {
+                    currentSection.columns[i].width = columnWidth;
+                }
+                
+                // Add new column
+                currentSection.columns.push({ width: columnWidth, fields: [] });
+            } else if (item.field_name && !item.is_layout_element) {
+                // Add field to current column
+                if (currentSection.columns.length === 0) {
+                    currentSection.columns.push({ width: 12, fields: [] });
+                }
+                currentSection.columns[currentColumnIndex].fields.push({ field_name: item.field_name });
+            }
+        });
+        
+        // Add the last section if it has fields
+        if (currentSection.columns.some(col => col.fields.length > 0)) {
+            sections.push(currentSection);
+        }
+        
+        // If no sections were created, create a default one
+        if (sections.length === 0) {
+            const allFields = this.table_fields.map(field => ({ field_name: field.field_name }));
+            sections.push({
+                title: 'Form Fields',
+                columns: [{ width: 12, fields: allFields }]
+            });
+        }
+        
+        return sections;
+    }
+    
+    render_single_field_no_wrapper(field, value, fieldId, isReadonly) {
+        // Render field content without column wrapper (for use inside columns)
+        let fieldHtml = '';
+        
+        // Handle special field types
+        if (this.is_gallery_field(field)) {
+            fieldHtml = this.render_gallery_field(field, value, fieldId, isReadonly);
+        } else {
+            fieldHtml = this.render_standard_field(field, value, fieldId, isReadonly);
+        }
+        
+        return `
+            <div class="mb-3">
+                <label for="${fieldId}" class="form-label">
+                    ${field.label}
+                    ${field.reqd ? '<span class="text-danger">*</span>' : ''}
+                </label>
+                ${fieldHtml}
+                ${field.description ? `<small class="form-text text-muted">${field.description}</small>` : ''}
+            </div>
+        `;
     }
     
     render_form_builder_gallery() {
