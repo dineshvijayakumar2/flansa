@@ -1430,7 +1430,8 @@ def create_relationship_document_only(config):
     except Exception as e:
         frappe.log_error(f"Error creating relationship document: {str(e)}", "Create Relationship Document")
         return {"success": False, "error": str(e)}
-\nprint("Enterprise Relationship API loaded!")
+
+print("Enterprise Relationship API loaded!")
 print("Features:")
 print("  ✅ Template-based relationship creation")
 print("  ✅ Master-Detail with cascade delete")  
