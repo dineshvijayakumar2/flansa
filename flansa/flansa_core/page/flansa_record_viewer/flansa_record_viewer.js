@@ -346,13 +346,9 @@ class FlansaRecordViewer {
             return;
         }
         
-        console.log('🏗️ Rendering fields with layout:', this.form_layout ? 'Custom' : 'Default');
-        
         if (this.form_layout && this.form_layout.sections) {
-            // Use form builder layout
             this.render_form_builder_layout();
         } else {
-            // Use default field layout
             this.render_default_field_layout();
         }
     }
@@ -379,7 +375,6 @@ class FlansaRecordViewer {
     render_form_builder_layout() {
         const fieldsContainer = $('#fields-container');
         
-        // Render form builder sections
         this.form_layout.sections.forEach((section, sectionIndex) => {
             let sectionHtml = `
                 <div class="form-section" data-section="${sectionIndex}">
@@ -389,26 +384,25 @@ class FlansaRecordViewer {
                     <div class="section-fields row">
             `;
             
-            // Render fields in this section
-            section.fields.forEach(formField => {
-                // Find matching field from table_fields
-                const field = this.table_fields.find(f => f.fieldname === formField.fieldname);
-                if (field) {
-                    const fieldValue = this.record_data[field.fieldname] || '';
-                    const fieldId = `field_${field.fieldname}`;
-                    const isReadonly = this.mode === 'view';
-                    
-                    // Use form builder configuration over field metadata
-                    const mergedField = {
-                        ...field,
-                        label: formField.label || field.label,
-                        reqd: formField.reqd !== undefined ? formField.reqd : field.reqd,
-                        read_only: formField.read_only !== undefined ? formField.read_only : field.read_only
-                    };
-                    
-                    sectionHtml += this.render_single_field(mergedField, fieldValue, fieldId, isReadonly);
-                }
-            });
+            if (section.fields) {
+                section.fields.forEach(formField => {
+                    const field = this.table_fields.find(f => f.fieldname === formField.fieldname);
+                    if (field) {
+                        const fieldValue = this.record_data[field.fieldname] || '';
+                        const fieldId = `field_${field.fieldname}`;
+                        const isReadonly = this.mode === 'view';
+                        
+                        const mergedField = {
+                            ...field,
+                            label: formField.label || field.label,
+                            reqd: formField.reqd !== undefined ? formField.reqd : field.reqd,
+                            read_only: formField.read_only !== undefined ? formField.read_only : field.read_only
+                        };
+                        
+                        sectionHtml += this.render_single_field(mergedField, fieldValue, fieldId, isReadonly);
+                    }
+                });
+            }
             
             sectionHtml += `</div></div>`;
             fieldsContainer.append(sectionHtml);
