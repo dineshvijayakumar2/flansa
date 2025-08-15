@@ -1393,7 +1393,44 @@ def get_unique_field_name(doctype_name, base_field_name):
         frappe.log_error(f"Error getting unique field name: {str(e)}", "Field Name Generation")
         return base_field_name
 
-print("Enterprise Relationship API loaded!")
+
+
+def create_relationship_document_only(config):
+    """Create only the relationship document without creating fields"""
+    try:
+        # Create the relationship document
+        relationship = frappe.new_doc("Flansa Relationship")
+        
+        # Set basic fields
+        relationship.relationship_name = config.get("relationship_name")
+        relationship.relationship_type = config.get("relationship_type")
+        relationship.from_table = config.get("from_table")
+        relationship.to_table = config.get("to_table")
+        relationship.from_field = config.get("from_field")
+        relationship.to_field = config.get("to_field")
+        relationship.status = "Active"
+        
+        # Set enterprise fields if present
+        if config.get("parent_table"):
+            relationship.parent_table = config.get("parent_table")
+        if config.get("child_table"):
+            relationship.child_table = config.get("child_table")
+        if config.get("child_reference_field"):
+            relationship.child_reference_field = config.get("child_reference_field")
+        
+        # Save the relationship
+        relationship.insert(ignore_permissions=True)
+        
+        return {
+            "success": True,
+            "relationship": relationship.name,
+            "message": f"Relationship '{relationship.relationship_name}' document created successfully"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error creating relationship document: {str(e)}", "Create Relationship Document")
+        return {"success": False, "error": str(e)}
+\nprint("Enterprise Relationship API loaded!")
 print("Features:")
 print("  ✅ Template-based relationship creation")
 print("  ✅ Master-Detail with cascade delete")  
