@@ -378,6 +378,26 @@ class FlansaRecordViewer {
                 `;
             }
             actionsContainer.innerHTML = actionHtml;
+            
+            // Add Form Builder button for view mode
+        if (this.mode === 'view') {
+            const formBuilderBtn = document.createElement('button');
+            formBuilderBtn.type = 'button';
+            formBuilderBtn.className = 'btn btn-sm btn-outline-primary form-builder-btn';
+            formBuilderBtn.style.cssText = 'display: flex; align-items: center; gap: 6px; margin-left: 8px;';
+            formBuilderBtn.innerHTML = '<i class="fa fa-paint-brush"></i> Customize Form';
+            formBuilderBtn.title = 'Open Form Builder to customize this form layout';
+            
+            formBuilderBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                window.open(`/app/flansa-form-builder?table=${this.table_name}`, '_blank');
+            });
+            
+            // Only add if it doesn't already exist
+            if (!actionsContainer.querySelector('.form-builder-btn')) {
+                actionsContainer.appendChild(formBuilderBtn);
+            }
+        }
         }
         
         // Update status message
@@ -1387,8 +1407,15 @@ class FlansaRecordViewer {
             z-index: 10001;
         `;
         
-        // Add elements to lightbox
-        lightbox.appendChild(img);
+        // Add elements to lightbox safely
+        try {
+            lightbox.appendChild(img);
+            lightbox.appendChild(closeBtn);
+        } catch (error) {
+            console.error('Error adding elements to lightbox:', error);
+            return;
+        }
+
         lightbox.appendChild(closeBtn);
         
         // Add event listeners
@@ -1404,8 +1431,14 @@ class FlansaRecordViewer {
         img.addEventListener('click', (e) => e.stopPropagation());
         
         // Add to DOM
-        document.body.appendChild(lightbox);
-        document.body.style.overflow = 'hidden';
+        // Add to DOM safely
+        try {
+            document.body.appendChild(lightbox);
+            document.body.style.overflow = 'hidden';
+        } catch (error) {
+            console.error('Error adding lightbox to DOM:', error);
+            return;
+        }
         
         // ESC key to close
         const handleEscape = (e) => {
@@ -1430,11 +1463,25 @@ class FlansaRecordViewer {
             const styleElement = document.createElement('style');
             styleElement.id = 'form-builder-custom-css';
             styleElement.textContent = this.form_config.custom_css;
-            document.head.appendChild(styleElement);
-            
-            console.log('🎨 Applied custom CSS from form builder');
+            try {
+                document.head.appendChild(styleElement);
+                console.log('🎨 Applied custom CSS from form builder');
+            } catch (error) {
+                console.error('Error applying custom CSS:', error);
+            }
         }
     }
+    
+    // Safe DOM operation helper
+    safe_dom_operation(operation, errorMessage = 'DOM operation failed') {
+        try {
+            return operation();
+        } catch (error) {
+            console.error(errorMessage, error);
+            return null;
+        }
+    }
+    
     show_error(message) {
         const content = document.getElementById('record-content');
         if (content) {
