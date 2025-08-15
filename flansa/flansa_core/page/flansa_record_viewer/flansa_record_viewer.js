@@ -679,6 +679,9 @@ class FlansaRecordViewer {
         
         // Gallery event handlers
         this.bind_gallery_events(content);
+        
+        // Gallery event handlers
+        this.bind_gallery_events(content);
             }
         } else {
             console.error('Actions container not found!');
@@ -956,6 +959,7 @@ class FlansaRecordViewer {
             });
         });
     }
+
 
     
     async clear_gallery_images(fieldName) {
