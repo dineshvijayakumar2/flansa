@@ -91,57 +91,217 @@ class FlansaRecordViewer {
         
         this.page.set_title(modeTitle);
         
+        // Use the same consistent UI structure as report viewer
         this.page.main.html(`
-            <div class="record-form-container" style="padding: 20px; max-width: 1200px; margin: 0 auto;">
-                <!-- Header -->
-                <div class="record-header" style="margin-bottom: 30px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <div>
-                            <h3 id="record-title">${modeTitle}</h3>
-                            <p class="text-muted" id="record-subtitle">Table: ${this.table_name}</p>
-                        </div>
-                        <div class="btn-group" id="action-buttons">
-                            <!-- Buttons will be added dynamically based on mode -->
-                        </div>
-                    </div>
-                </div>
+            <div class="flansa-record-viewer-page">
                 
-                <!-- Loading indicator -->
-                <div id="loading-container" style="text-align: center; padding: 60px; display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="sr-only">Loading...</span>
+                <!-- Compact Modern Header -->
+                <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
+                    <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
+                        <i class="fa fa-edit" style="font-size: 18px; opacity: 0.9;"></i>
+                        <span style="font-size: 16px; font-weight: 600;" id="app-name-display">Loading...</span>
                     </div>
-                    <p style="margin-top: 15px; color: #6c757d;">Loading record data...</p>
-                </div>
-                
-                <!-- Error container -->
-                <div id="error-container" style="display: none;">
-                    <div class="alert alert-danger" role="alert">
-                        <h5>Error</h5>
-                        <p id="error-message">Something went wrong</p>
-                    </div>
-                </div>
-                
-                <!-- Record form -->
-                <div id="record-form" style="display: none;">
-                    <form id="record-data-form">
-                        <div id="fields-container" class="row">
-                            <!-- Fields will be generated dynamically -->
-                        </div>
-                        
-                        <div class="form-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                            <div id="form-buttons">
-                                <!-- Action buttons will be added here -->
+                    <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;" id="page-mode-title">${modeTitle}</h3>
+                        <div class="context-menu-wrapper" style="position: relative;">
+                            <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
+                                ⋯
+                            </button>
+                            <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
+                                <div class="context-menu-item" data-action="form-builder" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-th-large" style="width: 16px;"></i>
+                                    <span>Form Builder</span>
+                                </div>
+                                <div class="context-menu-item" data-action="refresh-data" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-refresh" style="width: 16px;"></i>
+                                    <span>Refresh Data</span>
+                                </div>
+                                <div class="context-menu-item" data-action="view-table" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-table" style="width: 16px;"></i>
+                                    <span>View All Records</span>
+                                </div>
                             </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
+                
+                <!-- Modern Breadcrumb Navigation -->
+                <div class="flansa-breadcrumb-bar" style="background: rgba(255,255,255,0.95); padding: 8px 20px; margin: 0 -20px 0 -20px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; font-size: 14px;" id="breadcrumb-container">
+                    <!-- Breadcrumbs will be populated here -->
+                </div>
+                
+                <!-- Page Header for Record Details -->
+                <div id="page-header" style="padding: 20px 20px 10px 20px; margin: 0 -20px 16px -20px; background: white; border-bottom: 1px solid #e0e0e0;">
+                    <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #333;" id="record-title">Loading...</h2>
+                    <div style="margin: 5px 0 0 0; font-size: 14px; color: #666; display: flex; gap: 20px;" id="record-meta-info">
+                        <span id="record-subtitle">Loading...</span>
+                    </div>
+                </div>
+
+                <!-- Content Wrapper -->
+                <div class="flansa-workspace-content" style="padding: var(--flansa-spacing-xl) var(--flansa-spacing-xl) 0;">
+
+                    <!-- Loading State -->
+                    <div id="loading-container" style="display: none;">
+                        <div class="loading-container text-center" style="padding: 60px;">
+                            <div class="spinner"></div>
+                            <p class="text-muted">Loading record data...</p>
+                        </div>
+                    </div>
+
+                    <!-- Error State -->
+                    <div id="error-container" style="display: none;">
+                        <div class="error-container text-center" style="padding: 60px;">
+                            <i class="fa fa-exclamation-triangle text-danger" style="font-size: 48px;"></i>
+                            <h4>Error Loading Record</h4>
+                            <p class="text-muted" id="error-message">Something went wrong while loading this record.</p>
+                            <button class="btn btn-primary" onclick="location.reload()">
+                                <i class="fa fa-refresh"></i> Retry
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Record Form Content -->
+                    <div id="record-form" style="display: none;">
+                        
+                        <!-- Form Controls -->
+                        <div class="form-controls" style="margin-bottom: 20px;">
+                            <div style="float: right; display: flex; align-items: center; gap: 15px;">
+                                <div class="btn-group" role="group" id="action-buttons">
+                                    <!-- Action buttons will be added here -->
+                                </div>
+                            </div>
+                            <div class="clearfix"></div>
+                        </div>
+
+                        <!-- Form Fields Container -->
+                        <div class="form-content" style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); min-height: 400px;">
+                            <form id="record-data-form">
+                                <div id="fields-container">
+                                    <!-- Fields will be generated dynamically -->
+                                </div>
+                                
+                                <div class="form-actions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                                    <div id="form-buttons">
+                                        <!-- Action buttons will be added here -->
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div> <!-- Close flansa-workspace-content -->
             </div>
+            
+            <!-- Consistent Styles -->
+            <style>
+                .flansa-record-viewer-page {
+                    padding: 0;
+                    background: var(--flansa-background, #f8f9fa);
+                    min-height: 100vh;
+                }
+                
+                .page-head {
+                    display: none !important;
+                }
+                
+                #context-menu-btn:hover {
+                    background: rgba(255,255,255,0.3) !important;
+                }
+
+                .context-menu-item:hover {
+                    background-color: #f8f9fa !important;
+                }
+
+                .context-menu-item:last-child {
+                    border-bottom: none !important;
+                }
+                
+                .form-content {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 20px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    min-height: 400px;
+                }
+                
+                .form-section {
+                    margin-bottom: 30px;
+                    background: white;
+                    border-radius: 8px;
+                    padding: 20px;
+                    border: 1px solid #e0e0e0;
+                }
+                
+                .section-title {
+                    margin-bottom: 20px;
+                    color: #495057;
+                    border-bottom: 2px solid #e9ecef;
+                    padding-bottom: 8px;
+                    font-size: 18px;
+                    font-weight: 600;
+                }
+                
+                .spinner {
+                    border: 4px solid #f3f3f3;
+                    border-top: 4px solid #3498db;
+                    border-radius: 50%;
+                    width: 50px;
+                    height: 50px;
+                    animation: spin 1s linear infinite;
+                    margin: 0 auto 20px;
+                }
+                
+                @keyframes spin {
+                    0% { transform: rotate(0deg); }
+                    100% { transform: rotate(360deg); }
+                }
+                
+                .error-container, .loading-container {
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }
+            </style>
         `);
     }
     
     bind_events() {
         const container = $(this.wrapper);
+        
+        // Context menu functionality
+        $(document).on('click', '#context-menu-btn', function(e) {
+            e.stopPropagation();
+            const menu = $('#context-menu');
+            menu.toggle();
+        });
+        
+        // Close context menu when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('#context-menu, #context-menu-btn').length) {
+                $('#context-menu').hide();
+            }
+        });
+        
+        // Context menu actions
+        $(document).on('click', '.context-menu-item', (e) => {
+            const action = $(e.currentTarget).data('action');
+            $('#context-menu').hide();
+            
+            switch (action) {
+                case 'form-builder':
+                    // Navigate to form builder for this table
+                    frappe.set_route('flansa-form-builder', { table: this.table_name });
+                    break;
+                case 'refresh-data':
+                    // Reload the record data
+                    this.load_data();
+                    break;
+                case 'view-table':
+                    // Navigate to report viewer for this table
+                    frappe.set_route('flansa-report-viewer', this.table_name);
+                    break;
+            }
+        });
         
         // Gallery lightbox triggers
         $(document).on('click', '.gallery-lightbox-trigger', (e) => {
@@ -288,21 +448,28 @@ class FlansaRecordViewer {
             });
             
             if (response.message && response.message.success) {
-                // Transform the response to match expected format
-                const formConfig = response.message.form_config || {};
+                // Store the complete form configuration
+                this.form_config = response.message.form_config || {};
+                this.field_overrides = response.message.field_overrides || {};
+                this.table_fields = response.message.fields || []; // These fields already have overrides applied
+                
+                // Create form layout for rendering
                 this.form_layout = {
-                    sections: formConfig.sections || [],
-                    layout_type: formConfig.layout_type || 'standard',
-                    custom_css: formConfig.custom_css || '',
-                    form_title: formConfig.form_title || '',
-                    form_description: formConfig.form_description || ''
+                    sections: this.form_config.sections || [],
+                    layout_type: this.form_config.layout_type || 'standard',
+                    custom_css: this.form_config.custom_css || '',
+                    form_title: this.form_config.form_title || '',
+                    form_description: this.form_config.form_description || ''
                 };
-                this.table_fields = response.message.fields || [];
-                console.log('✅ Loaded form layout:', this.form_layout);
-                console.log('✅ Loaded table fields:', this.table_fields);
+                
+                console.log('✅ Loaded form configuration:', this.form_config);
+                console.log('✅ Loaded field overrides:', this.field_overrides);
+                console.log('✅ Loaded table fields with overrides:', this.table_fields);
             } else {
-                console.log('⚠️ No form layout found, using default field layout');
+                console.log('⚠️ No form configuration found, using default field layout');
                 this.form_layout = null;
+                this.form_config = {};
+                this.field_overrides = {};
             }
         } catch (error) {
             console.error('❌ Error loading form layout:', error);
@@ -329,12 +496,52 @@ class FlansaRecordViewer {
     }
     
     update_header() {
-        const recordTitle = this.mode === 'new' ? 'New Record' :
-                           this.mode === 'edit' ? `Edit: ${this.record_id}` :
-                           `View: ${this.record_id}`;
+        // Update app name in header
+        $('#app-name-display').text(this.table_name);
+        
+        // Use form title from form builder configuration if available
+        let recordTitle;
+        if (this.form_config && this.form_config.form_title) {
+            recordTitle = this.form_config.form_title;
+            if (this.mode === 'edit') {
+                recordTitle += ` - Edit: ${this.record_id}`;
+            } else if (this.mode === 'new') {
+                recordTitle += ' - New Record';
+            } else {
+                recordTitle += ` - View: ${this.record_id}`;
+            }
+        } else {
+            recordTitle = this.mode === 'new' ? 'New Record' :
+                         this.mode === 'edit' ? `Edit: ${this.record_id}` :
+                         `View: ${this.record_id}`;
+        }
         
         $('#record-title').text(recordTitle);
-        $('#record-subtitle').text(`Table: ${this.table_name}`);
+        
+        // Use form description or default subtitle
+        const subtitle = (this.form_config && this.form_config.form_description) || `Table: ${this.table_name}`;
+        $('#record-subtitle').text(subtitle);
+        
+        // Add breadcrumb navigation
+        const breadcrumbs = [
+            { label: 'Workspace', url: '/app/flansa-workspace' },
+            { label: this.table_name, url: `/app/flansa-report-viewer/${this.table_name}` },
+            { label: this.record_id || 'New', url: '#', active: true }
+        ];
+        
+        let breadcrumbHtml = '';
+        breadcrumbs.forEach((crumb, index) => {
+            if (index > 0) {
+                breadcrumbHtml += '<i class="fa fa-chevron-right" style="margin: 0 8px; opacity: 0.5; font-size: 10px;"></i>';
+            }
+            if (crumb.active) {
+                breadcrumbHtml += `<span style="color: var(--flansa-primary, #007bff);">${crumb.label}</span>`;
+            } else {
+                breadcrumbHtml += `<a href="${crumb.url}" style="color: #666; text-decoration: none;">${crumb.label}</a>`;
+            }
+        });
+        
+        $('#breadcrumb-container').html(breadcrumbHtml);
     }
     
     render_form_fields() {
@@ -375,38 +582,108 @@ class FlansaRecordViewer {
     render_form_builder_layout() {
         const fieldsContainer = $('#fields-container');
         
-        this.form_layout.sections.forEach((section, sectionIndex) => {
+        // The form builder stores fields in a flat array with layout elements (Section Break, Column Break)
+        // We need to group them into sections for rendering
+        const sections = this.build_sections_from_form_layout();
+        
+        sections.forEach((section, sectionIndex) => {
             let sectionHtml = `
                 <div class="form-section" data-section="${sectionIndex}">
                     <h4 class="section-title" style="margin-bottom: 20px; color: #495057; border-bottom: 2px solid #e9ecef; padding-bottom: 8px;">
-                        ${section.title || 'Form Fields'}
+                        ${section.title}
                     </h4>
                     <div class="section-fields row">
             `;
             
-            if (section.fields) {
-                section.fields.forEach(formField => {
-                    const field = this.table_fields.find(f => f.fieldname === formField.fieldname);
-                    if (field) {
-                        const fieldValue = this.record_data[field.fieldname] || '';
-                        const fieldId = `field_${field.fieldname}`;
-                        const isReadonly = this.mode === 'view';
-                        
-                        const mergedField = {
-                            ...field,
-                            label: formField.label || field.label,
-                            reqd: formField.reqd !== undefined ? formField.reqd : field.reqd,
-                            read_only: formField.read_only !== undefined ? formField.read_only : field.read_only
-                        };
-                        
-                        sectionHtml += this.render_single_field(mergedField, fieldValue, fieldId, isReadonly);
-                    }
-                });
-            }
+            section.fields.forEach(fieldConfig => {
+                // Find the actual field definition from table_fields
+                const field = this.table_fields.find(f => f.field_name === fieldConfig.field_name);
+                if (field) {
+                    const fieldValue = this.record_data[field.field_name] || '';
+                    const fieldId = `field_${field.field_name}`;
+                    const isReadonly = this.mode === 'view';
+                    
+                    // Use field from table_fields (which already has form builder overrides applied)
+                    // but map the field structure for rendering
+                    const mergedField = {
+                        fieldname: field.field_name,
+                        label: field.field_label,
+                        fieldtype: field.field_type,
+                        options: field.options,
+                        reqd: field.is_required,
+                        read_only: field.is_readonly,
+                        description: field.description,
+                        default: field.default_value
+                    };
+                    
+                    sectionHtml += this.render_single_field(mergedField, fieldValue, fieldId, isReadonly);
+                }
+            });
             
             sectionHtml += `</div></div>`;
             fieldsContainer.append(sectionHtml);
         });
+    }
+    
+    build_sections_from_form_layout() {
+        // Parse the form builder sections array to group fields by sections
+        const sections = [];
+        let currentSection = {
+            title: 'Form Fields',
+            fields: []
+        };
+        
+        if (!this.form_layout.sections || this.form_layout.sections.length === 0) {
+            // No form builder layout, use all fields in one section
+            currentSection.fields = this.table_fields.map(field => ({
+                field_name: field.field_name
+            }));
+            sections.push(currentSection);
+            return sections;
+        }
+        
+        // Process form builder sections array
+        this.form_layout.sections.forEach(item => {
+            if (item.is_layout_element && item.layout_type === 'Section Break') {
+                // Start a new section
+                if (currentSection.fields.length > 0) {
+                    sections.push(currentSection);
+                }
+                currentSection = {
+                    title: item.field_label || 'Section',
+                    fields: []
+                };
+            } else if (item.is_layout_element && item.layout_type === 'Column Break') {
+                // Column break - for now just continue in same section
+                // TODO: Implement column layout
+            } else if (item.field_name && !item.is_layout_element) {
+                // Regular field
+                currentSection.fields.push({
+                    field_name: item.field_name
+                });
+            }
+        });
+        
+        // Add the last section if it has fields
+        if (currentSection.fields.length > 0) {
+            sections.push(currentSection);
+        }
+        
+        // If no sections were created, create a default one with all fields
+        if (sections.length === 0) {
+            sections.push({
+                title: 'Form Fields',
+                fields: this.table_fields.map(field => ({
+                    field_name: field.field_name
+                }))
+            });
+        }
+        
+        return sections;
+    }
+    
+    render_form_builder_gallery() {
+        const fieldsContainer = $('#fields-container');
         
         // Render gallery fields if any
         if (this.form_layout.gallery_fields && this.form_layout.gallery_fields.length > 0) {
