@@ -53,6 +53,9 @@ class FlansaFormBuilder {
     
     
     init() {
+        // Store global reference for drop handlers
+        window.form_builder_instance = this;
+        
         // Load the HTML template content
         this.setup_template();
         
@@ -129,6 +132,43 @@ class FlansaFormBuilder {
                 </button>
             </div>
             
+            <div class="palette-section" style="margin-bottom: 20px;">
+                <h6 style="margin-bottom: 12px; color: var(--flansa-text-primary, #495057); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
+                    <i class="fa fa-th-large"></i> Layout Elements
+                </h6>
+                <div class="layout-elements" style="margin-bottom: 16px;">
+                    <div class="field-item layout-item" data-field-type="Section Break" draggable="true"
+                         style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: #e3f2fd; transition: all 0.2s ease;"
+                         onmouseover="this.style.borderColor='var(--flansa-primary, #007bff)'; this.style.backgroundColor='#bbdefb';"
+                         onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='#e3f2fd';">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center;">
+                                <i class="fa fa-th-large" style="margin-right: 8px; color: var(--flansa-primary, #007bff); width: 16px;"></i>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">Section Break</div>
+                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">New form section</div>
+                                </div>
+                            </div>
+                            <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
+                        </div>
+                    </div>
+                    <div class="field-item layout-item" data-field-type="Column Break" draggable="true"
+                         style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: #f3e5f5; transition: all 0.2s ease;"
+                         onmouseover="this.style.borderColor='var(--flansa-secondary, #6f42c1)'; this.style.backgroundColor='#e1bee7';"
+                         onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='#f3e5f5';">
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <div style="display: flex; align-items: center;">
+                                <i class="fa fa-columns" style="margin-right: 8px; color: var(--flansa-secondary, #6f42c1); width: 16px;"></i>
+                                <div>
+                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">Column Break</div>
+                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">Start new column</div>
+                                </div>
+                            </div>
+                            <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
             
             <div class="palette-section">
                 <h6 style="margin-bottom: 12px; color: var(--flansa-text-primary, #495057); font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">
@@ -322,6 +362,10 @@ class FlansaFormBuilder {
                 } else if (itemType === 'field') {
                     // Handle existing field from available fields
                     this.add_existing_field_to_form(itemData);
+                } else if (itemType === 'form-field') {
+                    // Handle moving existing form fields
+                    const fieldIndex = parseInt(e.dataTransfer.getData('field-index'));
+                    this.move_field_to_end(fieldIndex);
                 } else {
                     // Fallback for old behavior
                     this.add_field_to_canvas(itemData, e.clientX, e.clientY);
@@ -348,8 +392,200 @@ class FlansaFormBuilder {
             $item.addClass('dragging');
         });
         
-        $(document).on('dragend', '.field-item', function(e) {
+        // Setup drag handlers for form fields (for cross-section movement)
+        $(document).on('dragstart', '.form-field', function(e) {
+            const $field = $(this);
+            const fieldIndex = $field.data('field-index');
+            const fieldName = $field.data('field-name');
+            
+            e.originalEvent.dataTransfer.setData('text/plain', fieldName);
+            e.originalEvent.dataTransfer.setData('item-type', 'form-field');
+            e.originalEvent.dataTransfer.setData('field-index', fieldIndex.toString());
+            
+            $field.addClass('dragging');
+        });
+        
+        $(document).on('dragend', '.field-item, .form-field', function() {
             $(this).removeClass('dragging');
+        });
+        
+        // Setup section drop zones for cross-section drag and drop
+        this.setup_section_drop_zones();
+    }
+    
+    setup_section_drop_zones() {
+        // Make individual sections droppable for cross-section field movement
+        $(document).on('dragover', '.section-content', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).addClass('drag-over');
+        });
+        
+        $(document).on('dragleave', '.section-content', function(e) {
+            if (!$(this)[0].contains(e.relatedTarget)) {
+                $(this).removeClass('drag-over');
+            }
+        });
+        
+        $(document).on('drop', '.section-content', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            $(this).removeClass('drag-over');
+            
+            const itemType = e.originalEvent.dataTransfer.getData('item-type');
+            const itemData = e.originalEvent.dataTransfer.getData('text/plain');
+            
+            if (itemType === 'form-field') {
+                const fieldIndex = parseInt(e.originalEvent.dataTransfer.getData('field-index'));
+                const $section = $(this).closest('.form-section');
+                const sectionFieldIndex = parseInt($section.data('field-index'));
+                
+                // Get form builder instance
+                const formBuilder = window.form_builder_instance || 
+                    (window.page_instance && window.page_instance.form_builder);
+                
+                if (formBuilder) {
+                    formBuilder.move_field_to_section_by_index(fieldIndex, sectionFieldIndex);
+                }
+            } else if (itemType === 'field') {
+                // Handle adding field from palette to specific section
+                const $section = $(this).closest('.form-section');
+                const sectionFieldIndex = parseInt($section.data('field-index'));
+                
+                const formBuilder = window.form_builder_instance || 
+                    (window.page_instance && window.page_instance.form_builder);
+                
+                if (formBuilder) {
+                    formBuilder.add_field_to_section_by_index(itemData, sectionFieldIndex);
+                }
+            }
+        });
+    }
+    
+    move_field_to_end(fieldIndex) {
+        // Move field to the end of the form
+        if (fieldIndex < 0 || fieldIndex >= this.current_fields.length) return;
+        
+        const field = this.current_fields.splice(fieldIndex, 1)[0];
+        this.current_fields.push(field);
+        
+        this.render_form_canvas();
+        
+        frappe.show_alert({
+            message: `Moved "${field.field_label}" to end of form`,
+            indicator: 'blue'
+        });
+    }
+    
+    move_field_to_section(fieldIndex, targetSectionIndex) {
+        // Move field to a specific section
+        if (fieldIndex < 0 || fieldIndex >= this.current_fields.length) return;
+        
+        const field = this.current_fields.splice(fieldIndex, 1)[0];
+        
+        // Find the target section
+        let sectionCount = 0;
+        let insertIndex = this.current_fields.length;
+        
+        for (let i = 0; i < this.current_fields.length; i++) {
+            if (this.current_fields[i].is_layout_element && 
+                this.current_fields[i].layout_type === 'Section Break') {
+                if (sectionCount === targetSectionIndex) {
+                    insertIndex = i + 1;
+                    break;
+                }
+                sectionCount++;
+            }
+        }
+        
+        this.current_fields.splice(insertIndex, 0, field);
+        this.render_form_canvas();
+        
+        frappe.show_alert({
+            message: `Moved "${field.field_label}" to section ${targetSectionIndex + 1}`,
+            indicator: 'green'
+        });
+    }
+    
+    add_field_to_section(fieldName, targetSectionIndex) {
+        // Add field from palette to specific section
+        const field = this.table_fields.find(f => f.field_name === fieldName);
+        if (!field) return;
+        
+        // Find the target section
+        let sectionCount = 0;
+        let insertIndex = this.current_fields.length;
+        
+        for (let i = 0; i < this.current_fields.length; i++) {
+            if (this.current_fields[i].is_layout_element && 
+                this.current_fields[i].layout_type === 'Section Break') {
+                if (sectionCount === targetSectionIndex) {
+                    insertIndex = i + 1;
+                    break;
+                }
+                sectionCount++;
+            }
+        }
+        
+        this.current_fields.splice(insertIndex, 0, field);
+        this.render_form_canvas();
+        this.load_available_fields();
+        
+        frappe.show_alert({
+            message: `Added "${field.field_label}" to section ${targetSectionIndex + 1}`,
+            indicator: 'green'
+        });
+    }
+    
+    move_field_to_section_by_index(fieldIndex, sectionFieldIndex) {
+        // Move field to the section identified by the section field's index
+        if (fieldIndex < 0 || fieldIndex >= this.current_fields.length) return;
+        
+        const field = this.current_fields.splice(fieldIndex, 1)[0];
+        
+        // Find where to insert after the section
+        let insertIndex = sectionFieldIndex + 1;
+        
+        // Make sure we don't go past the end
+        if (insertIndex > this.current_fields.length) {
+            insertIndex = this.current_fields.length;
+        }
+        
+        this.current_fields.splice(insertIndex, 0, field);
+        this.render_form_canvas();
+        
+        const sectionField = this.current_fields[sectionFieldIndex];
+        const sectionName = sectionField?.field_label || 'Section';
+        
+        frappe.show_alert({
+            message: `Moved "${field.field_label}" to "${sectionName}"`,
+            indicator: 'green'
+        });
+    }
+    
+    add_field_to_section_by_index(fieldName, sectionFieldIndex) {
+        // Add field from palette to specific section by section field index
+        const field = this.table_fields.find(f => f.field_name === fieldName);
+        if (!field) return;
+        
+        // Insert right after the section header
+        let insertIndex = sectionFieldIndex + 1;
+        
+        // Make sure we don't go past the end
+        if (insertIndex > this.current_fields.length) {
+            insertIndex = this.current_fields.length;
+        }
+        
+        this.current_fields.splice(insertIndex, 0, field);
+        this.render_form_canvas();
+        this.load_available_fields();
+        
+        const sectionField = this.current_fields[sectionFieldIndex];
+        const sectionName = sectionField?.field_label || 'Section';
+        
+        frappe.show_alert({
+            message: `Added "${field.field_label}" to "${sectionName}"`,
+            indicator: 'green'
         });
     }
     
@@ -647,8 +883,11 @@ class FlansaFormBuilder {
                         <div class="section-content" style="padding: 16px; min-height: 60px;">
                 `;
                 current_section = field;
+            } else if (field.is_layout_element && field.layout_type === 'Column Break') {
+                form_html += '<div class="column-break" style="width: 100%; border-top: 1px dashed var(--flansa-border, #e0e6ed); margin: 16px 0; font-size: 12px; color: var(--flansa-text-secondary, #6c757d); text-align: center; padding: 8px;">Column Break</div>';
             } else if (field.field_type === 'Column Break') {
-                form_html += '<div class="column-break" style="width: 100%; border-top: 1px dashed var(--flansa-border, #e0e6ed); margin: 16px 0;"></div>';
+                // Handle old-style column breaks for backward compatibility
+                form_html += '<div class="column-break" style="width: 100%; border-top: 1px dashed var(--flansa-border, #e0e6ed); margin: 16px 0; font-size: 12px; color: var(--flansa-text-secondary, #6c757d); text-align: center; padding: 8px;">Column Break</div>';
             } else {
                 // Regular field
                 if (!current_section) {
@@ -680,7 +919,7 @@ class FlansaFormBuilder {
         const readonly_indicator = field.is_readonly ? '<i class="fa fa-lock text-muted"></i>' : '';
         
         let field_html = `
-            <div class="form-field" data-field-index="${index}" data-field-name="${field.field_name}" style="margin-bottom: 16px; padding: 12px; border: 1px solid transparent; border-radius: 4px; transition: all 0.2s; cursor: pointer;">
+            <div class="form-field" data-field-index="${index}" data-field-name="${field.field_name}" draggable="true" style="margin-bottom: 16px; padding: 12px; border: 1px solid transparent; border-radius: 4px; transition: all 0.2s; cursor: move;">
                 <div class="field-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <label class="field-label" style="font-weight: 600; margin: 0; color: var(--flansa-text-primary, #495057);">
                         ${field.field_label || field.field_name} ${required_indicator} ${readonly_indicator}
@@ -765,6 +1004,19 @@ class FlansaFormBuilder {
                 $(this).find('.field-actions').hide();
             }
         }, '.form-field');
+        
+        // Section editing and removal
+        $(document).off('click', '.edit-section').on('click', '.edit-section', function(e) {
+            e.stopPropagation();
+            const index = parseInt($(this).closest('.form-section').data('field-index'));
+            self.edit_section(index);
+        });
+        
+        $(document).off('click', '.remove-section').on('click', '.remove-section', function(e) {
+            e.stopPropagation();
+            const index = parseInt($(this).closest('.form-section').data('field-index'));
+            self.remove_section(index);
+        });
     }
     
     edit_field_layout(index) {
@@ -809,6 +1061,95 @@ class FlansaFormBuilder {
                 indicator: 'orange'
             });
         });
+    }
+    
+    edit_section(index) {
+        const field = this.current_fields[index];
+        if (!field || !field.is_layout_element || field.layout_type !== 'Section Break') {
+            return;
+        }
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Edit Section',
+            fields: [
+                {
+                    label: 'Section Title',
+                    fieldname: 'section_title',
+                    fieldtype: 'Data',
+                    default: field.field_label || '',
+                    reqd: 1,
+                    description: 'Title displayed in the section header'
+                }
+            ],
+            primary_action_label: 'Update Section',
+            primary_action: (values) => {
+                this.current_fields[index].field_label = values.section_title;
+                this.render_form_canvas();
+                
+                frappe.show_alert({
+                    message: `Updated section title to "${values.section_title}"`,
+                    indicator: 'green'
+                });
+                
+                dialog.hide();
+            }
+        });
+        
+        dialog.show();
+    }
+    
+    remove_section(index) {
+        const field = this.current_fields[index];
+        if (!field || !field.is_layout_element || field.layout_type !== 'Section Break') {
+            return;
+        }
+        
+        frappe.confirm(
+            `Remove section "${field.field_label || 'Section'}"? All fields in this section will be moved to the previous section.`,
+            () => {
+                // Find all fields that belong to this section
+                let fieldsToMove = [];
+                let startIndex = index + 1;
+                
+                // Collect fields until next section or end
+                for (let i = startIndex; i < this.current_fields.length; i++) {
+                    const currentField = this.current_fields[i];
+                    
+                    // Stop if we hit another section break
+                    if (currentField.is_layout_element && currentField.layout_type === 'Section Break') {
+                        break;
+                    }
+                    
+                    fieldsToMove.push(currentField);
+                }
+                
+                // Remove the section and its fields from their current positions
+                this.current_fields.splice(index, fieldsToMove.length + 1);
+                
+                // Find the previous section or add fields to the end
+                let insertIndex = this.current_fields.length;
+                if (index > 0) {
+                    // Find where to insert the fields (after the previous section header)
+                    for (let i = index - 1; i >= 0; i--) {
+                        if (this.current_fields[i].is_layout_element && 
+                            this.current_fields[i].layout_type === 'Section Break') {
+                            insertIndex = i + 1;
+                            break;
+                        }
+                    }
+                }
+                
+                // Insert the moved fields
+                this.current_fields.splice(insertIndex, 0, ...fieldsToMove);
+                
+                this.render_form_canvas();
+                
+                frappe.show_alert({
+                    message: `Removed section "${field.field_label || 'Section'}" and moved ${fieldsToMove.length} field(s)`,
+                    indicator: 'orange'
+                });
+            }
+        );
     }
     
     show_field_properties(index) {
@@ -963,11 +1304,7 @@ class FlansaFormBuilder {
             indicator: 'blue'
         });
         
-        // Save current form state before refresh
-        const currentFormState = {
-            fields: [...this.current_fields],
-            form_config: {...this.form_config}
-        };
+        // Note: Current form state is preserved during sync
         
         // Reload table data with force refresh
         frappe.call({
