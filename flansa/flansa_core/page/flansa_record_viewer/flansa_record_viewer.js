@@ -60,6 +60,33 @@ class FlansaRecordViewer {
                     if (response.message) {
                         resolve(response.message);
                     } else {
+
+    // Load form builder configuration
+    async load_form_configuration() {
+        try {
+            const formConfigResponse = await this.call_api(
+                'flansa.flansa_core.api.form_builder.get_table_form_config',
+                { table_name: this.table_name }
+            );
+            
+            if (formConfigResponse.success) {
+                this.form_config = formConfigResponse.form_config || {};
+                this.form_sections = formConfigResponse.form_config?.sections || [];
+                console.log('📋 Loaded form builder configuration:', this.form_config);
+                return true;
+            } else {
+                console.warn('⚠️ No form builder configuration found, using default layout');
+                this.form_config = {};
+                this.form_sections = [];
+                return false;
+            }
+        } catch (error) {
+            console.error('❌ Error loading form configuration:', error);
+            this.form_config = {};
+            this.form_sections = [];
+            return false;
+        }
+    }
                         resolve({ success: false, error: 'No response' });
                     }
                 },
@@ -240,12 +267,16 @@ class FlansaRecordViewer {
     load_data() {
         console.log('📊 Loading data for record viewer');
         
-        if (this.mode === 'new') {
-            this.load_table_structure();
-        } else {
-            this.load_record_data();
-        }
+        // First load form configuration, then load data
+        this.load_form_configuration().then((hasFormConfig) => {
+            if (this.mode === 'new') {
+                this.load_table_structure();
+            } else {
+                this.load_record_data();
+            }
+        });
     }
+
     
     load_table_structure() {
         // Load both table metadata and form layout
@@ -371,7 +402,28 @@ class FlansaRecordViewer {
                 </div>
                 
                 <div class="record-fields" style="padding: 24px;">
-        `;
+        
+        // Add form title and description from form builder config
+        if (this.form_config && (this.form_config.form_title || this.form_config.form_description)) {
+            let headerHtml = '';
+            
+            if (this.form_config.form_title) {
+                headerHtml += `<h4 style="margin: 0 0 8px 0; color: #2c3e50; font-weight: 600;">${this.form_config.form_title}</h4>`;
+            }
+            
+            if (this.form_config.form_description) {
+                headerHtml += `<p style="margin: 0 0 16px 0; color: #6c757d; font-size: 14px;">${this.form_config.form_description}</p>`;
+            }
+            
+            if (headerHtml) {
+                html += `
+                    <div class="form-builder-header" style="margin-bottom: 20px; padding: 16px; background: #f8f9fc; border-radius: 6px; border-left: 4px solid #667eea;">
+                        ${headerHtml}
+                    </div>
+                `;
+            }
+        }
+        
         
         // Render fields with sections
         if (this.table_fields && this.table_fields.length > 0) {
@@ -417,6 +469,7 @@ class FlansaRecordViewer {
         // Small delay to ensure DOM is ready
         setTimeout(() => {
             this.bind_record_events();
+        this.apply_form_builder_styles();
         }, 50);
     }
 
@@ -676,12 +729,6 @@ class FlansaRecordViewer {
                     e.preventDefault();
                     frappe.set_route('flansa-report-viewer', this.table_name);
                 });
-        
-        // Gallery event handlers
-        this.bind_gallery_events(content);
-        
-        // Gallery event handlers
-        this.bind_gallery_events(content);
             }
         } else {
             console.error('Actions container not found!');
@@ -1121,23 +1168,99 @@ class FlansaRecordViewer {
     }
     
     // Utility methods for UI organization
+    // Organize fields using form builder configuration
     organize_fields_into_sections(fields) {
-        // Use form builder layout if available
-        if (this.form_layout && this.form_layout.sections && this.form_layout.sections.length > 0) {
-            console.log('📋 Using form builder sections');
-            return this.form_layout.sections.map(section => ({
-                title: section.title,
-                icon: section.icon || 'folder-o',
-                columns: `repeat(${section.columns || 2}, 1fr)`,
-                fields: section.fields.map(fieldConfig => {
-                    // Find the actual field from table_fields
-                    const actualField = fields.find(f => f.fieldname === fieldConfig.fieldname);
-                    return actualField || fieldConfig;
-                })
-            }));
+        // If we have form builder sections, use them
+        if (this.form_sections && this.form_sections.length > 0) {
+            console.log('📋 Using form builder sections for field organization');
+            return this.organize_fields_with_form_config(fields);
         }
         
-        // Fallback to default organization
+        // Fallback to automatic organization
+        console.log('📋 Using automatic field organization');
+        return this.organize_fields_automatically(fields);
+    }
+    
+    organize_fields_with_form_config(fields) {
+        const sections = [];
+        let currentSection = null;
+        
+        // Create field lookup for quick access
+        const fieldLookup = {};
+        fields.forEach(field => {
+            fieldLookup[field.fieldname] = field;
+        });
+        
+        this.form_sections.forEach(sectionField => {
+            if (sectionField.is_layout_element && sectionField.layout_type === 'Section Break') {
+                // Start new section
+                if (currentSection && currentSection.fields.length > 0) {
+                    sections.push(currentSection);
+                }
+                
+                currentSection = {
+                    title: sectionField.field_label || 'Section',
+                    icon: this.getSectionIcon(sectionField.field_label),
+                    columns: this.getSectionColumns(sectionField),
+                    fields: []
+                };
+            } else if (sectionField.is_layout_element && sectionField.layout_type === 'Column Break') {
+                // Handle column breaks within sections (visual hint for responsive layout)
+                if (currentSection) {
+                    currentSection.has_column_break = true;
+                }
+            } else if (sectionField.field_name && fieldLookup[sectionField.field_name]) {
+                // Add field to current section
+                if (!currentSection) {
+                    currentSection = {
+                        title: 'Basic Information',
+                        icon: 'info-circle',
+                        columns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                        fields: []
+                    };
+                }
+                
+                // Use the actual field from the table with form builder customizations
+                const actualField = fieldLookup[sectionField.field_name];
+                const configuredField = {
+                    ...actualField,
+                    // Apply form builder customizations if any
+                    label: sectionField.field_label || actualField.label,
+                    description: sectionField.description || actualField.description,
+                    form_config: sectionField // Store form config for advanced features
+                };
+                
+                currentSection.fields.push(configuredField);
+            }
+        });
+        
+        // Add the last section
+        if (currentSection && currentSection.fields.length > 0) {
+            sections.push(currentSection);
+        }
+        
+        // Add any fields not included in form builder config to a default section
+        const usedFieldNames = new Set();
+        sections.forEach(section => {
+            section.fields.forEach(field => {
+                usedFieldNames.add(field.fieldname);
+            });
+        });
+        
+        const unusedFields = fields.filter(field => !usedFieldNames.has(field.fieldname));
+        if (unusedFields.length > 0) {
+            sections.push({
+                title: 'Additional Fields',
+                icon: 'plus-circle',
+                columns: 'repeat(auto-fit, minmax(300px, 1fr))',
+                fields: unusedFields
+            });
+        }
+        
+        return sections;
+    }
+    
+    organize_fields_automatically(fields) {
         const sections = [];
         let currentSection = {
             title: 'General Information',
@@ -1181,6 +1304,37 @@ class FlansaRecordViewer {
         
         return sections;
     }
+    
+    getSectionIcon(sectionTitle) {
+        if (!sectionTitle) return 'folder-o';
+        
+        const title = sectionTitle.toLowerCase();
+        if (title.includes('basic') || title.includes('general')) return 'info-circle';
+        if (title.includes('contact') || title.includes('personal')) return 'user';
+        if (title.includes('address') || title.includes('location')) return 'map-marker';
+        if (title.includes('financial') || title.includes('payment')) return 'credit-card';
+        if (title.includes('date') || title.includes('time')) return 'calendar';
+        if (title.includes('attachment') || title.includes('media') || title.includes('image')) return 'paperclip';
+        if (title.includes('additional') || title.includes('other')) return 'plus-circle';
+        if (title.includes('related') || title.includes('reference')) return 'link';
+        
+        return 'folder-o';
+    }
+    
+    getSectionColumns(sectionField) {
+        // Check if this section has column breaks or specific layout preferences
+        if (this.form_config.column_layout === 'two-column') {
+            return 'repeat(2, 1fr)';
+        } else if (this.form_config.column_layout === 'three-column') {
+            return 'repeat(3, 1fr)';
+        } else if (this.form_config.column_layout === 'single') {
+            return '1fr';
+        }
+        
+        // Default responsive grid
+        return 'repeat(auto-fit, minmax(300px, 1fr))';
+    }
+
     
     update_status(message) {
         const statusElement = document.getElementById('status-message');
@@ -1263,7 +1417,25 @@ class FlansaRecordViewer {
         document.addEventListener('keydown', handleEscape);
     }
 
-        show_error(message) {
+    // Apply custom CSS from form builder configuration
+    apply_form_builder_styles() {
+        if (this.form_config && this.form_config.custom_css) {
+            // Remove any existing form builder styles
+            const existingStyle = document.getElementById('form-builder-custom-css');
+            if (existingStyle) {
+                existingStyle.remove();
+            }
+            
+            // Add new custom styles
+            const styleElement = document.createElement('style');
+            styleElement.id = 'form-builder-custom-css';
+            styleElement.textContent = this.form_config.custom_css;
+            document.head.appendChild(styleElement);
+            
+            console.log('🎨 Applied custom CSS from form builder');
+        }
+    }
+    show_error(message) {
         const content = document.getElementById('record-content');
         if (content) {
             content.innerHTML = `
