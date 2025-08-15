@@ -245,10 +245,26 @@ def seamless_delete_field(table_name, field_name):
 
 @frappe.whitelist()
 def seamless_add_field(table_name, field_data):
-    """Seamless add field - now uses native field management"""
+    """Seamless add field - now uses native field management with deduplication"""
     try:
         if isinstance(field_data, str):
             field_data = json.loads(field_data)
+        
+        # Global deduplication check for link fields
+        field_name = field_data.get("field_name")
+        field_type = field_data.get("field_type")
+        
+        if field_type == "Link" and field_name:
+            # Get target doctype
+            doctype_name = frappe.db.get_value("Flansa Table", table_name, "doctype_name")
+            if doctype_name:
+                # Check if any link field with same purpose already exists
+                if _check_duplicate_link_field(doctype_name, field_name, field_data.get("options")):
+                    frappe.logger().info(f"Skipping duplicate link field creation: {field_name} in {doctype_name}")
+                    return {"success": True, "message": f"Field {field_name} already exists", "skipped": True}
+                
+                # Log field creation for debugging
+                frappe.logger().info(f"Creating link field: {field_name} in {doctype_name} pointing to {field_data.get('options')}")
         
         # Use native field management
         from flansa.native_fields import add_basic_field_native

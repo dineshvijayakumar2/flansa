@@ -432,6 +432,8 @@ def create_relationship_fields(config: Dict, enterprise_type: str):
         
         # Create fields based on enterprise type (with duplicate prevention)
         if enterprise_type == "Master-Detail":
+            # Enhanced duplicate prevention for Master-Detail relationships
+            
             # Check if link field already exists before creating
             if not _field_exists_in_doctype(from_doctype, from_field):
                 # Master table gets child table field
@@ -442,8 +444,33 @@ def create_relationship_fields(config: Dict, enterprise_type: str):
                     "options": to_doctype,  # Use actual DocType name
                     "description": f"Detail records owned by this {from_table}"
                 })
+            else:
+                frappe.logger().info(f"Skipping master field creation - {from_field} already exists in {from_doctype}")
             
-            if not _field_exists_in_doctype(to_doctype, to_field):
+            # More thorough check for link field in child table
+            child_link_exists = False
+            
+            # Check exact field name
+            if _field_exists_in_doctype(to_doctype, to_field):
+                child_link_exists = True
+                frappe.logger().info(f"Link field {to_field} already exists in {to_doctype}")
+            else:
+                # Check if ANY link field pointing to parent already exists
+                existing_parent_links = frappe.get_all("Custom Field",
+                    filters={
+                        "dt": to_doctype,
+                        "fieldtype": "Link", 
+                        "options": from_doctype
+                    },
+                    fields=["fieldname"]
+                )
+                
+                if existing_parent_links:
+                    child_link_exists = True
+                    existing_field_names = [f.fieldname for f in existing_parent_links]
+                    frappe.logger().info(f"Link to {from_doctype} already exists in {to_doctype}: {existing_field_names}")
+            
+            if not child_link_exists:
                 # Detail table gets required master reference
                 seamless_add_field(to_table, {
                     "field_name": to_field,
@@ -455,6 +482,8 @@ def create_relationship_fields(config: Dict, enterprise_type: str):
                     "search_index": 1,
                     "description": f"Parent record in {from_table}"
                 })
+            else:
+                frappe.logger().info(f"Skipping child link field creation - link to {from_doctype} already exists in {to_doctype}")
             
         elif enterprise_type == "Lookup":
             # Simple lookup field
