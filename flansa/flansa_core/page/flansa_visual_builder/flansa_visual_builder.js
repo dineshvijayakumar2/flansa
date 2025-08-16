@@ -3579,8 +3579,8 @@ class EnhancedVisualBuilder {
                     options: 'JSON',
                     default: '{"price": 100, "quantity": 2, "status": "Active", "name": "Sample Record"}',
                     description: 'JSON object with sample field values for testing your expression',
-                    change: () => {
-                        this.runLiveTest(dialog);
+                    change: function() {
+                        // Live test will be handled by the initialization
                     }
                 },
                 {
