@@ -3611,7 +3611,7 @@ class EnhancedVisualBuilder {
                             </div>
                             
                             <div id="live-test-status" style="margin-top: 10px; padding: 8px; background: #fff; border-radius: 4px; font-size: 12px; color: #6c757d; border: 1px solid #e9ecef;">
-                                <i class="fa fa-clock-o"></i> Ready for testing • Auto-test: Enabled
+                                <i class="fa fa-clock-o"></i> Ready for testing - Auto-test: Enabled
                             </div>
                         </div>
                     `
@@ -3865,7 +3865,7 @@ class EnhancedVisualBuilder {
         const status_display = document.getElementById('live-test-status');
         if (status_display) {
             const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing • Auto-test: ${auto_status}`;
+            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing - Auto-test: ${auto_status}`;
         }
     }
     
@@ -3885,7 +3885,7 @@ class EnhancedVisualBuilder {
                 </div>
             `;
             const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing • Auto-test: ${auto_status}`;
+            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing - Auto-test: ${auto_status}`;
             return;
         }
         
@@ -3948,7 +3948,7 @@ class EnhancedVisualBuilder {
                 const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
                 status_display.innerHTML = `
                     <i class="fa fa-check-circle text-success"></i> 
-                    Expression tested successfully at ${timestamp} • Auto-test: ${auto_status}
+                    Expression tested successfully at ${timestamp} - Auto-test: ${auto_status}
                 `;
                 
             } else {
@@ -3980,7 +3980,7 @@ class EnhancedVisualBuilder {
                 const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
                 status_display.innerHTML = `
                     <i class="fa fa-exclamation-triangle text-danger"></i> 
-                    Expression syntax error detected • Auto-test: ${auto_status}
+                    Expression syntax error detected - Auto-test: ${auto_status}
                 `;
             }
             
@@ -4008,7 +4008,7 @@ class EnhancedVisualBuilder {
             const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
             status_display.innerHTML = `
                 <i class="fa fa-wifi text-warning"></i> 
-                Connection error - test failed • Auto-test: ${auto_status}
+                Connection error - test failed - Auto-test: ${auto_status}
             `;
         }
     }
