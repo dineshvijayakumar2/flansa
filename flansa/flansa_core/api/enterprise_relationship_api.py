@@ -1,5 +1,38 @@
 # Enterprise Relationship API - Integration with Architecture
 import frappe
+
+def get_meaningful_field_label(field_label, table_id, doctype_name):
+    """Convert table ID labels to meaningful labels"""
+    try:
+        # If label starts with table ID pattern (FT-), replace with meaningful name
+        if field_label and field_label.startswith('FT-'):
+            # Get the table document to find meaningful name
+            import frappe
+            try:
+                table_doc = frappe.get_doc("Flansa Table", table_id)
+                # Prefer table_label, then table_name, avoid table IDs
+                if table_doc.table_label and not table_doc.table_label.startswith('FT-'):
+                    return table_doc.table_label
+                elif table_doc.table_name and not table_doc.table_name.startswith('FT-'):
+                    return table_doc.table_name.replace('_', ' ').title()
+                elif doctype_name:
+                    # Clean up the doctype name for display
+                    clean_name = doctype_name.replace('FLS', '').replace('Flansa', '')
+                    return clean_name if clean_name else 'Related Table'
+                else:
+                    return 'Related Table'
+            except:
+                # If table lookup fails, try to infer from doctype
+                if doctype_name:
+                    clean_name = doctype_name.replace('FLS', '').replace('Flansa', '')
+                    return clean_name if clean_name else 'Related Table'
+                return 'Related Table'
+        else:
+            # Label is already meaningful, return as-is
+            return field_label or 'Field'
+    except:
+        return field_label or 'Field'
+
 from frappe import _
 from frappe.utils import now
 import json
@@ -1266,6 +1299,10 @@ def get_relationship_fields_detail(relationship_name):
                                 include_field = True
                     
                     if include_field:
+                        # Fix table ID labels with meaningful names
+                        original_label = field.get("label", field.get("fieldname", ""))
+                        meaningful_label = get_meaningful_field_label(original_label, parent_table, parent_doctype)
+                        field["label"] = meaningful_label
                         field["description"] = f"Lookup from {field.get('fetch_from', 'unknown')}"
                         field["is_virtual"] = is_virtual
                         actual_lookup_fields.append(field)
@@ -1293,9 +1330,12 @@ def get_relationship_fields_detail(relationship_name):
                 )
                 
                 for field in link_field_data:
+                    # Fix table ID labels with meaningful names
+                    original_label = field.label or field.fieldname
+                    meaningful_label = get_meaningful_field_label(original_label, parent_table, parent_doctype)
                     link_fields.append({
                         "fieldname": field.fieldname,
-                        "label": field.label or field.fieldname,
+                        "label": meaningful_label,
                         "fieldtype": field.fieldtype,
                         "options": field.options,
                         "description": f"Links {child_doctype} to {parent_doctype}",

@@ -7,9 +7,9 @@ app_license = "MIT"
 
 # App Logo
 # --------
-app_logo_url = "/assets/flansa/images/Flansa-Logo.jpeg"
+app_logo_url = "/assets/flansa/images/flansa-logo.svg"
 website_context = {
-    "favicon": "/assets/flansa/images/Flansa-Logo.jpeg",
+    "favicon": "/assets/flansa/images/flansa-logo.svg",
     "splash_image": "/assets/flansa/images/flansa-logo.svg"
 }
 

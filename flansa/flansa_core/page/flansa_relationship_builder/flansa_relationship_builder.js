@@ -217,7 +217,10 @@ class SimplifiedRelationshipBuilder {
         const child_table = dialog.get_value('child_table');
         const relationship_name = dialog.get_value('relationship_name');
         
-        if (parent_table && child_table && relationship_name) {
+        // Always try to generate a field name if we have parent_table
+        if (parent_table) {
+            // Use relationship_name if available, otherwise use a generic name
+            const rel_name = relationship_name || 'relationship';
             // Call backend to generate field name
             frappe.call({
                 method: 'flansa.flansa_core.api.relationship_management.generate_relationship_field_name',
@@ -403,6 +406,11 @@ show_create_dialog() {
         
         // Initialize validation status
         this.update_validation_status(dialog, '', 'info');
+        
+        // Initialize link field name when dialog opens
+        setTimeout(() => {
+            this.generate_and_set_link_field_name(dialog);
+        }, 100); // Small delay to ensure dialog is fully rendered
         
 
         
