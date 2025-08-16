@@ -1808,7 +1808,20 @@ class EnhancedVisualBuilder {
 
     // Link Field Wizard
     show_link_wizard(table_id) {
-        console.log("Starting Link Field wizard for table:", table_id);
+        // Use unified wizard for creation mode
+        this.show_unified_link_wizard(table_id, null);
+    }
+
+    show_link_edit_wizard(table_id, field) {
+        // Use unified wizard for edit mode
+        this.show_unified_link_wizard(table_id, field);
+    }
+    
+    show_unified_link_wizard(table_id, field = null) {
+        const is_edit_mode = field !== null;
+        const dialog_title = is_edit_mode ? `Edit Link Field: ${field.field_label}` : 'Create Link Field';
+        
+        console.log(is_edit_mode ? "Starting Link Field edit wizard" : "Starting Link Field wizard for table:", table_id);
         
         const dialog = new frappe.ui.Dialog({
             title: 'Create Link Field',
