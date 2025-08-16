@@ -2324,27 +2324,30 @@ class EnhancedVisualBuilder {
             frappe.call({
                 method: 'frappe.client.get_value',
                 args: {
-                    doctype: 'Logic Field',
+                    doctype: 'Flansa Logic Field',
                     filters: {
                         table_name: table_id || this.current_table,
                         field_name: field.field_name
                     },
-                    fieldname: ['formula', 'field_type', 'expression']
+                    fieldname: ['expression', 'result_type', 'label']
                 },
                 async: false,
                 callback: (r) => {
-                    if (r.message && (r.message.formula || r.message.expression)) {
+                    if (r.message && r.message.expression) {
                         is_logic_field = true;
-                        field.formula = r.message.formula || r.message.expression;
+                        field.formula = r.message.expression;
+                        field.expression = r.message.expression;
+                        field.result_type = r.message.result_type;
+                        field.logic_label = r.message.label;
                         
-                        // Determine template type based on field name and formula
+                        // Determine template type based on field name and expression
                         if (field.field_name.includes('logic_link_field')) {
                             logic_field_template = 'link';
-                        } else if (field.field_name.includes('logic_fetch_field') || field.field_name.includes('logic_auto_fill')) {
+                        } else if (field.field_name.includes('logic_fetch') || field.field_name.includes('logic_auto_fill') || field.expression.includes('FETCH(')) {
                             logic_field_template = 'fetch';
-                        } else if (field.formula && field.formula.includes('ROLLUP')) {
+                        } else if (field.expression && field.expression.includes('ROLLUP')) {
                             logic_field_template = 'rollup';
-                        } else if (field.formula) {
+                        } else if (field.expression) {
                             logic_field_template = 'formula';
                         }
                     }

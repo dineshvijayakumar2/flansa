@@ -419,7 +419,7 @@ def add_summary_field_native(table_name, summary_config):
 @frappe.whitelist()
 def update_field_native(table_name, field_name, field_updates):
     """
-    Update field properties directly in DocType
+    Update field properties using Custom Fields (seamless for basic and logic fields)
     Works for both UI and CLI usage
     """
     try:
@@ -430,23 +430,75 @@ def update_field_native(table_name, field_name, field_updates):
         if not table_doc.doctype_name:
             return {"success": False, "error": "DocType not generated"}
         
-        doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
+        doctype_name = table_doc.doctype_name
         
-        # Find and update field
-        field_found = False
-        for field in doctype_doc.fields:
-            if field.fieldname == field_name and is_flansa_created_field(field):
-                # Update allowed properties
+        # Check if it's a Custom Field (new approach)
+        custom_field = frappe.db.exists("Custom Field", {
+            "dt": doctype_name,
+            "fieldname": field_name
+        })
+        
+        if custom_field:
+            # Update Custom Field
+            custom_field_doc = frappe.get_doc("Custom Field", custom_field)
+            
+            # Update allowed properties
+            if "field_label" in field_updates:
+                custom_field_doc.label = field_updates["field_label"]
+            if "field_type" in field_updates:
+                custom_field_doc.fieldtype = field_updates["field_type"]
+            if "options" in field_updates:
+                custom_field_doc.options = field_updates["options"]
+            if "is_required" in field_updates:
+                custom_field_doc.reqd = field_updates["is_required"]
+            if "is_readonly" in field_updates:
+                custom_field_doc.read_only = field_updates["is_readonly"]
+            
+            custom_field_doc.save()
+            
+            # If it's a Logic Field, also update the Logic Field record
+            logic_field = frappe.db.exists("Flansa Logic Field", {
+                "table_name": table_name,
+                "field_name": field_name
+            })
+            
+            if logic_field:
+                logic_field_doc = frappe.get_doc("Flansa Logic Field", logic_field)
                 if "field_label" in field_updates:
-                    field.label = field_updates["field_label"]
+                    logic_field_doc.label = field_updates["field_label"]
                 if "field_type" in field_updates:
-                    field.fieldtype = field_updates["field_type"]
-                if "options" in field_updates:
-                    field.options = field_updates["options"]
-                if "is_required" in field_updates:
-                    field.reqd = field_updates["is_required"]
-                if "is_readonly" in field_updates:
-                    field.read_only = field_updates["is_readonly"]
+                    logic_field_doc.result_type = field_updates["field_type"]
+                if "formula" in field_updates or "expression" in field_updates:
+                    logic_field_doc.expression = field_updates.get("formula") or field_updates.get("expression")
+                logic_field_doc.save()
+            
+            # Clear cache
+            frappe.clear_cache(doctype=doctype_name)
+            frappe.db.commit()
+            
+            return {
+                "success": True,
+                "message": f"Field '{field_name}' updated successfully",
+                "field_type": "custom_field"
+            }
+        else:
+            # Fallback: Check DocType fields (legacy support)
+            doctype_doc = frappe.get_doc("DocType", doctype_name)
+            
+            field_found = False
+            for field in doctype_doc.fields:
+                if field.fieldname == field_name and is_flansa_created_field(field):
+                    # Update allowed properties
+                    if "field_label" in field_updates:
+                        field.label = field_updates["field_label"]
+                    if "field_type" in field_updates:
+                        field.fieldtype = field_updates["field_type"]
+                    if "options" in field_updates:
+                        field.options = field_updates["options"]
+                    if "is_required" in field_updates:
+                        field.reqd = field_updates["is_required"]
+                    if "is_readonly" in field_updates:
+                        field.read_only = field_updates["is_readonly"]
                 if "default_value" in field_updates:
                     field.default = field_updates["default_value"]
                     
