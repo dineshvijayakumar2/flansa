@@ -5464,15 +5464,19 @@ class EnhancedVisualBuilder {
                 if (source_link_field) {
                     dialog.set_value('source_link_field', source_link_field.label);
                     
-                    // Load target fields for this link field and set the target
-                    this.load_linked_fields(dialog, this.current_table, () => {
-                        // After target fields are loaded, set the target field value
-                        const target_fields_data = dialog._target_fields_data || [];
-                        const target_field_data = target_fields_data.find(f => f.fieldname === target_fieldname);
-                        if (target_field_data) {
-                            dialog.set_value('target_field', target_field_data.label);
-                        }
-                    });
+                    // Delay loading target fields to allow dialog to settle
+                    setTimeout(() => {
+                        this.load_linked_fields(dialog, this.current_table);
+                        
+                        // After a short delay, try to set the target field
+                        setTimeout(() => {
+                            const target_fields_data = dialog._target_fields_data || [];
+                            const target_field_data = target_fields_data.find(f => f.fieldname === target_fieldname);
+                            if (target_field_data) {
+                                dialog.set_value('target_field', target_field_data.label);
+                            }
+                        }, 1000); // Wait for linked fields to load
+                    }, 500);
                 }
             }
         } catch (error) {
