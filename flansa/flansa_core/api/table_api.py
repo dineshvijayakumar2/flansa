@@ -717,3 +717,168 @@ def get_link_options(doctype, search_term="", limit=20):
             "error": f"Error loading options: {str(e)}"
         }
 
+
+# ====== FLANSALOGIC ENGINE INTEGRATION ======
+
+@frappe.whitelist()
+def get_logic_fields_for_table(table_name):
+    """Get all active Logic Fields for a table"""
+    try:
+        logic_fields = frappe.get_all("Flansa Logic Field",
+            filters={"table_name": table_name, "is_active": 1},
+            fields=["name", "field_name", "label", "expression", "result_type"]
+        )
+        
+        return {
+            "success": True,
+            "logic_fields": logic_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting logic fields: {str(e)}", "FlansaLogic Integration")
+        return {
+            "success": False,
+            "error": str(e),
+            "logic_fields": []
+        }
+
+@frappe.whitelist()
+def calculate_record_logic(table_name, record_name):
+    """Calculate all Logic Fields for a specific record"""
+    try:
+        # Get Logic Fields for this table
+        logic_fields = frappe.get_all("Flansa Logic Field",
+            filters={"table_name": table_name, "is_active": 1},
+            fields=["field_name", "expression", "result_type"]
+        )
+        
+        if not logic_fields:
+            return {"success": True, "logic_values": {}}
+        
+        # Get record data - find the actual DocType
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        actual_doctype = flansa_table.table_name
+        
+        record = frappe.get_doc(actual_doctype, record_name)
+        doc_context = record.as_dict()
+        
+        # Import Logic Engine
+        from flansa.flansa_core.api.flansa_logic_engine import get_logic_engine
+        engine = get_logic_engine()
+        
+        # Calculate each Logic Field
+        logic_values = {}
+        for field in logic_fields:
+            try:
+                result = engine.evaluate(field.expression, doc_context)
+                logic_values[field.field_name] = result
+            except Exception as field_error:
+                frappe.log_error(f"Error calculating {field.field_name}: {str(field_error)}")
+                logic_values[field.field_name] = 0
+        
+        return {
+            "success": True,
+            "logic_values": logic_values
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error calculating record logic: {str(e)}", "FlansaLogic Integration")
+        return {
+            "success": False,
+            "error": str(e),
+            "logic_values": {}
+        }
+
+@frappe.whitelist()
+def get_record_with_logic(table_name, record_name):
+    """Get record data including calculated Logic Field values"""
+    try:
+        # Get base record using existing method
+        record_result = get_record(table_name, record_name)
+        
+        if not record_result.get("success"):
+            return record_result
+        
+        # Calculate Logic Fields
+        logic_result = calculate_record_logic(table_name, record_name)
+        
+        # Merge logic values into record
+        if logic_result.get("success") and logic_result.get("logic_values"):
+            if "record" in record_result:
+                record_result["record"].update(logic_result["logic_values"])
+            record_result["logic_fields"] = logic_result["logic_values"]
+            record_result["has_logic_fields"] = True
+        else:
+            record_result["has_logic_fields"] = False
+        
+        return record_result
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting record with logic: {str(e)}", "FlansaLogic Integration")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def add_logic_field_to_table(table_name, field_config):
+    """Add a Logic Field to a table"""
+    try:
+        # Create Logic Field document
+        logic_field = frappe.new_doc("Flansa Logic Field")
+        logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
+        logic_field.table_name = table_name
+        logic_field.field_name = field_config.get("field_name")
+        logic_field.label = field_config.get("label")
+        logic_field.expression = field_config.get("expression")
+        logic_field.result_type = field_config.get("result_type", "Data")
+        # logic_field.logic_type = field_config.get("logic_type", "Calculation")  # Field doesn't exist yet
+        logic_field.is_active = 1
+        
+        logic_field.insert()
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "logic_field_name": logic_field.name,
+            "message": "Logic Field added successfully"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error adding logic field: {str(e)}", "FlansaLogic Integration")
+        frappe.db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def test_logic_field(expression, sample_data=None):
+    """Test a Logic Field expression with sample data"""
+    try:
+        if not sample_data:
+            sample_data = {"price": 100, "quantity": 2, "status": "Active"}
+        
+        if isinstance(sample_data, str):
+            import json
+            sample_data = json.loads(sample_data)
+        
+        # Import and test Logic Engine
+        from flansa.flansa_core.api.flansa_logic_engine import get_logic_engine
+        engine = get_logic_engine()
+        result = engine.evaluate(expression, sample_data)
+        
+        return {
+            "success": True,
+            "result": result,
+            "sample_data": sample_data,
+            "message": "Logic Field test successful"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e),
+            "result": None
+        }
+
