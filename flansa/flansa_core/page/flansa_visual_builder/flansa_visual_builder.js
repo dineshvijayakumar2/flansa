@@ -3534,8 +3534,7 @@ class EnhancedVisualBuilder {
                     fieldname: 'label',
                     fieldtype: 'Data',
                     reqd: 1,
-                    description: 'Display label for the field'
-                ,
+                    description: 'Display label for the field',
                     change: () => {
                         const label = dialog.get_value('label');
                         const current_field_name = dialog.get_value('field_name');
@@ -3790,7 +3789,8 @@ class EnhancedVisualBuilder {
             title: 'FlansaLogic Examples',
             message: examples_html,
             wide: true
-        }
+        });
+    }
     
     initializeEnhancedLiveLogicTesting(dialog) {
         /**Initialize enhanced live testing for Logic Field dialog*/
