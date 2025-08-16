@@ -1097,6 +1097,11 @@ class EnhancedVisualBuilder {
         });
         
         dialog.show();
+        
+        // Initialize live testing with enhanced features
+        setTimeout(() => {
+            this.initializeEnhancedLiveLogicTesting(dialog);
+        }, 200);
     }
     
     show_error(message = null) {
@@ -3561,6 +3566,55 @@ class EnhancedVisualBuilder {
                     options: 'Data\nFloat\nInt\nCurrency\nPercent',
                     default: 'Float',
                     reqd: 1
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: '🧪 Live Expression Testing',
+                    description: 'Test your Logic expression in real-time with sample data'
+                },
+                {
+                    label: 'Sample Data (JSON)',
+                    fieldname: 'test_data',
+                    fieldtype: 'Code',
+                    options: 'JSON',
+                    default: '{"price": 100, "quantity": 2, "status": "Active", "name": "Sample Record"}',
+                    description: 'JSON object with sample field values for testing your expression',
+                    change: () => {
+                        this.runLiveTest(dialog);
+                    }
+                },
+                {
+                    label: 'Live Test Results',
+                    fieldname: 'live_test_results',
+                    fieldtype: 'HTML',
+                    options: `
+                        <div id="live-test-container" style="border: 1px solid #d1d8dd; padding: 15px; border-radius: 6px; background: #f8f9fa; margin-top: 10px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h6 style="margin: 0; color: #495057;">
+                                    <i class="fa fa-bolt text-warning"></i> Live Test Results
+                                </h6>
+                                <div>
+                                    <button type="button" id="manual-test-btn" class="btn btn-sm btn-primary" style="margin-right: 5px;">
+                                        <i class="fa fa-play"></i> Test Now
+                                    </button>
+                                    <button type="button" id="auto-test-toggle" class="btn btn-sm btn-secondary">
+                                        <i class="fa fa-magic"></i> Auto: ON
+                                    </button>
+                                </div>
+                            </div>
+                            
+                            <div id="live-result-display" style="padding: 12px; background: white; border-radius: 4px; min-height: 80px; border: 1px solid #e9ecef;">
+                                <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                                    <i class="fa fa-info-circle" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+                                    Enter an expression above to see live results
+                                </div>
+                            </div>
+                            
+                            <div id="live-test-status" style="margin-top: 10px; padding: 8px; background: #fff; border-radius: 4px; font-size: 12px; color: #6c757d; border: 1px solid #e9ecef;">
+                                <i class="fa fa-clock-o"></i> Ready for testing • Auto-test: Enabled
+                            </div>
+                        </div>
+                    `
                 }
             ],
             primary_action_label: 'Create Logic Field',
@@ -3736,7 +3790,257 @@ class EnhancedVisualBuilder {
             title: 'FlansaLogic Examples',
             message: examples_html,
             wide: true
-        });
+        }
+    
+    initializeEnhancedLiveLogicTesting(dialog) {
+        /**Initialize enhanced live testing for Logic Field dialog*/
+        
+        const expression_field = dialog.fields_dict.expression;
+        const test_data_field = dialog.fields_dict.test_data;
+        const manual_test_btn = document.getElementById('manual-test-btn');
+        const auto_test_toggle = document.getElementById('auto-test-toggle');
+        
+        this.auto_test_enabled = true;
+        this.test_timeout = null;
+        
+        // Auto-test when expression changes
+        if (expression_field && expression_field.$input) {
+            expression_field.$input.on('input keyup paste', () => {
+                if (this.auto_test_enabled) {
+                    this.scheduleAutoTest(dialog);
+                }
+            });
+        }
+        
+        // Auto-test when test data changes
+        if (test_data_field && test_data_field.$input) {
+            test_data_field.$input.on('input keyup paste', () => {
+                if (this.auto_test_enabled) {
+                    this.scheduleAutoTest(dialog);
+                }
+            });
+        }
+        
+        // Manual test button
+        if (manual_test_btn) {
+            manual_test_btn.onclick = () => {
+                this.runEnhancedLiveTest(dialog);
+            };
+        }
+        
+        // Auto-test toggle
+        if (auto_test_toggle) {
+            auto_test_toggle.onclick = () => {
+                this.toggleAutoTest(auto_test_toggle);
+            };
+        }
+        
+        // Initial test
+        setTimeout(() => {
+            this.runEnhancedLiveTest(dialog);
+        }, 500);
+    }
+    
+    scheduleAutoTest(dialog) {
+        /**Schedule auto-test with debouncing*/
+        clearTimeout(this.test_timeout);
+        this.test_timeout = setTimeout(() => {
+            this.runEnhancedLiveTest(dialog);
+        }, 800); // 800ms delay for auto-testing
+    }
+    
+    toggleAutoTest(button) {
+        /**Toggle auto-test functionality*/
+        this.auto_test_enabled = !this.auto_test_enabled;
+        
+        if (this.auto_test_enabled) {
+            button.innerHTML = '<i class="fa fa-magic"></i> Auto: ON';
+            button.className = 'btn btn-sm btn-secondary';
+        } else {
+            button.innerHTML = '<i class="fa fa-pause"></i> Auto: OFF';
+            button.className = 'btn btn-sm btn-outline-secondary';
+        }
+        
+        // Update status
+        const status_display = document.getElementById('live-test-status');
+        if (status_display) {
+            const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
+            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing • Auto-test: ${auto_status}`;
+        }
+    }
+    
+    async runEnhancedLiveTest(dialog) {
+        /**Run enhanced live Logic Field test with better UI*/
+        
+        const expression = dialog.get_value('expression');
+        const test_data = dialog.get_value('test_data');
+        const result_display = document.getElementById('live-result-display');
+        const status_display = document.getElementById('live-test-status');
+        
+        if (!expression || !expression.trim()) {
+            result_display.innerHTML = `
+                <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
+                    <i class="fa fa-info-circle" style="font-size: 24px; margin-bottom: 10px;"></i><br>
+                    Enter an expression above to see live results
+                </div>
+            `;
+            const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
+            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing • Auto-test: ${auto_status}`;
+            return;
+        }
+        
+        // Show testing indicator with animation
+        status_display.innerHTML = '<i class="fa fa-spinner fa-spin text-primary"></i> Testing expression...';
+        result_display.innerHTML = `
+            <div style="text-align: center; padding: 20px; color: #007bff;">
+                <i class="fa fa-cog fa-spin" style="font-size: 20px; margin-bottom: 10px;"></i><br>
+                <strong>Testing expression...</strong>
+            </div>
+        `;
+        
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.test_logic_field',
+                args: {
+                    expression: expression,
+                    sample_data: test_data || '{"price": 100, "quantity": 2, "status": "Active", "name": "Sample"}'
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                const result = response.message.result;
+                const sample_data = response.message.sample_data;
+                const result_type = typeof result;
+                
+                // Enhanced success display with more visual appeal
+                result_display.innerHTML = `
+                    <div style="border: 1px solid #28a745; border-radius: 6px; overflow: hidden;">
+                        <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 12px;">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <strong><i class="fa fa-check-circle"></i> Expression Valid & Tested</strong>
+                                <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">
+                                    ${result_type.toUpperCase()}
+                                </span>
+                            </div>
+                        </div>
+                        
+                        <div style="padding: 15px; background: #f8fff8;">
+                            <div style="margin-bottom: 12px;">
+                                <strong style="color: #155724;">Result:</strong>
+                                <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #c3e6cb; margin-top: 5px;">
+                                    <span style="font-size: 18px; font-weight: bold; color: #155724;">
+                                        ${this.formatEnhancedResult(result)}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div style="border-top: 1px solid #c3e6cb; padding-top: 10px; margin-top: 10px;">
+                                <strong style="color: #6c757d; font-size: 12px;">SAMPLE DATA USED:</strong>
+                                <div style="background: #f1f3f4; padding: 8px; border-radius: 4px; margin-top: 5px; font-family: monospace; font-size: 12px; color: #495057;">
+                                    ${JSON.stringify(sample_data, null, 2)}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const timestamp = new Date().toLocaleTimeString();
+                const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
+                status_display.innerHTML = `
+                    <i class="fa fa-check-circle text-success"></i> 
+                    Expression tested successfully at ${timestamp} • Auto-test: ${auto_status}
+                `;
+                
+            } else {
+                const error_msg = response.message ? response.message.error : 'Unknown error occurred';
+                
+                // Enhanced error display
+                result_display.innerHTML = `
+                    <div style="border: 1px solid #dc3545; border-radius: 6px; overflow: hidden;">
+                        <div style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 12px;">
+                            <strong><i class="fa fa-exclamation-triangle"></i> Expression Error Detected</strong>
+                        </div>
+                        
+                        <div style="padding: 15px; background: #fff5f5;">
+                            <div style="background: #f8d7da; padding: 12px; border-radius: 4px; border-left: 4px solid #dc3545; margin-bottom: 10px;">
+                                <strong style="color: #721c24;">Error:</strong>
+                                <div style="margin-top: 5px; font-family: monospace; color: #721c24;">
+                                    ${error_msg}
+                                </div>
+                            </div>
+                            
+                            <div style="color: #6c757d; font-size: 12px;">
+                                <i class="fa fa-lightbulb-o"></i> 
+                                <strong>Tips:</strong> Check syntax, field names, and function usage
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
+                status_display.innerHTML = `
+                    <i class="fa fa-exclamation-triangle text-danger"></i> 
+                    Expression syntax error detected • Auto-test: ${auto_status}
+                `;
+            }
+            
+        } catch (error) {
+            console.error('Enhanced live test error:', error);
+            
+            // Enhanced network error display
+            result_display.innerHTML = `
+                <div style="border: 1px solid #fd7e14; border-radius: 6px; overflow: hidden;">
+                    <div style="background: linear-gradient(135deg, #fd7e14, #e67e22); color: white; padding: 12px;">
+                        <strong><i class="fa fa-wifi"></i> Connection Error</strong>
+                    </div>
+                    
+                    <div style="padding: 15px; background: #fff9f5;">
+                        <div style="color: #8a4616;">
+                            Unable to test expression due to network or server issues.
+                        </div>
+                        <div style="margin-top: 10px; color: #6c757d; font-size: 12px;">
+                            <i class="fa fa-refresh"></i> Please check your connection and try again.
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
+            status_display.innerHTML = `
+                <i class="fa fa-wifi text-warning"></i> 
+                Connection error - test failed • Auto-test: ${auto_status}
+            `;
+        }
+    }
+    
+    formatEnhancedResult(result) {
+        /**Format result for enhanced display*/
+        
+        if (result === null || result === undefined) {
+            return '<span style="color: #6c757d; font-style: italic;">null</span>';
+        }
+        
+        if (typeof result === 'boolean') {
+            const color = result ? '#28a745' : '#dc3545';
+            const icon = result ? 'check' : 'times';
+            return `<i class="fa fa-${icon}" style="color: ${color};"></i> <span style="color: ${color};">${result}</span>`;
+        }
+        
+        if (typeof result === 'number') {
+            if (Number.isInteger(result)) {
+                return `<strong>${result.toLocaleString()}</strong>`;
+            } else {
+                return `<strong>${result.toFixed(2)}</strong>`;
+            }
+        }
+        
+        if (typeof result === 'string') {
+            return `"<span style="color: #007bff;">${result}</span>"`;
+        }
+        
+        // For objects/arrays
+        return `<pre style="margin: 0; font-size: 14px;">${JSON.stringify(result, null, 2)}</pre>`;
+    });
     }
 }
 // Apply theme on page load
