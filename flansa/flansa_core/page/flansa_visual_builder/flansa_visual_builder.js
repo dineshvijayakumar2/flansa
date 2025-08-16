@@ -1185,8 +1185,12 @@ class EnhancedVisualBuilder {
     
     // Action methods for buttons
     add_field(table_id) {
-        // Use unified dialog for adding fields
-        this.show_unified_field_dialog(table_id);
+        // Debug: Add console log to verify method is called
+        console.log("add_field called with table_id:", table_id);
+        console.log("this.show_field_creation_wizard exists:", typeof this.show_field_creation_wizard);
+        
+        // Use the new field creation wizard
+        this.show_field_creation_wizard(table_id);
     }
 
     // Legacy add_field function (kept for reference)
@@ -1305,7 +1309,7 @@ class EnhancedVisualBuilder {
                     label: 'Field Type',
                     fieldname: 'field_type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach',
                     default: 'Data',
                     reqd: 1
                 },
@@ -1315,6 +1319,13 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Small Text',
                     description: 'For Select: Option1\\nOption2\\nOption3',
                     depends_on: 'eval:doc.field_type === "Select"'
+                },
+                {
+                    label: 'Link Target',
+                    fieldname: 'options',
+                    fieldtype: 'Data',
+                    description: 'DocType to link to (e.g., Customer, Item)',
+                    depends_on: 'eval:doc.field_type === "Link"'
                 },
                 {
                     fieldtype: 'Section Break',
@@ -1562,33 +1573,789 @@ class EnhancedVisualBuilder {
         });
     }
     
+    // Show template selection dialog first
+    show_field_creation_wizard(table_id) {
+        console.log("show_field_creation_wizard called with table_id:", table_id);
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Create Field - Choose Method',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `
+                        <div style="text-align: center; padding: 20px;">
+                            <h4>How would you like to create your field?</h4>
+                            <p class="text-muted">Choose the method that best fits your needs</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'Section Break'
+                },
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'options_html',
+                    options: `
+                        <div class="field-creation-options" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 20px 0;">
+                            
+                            <div class="creation-option" data-method="basic" style="
+                                border: 2px solid #e9ecef; 
+                                border-radius: 8px; 
+                                padding: 20px; 
+                                text-align: center; 
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                            ">
+                                <i class="fa fa-edit" style="font-size: 2em; color: #007bff; margin-bottom: 10px;"></i>
+                                <h5>Basic Field</h5>
+                                <p class="text-muted">Create simple data fields<br><small>Text, Numbers, Dates, etc.</small></p>
+                            </div>
+                            
+                            <div class="creation-option" data-method="template" style="
+                                border: 2px solid #e9ecef; 
+                                border-radius: 8px; 
+                                padding: 20px; 
+                                text-align: center; 
+                                cursor: pointer;
+                                transition: all 0.3s ease;
+                            ">
+                                <i class="fa fa-magic" style="font-size: 2em; color: #28a745; margin-bottom: 10px;"></i>
+                                <h5>Smart Templates</h5>
+                                <p class="text-muted">Guided creation for complex fields<br><small>Lookups, Summaries, Calculations</small></p>
+                            </div>
+                            
+                        </div>
+                        
+                        <style>
+                        .creation-option:hover {
+                            border-color: #007bff !important;
+                            transform: translateY(-2px);
+                            box-shadow: 0 4px 8px rgba(0,123,255,0.2);
+                        }
+                        </style>
+                    `
+                }
+            ]
+        });
+        
+        dialog.show();
+        
+        // Handle option selection
+        const self = this;
+        setTimeout(() => {
+            console.log("Setting up click handlers...");
+            console.log("Found .creation-option elements:", $('.creation-option').length);
+            
+            $('.creation-option').on('click', (e) => {
+                const method = $(e.currentTarget).data('method');
+                console.log("Option clicked:", method);
+                dialog.hide();
+                
+                if (method === 'basic') {
+                    console.log("Calling show_unified_field_dialog");
+                    self.show_unified_field_dialog(table_id);
+                } else if (method === 'template') {
+                    console.log("Calling show_template_selection_dialog");
+                    self.show_template_selection_dialog(table_id);
+                }
+            });
+            
+            // Also try direct binding to the dialog wrapper
+            $(dialog.$wrapper).on('click', '.creation-option', (e) => {
+                const method = $(e.currentTarget).data('method');
+                console.log("Dialog wrapper click - Option clicked:", method);
+                dialog.hide();
+                
+                if (method === 'basic') {
+                    console.log("Dialog wrapper - Calling show_unified_field_dialog");
+                    self.show_unified_field_dialog(table_id);
+                } else if (method === 'template') {
+                    console.log("Dialog wrapper - Calling show_template_selection_dialog");
+                    self.show_template_selection_dialog(table_id);
+                }
+            });
+        }, 100);
+    }
+
+    // Show template selection dialog
+    show_template_selection_dialog(table_id) {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Choose Field Template',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `
+                        <div style="padding: 10px 0;">
+                            <h5>Select a template that matches what you want to create:</h5>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'templates_html',
+                    options: '<div id="template-grid">Loading templates...</div>'
+                }
+            ]
+        });
+        
+        dialog.show();
+        
+        // Load templates
+        console.log("Loading logic templates...");
+        frappe.call({
+            method: 'flansa.logic_templates.get_logic_templates',
+            callback: (r) => {
+                console.log("Templates API response:", r);
+                if (r.message && r.message.success) {
+                    console.log("Templates loaded successfully:", Object.keys(r.message.templates));
+                    this.render_template_grid(r.message.templates, table_id, dialog);
+                } else {
+                    console.log("Failed to load templates:", r.message);
+                    $('#template-grid').html('<div class="alert alert-warning">Could not load templates</div>');
+                }
+            }
+        });
+    }
+
+    // Render template selection grid
+    render_template_grid(templates, table_id, dialog) {
+        console.log("Rendering template grid with templates:", templates);
+        let html = '<div class="template-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">';
+        
+        for (const [key, template] of Object.entries(templates)) {
+            html += `
+                <div class="template-card" data-template="${key}" style="
+                    border: 2px solid #e9ecef;
+                    border-radius: 8px;
+                    padding: 15px;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                ">
+                    <div style="display: flex; align-items: center; margin-bottom: 10px;">
+                        <i class="fa ${template.icon}" style="font-size: 1.5em; color: #007bff; margin-right: 10px;"></i>
+                        <h6 style="margin: 0;">${template.name}</h6>
+                    </div>
+                    <p class="text-muted" style="font-size: 0.9em; margin: 0;">${template.description}</p>
+                    <div class="template-category" style="margin-top: 8px;">
+                        <span class="label label-info" style="font-size: 0.75em;">${template.category}</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+        
+        // Add back button
+        html += `
+            <div style="text-align: center; margin-top: 20px;">
+                <button class="btn btn-default" id="back-to-method">
+                    <i class="fa fa-arrow-left"></i> Back to Method Selection
+                </button>
+            </div>
+        `;
+        
+        console.log("Generated HTML length:", html.length);
+        console.log("Found #template-grid elements:", $('#template-grid').length);
+        console.log("Found in dialog wrapper:", $(dialog.$wrapper).find('#template-grid').length);
+        
+        // Update the template grid - try both global and dialog-scoped
+        $('#template-grid').html(html);
+        $(dialog.$wrapper).find('#template-grid').html(html);
+        
+        const self = this;
+        
+        // Handle template selection - use dialog wrapper for event delegation
+        $(dialog.$wrapper).on('click', '.template-card', (e) => {
+            const templateId = $(e.currentTarget).data('template');
+            console.log("Template selected:", templateId);
+            dialog.hide();
+            self.show_template_wizard(table_id, templateId, templates[templateId]);
+        });
+        
+        // Handle back button - use dialog wrapper for event delegation
+        $(dialog.$wrapper).on('click', '#back-to-method', () => {
+            console.log("Back button clicked");
+            dialog.hide();
+            self.show_field_creation_wizard(table_id);
+        });
+        
+        // Add hover effects
+        $('.template-card').hover(
+            function() { $(this).css('border-color', '#007bff').css('transform', 'translateY(-2px)'); },
+            function() { $(this).css('border-color', '#e9ecef').css('transform', 'translateY(0)'); }
+        );
+    }
+
+    // Show template wizard for specific template
+    show_template_wizard(table_id, template_id, template) {
+        console.log("Showing template wizard for:", template_id);
+        
+        if (template_id === 'link') {
+            this.show_link_wizard(table_id);
+        } else if (template_id === 'fetch') {
+            this.show_fetch_wizard(table_id);
+        } else if (template_id === 'rollup') {
+            this.show_rollup_wizard(table_id);
+        } else if (template_id === 'formula') {
+            this.show_formula_wizard(table_id);
+        } else {
+            // Fallback to basic dialog with template hint
+            this.show_unified_field_dialog(table_id, null, template);
+        }
+    }
+
+    // Link Field Wizard
+    show_link_wizard(table_id) {
+        console.log("Starting Link Field wizard for table:", table_id);
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Create Link Field',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `
+                        <div style="padding: 10px 0;">
+                            <h5><i class="fa fa-link"></i> Link Field</h5>
+                            <p class="text-muted">Create a relationship field to connect with another table.</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Details'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Display label (e.g., Customer)',
+                    change: () => {
+                        // Auto-generate field name from label
+                        const label = dialog.get_value('field_label');
+                        if (label) {
+                            const normalized_name = this.normalize_field_name(label);
+                            dialog.set_value('field_name', normalized_name);
+                        }
+                    }
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Internal field name (auto-generated from label)'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Target Selection'
+                },
+                {
+                    label: 'Link Scope',
+                    fieldname: 'link_scope',
+                    fieldtype: 'Select',
+                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
+                    default: 'Current App',
+                    reqd: 1,
+                    change: () => this.load_target_tables(dialog, table_id)
+                },
+                {
+                    label: 'Select App',
+                    fieldname: 'target_app',
+                    fieldtype: 'Select',
+                    depends_on: 'eval:doc.link_scope === "Other Flansa Apps"',
+                    description: 'Choose the Flansa app to select tables from',
+                    change: () => this.handle_app_selection_change(dialog)
+                },
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_doctype',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Table to link to'
+                }
+            ],
+            primary_action_label: 'Create Link Field',
+            primary_action: (values) => {
+                this.create_link_field(table_id, values, dialog);
+            }
+        });
+        
+        dialog.show();
+        
+        // Load initial target tables
+        this.load_target_tables(dialog, table_id);
+    }
+    
+    load_target_tables(dialog, table_id) {
+        const scope = dialog.get_value('link_scope');
+        const target_table = table_id || this.current_table;
+        
+        console.log("Loading target tables for scope:", scope, "table:", target_table);
+        console.log("Args being sent:", { table_name: target_table });
+        
+        frappe.call({
+            method: 'flansa.logic_templates.get_link_wizard_data',
+            args: { table_name: target_table },
+            callback: (r) => {
+                console.log("Link wizard data response:", r);
+                if (r.message && r.message.success) {
+                    let tables = [];
+                    
+                    if (scope === 'Current App') {
+                        tables = r.message.current_app_tables || [];
+                        this.populate_target_tables(dialog, tables);
+                        
+                    } else if (scope === 'Other Flansa Apps') {
+                        // Handle hierarchical app selection
+                        this.handle_other_apps_selection(dialog, r.message);
+                        
+                    } else if (scope === 'System Tables') {
+                        tables = r.message.system_tables || [];
+                        this.populate_target_tables(dialog, tables);
+                    }
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: r.message?.error || 'Failed to load target tables'
+                    });
+                }
+            }
+        });
+    }
+    
+    handle_other_apps_selection(dialog, response_data) {
+        const available_apps = response_data.available_apps || [];
+        const other_apps_grouped = response_data.other_apps_grouped || {};
+        
+        if (available_apps.length > 0) {
+            // Store grouped data for later use
+            dialog._other_apps_grouped = other_apps_grouped;
+            
+            // Populate app selection dropdown
+            const app_options = available_apps.join('\n');
+            dialog.set_df_property('target_app', 'options', app_options);
+            
+            // Check if an app is already selected and load its tables
+            const selected_app = dialog.get_value('target_app');
+            if (selected_app && other_apps_grouped[selected_app]) {
+                this.populate_target_tables(dialog, other_apps_grouped[selected_app]);
+            } else {
+                // Clear target table dropdown until app is selected
+                dialog.set_df_property('target_doctype', 'options', '');
+                dialog._table_data = [];
+            }
+        } else {
+            dialog.set_df_property('target_app', 'options', '');
+            dialog.set_df_property('target_doctype', 'options', '');
+            frappe.show_alert({
+                message: 'No other Flansa apps found',
+                indicator: 'orange'
+            });
+        }
+    }
+    
+    handle_app_selection_change(dialog) {
+        const selected_app = dialog.get_value('target_app');
+        console.log("App selection changed to:", selected_app);
+        
+        if (selected_app && dialog._other_apps_grouped && dialog._other_apps_grouped[selected_app]) {
+            this.populate_target_tables(dialog, dialog._other_apps_grouped[selected_app]);
+        } else {
+            // Clear target table dropdown
+            dialog.set_df_property('target_doctype', 'options', '');
+            dialog._table_data = [];
+        }
+    }
+    
+    populate_target_tables(dialog, tables) {
+        console.log("Populating target tables:", tables);
+        
+        if (tables.length > 0) {
+            // Store table data for later lookup
+            dialog._table_data = tables;
+            // Show only labels to user
+            const options = tables.map(t => t.label).join('\n');
+            dialog.set_df_property('target_doctype', 'options', options);
+        } else {
+            dialog.set_df_property('target_doctype', 'options', '');
+            const scope = dialog.get_value('link_scope');
+            const selected_app = dialog.get_value('target_app');
+            const context = scope === 'Other Flansa Apps' && selected_app ? `"${selected_app}" app` : `"${scope}"`;
+            
+            frappe.show_alert({
+                message: `No tables found in ${context}`,
+                indicator: 'orange'
+            });
+        }
+    }
+    
+    create_link_field(table_id, values, dialog) {
+        // Get actual doctype from stored data using the label
+        const target_label = values.target_doctype;
+        const table_data = dialog._table_data || [];
+        
+        const table_info = table_data.find(t => t.label === target_label);
+        if (!table_info) {
+            frappe.msgprint({
+                title: 'Error',
+                indicator: 'red',
+                message: 'Target table not found. Please reselect.'
+            });
+            return;
+        }
+        
+        const actual_doctype = table_info.value;
+        
+        console.log("Creating link field with values:", values);
+        console.log("Target table label:", target_label, "→ doctype:", actual_doctype);
+        
+        // Update the values with the actual doctype
+        const template_data = {
+            ...values,
+            target_doctype: actual_doctype
+        };
+        
+        frappe.call({
+            method: 'flansa.logic_templates.create_field_from_template',
+            args: {
+                table_name: table_id,
+                template_id: 'link',
+                template_data: template_data
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: `Link field "${values.field_label}" created successfully!`,
+                        indicator: 'green'
+                    });
+                    dialog.hide();
+                    this.load_table_fields(table_id);
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: r.message?.error || 'Failed to create link field'
+                    });
+                }
+            }
+        });
+    }
+
+    // Fetch Field Wizard
+    show_fetch_wizard(table_id) {
+        console.log("Starting Fetch Field wizard for table:", table_id);
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Create Fetch Field',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `
+                        <div style="padding: 10px 0;">
+                            <h5><i class="fa fa-magic"></i> Fetch Field</h5>
+                            <p class="text-muted">Fetch data from linked records (e.g., Customer Name from Customer).</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Details'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Display label (e.g., Customer Name)',
+                    change: () => {
+                        // Auto-generate field name from label
+                        const label = dialog.get_value('field_label');
+                        if (label) {
+                            const normalized_name = this.normalize_field_name(label);
+                            dialog.set_value('field_name', normalized_name);
+                        }
+                    }
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Internal field name (auto-generated from label)'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Source Configuration'
+                },
+                {
+                    label: 'Source Link Field',
+                    fieldname: 'source_link_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Choose the link field to get data from',
+                    change: () => this.load_linked_fields(dialog, table_id)
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Target Field',
+                    fieldname: 'target_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Field to auto-fill from linked table'
+                }
+            ],
+            primary_action_label: 'Create Fetch Field',
+            primary_action: (values) => {
+                this.create_fetch_field(table_id, values, dialog);
+            }
+        });
+        
+        dialog.show();
+        
+        // Load link fields
+        this.load_fetch_data(dialog, table_id);
+    }
+    
+    load_fetch_data(dialog, table_id) {
+        const target_table = table_id || this.current_table;
+        console.log("Loading fetch data for table:", target_table);
+        console.log("Args being sent:", { table_name: target_table });
+        
+        frappe.call({
+            method: 'flansa.logic_templates.get_fetch_wizard_data',
+            args: { table_name: target_table },
+            callback: (r) => {
+                console.log("Fetch wizard data response:", r);
+                if (r.message && r.message.success) {
+                    const link_fields = r.message.link_fields;
+                    if (link_fields && link_fields.length > 0) {
+                        // Store link fields data for later lookup
+                        dialog._link_fields_data = link_fields;
+                        // Show only labels to user
+                        const options = link_fields.map(f => f.label).join('\n');
+                        dialog.set_df_property('source_link_field', 'options', options);
+                    } else {
+                        frappe.msgprint({
+                            title: 'No Link Fields Found',
+                            indicator: 'orange',
+                            message: 'This table has no Link fields. Please create a Link field first before creating Fetch fields.'
+                        });
+                    }
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: r.message?.error || 'Failed to load fetch data'
+                    });
+                }
+            }
+        });
+    }
+    
+    load_linked_fields(dialog, table_id) {
+        const source_field_label = dialog.get_value('source_link_field');
+        if (!source_field_label) return;
+        
+        console.log("Loading linked fields for source field label:", source_field_label);
+        
+        // Find the fieldname from stored data using the label
+        const link_fields_data = dialog._link_fields_data;
+        if (!link_fields_data) {
+            console.log("No link fields data stored");
+            return;
+        }
+        
+        const link_field = link_fields_data.find(f => f.label === source_field_label);
+        if (!link_field) {
+            console.log("Link field not found for label:", source_field_label);
+            console.log("Available link fields:", link_fields_data);
+            dialog.set_df_property('target_field', 'options', '');
+            frappe.show_alert({
+                message: 'Selected link field not found',
+                indicator: 'red'
+            });
+            return;
+        }
+        
+        console.log("Found link field:", link_field);
+        
+        // Load fields from linked table
+        frappe.call({
+            method: 'flansa.logic_templates.get_linked_table_fields',
+            args: { linked_doctype: link_field.options },
+            callback: (r) => {
+                console.log("Linked table fields response:", r);
+                if (r.message && r.message.success) {
+                    const fields = r.message.fields;
+                    if (fields && fields.length > 0) {
+                        // Store target fields data for later lookup
+                        dialog._target_fields_data = fields;
+                        // Show only labels to user
+                        const options = fields.map(f => f.label).join('\n');
+                        dialog.set_df_property('target_field', 'options', options);
+                        console.log("Target field options set (labels only):", options);
+                    } else {
+                        dialog.set_df_property('target_field', 'options', '');
+                        dialog._target_fields_data = [];
+                        frappe.show_alert({
+                            message: 'No suitable fields found in linked table',
+                            indicator: 'orange'
+                        });
+                    }
+                } else {
+                    dialog.set_df_property('target_field', 'options', '');
+                    dialog._target_fields_data = [];
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: 'Failed to load fields from linked table'
+                    });
+                }
+            }
+        });
+    }
+    
+    create_fetch_field(table_id, values, dialog) {
+        // Get fieldnames from stored data using the labels
+        const source_field_label = values.source_link_field;
+        const target_field_label = values.target_field;
+        
+        // Find actual fieldnames from stored data
+        const link_fields_data = dialog._link_fields_data || [];
+        const target_fields_data = dialog._target_fields_data || [];
+        
+        const source_field_data = link_fields_data.find(f => f.label === source_field_label);
+        const target_field_data = target_fields_data.find(f => f.label === target_field_label);
+        
+        if (!source_field_data) {
+            frappe.msgprint({
+                title: 'Error',
+                indicator: 'red',
+                message: 'Source link field not found. Please reselect.'
+            });
+            return;
+        }
+        
+        if (!target_field_data) {
+            frappe.msgprint({
+                title: 'Error',
+                indicator: 'red',
+                message: 'Target field not found. Please reselect.'
+            });
+            return;
+        }
+        
+        const actual_source_field = source_field_data.fieldname;
+        const actual_target_field = target_field_data.fieldname;
+        
+        console.log("Creating fetch field with values:", values);
+        console.log("Source field label:", source_field_label, "→ fieldname:", actual_source_field);
+        console.log("Target field label:", target_field_label, "→ fieldname:", actual_target_field);
+        
+        // Update the values with the actual fieldnames
+        const template_data = {
+            ...values,
+            source_link_field: actual_source_field,
+            target_field: actual_target_field
+        };
+        
+        frappe.call({
+            method: 'flansa.logic_templates.create_field_from_template',
+            args: {
+                table_name: table_id,
+                template_id: 'fetch',
+                template_data: template_data
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: `Fetch field "${values.field_label}" created successfully!`,
+                        indicator: 'green'
+                    });
+                    dialog.hide();
+                    this.load_table_fields(table_id);
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: r.message?.error || 'Failed to create fetch field'
+                    });
+                }
+            }
+        });
+    }
+
+    // Roll-up Field Wizard (TODO: Implement full wizard)
+    show_rollup_wizard(table_id) {
+        console.log("Rollup wizard - using fallback for now");
+        frappe.msgprint("Roll-up Field wizard coming soon! Using basic field dialog for now.");
+        this.show_unified_field_dialog(table_id);
+    }
+
+    // Formula Field Wizard (TODO: Implement full wizard)
+    show_formula_wizard(table_id) {
+        console.log("Formula wizard - using fallback for now");
+        frappe.msgprint("Formula Field wizard coming soon! Using basic field dialog for now.");
+        this.show_unified_field_dialog(table_id);
+    }
+
     // Unified field dialog for add/edit with formula support
-    show_unified_field_dialog(table_id, field = null) {
+    show_unified_field_dialog(table_id, field = null, template_hint = null) {
         const is_edit_mode = !!field;
         const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
         
         // Check if it's a Logic Field for editing
         let is_logic_field = false;
+        let logic_field_template = null;
+        
         if (is_edit_mode) {
             // Check if this field has a corresponding Logic Field record
             frappe.call({
                 method: 'frappe.client.get_value',
                 args: {
-                    doctype: 'Flansa Logic Field',
+                    doctype: 'Logic Field',
                     filters: {
                         table_name: table_id || this.current_table,
                         field_name: field.field_name
                     },
-                    fieldname: 'expression'
+                    fieldname: ['formula', 'field_type', 'expression']
                 },
                 async: false,
                 callback: (r) => {
-                    if (r.message && r.message.expression) {
+                    if (r.message && (r.message.formula || r.message.expression)) {
                         is_logic_field = true;
-                        field.formula = r.message.expression;
+                        field.formula = r.message.formula || r.message.expression;
+                        
+                        // Determine template type based on field name and formula
+                        if (field.field_name.includes('logic_link_field')) {
+                            logic_field_template = 'link';
+                        } else if (field.field_name.includes('logic_fetch_field') || field.field_name.includes('logic_auto_fill')) {
+                            logic_field_template = 'fetch';
+                        } else if (field.formula && field.formula.includes('ROLLUP')) {
+                            logic_field_template = 'rollup';
+                        } else if (field.formula) {
+                            logic_field_template = 'formula';
+                        }
                     }
                 }
             });
+        }
+        
+        // If this is a Logic Field in edit mode, show the appropriate template wizard
+        if (is_edit_mode && is_logic_field && logic_field_template) {
+            this.show_logic_field_edit_wizard(table_id, field, logic_field_template);
+            return;
         }
         
         const dialog = new frappe.ui.Dialog({
@@ -1632,7 +2399,7 @@ class EnhancedVisualBuilder {
                     label: 'Field Type',
                     fieldname: 'field_type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach',
                     default: is_edit_mode ? field.field_type : 'Data',
                     reqd: 1
                 },
@@ -1643,6 +2410,14 @@ class EnhancedVisualBuilder {
                     default: is_edit_mode ? (field.options || '') : '',
                     description: 'For Select: Option1\\nOption2\\nOption3',
                     depends_on: 'eval:doc.field_type === "Select"'
+                },
+                {
+                    label: 'Link Target',
+                    fieldname: 'options',
+                    fieldtype: 'Data',
+                    default: is_edit_mode ? (field.options || '') : '',
+                    description: 'DocType to link to (e.g., Customer, Item)',
+                    depends_on: 'eval:doc.field_type === "Link"'
                 },
                 {
                     fieldtype: 'Section Break',
@@ -1804,6 +2579,554 @@ class EnhancedVisualBuilder {
                 }
             });
         }
+    }
+
+    // Lookup Field Wizard
+    show_lookup_wizard(table_id) {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Create Lookup Field - Step by Step',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                            <h5><i class="fa fa-external-link text-info"></i> Lookup Field Wizard</h5>
+                            <p class="text-muted">This will help you create a field that gets data from another table.<br>
+                            <strong>Example:</strong> Get customer name when you select a customer ID.</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Step 1: Basic Field Information'
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Internal name for your lookup field (e.g., customer_name)'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Display name users will see (e.g., Customer Name)',
+                    change: () => {
+                        const label = dialog.get_value('field_label');
+                        if (label && !dialog.get_value('field_name')) {
+                            const normalized = label.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+                            dialog.set_value('field_name', normalized);
+                        }
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Step 2: Source Configuration'
+                },
+                {
+                    label: 'Source Field',
+                    fieldname: 'source_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Which field in this table contains the reference?',
+                    options: []  // Will be populated
+                },
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_table',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Which table should we lookup data from?',
+                    options: [],  // Will be populated
+                    change: () => {
+                        const target_table = dialog.get_value('target_table');
+                        if (target_table) {
+                            this.load_target_fields_for_lookup(target_table, dialog);
+                        }
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Step 3: Target Field Selection'
+                },
+                {
+                    label: 'Target Field',
+                    fieldname: 'target_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Which field from the target table do you want to display?',
+                    options: []  // Will be populated
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Preview'
+                },
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'preview_html',
+                    options: '<div id="lookup-preview">Configure the fields above to see preview</div>'
+                }
+            ],
+            primary_action_label: 'Create Lookup Field',
+            primary_action: (values) => {
+                this.create_lookup_field(table_id, values, dialog);
+            },
+            secondary_action_label: 'Back to Templates',
+            secondary_action: () => {
+                dialog.hide();
+                this.show_template_selection_dialog(table_id);
+            }
+        });
+        
+        dialog.show();
+        
+        // Load wizard data
+        this.load_lookup_wizard_data(table_id, dialog);
+        
+        // Set up preview updates
+        setTimeout(() => {
+            ['source_field', 'target_table', 'target_field'].forEach(fieldname => {
+                const field = dialog.get_field(fieldname);
+                if (field) {
+                    field.$input.on('change', () => {
+                        this.update_lookup_preview(dialog);
+                    });
+                }
+            });
+        }, 100);
+    }
+
+    // Load data for lookup wizard
+    load_lookup_wizard_data(table_id, dialog) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_lookup_wizard_data',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const data = r.message;
+                    
+                    // Populate source fields
+                    const source_field = dialog.get_field('source_field');
+                    if (source_field) {
+                        const source_options = data.source_fields.map(f => ({
+                            label: `${f.label} (${f.fieldname})`,
+                            value: f.fieldname
+                        }));
+                        source_field.df.options = source_options;
+                        source_field.refresh();
+                    }
+                    
+                    // Populate target tables
+                    const target_table_field = dialog.get_field('target_table');
+                    if (target_table_field) {
+                        const table_options = data.target_tables.map(t => ({
+                            label: t.label,
+                            value: t.value
+                        }));
+                        target_table_field.df.options = table_options;
+                        target_table_field.refresh();
+                    }
+                    
+                } else {
+                    frappe.show_alert({
+                        message: 'Could not load lookup wizard data',
+                        indicator: 'red'
+                    });
+                }
+            }
+        });
+    }
+
+    // Load target fields when target table changes
+    load_target_fields_for_lookup(target_table, dialog) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_target_table_fields',
+            args: { target_doctype: target_table },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const target_field = dialog.get_field('target_field');
+                    if (target_field) {
+                        const field_options = r.message.fields.map(f => ({
+                            label: `${f.label} (${f.fieldname})`,
+                            value: f.fieldname
+                        }));
+                        target_field.df.options = field_options;
+                        target_field.refresh();
+                    }
+                    
+                    this.update_lookup_preview(dialog);
+                }
+            }
+        });
+    }
+
+    // Update lookup preview
+    update_lookup_preview(dialog) {
+        const source_field = dialog.get_value('source_field');
+        const target_table = dialog.get_value('target_table');
+        const target_field = dialog.get_value('target_field');
+        
+        let preview_html = '<div id="lookup-preview">';
+        
+        if (source_field && target_table && target_field) {
+            const formula = `LOOKUP(${target_table}, ${source_field}, ${target_field})`;
+            
+            preview_html += `
+                <div style="background: #e8f5e8; border: 1px solid #d4edda; padding: 15px; border-radius: 6px;">
+                    <h6><i class="fa fa-check-circle text-success"></i> Preview</h6>
+                    <p><strong>Formula that will be created:</strong></p>
+                    <code style="background: white; padding: 5px; border-radius: 3px;">${formula}</code>
+                    <p class="text-muted" style="margin-top: 10px;">
+                        <strong>How it works:</strong> When a user selects a value in "${source_field}", 
+                        this field will automatically show the "${target_field}" from the "${target_table}" table.
+                    </p>
+                </div>
+            `;
+        } else {
+            preview_html += `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px;">
+                    <i class="fa fa-info-circle text-warning"></i> 
+                    Complete all fields above to see the lookup preview
+                </div>
+            `;
+        }
+        
+        preview_html += '</div>';
+        $('#lookup-preview').html(preview_html);
+    }
+
+    // Create lookup field from wizard data
+    create_lookup_field(table_id, values, dialog) {
+        const template_data = {
+            field_name: values.field_name,
+            field_label: values.field_label,
+            source_field: values.source_field,
+            target_table: values.target_table,
+            target_field: values.target_field
+        };
+        
+        frappe.call({
+            method: 'flansa.logic_templates.create_field_from_template',
+            args: {
+                table_name: table_id,
+                template_id: 'lookup',
+                template_data: template_data
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    dialog.hide();
+                    frappe.show_alert({
+                        message: `Lookup field "${values.field_label}" created successfully!`,
+                        indicator: 'green'
+                    });
+                    this.load_table_data(table_id);
+                } else {
+                    frappe.show_alert({
+                        message: r.message?.error || 'Failed to create lookup field',
+                        indicator: 'red'
+                    });
+                }
+            }
+        });
+    }
+
+    // Summary Field Wizard
+    show_summary_wizard(table_id) {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Create Summary Field - Step by Step',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                            <h5><i class="fa fa-calculator text-warning"></i> Summary Field Wizard</h5>
+                            <p class="text-muted">This will help you create a field that calculates totals from child tables.<br>
+                            <strong>Example:</strong> Calculate total amount from all invoice items.</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Step 1: Basic Field Information'
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Internal name for your summary field (e.g., total_amount)'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Display name users will see (e.g., Total Amount)',
+                    change: () => {
+                        const label = dialog.get_value('field_label');
+                        if (label && !dialog.get_value('field_name')) {
+                            const normalized = label.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, '_');
+                            dialog.set_value('field_name', normalized);
+                        }
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Step 2: Child Table & Operation'
+                },
+                {
+                    label: 'Child Table',
+                    fieldname: 'child_table',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Which child table contains the data to summarize?',
+                    options: [],  // Will be populated
+                    change: () => {
+                        const child_table = dialog.get_value('child_table');
+                        if (child_table) {
+                            this.load_child_table_fields_for_summary(child_table, dialog);
+                        }
+                    }
+                },
+                {
+                    label: 'Operation',
+                    fieldname: 'operation_type',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'How do you want to calculate the summary?',
+                    options: [
+                        { label: 'Sum - Add all values', value: 'SUM' },
+                        { label: 'Count - Count records', value: 'COUNT' },
+                        { label: 'Average - Calculate average', value: 'AVERAGE' },
+                        { label: 'Maximum - Find highest value', value: 'MAX' },
+                        { label: 'Minimum - Find lowest value', value: 'MIN' }
+                    ],
+                    change: () => {
+                        this.update_summary_preview(dialog);
+                        this.filter_suitable_fields_for_operation(dialog);
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Step 3: Target Field Selection'
+                },
+                {
+                    label: 'Target Field',
+                    fieldname: 'target_field',
+                    fieldtype: 'Select',
+                    description: 'Which field should be used for the calculation?',
+                    options: [],  // Will be populated
+                    depends_on: 'eval:doc.operation_type !== "COUNT"'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Preview'
+                },
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'preview_html',
+                    options: '<div id="summary-preview">Configure the fields above to see preview</div>'
+                }
+            ],
+            primary_action_label: 'Create Summary Field',
+            primary_action: (values) => {
+                this.create_summary_field(table_id, values, dialog);
+            },
+            secondary_action_label: 'Back to Templates',
+            secondary_action: () => {
+                dialog.hide();
+                this.show_template_selection_dialog(table_id);
+            }
+        });
+        
+        dialog.show();
+        
+        // Load wizard data
+        this.load_summary_wizard_data(table_id, dialog);
+        
+        // Set up preview updates
+        setTimeout(() => {
+            ['child_table', 'operation_type', 'target_field'].forEach(fieldname => {
+                const field = dialog.get_field(fieldname);
+                if (field) {
+                    field.$input.on('change', () => {
+                        this.update_summary_preview(dialog);
+                    });
+                }
+            });
+        }, 100);
+    }
+
+    // Load data for summary wizard
+    load_summary_wizard_data(table_id, dialog) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_summary_wizard_data',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const data = r.message;
+                    
+                    // Populate child tables
+                    const child_table_field = dialog.get_field('child_table');
+                    if (child_table_field) {
+                        const table_options = data.child_tables.map(t => ({
+                            label: `${t.label} (${t.fieldname})`,
+                            value: t.options  // Child DocType name
+                        }));
+                        child_table_field.df.options = table_options;
+                        child_table_field.refresh();
+                    }
+                    
+                } else {
+                    frappe.show_alert({
+                        message: 'Could not load summary wizard data',
+                        indicator: 'red'
+                    });
+                }
+            }
+        });
+    }
+
+    // Load child table fields when child table changes
+    load_child_table_fields_for_summary(child_doctype, dialog) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_child_table_fields',
+            args: { child_doctype: child_doctype },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const target_field = dialog.get_field('target_field');
+                    if (target_field) {
+                        this.all_child_fields = r.message.fields; // Store for filtering
+                        const field_options = r.message.fields.map(f => ({
+                            label: `${f.label} (${f.fieldname})`,
+                            value: f.fieldname,
+                            suitable_for: f.suitable_for
+                        }));
+                        target_field.df.options = field_options;
+                        target_field.refresh();
+                    }
+                    
+                    this.filter_suitable_fields_for_operation(dialog);
+                    this.update_summary_preview(dialog);
+                }
+            }
+        });
+    }
+
+    // Filter fields based on selected operation
+    filter_suitable_fields_for_operation(dialog) {
+        const operation = dialog.get_value('operation_type');
+        const target_field = dialog.get_field('target_field');
+        
+        if (target_field && this.all_child_fields && operation) {
+            // Filter fields suitable for the operation
+            const suitable_fields = this.all_child_fields.filter(f => 
+                f.suitable_for.includes(operation)
+            );
+            
+            const field_options = suitable_fields.map(f => ({
+                label: `${f.label} (${f.fieldname})`,
+                value: f.fieldname
+            }));
+            
+            target_field.df.options = field_options;
+            target_field.refresh();
+            
+            // Clear selection if current value is not suitable
+            const current_value = dialog.get_value('target_field');
+            if (current_value && !suitable_fields.find(f => f.fieldname === current_value)) {
+                dialog.set_value('target_field', '');
+            }
+        }
+    }
+
+    // Update summary preview
+    update_summary_preview(dialog) {
+        const child_table = dialog.get_value('child_table');
+        const operation = dialog.get_value('operation_type');
+        const target_field = dialog.get_value('target_field');
+        
+        let preview_html = '<div id="summary-preview">';
+        
+        if (child_table && operation) {
+            let formula;
+            if (operation === 'COUNT') {
+                formula = `COUNT(${child_table})`;
+            } else if (target_field) {
+                formula = `${operation}(${child_table}, ${target_field})`;
+            } else {
+                preview_html += `
+                    <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px;">
+                        <i class="fa fa-info-circle text-warning"></i> 
+                        Please select a target field for the ${operation} operation
+                    </div>
+                `;
+                preview_html += '</div>';
+                $('#summary-preview').html(preview_html);
+                return;
+            }
+            
+            preview_html += `
+                <div style="background: #e8f5e8; border: 1px solid #d4edda; padding: 15px; border-radius: 6px;">
+                    <h6><i class="fa fa-check-circle text-success"></i> Preview</h6>
+                    <p><strong>Formula that will be created:</strong></p>
+                    <code style="background: white; padding: 5px; border-radius: 3px;">${formula}</code>
+                    <p class="text-muted" style="margin-top: 10px;">
+                        <strong>How it works:</strong> This field will automatically ${operation.toLowerCase()} 
+                        ${target_field ? `the "${target_field}"` : 'records'} from the "${child_table}" child table.
+                    </p>
+                </div>
+            `;
+        } else {
+            preview_html += `
+                <div style="background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 6px;">
+                    <i class="fa fa-info-circle text-warning"></i> 
+                    Complete the fields above to see the summary preview
+                </div>
+            `;
+        }
+        
+        preview_html += '</div>';
+        $('#summary-preview').html(preview_html);
+    }
+
+    // Create summary field from wizard data
+    create_summary_field(table_id, values, dialog) {
+        const template_data = {
+            field_name: values.field_name,
+            field_label: values.field_label,
+            child_table: values.child_table,
+            operation_type: values.operation_type,
+            target_field: values.target_field
+        };
+        
+        frappe.call({
+            method: 'flansa.logic_templates.create_field_from_template',
+            args: {
+                table_name: table_id,
+                template_id: 'summary',
+                template_data: template_data
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    dialog.hide();
+                    frappe.show_alert({
+                        message: `Summary field "${values.field_label}" created successfully!`,
+                        indicator: 'green'
+                    });
+                    this.load_table_data(table_id);
+                } else {
+                    frappe.show_alert({
+                        message: r.message?.error || 'Failed to create summary field',
+                        indicator: 'red'
+                    });
+                }
+            }
+        });
     }
 
     show_edit_field_dialog(table_id, field) {
@@ -3946,6 +5269,313 @@ class EnhancedVisualBuilder {
             console.error('Logic Field creation error:', error);
             frappe.show_alert('Logic Field creation failed', 'red');
         }
+    }
+    
+    show_logic_field_edit_wizard(table_id, field, template_type) {
+        const self = this;
+        
+        // Based on template type, show the appropriate edit wizard
+        switch (template_type) {
+            case 'link':
+                this.show_link_edit_wizard(table_id, field);
+                break;
+            case 'fetch':
+                this.show_fetch_edit_wizard(table_id, field);
+                break;
+            case 'rollup':
+                this.show_rollup_edit_wizard(table_id, field);
+                break;
+            case 'formula':
+                this.show_formula_edit_wizard(table_id, field);
+                break;
+            default:
+                // Fallback to standard dialog
+                this.show_standard_field_dialog(table_id, field);
+        }
+    }
+    
+    show_link_edit_wizard(table_id, field) {
+        const dialog = new frappe.ui.Dialog({
+            title: `Edit Link Field: ${field.field_label}`,
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `<h5><i class="fa fa-link"></i> Edit Link Field</h5>
+                             <p class="text-muted">Update the settings for this Link field that connects to another table.</p>`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Information'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_label,
+                    description: 'Display name for users'
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_name,
+                    read_only: 1,
+                    description: 'Internal field name (cannot be changed)'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Target Selection'
+                },
+                {
+                    label: 'Link Scope',
+                    fieldname: 'link_scope',
+                    fieldtype: 'Select',
+                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
+                    default: 'Current App',
+                    reqd: 1,
+                    change: () => this.load_target_tables(dialog, table_id)
+                },
+                {
+                    label: 'Select App',
+                    fieldname: 'target_app',
+                    fieldtype: 'Select',
+                    depends_on: 'eval:doc.link_scope === "Other Flansa Apps"',
+                    description: 'Choose the Flansa app to select tables from',
+                    change: () => this.handle_app_selection_change(dialog)
+                },
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_doctype',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    default: field.options || '',
+                    description: 'Table to link to'
+                }
+            ],
+            primary_action_label: 'Update Link Field',
+            primary_action: (values) => {
+                this.update_link_field(table_id, values, dialog, field);
+            }
+        });
+        
+        dialog.show();
+        
+        // Load initial target tables and try to detect current selection
+        this.load_target_tables(dialog, table_id);
+        
+        // Set the current target if it exists
+        if (field.options) {
+            setTimeout(() => {
+                dialog.set_value('target_doctype', field.options);
+            }, 500);
+        }
+    }
+    
+    show_fetch_edit_wizard(table_id, field) {
+        const dialog = new frappe.ui.Dialog({
+            title: `Edit Fetch Field: ${field.field_label}`,
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `<h5><i class="fa fa-download"></i> Edit Fetch Field</h5>
+                             <p class="text-muted">Update the settings for this Fetch field that retrieves data from linked records.</p>`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Information'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_label,
+                    description: 'Display name for users'
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_name,
+                    read_only: 1,
+                    description: 'Internal field name (cannot be changed)'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Source Configuration'
+                },
+                {
+                    label: 'Source Link Field',
+                    fieldname: 'source_link_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'The Link field to fetch data from',
+                    change: () => this.load_target_fields_for_edit(dialog, table_id)
+                },
+                {
+                    label: 'Target Field',
+                    fieldname: 'target_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'The field to fetch from the linked record'
+                }
+            ],
+            primary_action_label: 'Update Fetch Field',
+            primary_action: (values) => {
+                this.update_fetch_field(table_id, values, dialog, field);
+            }
+        });
+        
+        dialog.show();
+        
+        // Load link fields and try to parse current formula
+        this.load_fetch_link_fields_for_edit(dialog, table_id, field);
+    }
+    
+    show_formula_edit_wizard(table_id, field) {
+        const dialog = new frappe.ui.Dialog({
+            title: `Edit Formula Field: ${field.field_label}`,
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `<h5><i class="fa fa-calculator"></i> Edit Formula Field</h5>
+                             <p class="text-muted">Update the formula for this calculated field.</p>`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Information'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_label,
+                    description: 'Display name for users'
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_name,
+                    read_only: 1,
+                    description: 'Internal field name (cannot be changed)'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Formula Configuration'
+                },
+                {
+                    label: 'Formula',
+                    fieldname: 'formula',
+                    fieldtype: 'Code',
+                    reqd: 1,
+                    default: field.formula || '',
+                    description: 'Enter the calculation formula',
+                    language: 'javascript'
+                }
+            ],
+            primary_action_label: 'Update Formula Field',
+            primary_action: (values) => {
+                this.update_formula_field(table_id, values, dialog, field);
+            }
+        });
+        
+        dialog.show();
+    }
+    
+    show_rollup_edit_wizard(table_id, field) {
+        const dialog = new frappe.ui.Dialog({
+            title: `Edit Roll-up Field: ${field.field_label}`,
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'intro_html',
+                    options: `<h5><i class="fa fa-sum"></i> Edit Roll-up Field</h5>
+                             <p class="text-muted">Update the settings for this Roll-up field that aggregates data from related records.</p>`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Information'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_label,
+                    description: 'Display name for users'
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: field.field_name,
+                    read_only: 1,
+                    description: 'Internal field name (cannot be changed)'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Aggregation Configuration'
+                },
+                {
+                    label: 'Source Table',
+                    fieldname: 'source_table',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Table to aggregate data from'
+                },
+                {
+                    label: 'Aggregation Type',
+                    fieldname: 'aggregation_type',
+                    fieldtype: 'Select',
+                    options: 'Sum\nCount\nAverage\nMax\nMin',
+                    reqd: 1,
+                    description: 'Type of aggregation to perform'
+                },
+                {
+                    label: 'Source Field',
+                    fieldname: 'source_field',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Field to aggregate'
+                }
+            ],
+            primary_action_label: 'Update Roll-up Field',
+            primary_action: (values) => {
+                this.update_rollup_field(table_id, values, dialog, field);
+            }
+        });
+        
+        dialog.show();
+        
+        // Parse current rollup formula and populate fields
+        this.parse_rollup_formula_for_edit(dialog, field);
+    }
+    
+    show_standard_field_dialog(table_id, field) {
+        // Fallback to the original unified dialog for non-logic fields
+        this.show_unified_field_dialog_original(table_id, field);
     }
     
     show_logic_examples() {
