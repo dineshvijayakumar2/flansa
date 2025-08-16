@@ -824,7 +824,14 @@ def get_record_with_logic(table_name, record_name):
 def add_logic_field_to_table(table_name, field_config):
     """Add a Logic Field to a table"""
     try:
-        # Create Logic Field document
+
+        # Validate parameters
+        if isinstance(field_config, str):
+            return {"success": False, "error": "field_config must be a dictionary, not a string"}
+        
+        if not isinstance(field_config, dict):
+            return {"success": False, "error": f"field_config must be a dictionary, got {type(field_config)}"}
+                # Create Logic Field document
         logic_field = frappe.new_doc("Flansa Logic Field")
         logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
         logic_field.table_name = table_name

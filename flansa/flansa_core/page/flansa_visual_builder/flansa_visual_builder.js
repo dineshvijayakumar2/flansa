@@ -16,6 +16,9 @@ class EnhancedVisualBuilder {
         this.$container = $(this.wrapper).find('.layout-main-section');
         this.mode = null;
         
+        // Set global reference for button onclick handlers
+        window.visual_builder = this;
+        
         // Initialize asynchronously to handle database calls
         this.init();
     }
@@ -861,9 +864,20 @@ class EnhancedVisualBuilder {
     }
     
     render_table_fields(fields, table_id) {
+        // Store table_name for Logic Field creation
+        this.table_name = table_id;
+        
         let content_html = `
             <div class="row">
                 <div class="col-md-12">
+                    <div class="logic-field-actions mb-3">
+                        <button class="btn btn-success btn-sm me-2" onclick="window.visual_builder.show_logic_field_dialog()">
+                            <i class="fa fa-calculator"></i> Add Logic Field
+                        </button>
+                        <button class="btn btn-info btn-sm" onclick="window.visual_builder.show_logic_examples()">
+                            <i class="fa fa-question-circle"></i> Examples
+                        </button>
+                    </div>
                     <div class="fields-section">
                         <h4><i class="fa fa-list"></i> Fields (${fields.length})</h4>
         `;
@@ -3516,7 +3530,23 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Data',
                     reqd: 1,
                     description: 'Display label for the field'
-                },
+                ,
+                    change: () => {
+                        const label = dialog.get_value('label');
+                        const current_field_name = dialog.get_value('field_name');
+                        
+                        // Auto-generate field name if field_name is empty or matches previous auto-generation
+                        if (label && (!current_field_name || current_field_name === this.last_auto_field_name)) {
+                            const auto_name = label.toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, '') // Remove special chars except spaces
+                                .replace(/\s+/g, '_') // Replace spaces with underscores
+                                .replace(/^_+|_+$/g, '') // Remove leading/trailing underscores
+                                .substring(0, 50); // Limit length
+                            
+                            dialog.set_value('field_name', auto_name);
+                            this.last_auto_field_name = auto_name;
+                        }
+                    }},
                 {
                     label: 'Logic Expression',
                     fieldname: 'expression',
@@ -3639,13 +3669,74 @@ class EnhancedVisualBuilder {
                 
             } else {
                 frappe.show_alert('❌ Failed to create Logic Field', 'red');
-                console.error('Logic Field creation failed:', response.message);
+                console.error('Logic Field creation failed:', response);
+                console.error('Response message:', response.message);
+                
+                // Show detailed error to user
+                const error_message = response.message && response.message.error 
+                    ? response.message.error 
+                    : JSON.stringify(response.message || response);
+                
+                frappe.msgprint({
+                    title: 'Logic Field Creation Error',
+                    message: `<div class="text-danger">Error: ${error_message}</div>`,
+                    indicator: 'red'
+                });
             }
             
         } catch (error) {
             console.error('Logic Field creation error:', error);
             frappe.show_alert('Logic Field creation failed', 'red');
         }
+    }
+    
+    show_logic_examples() {
+        /**Show Logic Field examples dialog*/
+        
+        const examples_html = `
+            <div class="logic-examples">
+                <h5>Basic Calculations:</h5>
+                <ul>
+                    <li><code>price * quantity</code> - Multiply two fields</li>
+                    <li><code>(sales - cost) / sales * 100</code> - Profit margin percentage</li>
+                    <li><code>amount + (amount * 0.15)</code> - Add 15% tax</li>
+                </ul>
+                
+                <h5>Functions:</h5>
+                <ul>
+                    <li><code>SUM(10, 20, 30, 40)</code> - Sum of values</li>
+                    <li><code>MAX(price, cost, tax)</code> - Maximum value</li>
+                    <li><code>MIN(price, cost, tax)</code> - Minimum value</li>
+                    <li><code>ROUND(amount * 1.15, 2)</code> - Round to 2 decimals</li>
+                </ul>
+                
+                <h5>Conditions:</h5>
+                <ul>
+                    <li><code>IF(status == "Active", 1, 0)</code> - Status check</li>
+                    <li><code>IF(amount > 1000, amount * 0.1, 0)</code> - Discount logic</li>
+                    <li><code>IF(priority == "High", "🔴", "🟢")</code> - Priority indicator</li>
+                </ul>
+                
+                <h5>Text Functions:</h5>
+                <ul>
+                    <li><code>UPPER(status)</code> - Convert to uppercase</li>
+                    <li><code>CONCAT(first_name, " ", last_name)</code> - Join text</li>
+                    <li><code>LEN(description)</code> - Text length</li>
+                </ul>
+                
+                <h5>Date Functions:</h5>
+                <ul>
+                    <li><code>TODAY()</code> - Current date</li>
+                    <li><code>DATEDIFF(due_date, TODAY())</code> - Days until due</li>
+                </ul>
+            </div>
+        `;
+        
+        frappe.msgprint({
+            title: 'FlansaLogic Examples',
+            message: examples_html,
+            wide: true
+        });
     }
 }
 // Apply theme on page load
