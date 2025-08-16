@@ -2051,116 +2051,8 @@ class EnhancedVisualBuilder {
 
     // Fetch Field Wizard
     show_fetch_wizard(table_id) {
-        console.log("Starting Fetch Field wizard for table:", table_id);
-        
-        const dialog = new frappe.ui.Dialog({
-            title: 'Create Fetch Field',
-            fields: [
-                {
-                    fieldtype: 'HTML',
-                    fieldname: 'intro_html',
-                    options: `
-                        <div style="padding: 10px 0;">
-                            <h5><i class="fa fa-magic"></i> Fetch Field</h5>
-                            <p class="text-muted">Fetch data from linked records (e.g., Customer Name from Customer).</p>
-                        </div>
-                    `
-                },
-                {
-                    fieldtype: 'Section Break',
-                    label: 'Field Details'
-                },
-                {
-                    label: 'Field Label',
-                    fieldname: 'field_label',
-                    fieldtype: 'Data',
-                    reqd: 1,
-                    description: 'Display label (e.g., Customer Name)',
-                    change: () => {
-                        // Auto-generate field name from label
-                        const label = dialog.get_value('field_label');
-                        if (label) {
-                            const normalized_name = this.normalize_field_name(label);
-                            dialog.set_value('field_name', normalized_name);
-                        }
-                    }
-                },
-                {
-                    label: 'Field Name',
-                    fieldname: 'field_name',
-                    fieldtype: 'Data',
-                    reqd: 1,
-                    description: 'Internal field name (auto-generated from label)'
-                },
-                {
-                    fieldtype: 'Section Break',
-                    label: 'Source Configuration'
-                },
-                {
-                    label: 'Source Link Field',
-                    fieldname: 'source_link_field',
-                    fieldtype: 'Select',
-                    reqd: 1,
-                    description: 'Choose the link field to get data from',
-                    change: () => this.load_linked_fields(dialog, table_id)
-                },
-                {
-                    fieldtype: 'Column Break'
-                },
-                {
-                    label: 'Target Field',
-                    fieldname: 'target_field',
-                    fieldtype: 'Select',
-                    reqd: 1,
-                    description: 'Field to auto-fill from linked table'
-                }
-            ],
-            primary_action_label: 'Create Fetch Field',
-            primary_action: (values) => {
-                this.create_fetch_field(table_id, values, dialog);
-            }
-        });
-        
-        dialog.show();
-        
-        // Load link fields
-        this.load_fetch_data(dialog, table_id);
-    }
-    
-    load_fetch_data(dialog, table_id) {
-        const target_table = table_id || this.current_table;
-        console.log("Loading fetch data for table:", target_table);
-        console.log("Args being sent:", { table_name: target_table });
-        
-        frappe.call({
-            method: 'flansa.logic_templates.get_fetch_wizard_data',
-            args: { table_name: target_table },
-            callback: (r) => {
-                console.log("Fetch wizard data response:", r);
-                if (r.message && r.message.success) {
-                    const link_fields = r.message.link_fields;
-                    if (link_fields && link_fields.length > 0) {
-                        // Store link fields data for later lookup
-                        dialog._link_fields_data = link_fields;
-                        // Show only labels to user
-                        const options = link_fields.map(f => f.label).join('\n');
-                        dialog.set_df_property('source_link_field', 'options', options);
-                    } else {
-                        frappe.msgprint({
-                            title: 'No Link Fields Found',
-                            indicator: 'orange',
-                            message: 'This table has no Link fields. Please create a Link field first before creating Fetch fields.'
-                        });
-                    }
-                } else {
-                    frappe.msgprint({
-                        title: 'Error',
-                        indicator: 'red',
-                        message: r.message?.error || 'Failed to load fetch data'
-                    });
-                }
-            }
-        });
+        // Use unified wizard for creation mode
+        this.show_unified_fetch_wizard(table_id, null);
     }
     
     load_linked_fields(dialog, table_id) {
@@ -5380,39 +5272,101 @@ class EnhancedVisualBuilder {
         }
     }
     
+    update_link_field(table_id, values, dialog, existing_field) {
+        console.log("Updating link field with:", {
+            field_name: existing_field.field_name,
+            field_label: values.field_label,
+            target_doctype: values.target_doctype
+        });
+        
+        // Update the Logic Field document
+        frappe.call({
+            method: 'flansa.flansa_core.api.table_api.update_logic_field',
+            args: {
+                table_name: table_id,
+                field_name: existing_field.field_name,
+                field_label: values.field_label,
+                options: values.target_doctype,
+                template_type: 'link'
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: `Link field "${values.field_label}" updated successfully!`,
+                        indicator: 'green'
+                    });
+                    dialog.hide();
+                    // Refresh the table to show updated field
+                    this.load_table_data();
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: r.message?.message || 'Failed to update link field'
+                    });
+                }
+            }
+        });
+    }
+    
     show_fetch_edit_wizard(table_id, field) {
+        // Use unified wizard for edit mode
+        this.show_unified_fetch_wizard(table_id, field);
+    }
+    
+    show_unified_fetch_wizard(table_id, field = null) {
+        const is_edit_mode = field !== null;
+        const dialog_title = is_edit_mode ? `Edit Fetch Field: ${field.field_label}` : 'Create Fetch Field';
+        
+        console.log(is_edit_mode ? "Starting Fetch Field edit wizard" : "Starting Fetch Field wizard for table:", table_id);
+        
         const dialog = new frappe.ui.Dialog({
-            title: `Edit Fetch Field: ${field.field_label}`,
+            title: dialog_title,
             fields: [
                 {
                     fieldtype: 'HTML',
                     fieldname: 'intro_html',
-                    options: `<h5><i class="fa fa-download"></i> Edit Fetch Field</h5>
-                             <p class="text-muted">Update the settings for this Fetch field that retrieves data from linked records.</p>`
+                    options: `
+                        <div style="padding: 10px 0;">
+                            <h5><i class="fa fa-magic"></i> ${is_edit_mode ? 'Edit Fetch Field' : 'Fetch Field'}</h5>
+                            <p class="text-muted">Fetch data from linked records (e.g., Customer Name from Customer).</p>
+                        </div>
+                    `
                 },
                 {
                     fieldtype: 'Section Break',
-                    label: 'Field Information'
+                    label: 'Field Details'
                 },
                 {
                     label: 'Field Label',
                     fieldname: 'field_label',
                     fieldtype: 'Data',
                     reqd: 1,
-                    default: field.field_label,
-                    description: 'Display name for users'
+                    default: is_edit_mode ? field.field_label : '',
+                    description: 'Display label (e.g., Customer Name)',
+                    change: () => {
+                        if (!is_edit_mode) {
+                            // Auto-generate field name from label for new fields
+                            const label = dialog.get_value('field_label');
+                            if (label) {
+                                const normalized_name = this.normalize_field_name(label);
+                                const current_field_name = dialog.get_value('field_name');
+                                if (!current_field_name || current_field_name === this.last_auto_generated_name) {
+                                    dialog.set_value('field_name', normalized_name);
+                                    this.last_auto_generated_name = normalized_name;
+                                }
+                            }
+                        }
+                    }
                 },
                 {
                     label: 'Field Name',
                     fieldname: 'field_name',
                     fieldtype: 'Data',
                     reqd: 1,
-                    default: field.field_name,
-                    read_only: 1,
-                    description: 'Internal field name (cannot be changed)'
-                },
-                {
-                    fieldtype: 'Column Break'
+                    default: is_edit_mode ? field.field_name : '',
+                    read_only: is_edit_mode ? 1 : 0,
+                    description: is_edit_mode ? 'Internal field name (cannot be changed)' : 'Internal field name (auto-generated from label)'
                 },
                 {
                     fieldtype: 'Section Break',
@@ -5423,27 +5377,176 @@ class EnhancedVisualBuilder {
                     fieldname: 'source_link_field',
                     fieldtype: 'Select',
                     reqd: 1,
-                    description: 'The Link field to fetch data from',
-                    change: () => this.load_target_fields_for_edit(dialog, table_id)
+                    description: 'Choose the link field to get data from',
+                    change: () => this.load_linked_fields(dialog, table_id)
+                },
+                {
+                    fieldtype: 'Column Break'
                 },
                 {
                     label: 'Target Field',
                     fieldname: 'target_field',
                     fieldtype: 'Select',
                     reqd: 1,
-                    description: 'The field to fetch from the linked record'
+                    description: 'Field to auto-fill from linked table'
                 }
             ],
-            primary_action_label: 'Update Fetch Field',
+            primary_action_label: is_edit_mode ? 'Update Fetch Field' : 'Create Fetch Field',
             primary_action: (values) => {
-                this.update_fetch_field(table_id, values, dialog, field);
+                if (is_edit_mode) {
+                    this.update_fetch_field(table_id, values, dialog, field);
+                } else {
+                    this.create_fetch_field(table_id, values, dialog);
+                }
             }
         });
         
         dialog.show();
         
-        // Load link fields and try to parse current formula
-        this.load_fetch_link_fields_for_edit(dialog, table_id, field);
+        // Load fetch data
+        this.load_fetch_data_for_unified_wizard(dialog, table_id, field);
+    }
+    
+    load_fetch_data_for_unified_wizard(dialog, table_id, existing_field = null) {
+        const target_table = table_id || this.current_table;
+        console.log("Loading fetch data for unified wizard, table:", target_table);
+        
+        frappe.call({
+            method: 'flansa.logic_templates.get_fetch_wizard_data',
+            args: { table_name: target_table },
+            callback: (r) => {
+                console.log("Fetch wizard data response:", r);
+                if (r.message && r.message.success) {
+                    const link_fields = r.message.link_fields;
+                    if (link_fields && link_fields.length > 0) {
+                        // Store link fields data for later lookup
+                        dialog._link_fields_data = link_fields;
+                        // Show only labels to user
+                        const options = link_fields.map(f => f.label).join('\n');
+                        dialog.set_df_property('source_link_field', 'options', options);
+                        
+                        // If editing, pre-populate values from existing field
+                        if (existing_field && existing_field.calculation_method) {
+                            this.pre_populate_fetch_values(dialog, existing_field, link_fields);
+                        }
+                    } else {
+                        frappe.msgprint({
+                            title: 'No Link Fields Found',
+                            indicator: 'orange',
+                            message: 'This table has no Link fields. Please create a Link field first before creating Fetch fields.'
+                        });
+                        dialog.hide();
+                    }
+                } else {
+                    frappe.msgprint({
+                        title: 'Error Loading Data',
+                        indicator: 'red',
+                        message: 'Could not load link fields. Please try again.'
+                    });
+                }
+            }
+        });
+    }
+    
+    pre_populate_fetch_values(dialog, field, link_fields) {
+        try {
+            // Parse the calculation_method to extract source and target fields
+            // Expected format: "FETCH(source_field, target_field)"
+            const calc_method = field.calculation_method || '';
+            const match = calc_method.match(/FETCH\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/i);
+            
+            if (match) {
+                const source_fieldname = match[1].trim();
+                const target_fieldname = match[2].trim();
+                
+                // Find the corresponding link field
+                const source_link_field = link_fields.find(f => f.fieldname === source_fieldname);
+                if (source_link_field) {
+                    dialog.set_value('source_link_field', source_link_field.label);
+                    
+                    // Load target fields for this link field and set the target
+                    this.load_linked_fields(dialog, this.current_table, () => {
+                        // After target fields are loaded, set the target field value
+                        const target_fields_data = dialog._target_fields_data || [];
+                        const target_field_data = target_fields_data.find(f => f.fieldname === target_fieldname);
+                        if (target_field_data) {
+                            dialog.set_value('target_field', target_field_data.label);
+                        }
+                    });
+                }
+            }
+        } catch (error) {
+            console.warn("Could not pre-populate fetch values:", error);
+        }
+    }
+    
+    update_fetch_field(table_id, values, dialog, existing_field) {
+        // Get fieldnames from stored data using the labels
+        const source_field_label = values.source_link_field;
+        const target_field_label = values.target_field;
+        
+        // Find actual fieldnames from stored data
+        const link_fields_data = dialog._link_fields_data || [];
+        const target_fields_data = dialog._target_fields_data || [];
+        
+        const source_field_data = link_fields_data.find(f => f.label === source_field_label);
+        const target_field_data = target_fields_data.find(f => f.label === target_field_label);
+        
+        if (!source_field_data) {
+            frappe.msgprint({
+                title: 'Error',
+                indicator: 'red',
+                message: 'Source link field not found. Please reselect.'
+            });
+            return;
+        }
+        
+        if (!target_field_data) {
+            frappe.msgprint({
+                title: 'Error',
+                indicator: 'red',
+                message: 'Target field not found. Please reselect.'
+            });
+            return;
+        }
+        
+        // Create FETCH expression
+        const expression = `FETCH(${source_field_data.fieldname}, ${target_field_data.fieldname})`;
+        
+        console.log("Updating fetch field with:", {
+            field_name: existing_field.field_name,
+            field_label: values.field_label,
+            expression: expression
+        });
+        
+        // Update the Logic Field document
+        frappe.call({
+            method: 'flansa.flansa_core.api.table_api.update_logic_field',
+            args: {
+                table_name: table_id,
+                field_name: existing_field.field_name,
+                field_label: values.field_label,
+                calculation_method: expression,
+                template_type: 'fetch'
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: `Fetch field "${values.field_label}" updated successfully!`,
+                        indicator: 'green'
+                    });
+                    dialog.hide();
+                    // Refresh the table to show updated field
+                    this.load_table_data();
+                } else {
+                    frappe.msgprint({
+                        title: 'Error',
+                        indicator: 'red',
+                        message: r.message?.message || 'Failed to update fetch field'
+                    });
+                }
+            }
+        });
     }
     
     show_formula_edit_wizard(table_id, field) {
@@ -5578,7 +5681,7 @@ class EnhancedVisualBuilder {
     
     show_standard_field_dialog(table_id, field) {
         // Fallback to the original unified dialog for non-logic fields
-        this.show_unified_field_dialog_original(table_id, field);
+        this.show_unified_field_dialog(table_id, field);
     }
     
     show_logic_examples() {
