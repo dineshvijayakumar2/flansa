@@ -1824,15 +1824,15 @@ class EnhancedVisualBuilder {
         console.log(is_edit_mode ? "Starting Link Field edit wizard" : "Starting Link Field wizard for table:", table_id);
         
         const dialog = new frappe.ui.Dialog({
-            title: 'Create Link Field',
+            title: dialog_title,
             fields: [
                 {
                     fieldtype: 'HTML',
                     fieldname: 'intro_html',
                     options: `
                         <div style="padding: 10px 0;">
-                            <h5><i class="fa fa-link"></i> Link Field</h5>
-                            <p class="text-muted">Create a relationship field to connect with another table.</p>
+                            <h5><i class="fa fa-link"></i> ${is_edit_mode ? 'Edit Link Field' : 'Link Field'}</h5>
+                            <p class="text-muted">${is_edit_mode ? 'Update the settings for this Link field that connects to another table.' : 'Create a relationship field to connect with another table.'}</p>
                         </div>
                     `
                 },
@@ -1845,13 +1845,20 @@ class EnhancedVisualBuilder {
                     fieldname: 'field_label',
                     fieldtype: 'Data',
                     reqd: 1,
+                    default: is_edit_mode ? field.field_label : '',
                     description: 'Display label (e.g., Customer)',
                     change: () => {
-                        // Auto-generate field name from label
-                        const label = dialog.get_value('field_label');
-                        if (label) {
-                            const normalized_name = this.normalize_field_name(label);
-                            dialog.set_value('field_name', normalized_name);
+                        if (!is_edit_mode) {
+                            // Auto-generate field name from label for new fields
+                            const label = dialog.get_value('field_label');
+                            if (label) {
+                                const normalized_name = this.normalize_field_name(label);
+                                const current_field_name = dialog.get_value('field_name');
+                                if (!current_field_name || current_field_name === this.last_auto_generated_name) {
+                                    dialog.set_value('field_name', normalized_name);
+                                    this.last_auto_generated_name = normalized_name;
+                                }
+                            }
                         }
                     }
                 },
@@ -1860,7 +1867,9 @@ class EnhancedVisualBuilder {
                     fieldname: 'field_name',
                     fieldtype: 'Data',
                     reqd: 1,
-                    description: 'Internal field name (auto-generated from label)'
+                    default: is_edit_mode ? field.field_name : '',
+                    read_only: is_edit_mode ? 1 : 0,
+                    description: is_edit_mode ? 'Internal field name (cannot be changed)' : 'Internal field name (auto-generated from label)'
                 },
                 {
                     fieldtype: 'Column Break'
@@ -1894,9 +1903,13 @@ class EnhancedVisualBuilder {
                     description: 'Table to link to'
                 }
             ],
-            primary_action_label: 'Create Link Field',
+            primary_action_label: is_edit_mode ? 'Update Link Field' : 'Create Link Field',
             primary_action: (values) => {
-                this.create_link_field(table_id, values, dialog);
+                if (is_edit_mode) {
+                    this.update_link_field(table_id, values, dialog, field);
+                } else {
+                    this.create_link_field(table_id, values, dialog);
+                }
             }
         });
         
@@ -1904,6 +1917,13 @@ class EnhancedVisualBuilder {
         
         // Load initial target tables
         this.load_target_tables(dialog, table_id);
+        
+        // If editing, pre-populate with current target doctype
+        if (is_edit_mode && field.options) {
+            setTimeout(() => {
+                dialog.set_value('target_doctype', field.options);
+            }, 1000); // Wait for target tables to load
+        }
     }
     
     load_target_tables(dialog, table_id) {
