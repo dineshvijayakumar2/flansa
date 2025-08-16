@@ -5450,9 +5450,15 @@ class EnhancedVisualBuilder {
     
     pre_populate_fetch_values(dialog, field, link_fields) {
         try {
+            // Debug: Log the field object to understand its structure
+            console.log("Pre-populate field object:", field);
+            
             // Parse the calculation_method to extract source and target fields
             // Expected format: "FETCH(source_field, target_field)"
-            const calc_method = field.calculation_method || '';
+            // Try multiple possible property names for the formula
+            const calc_method = field.calculation_method || field.formula || field.expression || '';
+            console.log("Calculation method found:", calc_method);
+            
             const match = calc_method.match(/FETCH\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/i);
             
             if (match) {
