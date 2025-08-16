@@ -88,6 +88,10 @@ def add_basic_field_native(table_name, field_config):
         # Get DocType document
         doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
         
+        # Check if this is a calculated field (has formula)
+        has_formula = field_config.get("formula") or field_config.get("expression")
+        is_calculated = bool(has_formula)
+        
         # Create field definition
         field_def = {
             "fieldname": field_config["field_name"],
@@ -95,24 +99,109 @@ def add_basic_field_native(table_name, field_config):
             "fieldtype": field_config["field_type"],
             "reqd": field_config.get("required", 0),
             "hidden": field_config.get("hidden", 0),
-            "read_only": field_config.get("read_only", 0),
+            "read_only": field_config.get("read_only", 1 if is_calculated else 0),  # Calculated fields should be readonly
             "options": field_config.get("options", ""),
-            "description": create_flansa_field_description("basic", field_config)
+            "description": create_flansa_field_description("basic" if not is_calculated else "calculated", field_config)
         }
+        
+        # If it's a calculated field, create Logic Field record for management
+        logic_field_name = None
+        if is_calculated:
+            formula = field_config.get("formula") or field_config.get("expression")
+            
+            # Create Logic Field document for editing capability
+            logic_field = frappe.new_doc("Flansa Logic Field")
+            logic_field.table_name = table_name
+            logic_field.field_name = field_config["field_name"]
+            logic_field.label = field_config["field_label"]
+            logic_field.expression = formula
+            logic_field.result_type = field_config["field_type"]
+            logic_field.is_active = 1
+            logic_field.insert()
+            logic_field_name = logic_field.name
         
         # Add field to DocType
         doctype_doc.append("fields", field_def)
         doctype_doc.save()
         
-        return {
+        # If calculated field, populate existing records
+        if is_calculated:
+            try:
+                from flansa.flansa_core.api.table_api import populate_existing_records_for_cached_field
+                populate_existing_records_for_cached_field(table_doc.doctype_name, logic_field)
+            except Exception as e:
+                frappe.log_error(f"Error populating calculated field values: {str(e)}", "Native Fields")
+        
+        # Clear cache
+        frappe.clear_cache(doctype=table_doc.doctype_name)
+        frappe.db.commit()
+        
+        result = {
             "success": True,
-            "message": f"Basic field '{field_config['field_label']}' added successfully",
+            "message": f"{'Calculated' if is_calculated else 'Basic'} field '{field_config['field_label']}' added successfully",
             "method": "native_doctype_direct",
-            "field_name": field_config["field_name"]
+            "field_name": field_config["field_name"],
+            "is_calculated": is_calculated
         }
+        
+        if is_calculated:
+            result.update({
+                "logic_field_name": logic_field_name,
+                "formula": formula,
+                "editable": True  # Can be edited via Logic Field DocType
+            })
+        
+        return result
         
     except Exception as e:
         frappe.log_error(f"Error adding basic field: {str(e)}", "Native Fields")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def edit_field_formula(table_name, field_name, new_formula):
+    """
+    Edit formula for an existing calculated field
+    Provides editing capability for Logic Fields
+    """
+    try:
+        # Find the Logic Field record
+        logic_field_filters = {
+            "table_name": table_name,
+            "field_name": field_name
+        }
+        
+        if not frappe.db.exists("Flansa Logic Field", logic_field_filters):
+            return {"success": False, "error": f"Logic Field not found for {field_name}"}
+        
+        # Update Logic Field record
+        logic_field_name = frappe.db.get_value("Flansa Logic Field", logic_field_filters, "name")
+        logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
+        logic_field.expression = new_formula
+        logic_field.save()
+        
+        # Get table info
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        if not table_doc.doctype_name:
+            return {"success": False, "error": "DocType not generated"}
+        
+        # Recalculate values for existing records
+        try:
+            from flansa.flansa_core.api.table_api import populate_existing_records_for_cached_field
+            populate_existing_records_for_cached_field(table_doc.doctype_name, logic_field)
+        except Exception as e:
+            frappe.log_error(f"Error recalculating field values: {str(e)}", "Native Fields")
+        
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Formula updated for field '{field_name}'",
+            "new_formula": new_formula,
+            "logic_field_name": logic_field_name
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error editing field formula: {str(e)}", "Native Fields")
         return {"success": False, "error": str(e)}
 
 @frappe.whitelist()

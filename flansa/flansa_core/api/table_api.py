@@ -1,4 +1,5 @@
 import frappe
+from flansa.flansa_core.doctype_hooks import calculate_logic_fields
 from frappe import _
 
 @frappe.whitelist()
@@ -757,7 +758,7 @@ def calculate_record_logic(table_name, record_name):
         
         # Get record data - find the actual DocType
         flansa_table = frappe.get_doc("Flansa Table", table_name)
-        actual_doctype = flansa_table.table_name
+        actual_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
         
         record = frappe.get_doc(actual_doctype, record_name)
         doc_context = record.as_dict()
@@ -822,38 +823,409 @@ def get_record_with_logic(table_name, record_name):
 
 @frappe.whitelist()
 def add_logic_field_to_table(table_name, field_config):
-    """Add a Logic Field to a table"""
+    """Add a Logic Field to a table with Phase 1 smart auto-detection"""
     try:
-        # Validate parameters
+        # Handle Frappe's JSON string conversion
         if isinstance(field_config, str):
-            return {"success": False, "error": "field_config must be a dictionary, not a string"}
+            try:
+                import json
+                field_config = json.loads(field_config)
+            except (json.JSONDecodeError, ValueError):
+                return {"success": False, "error": f"field_config is a string but not valid JSON: {field_config}"}
         
         if not isinstance(field_config, dict):
             return {"success": False, "error": f"field_config must be a dictionary, got {type(field_config)}"}
         
-        # Create Logic Field document
+        # Phase 1: Auto-detect calculation type and strategy
+        expression = field_config.get("expression", "")
+        calc_type = detect_calculation_type(expression)
+        storage_strategy = get_storage_strategy(calc_type)
+        field_type = auto_detect_field_type(expression, calc_type)
+        
+        # Get target DocType
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        target_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
+        
+        # Validate target DocType exists
+        frappe.get_meta(target_doctype)
+        
+        # Check if Custom Field already exists
+        if frappe.db.exists("Custom Field", {"dt": target_doctype, "fieldname": field_config.get("field_name")}):
+            return {
+                "success": False,
+                "error": f"Field '{field_config.get('field_name')}' already exists in {target_doctype}"
+            }
+        
+        # Create Logic Field document with auto-detected metadata
         logic_field = frappe.new_doc("Flansa Logic Field")
         logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
         logic_field.table_name = table_name
         logic_field.field_name = field_config.get("field_name")
         logic_field.label = field_config.get("label")
-        logic_field.expression = field_config.get("expression")
-        logic_field.result_type = field_config.get("result_type", "Data")
-        # logic_field.logic_type = field_config.get("logic_type", "Calculation")  # Field doesn't exist yet
+        logic_field.expression = expression
+        logic_field.result_type = field_type
+        logic_field.calculation_type = calc_type
+        logic_field.storage_strategy = storage_strategy
         logic_field.is_active = 1
-        
         logic_field.insert()
+        
+        # Create Custom Field based on storage strategy
+        custom_field = frappe.new_doc("Custom Field")
+        custom_field.dt = target_doctype
+        custom_field.fieldname = field_config.get("field_name")
+        custom_field.label = field_config.get("label")
+        custom_field.fieldtype = field_type
+        custom_field.insert_after = "name"  # Use 'name' which always exists
+        custom_field.read_only = 1
+        custom_field.module = "Flansa Core"
+        custom_field.description = f"{calc_type.title()} calculation ({storage_strategy}): {expression}"
+        
+        # All Logic Fields are now real database fields (Option 1)
+        # No more virtual fields - all calculations stored in database
+        
+        custom_field.insert()
+        
+        # Populate existing records for all Logic Fields (now all are stored)
+        populate_existing_records_for_cached_field(target_doctype, logic_field)
+        
+        frappe.clear_cache(doctype=target_doctype)
         frappe.db.commit()
         
         return {
             "success": True,
             "logic_field_name": logic_field.name,
-            "message": "Logic Field added successfully"
+            "custom_field_name": custom_field.name,
+            "target_doctype": target_doctype,
+            "calculation_type": calc_type,
+            "storage_strategy": storage_strategy,
+            "field_type": field_type,
+            "message": f"{calc_type.title()} field created using {storage_strategy} strategy"
         }
         
     except Exception as e:
         frappe.log_error(f"Error adding logic field: {str(e)}", "FlansaLogic Integration")
         frappe.db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+# ====== PHASE 1 AUTO-DETECTION FUNCTIONS ======
+
+def detect_calculation_type(expression):
+    """Auto-detect calculation type for Phase 1"""
+    import re
+    
+    expression_upper = expression.upper()
+    
+    # Check for lookup patterns
+    if 'LOOKUP(' in expression_upper:
+        return 'lookup'
+    
+    # Check for summary patterns (child table operations)
+    if any(func in expression_upper for func in ['SUM(', 'COUNT(', 'AVERAGE(']) and ',' in expression:
+        # If it has comma-separated args, it might be summary: SUM(child_table, field)
+        args = extract_function_args('SUM|COUNT|AVERAGE', expression)
+        if len(args) >= 2:
+            return 'summary'
+    
+    # Check for text operations
+    if any(func in expression_upper for func in ['CONCAT(', 'UPPER(', 'LOWER(']):
+        return 'text'
+    
+    # Check for numerical operations
+    if any(op in expression for op in ['+', '-', '*', '/', 'SUM(', 'AVERAGE(']):
+        return 'numerical'
+    
+    # Default to numerical for simple expressions
+    return 'numerical'
+
+def get_storage_strategy(calc_type):
+    """Get optimal storage strategy for calculation type"""
+    
+    if calc_type in ['numerical', 'text']:
+        return 'real_time'  # Fast, calculated on-demand
+    else:
+        return 'cached'     # Store values, recalculate on dependency changes
+
+def auto_detect_field_type(expression, calc_type):
+    """Auto-detect Frappe field type based on expression"""
+    
+    if calc_type == 'text':
+        return 'Data'
+    elif 'COUNT(' in expression.upper():
+        return 'Int'
+    elif any(func in expression.upper() for func in ['SUM(', 'AVERAGE(']) or any(op in expression for op in ['*', '/']):
+        return 'Float'
+    elif 'LOOKUP(' in expression.upper():
+        return 'Data'  # Default for lookups, could be refined
+    else:
+        return 'Data'  # Safe default
+
+def extract_function_args(function_name, expression):
+    """Extract arguments from function call"""
+    import re
+    pattern = f'{function_name}\\s*\\(([^)]+)\\)'
+    match = re.search(pattern, expression, re.IGNORECASE)
+    if match:
+        args_str = match.group(1)
+        args = [arg.strip() for arg in args_str.split(',')]
+        return args
+    return []
+
+def populate_existing_records_for_cached_field(doctype, logic_field):
+    """Populate existing records for cached fields"""
+    
+    record_count = frappe.db.count(doctype)
+    
+    if record_count < 1000:
+        # Small dataset: populate immediately
+        populate_cached_field_immediately(doctype, logic_field)
+    else:
+        # Large dataset: queue background job
+        frappe.enqueue(
+            'flansa.flansa_core.api.table_api.populate_cached_field_background',
+            doctype=doctype,
+            logic_field_name=logic_field.name,
+            job_name=f"populate_{logic_field.field_name}",
+            timeout=3600
+        )
+
+def populate_cached_field_immediately(doctype, logic_field):
+    """Immediately populate cached field for small datasets"""
+    
+    records = frappe.get_all(doctype, fields=["name"], limit=1000)
+    
+    for record in records:
+        try:
+            doc = frappe.get_doc(doctype, record.name)
+            calculated_value = calculate_field_value_by_type(doc, logic_field)
+            frappe.db.set_value(doctype, record.name, logic_field.field_name, calculated_value)
+        except Exception as e:
+            frappe.log_error(f"Error calculating {logic_field.field_name} for {record.name}: {str(e)}")
+            continue
+    
+    frappe.db.commit()
+
+def populate_cached_field_background(doctype, logic_field_name):
+    """Background population for large datasets"""
+    
+    logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
+    total_records = frappe.db.count(doctype)
+    batch_size = 100
+    processed = 0
+    
+    for offset in range(0, total_records, batch_size):
+        records = frappe.get_all(doctype, fields=["name"], start=offset, page_length=batch_size)
+        
+        for record in records:
+            try:
+                doc = frappe.get_doc(doctype, record.name)
+                calculated_value = calculate_field_value_by_type(doc, logic_field)
+                frappe.db.set_value(doctype, record.name, logic_field.field_name, calculated_value)
+                processed += 1
+                
+                if processed % 50 == 0:
+                    frappe.publish_progress(
+                        percent=(processed / total_records) * 100,
+                        title=f"Calculating {logic_field.field_name}",
+                        description=f"{processed}/{total_records} records processed"
+                    )
+                    
+            except Exception as e:
+                frappe.log_error(f"Error calculating field for {record.name}: {str(e)}")
+                continue
+        
+        frappe.db.commit()
+
+def calculate_field_value_by_type(doc, logic_field):
+    """Calculate field value based on type"""
+    
+    calc_type = getattr(logic_field, 'calculation_type', 'numerical')
+    expression = logic_field.expression
+    
+    if calc_type == 'numerical':
+        return calculate_numerical_field(doc, expression)
+    elif calc_type == 'text':
+        return calculate_text_field(doc, expression)
+    elif calc_type == 'lookup':
+        return calculate_lookup_field(doc, expression)
+    elif calc_type == 'summary':
+        return calculate_summary_field(doc, expression)
+    else:
+        return None
+
+def calculate_numerical_field(doc, expression):
+    """Calculate numerical expressions"""
+    try:
+        from flansa.flansa_core.api.flansa_logic_engine import get_logic_engine
+        engine = get_logic_engine()
+        return engine.evaluate(expression, doc.as_dict())
+    except:
+        return 0
+
+def calculate_text_field(doc, expression):
+    """Calculate text concatenation"""
+    try:
+        from flansa.flansa_core.api.flansa_logic_engine import get_logic_engine
+        engine = get_logic_engine()
+        return engine.evaluate(expression, doc.as_dict())
+    except:
+        return ""
+
+def calculate_lookup_field(doc, expression):
+    """Calculate lookup from parent table"""
+    try:
+        args = extract_function_args('LOOKUP', expression)
+        if len(args) >= 3:
+            table_name, field_name, target_field = args[0].strip(), args[1].strip(), args[2].strip()
+            
+            field_value = getattr(doc, field_name, None)
+            if field_value:
+                result = frappe.db.get_value(table_name, field_value, target_field)
+                return result
+        return None
+    except:
+        return None
+
+def calculate_summary_field(doc, expression):
+    """Calculate summary from child table"""
+    try:
+        if 'SUM(' in expression.upper():
+            args = extract_function_args('SUM', expression)
+            if len(args) >= 2:
+                child_table, field_name = args[0].strip(), args[1].strip()
+                child_records = getattr(doc, child_table, [])
+                total = sum(getattr(child, field_name, 0) for child in child_records)
+                return total
+        
+        elif 'COUNT(' in expression.upper():
+            args = extract_function_args('COUNT', expression)
+            if len(args) >= 1:
+                child_table = args[0].strip()
+                child_records = getattr(doc, child_table, [])
+                return len(child_records)
+        
+        return 0
+    except:
+        return 0
+
+@frappe.whitelist()
+def remove_logic_field_from_table(table_name, field_name):
+    """Remove a Logic Field and its Custom Field from a table"""
+    try:
+        # Get target DocType
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        target_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
+        
+        # Find and remove Logic Field record
+        logic_field_name = f"LOGIC-{table_name}-{field_name}"
+        if frappe.db.exists("Flansa Logic Field", logic_field_name):
+            frappe.delete_doc("Flansa Logic Field", logic_field_name)
+            print(f"✅ Removed Logic Field record: {logic_field_name}", flush=True)
+        else:
+            print(f"⚠️ Logic Field record not found: {logic_field_name}", flush=True)
+        
+        # Find and remove Custom Field
+        custom_field_filters = {"dt": target_doctype, "fieldname": field_name}
+        if frappe.db.exists("Custom Field", custom_field_filters):
+            custom_field_name = frappe.db.get_value("Custom Field", custom_field_filters, "name")
+            frappe.delete_doc("Custom Field", custom_field_name)
+            print(f"✅ Removed Custom Field: {custom_field_name}", flush=True)
+        else:
+            print(f"⚠️ Custom Field not found: {field_name} in {target_doctype}", flush=True)
+        
+        # Clear cache to update DocType immediately
+        frappe.clear_cache(doctype=target_doctype)
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Logic Field '{field_name}' removed successfully from {target_doctype}"
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def cleanup_all_logic_fields(table_name=None):
+    """Remove all Logic Fields, optionally for a specific table"""
+    try:
+        # Get Logic Fields to remove
+        filters = {}
+        if table_name:
+            filters["table_name"] = table_name
+        
+        logic_fields = frappe.get_all("Flansa Logic Field", 
+                                    filters=filters,
+                                    fields=["name", "table_name", "field_name"])
+        
+        removed_count = 0
+        
+        for lf in logic_fields:
+            try:
+                result = remove_logic_field_from_table(lf.table_name, lf.field_name)
+                if result.get("success"):
+                    removed_count += 1
+                    print(f"✅ Removed: {lf.field_name} from {lf.table_name}", flush=True)
+                else:
+                    print(f"❌ Failed to remove: {lf.field_name} - {result.get('error')}", flush=True)
+            except Exception as e:
+                print(f"❌ Error removing {lf.field_name}: {str(e)}", flush=True)
+                continue
+        
+        return {
+            "success": True,
+            "removed_count": removed_count,
+            "total_found": len(logic_fields),
+            "message": f"Removed {removed_count} of {len(logic_fields)} Logic Fields"
+        }
+        
+    except Exception as e:
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
+@frappe.whitelist()
+def list_logic_fields(table_name=None):
+    """List all Logic Fields with their details"""
+    try:
+        filters = {}
+        if table_name:
+            filters["table_name"] = table_name
+        
+        logic_fields = frappe.get_all("Flansa Logic Field",
+                                    filters=filters,
+                                    fields=["name", "table_name", "field_name", "label", "expression", 
+                                           "calculation_type", "storage_strategy", "is_active"])
+        
+        # Add DocType information
+        for lf in logic_fields:
+            try:
+                flansa_table = frappe.get_doc("Flansa Table", lf.table_name)
+                target_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
+                lf["target_doctype"] = target_doctype
+                
+                # Check if Custom Field exists
+                custom_field_exists = frappe.db.exists("Custom Field", {"dt": target_doctype, "fieldname": lf.field_name})
+                lf["custom_field_exists"] = bool(custom_field_exists)
+                
+            except Exception as e:
+                lf["target_doctype"] = "Unknown"
+                lf["custom_field_exists"] = False
+        
+        return {
+            "success": True,
+            "logic_fields": logic_fields,
+            "count": len(logic_fields)
+        }
+        
+    except Exception as e:
         return {
             "success": False,
             "error": str(e)

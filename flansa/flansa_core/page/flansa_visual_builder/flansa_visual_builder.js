@@ -238,7 +238,6 @@ class EnhancedVisualBuilder {
                                 <option value="Int">Number</option>
                                 <option value="Currency">Currency</option>
                                 <option value="Date">Date</option>
-                                <option value="Link">Link</option>
                                 <option value="Select">Select</option>
                                 <option value="Check">Checkbox</option>
                             </select>
@@ -871,9 +870,6 @@ class EnhancedVisualBuilder {
             <div class="row">
                 <div class="col-md-12">
                     <div class="logic-field-actions mb-3">
-                        <button class="btn btn-success btn-sm me-2" onclick="window.visual_builder.show_logic_field_dialog()">
-                            <i class="fa fa-calculator"></i> Add Logic Field
-                        </button>
                         <button class="btn btn-info btn-sm" onclick="window.visual_builder.show_logic_examples()">
                             <i class="fa fa-question-circle"></i> Examples
                         </button>
@@ -896,11 +892,10 @@ class EnhancedVisualBuilder {
                 
                 const field_type_badge = this.get_field_type_badge(display_type);
                 const virtual_badge = is_virtual_field ? '<span class="label label-success">Virtual</span> ' : '';
-                const is_special_field = is_lookup_field || field.field_type === 'Summary' || field.field_type === 'Link';
+                const is_special_field = is_lookup_field || field.field_type === 'Summary';
                 const row_style = is_special_field ? 'style="cursor: pointer;" onclick="window.visual_builder.show_field_details(\'' + table_id + '\', \'' + field.field_name + '\')"' : '';
                 const field_icon = is_lookup_field ? '<i class="fa fa-link text-info"></i> ' : 
-                                 field.field_type === 'Summary' ? '<i class="fa fa-calculator text-warning"></i> ' : 
-                                 field.field_type === 'Link' ? '<i class="fa fa-external-link text-primary"></i> ' : '';
+                                 field.field_type === 'Summary' ? '<i class="fa fa-calculator text-warning"></i> ' : '';
                 
                 content_html += `
                     <tr ${row_style} class="${is_special_field ? 'field-clickable' : ''}">
@@ -1010,7 +1005,6 @@ class EnhancedVisualBuilder {
             'Float': 'primary',
             'Date': 'warning',
             'Select': 'success',
-            'Link': 'danger',
             'Lookup': 'info',
             'Summary': 'warning',
             'Attach': 'purple',
@@ -1099,9 +1093,7 @@ class EnhancedVisualBuilder {
         dialog.show();
         
         // Initialize live testing with enhanced features
-        setTimeout(() => {
-            this.initializeEnhancedLiveLogicTesting(dialog);
-        }, 200);
+        ;
     }
     
     show_error(message = null) {
@@ -1193,6 +1185,12 @@ class EnhancedVisualBuilder {
     
     // Action methods for buttons
     add_field(table_id) {
+        // Use unified dialog for adding fields
+        this.show_unified_field_dialog(table_id);
+    }
+
+    // Legacy add_field function (kept for reference)
+    add_field_legacy(table_id) {
         const self = this;
         let field_name_manually_edited = false;
         let last_auto_generated_name = '';
@@ -1307,7 +1305,7 @@ class EnhancedVisualBuilder {
                     label: 'Field Type',
                     fieldname: 'field_type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach\nLink\nTable',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach',
                     default: 'Data',
                     reqd: 1
                 },
@@ -1315,8 +1313,8 @@ class EnhancedVisualBuilder {
                     label: 'Options',
                     fieldname: 'options',
                     fieldtype: 'Small Text',
-                    description: 'For Select: Option1\\nOption2. For Link: DocType name',
-                    depends_on: 'eval:["Select", "Link", "Table"].includes(doc.field_type)'
+                    description: 'For Select: Option1\\nOption2\\nOption3',
+                    depends_on: 'eval:doc.field_type === "Select"'
                 },
                 {
                     fieldtype: 'Section Break',
@@ -1553,7 +1551,7 @@ class EnhancedVisualBuilder {
                             fetch_from: native_field.fetch_from || '',
                             depends_on: native_field.depends_on || ''
                         };
-                        this.show_edit_field_dialog(table_id, field);
+                        this.show_unified_field_dialog(table_id, field);
                     } else {
                         frappe.msgprint('Field not found: ' + field_name);
                     }
@@ -1564,6 +1562,250 @@ class EnhancedVisualBuilder {
         });
     }
     
+    // Unified field dialog for add/edit with formula support
+    show_unified_field_dialog(table_id, field = null) {
+        const is_edit_mode = !!field;
+        const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
+        
+        // Check if it's a Logic Field for editing
+        let is_logic_field = false;
+        if (is_edit_mode) {
+            // Check if this field has a corresponding Logic Field record
+            frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: 'Flansa Logic Field',
+                    filters: {
+                        table_name: this.current_table,
+                        field_name: field.field_name
+                    },
+                    fieldname: 'expression'
+                },
+                async: false,
+                callback: (r) => {
+                    if (r.message && r.message.expression) {
+                        is_logic_field = true;
+                        field.formula = r.message.expression;
+                    }
+                }
+            });
+        }
+        
+        const dialog = new frappe.ui.Dialog({
+            title: dialog_title,
+            fields: [
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: is_edit_mode ? field.field_label : '',
+                    description: 'Display name for users',
+                    change: () => {
+                        if (!is_edit_mode) {
+                            // Auto-generate field name from label for new fields
+                            const label = dialog.get_value('field_label');
+                            if (label) {
+                                const normalized_name = this.normalize_field_name(label);
+                                const current_field_name = dialog.get_value('field_name');
+                                if (!current_field_name || current_field_name === this.last_auto_generated_name) {
+                                    dialog.set_value('field_name', normalized_name);
+                                    this.last_auto_generated_name = normalized_name;
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: is_edit_mode ? field.field_name : '',
+                    read_only: is_edit_mode ? 1 : 0,
+                    description: is_edit_mode ? 'Field name cannot be changed after creation' : 'Internal name (lowercase, underscores only)'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Field Type',
+                    fieldname: 'field_type',
+                    fieldtype: 'Select',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach',
+                    default: is_edit_mode ? field.field_type : 'Data',
+                    reqd: 1
+                },
+                {
+                    label: 'Options',
+                    fieldname: 'options',
+                    fieldtype: 'Small Text',
+                    default: is_edit_mode ? (field.options || '') : '',
+                    description: 'For Select: Option1\\nOption2\\nOption3',
+                    depends_on: 'eval:doc.field_type === "Select"'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Formula (Optional)'
+                },
+                {
+                    label: 'Formula',
+                    fieldname: 'formula',
+                    fieldtype: 'Code',
+                    default: is_edit_mode && is_logic_field ? field.formula : '',
+                    description: 'Add formula to make this a calculated field (e.g., price * quantity)',
+                    language: 'javascript'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Properties'
+                },
+                {
+                    label: 'Required',
+                    fieldname: 'reqd',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.is_required || 0) : 0
+                },
+                {
+                    label: 'Read Only',
+                    fieldname: 'read_only',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.read_only || 0) : 0,
+                    description: 'Calculated fields are automatically read-only'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Hidden',
+                    fieldname: 'hidden',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.hidden || 0) : 0
+                },
+                {
+                    label: 'In List View',
+                    fieldname: 'in_list_view',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.in_list_view || 0) : 0
+                }
+            ],
+            primary_action_label: is_edit_mode ? 'Update Field' : 'Create Field',
+            primary_action: (values) => {
+                this.handle_unified_field_action(table_id, values, is_edit_mode, field);
+            }
+        });
+        
+        dialog.show();
+        
+        // Set up formula field visibility based on read-only
+        setTimeout(() => {
+            const formula_field = dialog.get_field('formula');
+            const read_only_field = dialog.get_field('read_only');
+            
+            if (formula_field && read_only_field) {
+                read_only_field.$input.on('change', () => {
+                    const formula_value = dialog.get_value('formula');
+                    if (formula_value && formula_value.trim()) {
+                        // If there's a formula, force read_only to be true
+                        dialog.set_value('read_only', 1);
+                    }
+                });
+                
+                formula_field.df.change = () => {
+                    const formula_value = dialog.get_value('formula');
+                    if (formula_value && formula_value.trim()) {
+                        dialog.set_value('read_only', 1);
+                    }
+                };
+            }
+        }, 100);
+    }
+
+    // Handle unified field dialog action (create or update)
+    handle_unified_field_action(table_id, values, is_edit_mode, existing_field) {
+        const has_formula = values.formula && values.formula.trim();
+        
+        // Prepare field configuration
+        const field_config = {
+            field_name: values.field_name,
+            field_label: values.field_label,
+            field_type: values.field_type,
+            options: values.options || '',
+            required: values.reqd || 0,
+            read_only: values.read_only || (has_formula ? 1 : 0), // Force read-only for calculated fields
+            hidden: values.hidden || 0,
+            in_list_view: values.in_list_view || 0
+        };
+        
+        // Add formula if provided
+        if (has_formula) {
+            field_config.formula = values.formula;
+        }
+        
+        if (is_edit_mode) {
+            // Handle edit - check if we need to update formula
+            if (has_formula) {
+                // This is a calculated field - use formula editing
+                frappe.call({
+                    method: 'flansa.native_fields.edit_field_formula',
+                    args: {
+                        table_name: this.current_table,
+                        field_name: values.field_name,
+                        new_formula: values.formula
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.show_alert({
+                                message: 'Formula updated successfully',
+                                indicator: 'green'
+                            });
+                            this.load_table_data(table_id);
+                        } else {
+                            frappe.show_alert({
+                                message: r.message?.error || 'Failed to update formula',
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
+            } else {
+                // Regular field update - would need a separate API for field property updates
+                frappe.show_alert({
+                    message: 'Field property updates not yet implemented',
+                    indicator: 'orange'
+                });
+            }
+        } else {
+            // Handle create - use unified field creation
+            frappe.call({
+                method: 'flansa.native_fields.add_basic_field_native',
+                args: {
+                    table_name: this.current_table,
+                    field_config: field_config
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        const message = r.message.is_calculated ? 
+                            `Calculated field '${values.field_label}' created successfully` :
+                            `Field '${values.field_label}' created successfully`;
+                        
+                        frappe.show_alert({
+                            message: message,
+                            indicator: 'green'
+                        });
+                        
+                        this.load_table_data(table_id);
+                    } else {
+                        frappe.show_alert({
+                            message: r.message?.error || 'Failed to create field',
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+        }
+    }
+
     show_edit_field_dialog(table_id, field) {
         const dialog = new frappe.ui.Dialog({
             title: 'Edit Field: ' + field.field_name,
@@ -1949,7 +2191,6 @@ class EnhancedVisualBuilder {
     display_field_details_dialog(field, table_id) {
         const is_lookup = field.field_type === 'Lookup' || (field.fetch_from && field.fetch_from.trim() !== '');
         const is_summary = field.field_type === 'Summary';
-        const is_link = field.field_type === 'Link';
         
         let details_html = `
             <div class="field-details-container">
@@ -3510,7 +3751,7 @@ class EnhancedVisualBuilder {
         
         // Add click handler
         logic_btn.on('click', () => {
-            this.show_logic_field_dialog();
+            this.show_unified_field_dialog(this.current_table);
         });
         
         console.log('✅ Added Logic Field button to Visual Builder');
@@ -3565,55 +3806,6 @@ class EnhancedVisualBuilder {
                     options: 'Data\nFloat\nInt\nCurrency\nPercent',
                     default: 'Float',
                     reqd: 1
-                },
-                {
-                    fieldtype: 'Section Break',
-                    label: '🧪 Live Expression Testing',
-                    description: 'Test your Logic expression in real-time with sample data'
-                },
-                {
-                    label: 'Sample Data (JSON)',
-                    fieldname: 'test_data',
-                    fieldtype: 'Code',
-                    options: 'JSON',
-                    default: '{"price": 100, "quantity": 2, "status": "Active", "name": "Sample Record"}',
-                    description: 'JSON object with sample field values for testing your expression',
-                    change: function() {
-                        // Live test will be handled by the initialization
-                    }
-                },
-                {
-                    label: 'Live Test Results',
-                    fieldname: 'live_test_results',
-                    fieldtype: 'HTML',
-                    options: `
-                        <div id="live-test-container" style="border: 1px solid #d1d8dd; padding: 15px; border-radius: 6px; background: #f8f9fa; margin-top: 10px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <h6 style="margin: 0; color: #495057;">
-                                    <i class="fa fa-bolt text-warning"></i> Live Test Results
-                                </h6>
-                                <div>
-                                    <button type="button" id="manual-test-btn" class="btn btn-sm btn-primary" style="margin-right: 5px;">
-                                        <i class="fa fa-play"></i> Test Now
-                                    </button>
-                                    <button type="button" id="auto-test-toggle" class="btn btn-sm btn-secondary">
-                                        <i class="fa fa-magic"></i> Auto: ON
-                                    </button>
-                                </div>
-                            </div>
-                            
-                            <div id="live-result-display" style="padding: 12px; background: white; border-radius: 4px; min-height: 80px; border: 1px solid #e9ecef;">
-                                <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
-                                    <i class="fa fa-info-circle" style="font-size: 24px; margin-bottom: 10px;"></i><br>
-                                    Enter an expression above to see live results
-                                </div>
-                            </div>
-                            
-                            <div id="live-test-status" style="margin-top: 10px; padding: 8px; background: #fff; border-radius: 4px; font-size: 12px; color: #6c757d; border: 1px solid #e9ecef;">
-                                <i class="fa fa-clock-o"></i> Ready for testing - Auto-test: Enabled
-                            </div>
-                        </div>
-                    `
                 }
             ],
             primary_action_label: 'Create Logic Field',
@@ -3622,7 +3814,8 @@ class EnhancedVisualBuilder {
                 dialog.hide();
             },
             secondary_action_label: 'Test Expression',
-            secondary_action: (values) => {
+            secondary_action: () => {
+                const values = dialog.get_values();
                 this.test_logic_expression(values);
             }
         });
@@ -3634,14 +3827,26 @@ class EnhancedVisualBuilder {
         /**Test Logic expression before creating field*/
         
         try {
+            // Debug: Log the values being passed
+            console.log('test_logic_expression called with values:', values);
+            
+            if (!values.expression) {
+                frappe.show_alert('Please enter an expression to test', 'red');
+                return;
+            }
+            
             frappe.show_alert('Testing Logic expression...', 'blue');
+            
+            // Debug: Log what we're sending to the API
+            const apiArgs = {
+                expression: values.expression,
+                sample_data: '{"price": 100, "quantity": 2}'
+            };
+            console.log('Sending to API:', apiArgs);
             
             const response = await frappe.call({
                 method: 'flansa.flansa_core.api.table_api.test_logic_field',
-                args: {
-                    expression: values.expression,
-                    sample_data: '{"price": 100, "quantity": 2}'
-                }
+                args: apiArgs
             });
             
             if (response.message && response.message.success) {
@@ -3791,258 +3996,8 @@ class EnhancedVisualBuilder {
             wide: true
         });
     }
-    
-    initializeEnhancedLiveLogicTesting(dialog) {
-        /**Initialize enhanced live testing for Logic Field dialog*/
-        
-        const expression_field = dialog.fields_dict.expression;
-        const test_data_field = dialog.fields_dict.test_data;
-        const manual_test_btn = document.getElementById('manual-test-btn');
-        const auto_test_toggle = document.getElementById('auto-test-toggle');
-        
-        this.auto_test_enabled = true;
-        this.test_timeout = null;
-        
-        // Auto-test when expression changes
-        if (expression_field && expression_field.$input) {
-            expression_field.$input.on('input keyup paste', () => {
-                if (this.auto_test_enabled) {
-                    this.scheduleAutoTest(dialog);
-                }
-            });
-        }
-        
-        // Auto-test when test data changes
-        if (test_data_field && test_data_field.$input) {
-            test_data_field.$input.on('input keyup paste', () => {
-                if (this.auto_test_enabled) {
-                    this.scheduleAutoTest(dialog);
-                }
-            });
-        }
-        
-        // Manual test button
-        if (manual_test_btn) {
-            manual_test_btn.onclick = () => {
-                this.runEnhancedLiveTest(dialog);
-            };
-        }
-        
-        // Auto-test toggle
-        if (auto_test_toggle) {
-            auto_test_toggle.onclick = () => {
-                this.toggleAutoTest(auto_test_toggle);
-            };
-        }
-        
-        // Initial test
-        setTimeout(() => {
-            this.runEnhancedLiveTest(dialog);
-        }, 500);
-    }
-    
-    scheduleAutoTest(dialog) {
-        /**Schedule auto-test with debouncing*/
-        clearTimeout(this.test_timeout);
-        this.test_timeout = setTimeout(() => {
-            this.runEnhancedLiveTest(dialog);
-        }, 800); // 800ms delay for auto-testing
-    }
-    
-    toggleAutoTest(button) {
-        /**Toggle auto-test functionality*/
-        this.auto_test_enabled = !this.auto_test_enabled;
-        
-        if (this.auto_test_enabled) {
-            button.innerHTML = '<i class="fa fa-magic"></i> Auto: ON';
-            button.className = 'btn btn-sm btn-secondary';
-        } else {
-            button.innerHTML = '<i class="fa fa-pause"></i> Auto: OFF';
-            button.className = 'btn btn-sm btn-outline-secondary';
-        }
-        
-        // Update status
-        const status_display = document.getElementById('live-test-status');
-        if (status_display) {
-            const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing - Auto-test: ${auto_status}`;
-        }
-    }
-    
-    async runEnhancedLiveTest(dialog) {
-        /**Run enhanced live Logic Field test with better UI*/
-        
-        const expression = dialog.get_value('expression');
-        const test_data = dialog.get_value('test_data');
-        const result_display = document.getElementById('live-result-display');
-        const status_display = document.getElementById('live-test-status');
-        
-        if (!expression || !expression.trim()) {
-            result_display.innerHTML = `
-                <div style="color: #6c757d; font-style: italic; text-align: center; padding: 20px;">
-                    <i class="fa fa-info-circle" style="font-size: 24px; margin-bottom: 10px;"></i><br>
-                    Enter an expression above to see live results
-                </div>
-            `;
-            const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-            status_display.innerHTML = `<i class="fa fa-clock-o"></i> Ready for testing - Auto-test: ${auto_status}`;
-            return;
-        }
-        
-        // Show testing indicator with animation
-        status_display.innerHTML = '<i class="fa fa-spinner fa-spin text-primary"></i> Testing expression...';
-        result_display.innerHTML = `
-            <div style="text-align: center; padding: 20px; color: #007bff;">
-                <i class="fa fa-cog fa-spin" style="font-size: 20px; margin-bottom: 10px;"></i><br>
-                <strong>Testing expression...</strong>
-            </div>
-        `;
-        
-        try {
-            const response = await frappe.call({
-                method: 'flansa.flansa_core.api.table_api.test_logic_field',
-                args: {
-                    expression: expression,
-                    sample_data: test_data || '{"price": 100, "quantity": 2, "status": "Active", "name": "Sample"}'
-                }
-            });
-            
-            if (response.message && response.message.success) {
-                const result = response.message.result;
-                const sample_data = response.message.sample_data;
-                const result_type = typeof result;
-                
-                // Enhanced success display with more visual appeal
-                result_display.innerHTML = `
-                    <div style="border: 1px solid #28a745; border-radius: 6px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 12px;">
-                            <div style="display: flex; justify-content: space-between; align-items: center;">
-                                <strong><i class="fa fa-check-circle"></i> Expression Valid & Tested</strong>
-                                <span style="background: rgba(255,255,255,0.2); padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: bold;">
-                                    ${result_type.toUpperCase()}
-                                </span>
-                            </div>
-                        </div>
-                        
-                        <div style="padding: 15px; background: #f8fff8;">
-                            <div style="margin-bottom: 12px;">
-                                <strong style="color: #155724;">Result:</strong>
-                                <div style="background: white; padding: 10px; border-radius: 4px; border: 1px solid #c3e6cb; margin-top: 5px;">
-                                    <span style="font-size: 18px; font-weight: bold; color: #155724;">
-                                        ${this.formatEnhancedResult(result)}
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div style="border-top: 1px solid #c3e6cb; padding-top: 10px; margin-top: 10px;">
-                                <strong style="color: #6c757d; font-size: 12px;">SAMPLE DATA USED:</strong>
-                                <div style="background: #f1f3f4; padding: 8px; border-radius: 4px; margin-top: 5px; font-family: monospace; font-size: 12px; color: #495057;">
-                                    ${JSON.stringify(sample_data, null, 2)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                const timestamp = new Date().toLocaleTimeString();
-                const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-                status_display.innerHTML = `
-                    <i class="fa fa-check-circle text-success"></i> 
-                    Expression tested successfully at ${timestamp} - Auto-test: ${auto_status}
-                `;
-                
-            } else {
-                const error_msg = response.message ? response.message.error : 'Unknown error occurred';
-                
-                // Enhanced error display
-                result_display.innerHTML = `
-                    <div style="border: 1px solid #dc3545; border-radius: 6px; overflow: hidden;">
-                        <div style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 12px;">
-                            <strong><i class="fa fa-exclamation-triangle"></i> Expression Error Detected</strong>
-                        </div>
-                        
-                        <div style="padding: 15px; background: #fff5f5;">
-                            <div style="background: #f8d7da; padding: 12px; border-radius: 4px; border-left: 4px solid #dc3545; margin-bottom: 10px;">
-                                <strong style="color: #721c24;">Error:</strong>
-                                <div style="margin-top: 5px; font-family: monospace; color: #721c24;">
-                                    ${error_msg}
-                                </div>
-                            </div>
-                            
-                            <div style="color: #6c757d; font-size: 12px;">
-                                <i class="fa fa-lightbulb-o"></i> 
-                                <strong>Tips:</strong> Check syntax, field names, and function usage
-                            </div>
-                        </div>
-                    </div>
-                `;
-                
-                const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-                status_display.innerHTML = `
-                    <i class="fa fa-exclamation-triangle text-danger"></i> 
-                    Expression syntax error detected - Auto-test: ${auto_status}
-                `;
-            }
-            
-        } catch (error) {
-            console.error('Enhanced live test error:', error);
-            
-            // Enhanced network error display
-            result_display.innerHTML = `
-                <div style="border: 1px solid #fd7e14; border-radius: 6px; overflow: hidden;">
-                    <div style="background: linear-gradient(135deg, #fd7e14, #e67e22); color: white; padding: 12px;">
-                        <strong><i class="fa fa-wifi"></i> Connection Error</strong>
-                    </div>
-                    
-                    <div style="padding: 15px; background: #fff9f5;">
-                        <div style="color: #8a4616;">
-                            Unable to test expression due to network or server issues.
-                        </div>
-                        <div style="margin-top: 10px; color: #6c757d; font-size: 12px;">
-                            <i class="fa fa-refresh"></i> Please check your connection and try again.
-                        </div>
-                    </div>
-                </div>
-            `;
-            
-            const auto_status = this.auto_test_enabled ? 'Enabled' : 'Disabled';
-            status_display.innerHTML = `
-                <i class="fa fa-wifi text-warning"></i> 
-                Connection error - test failed - Auto-test: ${auto_status}
-            `;
-        }
-    }
-    
-    formatEnhancedResult(result) {
-        /**Format result for enhanced display*/
-        
-        if (result === null || result === undefined) {
-            return '<span style="color: #6c757d; font-style: italic;">null</span>';
-        }
-        
-        if (typeof result === 'boolean') {
-            const color = result ? '#28a745' : '#dc3545';
-            const icon = result ? 'check' : 'times';
-            return `<i class="fa fa-${icon}" style="color: ${color};"></i> <span style="color: ${color};">${result}</span>`;
-        }
-        
-        if (typeof result === 'number') {
-            if (Number.isInteger(result)) {
-                return `<strong>${result.toLocaleString()}</strong>`;
-            } else {
-                return `<strong>${result.toFixed(2)}</strong>`;
-            }
-        }
-        
-        if (typeof result === 'string') {
-            return `"<span style="color: #007bff;">${result}</span>"`;
-        }
-        
-        // For objects/arrays
-        return `<pre style="margin: 0; font-size: 14px;">${JSON.stringify(result, null, 2)}</pre>`;
-    });
-    }
 }
+
 // Apply theme on page load
 $(document).ready(function() {
     if (window.page_instance && window.page_instance.apply_theme) {

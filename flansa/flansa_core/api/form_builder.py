@@ -303,13 +303,28 @@ def get_table_form_config(table_name, force_refresh=False):
         }
         
         for field in native_result.get('fields', []):
-            # Include fields created by Flansa OR important standard fields
-            include_field = (
-                field.get('created_by_flansa') or 
-                field.get('fieldname') in important_standard_fields
+            # Include all fields for maximum flexibility
+            # Users can choose which fields to display in their forms
+            # This includes Logic Fields, Custom Fields, and standard DocType fields
+            
+            # Skip system/internal fields that shouldn't be in forms
+            skip_field = (
+                field.get('fieldname', '').startswith('_') or
+                field.get('fieldname') in ['docstatus', 'idx', 'name'] or
+                field.get('fieldtype') in ['Section Break', 'Column Break', 'Tab Break']
             )
             
-            if include_field:
+            if not skip_field:
+                # Determine field source for UI categorization
+                field_source = "system"
+                if field.get('created_by_flansa'):
+                    field_source = "flansa"
+                elif frappe.db.exists("Custom Field", {"dt": table_doc.doctype_name, "fieldname": field.get('fieldname')}):
+                    field_source = "custom"
+                
+                # Check if it's a Logic Field
+                is_logic_field = frappe.db.exists("Flansa Logic Field", {"table_name": table_name, "field_name": field.get('fieldname')})
+                
                 formatted_fields.append({
                     'field_name': field['fieldname'],
                     'field_label': field['label'],
@@ -325,7 +340,10 @@ def get_table_form_config(table_name, force_refresh=False):
                     'collapsible': field.get('collapsible', 0),
                     'depends_on': field.get('depends_on', ''),
                     'width': field.get('width', ''),
-                    'field_order': field.get('idx', 0)
+                    'field_order': field.get('idx', 0),
+                    'field_source': field_source,
+                    'is_logic_field': is_logic_field,
+                    'is_virtual': field.get('is_virtual', 0)
                 })
         
         # Check if form configuration already exists
