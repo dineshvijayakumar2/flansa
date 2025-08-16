@@ -3462,6 +3462,191 @@ class EnhancedVisualBuilder {
         
         tryAddButton();
     }
+
+    // ====== FLANSALOGIC INTEGRATION ======
+    
+    add_logic_field_button() {
+        /**Add Logic Field button to Visual Builder*/
+        
+        const logic_btn = $(`
+            <button class="btn btn-success btn-sm me-2 logic-field-btn">
+                <i class="fa fa-calculator"></i> Add Logic Field
+            </button>
+        `);
+        
+        // Find existing buttons and add Logic button
+        const button_container = this.page.main.find('.btn-group, .table-actions, .field-actions').first();
+        if (button_container.length) {
+            button_container.append(logic_btn);
+        } else {
+            // Create button section if it doesn't exist
+            const actions_section = $(`
+                <div class="field-actions mb-3">
+                    <div class="btn-group" role="group"></div>
+                </div>
+            `);
+            actions_section.find('.btn-group').append(logic_btn);
+            this.page.main.find('.page-content').prepend(actions_section);
+        }
+        
+        // Add click handler
+        logic_btn.on('click', () => {
+            this.show_logic_field_dialog();
+        });
+        
+        console.log('✅ Added Logic Field button to Visual Builder');
+    }
+    
+    show_logic_field_dialog() {
+        /**Show dialog to create Logic Field*/
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Create Logic Field',
+            fields: [
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Unique name for the Logic Field (no spaces)'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Display label for the field'
+                },
+                {
+                    label: 'Logic Expression',
+                    fieldname: 'expression',
+                    fieldtype: 'Code',
+                    reqd: 1,
+                    description: 'FlansaLogic expression (e.g., price * quantity, SUM(10,20,30))'
+                },
+                {
+                    label: 'Result Type',
+                    fieldname: 'result_type',
+                    fieldtype: 'Select',
+                    options: 'Data\nFloat\nInt\nCurrency\nPercent',
+                    default: 'Float',
+                    reqd: 1
+                }
+            ],
+            primary_action_label: 'Create Logic Field',
+            primary_action: (values) => {
+                this.create_logic_field(values);
+                dialog.hide();
+            },
+            secondary_action_label: 'Test Expression',
+            secondary_action: (values) => {
+                this.test_logic_expression(values);
+            }
+        });
+        
+        dialog.show();
+    }
+    
+    async test_logic_expression(values) {
+        /**Test Logic expression before creating field*/
+        
+        try {
+            frappe.show_alert('Testing Logic expression...', 'blue');
+            
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.test_logic_field',
+                args: {
+                    expression: values.expression,
+                    sample_data: '{"price": 100, "quantity": 2}'
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                const result = response.message.result;
+                frappe.msgprint({
+                    title: 'Logic Test Result',
+                    message: `
+                        <div class="logic-test-result">
+                            <h5>Expression: <code>${values.expression}</code></h5>
+                            <h4>Result: <span class="text-success">${result}</span></h4>
+                            <p class="text-muted">✅ Logic expression is valid!</p>
+                        </div>
+                    `,
+                    indicator: 'green'
+                });
+            } else {
+                frappe.msgprint({
+                    title: 'Logic Test Failed',
+                    message: `❌ Error: ${response.message ? response.message.error : 'Unknown error'}`,
+                    indicator: 'red'
+                });
+            }
+            
+        } catch (error) {
+            console.error('Logic test error:', error);
+            frappe.show_alert('Logic test failed', 'red');
+        }
+    }
+    
+    async create_logic_field(values) {
+        /**Create the Logic Field*/
+        
+        try {
+            frappe.show_alert('Creating Logic Field...', 'blue');
+            
+            // Use the table_name from current context
+            const table_name = this.table_name || this.current_table;
+            
+            if (!table_name) {
+                frappe.show_alert('❌ No table selected', 'red');
+                return;
+            }
+            
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.add_logic_field_to_table',
+                args: {
+                    table_name: table_name,
+                    field_config: {
+                        field_name: values.field_name,
+                        label: values.label,
+                        expression: values.expression,
+                        result_type: values.result_type
+                    }
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                frappe.show_alert('✅ Logic Field created successfully!', 'green');
+                
+                frappe.msgprint({
+                    title: 'Logic Field Created',
+                    message: `
+                        <div class="logic-field-success">
+                            <h5>Logic Field: <strong>${values.label}</strong></h5>
+                            <p>Field Name: <code>${values.field_name}</code></p>
+                            <p>Expression: <code>${values.expression}</code></p>
+                            <p>Result Type: ${values.result_type}</p>
+                            <p class="text-success">✅ Logic Field is now active!</p>
+                        </div>
+                    `,
+                    indicator: 'green'
+                });
+                
+                // Refresh current view
+                if (typeof this.refresh_data === 'function') {
+                    this.refresh_data();
+                }
+                
+            } else {
+                frappe.show_alert('❌ Failed to create Logic Field', 'red');
+                console.error('Logic Field creation failed:', response.message);
+            }
+            
+        } catch (error) {
+            console.error('Logic Field creation error:', error);
+            frappe.show_alert('Logic Field creation failed', 'red');
+        }
+    }
 }
 // Apply theme on page load
 $(document).ready(function() {
