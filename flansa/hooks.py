@@ -194,8 +194,13 @@ user_data_fields = [
 # ---------------
 # Hook on document methods and events
 
-# Document Events removed - using native field management now
-# doc_events = {}
+# Document Events for Logic Field calculations
+doc_events = {
+    "*": {
+        "before_save": "flansa.flansa_core.doctype_hooks.calculate_logic_fields",
+        "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
+    }
+}
 
 
 # Scheduled Tasks

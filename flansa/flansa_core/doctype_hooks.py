@@ -13,7 +13,7 @@ def calculate_logic_fields(doc, method=None):
                                      filters={
                                          "is_active": 1
                                      },
-                                     fields=["field_name", "expression", "table_name"])
+                                     fields=["name", "field_name", "expression", "table_name"])
         
         # Filter Logic Fields for this DocType
         doctype_logic_fields = []
@@ -21,7 +21,7 @@ def calculate_logic_fields(doc, method=None):
             try:
                 # Get the target DocType for this Logic Field
                 flansa_table = frappe.get_doc("Flansa Table", field.table_name)
-                if flansa_table.table_name == doc.doctype:
+                if flansa_table.doctype_name == doc.doctype:
                     doctype_logic_fields.append(field)
             except:
                 continue
@@ -29,24 +29,18 @@ def calculate_logic_fields(doc, method=None):
         if not doctype_logic_fields:
             return
         
-        # Calculate each Logic Field
-        engine = get_logic_engine()
-        
+        # Calculate each Logic Field using the proper calculation functions
         for logic_field in doctype_logic_fields:
             try:
-                # Get field data for calculation
-                field_data = {}
+                # Get the full Logic Field document for calculation
+                logic_field_doc = frappe.get_doc("Flansa Logic Field", logic_field.name)
                 
-                # Add all doc fields to the calculation context
-                for fieldname, value in doc.as_dict().items():
-                    if not fieldname.startswith('_'):
-                        field_data[fieldname] = value
-                
-                # Calculate the Logic Field value
-                result = engine.evaluate(logic_field.expression, field_data)
+                # Use the proper calculation function based on expression type
+                from flansa.flansa_core.api.table_api import calculate_field_value_by_type
+                calculated_value = calculate_field_value_by_type(doc, logic_field_doc)
                 
                 # Set the calculated value in the document
-                setattr(doc, logic_field.field_name, result)
+                setattr(doc, logic_field.field_name, calculated_value)
                 
             except Exception as calc_error:
                 # If calculation fails, set to None or error message

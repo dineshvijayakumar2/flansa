@@ -1041,19 +1041,41 @@ def populate_cached_field_background(doctype, logic_field_name):
 def calculate_field_value_by_type(doc, logic_field):
     """Calculate field value based on type"""
     
-    calc_type = getattr(logic_field, 'calculation_type', 'numerical')
     expression = logic_field.expression
     
-    if calc_type == 'numerical':
+    # Auto-detect calculation type from expression if not set
+    calc_type = getattr(logic_field, 'calculation_type', None)
+    if not calc_type:
+        calc_type = auto_detect_calculation_type(expression)
+    
+    if calc_type == 'fetch' or 'FETCH(' in expression.upper():
+        return calculate_fetch_field(doc, expression)
+    elif calc_type == 'lookup' or 'LOOKUP(' in expression.upper():
+        return calculate_lookup_field(doc, expression)
+    elif calc_type == 'summary' or any(func in expression.upper() for func in ['SUM(', 'COUNT(', 'AVERAGE(']):
+        return calculate_summary_field(doc, expression)
+    elif calc_type == 'numerical' or any(op in expression for op in ['+', '-', '*', '/', 'IF(']):
         return calculate_numerical_field(doc, expression)
     elif calc_type == 'text':
         return calculate_text_field(doc, expression)
-    elif calc_type == 'lookup':
-        return calculate_lookup_field(doc, expression)
-    elif calc_type == 'summary':
-        return calculate_summary_field(doc, expression)
     else:
-        return None
+        # Default to numerical calculation
+        return calculate_numerical_field(doc, expression)
+
+def auto_detect_calculation_type(expression):
+    """Auto-detect calculation type from expression"""
+    expression_upper = expression.upper()
+    
+    if 'FETCH(' in expression_upper:
+        return 'fetch'
+    elif 'LOOKUP(' in expression_upper:
+        return 'lookup'
+    elif any(func in expression_upper for func in ['SUM(', 'COUNT(', 'AVERAGE(', 'MAX(', 'MIN(']):
+        return 'summary'
+    elif any(op in expression for op in ['+', '-', '*', '/', 'IF(', 'AND(', 'OR(']):
+        return 'numerical'
+    else:
+        return 'text'
 
 def calculate_numerical_field(doc, expression):
     """Calculate numerical expressions"""
@@ -1073,6 +1095,34 @@ def calculate_text_field(doc, expression):
     except:
         return ""
 
+def calculate_fetch_field(doc, expression):
+    """Calculate fetch from linked field"""
+    try:
+        args = extract_function_args('FETCH', expression)
+        if len(args) >= 2:
+            link_field, target_field = args[0].strip(), args[1].strip()
+            
+            # Get the value from the link field
+            link_value = getattr(doc, link_field, None)
+            if link_value:
+                # Get the DocType of the link field
+                meta = frappe.get_meta(doc.doctype)
+                link_field_meta = None
+                
+                for field in meta.fields:
+                    if field.fieldname == link_field:
+                        link_field_meta = field
+                        break
+                
+                if link_field_meta and link_field_meta.fieldtype == 'Link':
+                    linked_doctype = link_field_meta.options
+                    result = frappe.db.get_value(linked_doctype, link_value, target_field)
+                    return result
+        return None
+    except Exception as e:
+        frappe.log_error(f"Error in calculate_fetch_field: {str(e)}")
+        return None
+
 def calculate_lookup_field(doc, expression):
     """Calculate lookup from parent table"""
     try:
@@ -1085,7 +1135,8 @@ def calculate_lookup_field(doc, expression):
                 result = frappe.db.get_value(table_name, field_value, target_field)
                 return result
         return None
-    except:
+    except Exception as e:
+        frappe.log_error(f"Error in calculate_lookup_field: {str(e)}")
         return None
 
 def calculate_summary_field(doc, expression):
