@@ -879,13 +879,11 @@ def create_field_from_template(table_name, template_id, template_data):
             "description": f"Generated from {template['name']} template"
         }
         
-        # Handle Link fields differently
+        # Handle Link fields differently - use direct DocType field creation
         formula = None
         if template_id == "link":
-            field_config.update({
-                "options": template_data.get("target_doctype"),
-                "read_only": 0
-            })
+            # For Link fields, use direct DocType field addition instead of Custom Fields
+            return create_link_field_direct(table_name, field_config, template_data)
         else:
             # Generate formula for calculated fields
             formula = generate_formula_from_template(template, template_data)
@@ -973,3 +971,53 @@ def is_float(value):
         return True
     except ValueError:
         return False
+
+def create_link_field_direct(table_name, field_config, template_data):
+    """Create Link field using direct DocType field addition (consistent with existing approach)"""
+    try:
+        # Get the Flansa Table document
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        if not flansa_table.doctype_name:
+            return {
+                "success": False,
+                "error": "DocType not generated for this table"
+            }
+        
+        # Import the safe field addition function from existing code
+        from flansa.flansa_core.doctype.flansa_relationship.flansa_relationship import safe_add_field_to_doctype
+        
+        # Prepare field definition for direct DocType addition
+        field_definition = {
+            "fieldname": field_config["field_name"],
+            "label": field_config["field_label"], 
+            "fieldtype": "Link",
+            "options": template_data.get("target_doctype"),
+            "reqd": field_config.get("reqd", 0),
+            "read_only": field_config.get("read_only", 0),
+            "description": field_config.get("description", ""),
+            "idx": len(frappe.get_meta(flansa_table.doctype_name).get("fields")) + 1
+        }
+        
+        # Add field directly to DocType
+        safe_add_field_to_doctype(flansa_table.doctype_name, field_definition)
+        
+        # Reload and save the DocType to apply changes
+        doctype_doc = frappe.get_doc("DocType", flansa_table.doctype_name)
+        doctype_doc.save()
+        
+        # Update database schema
+        frappe.db.updatedb(flansa_table.doctype_name)
+        
+        return {
+            "success": True,
+            "message": f"Link field '{field_config['field_label']}' created successfully",
+            "field_name": field_config["field_name"],
+            "approach": "direct_doctype"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error creating direct Link field: {str(e)}", "Logic Templates")
+        return {
+            "success": False,
+            "error": str(e)
+        }
