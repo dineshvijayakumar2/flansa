@@ -1576,7 +1576,7 @@ class EnhancedVisualBuilder {
                 args: {
                     doctype: 'Flansa Logic Field',
                     filters: {
-                        table_name: this.current_table,
+                        table_name: table_id || this.current_table,
                         field_name: field.field_name
                     },
                     fieldname: 'expression'
@@ -1749,7 +1749,7 @@ class EnhancedVisualBuilder {
                 frappe.call({
                     method: 'flansa.native_fields.edit_field_formula',
                     args: {
-                        table_name: this.current_table,
+                        table_name: table_id || this.current_table,
                         field_name: values.field_name,
                         new_formula: values.formula
                     },
@@ -1780,7 +1780,7 @@ class EnhancedVisualBuilder {
             frappe.call({
                 method: 'flansa.native_fields.add_basic_field_native',
                 args: {
-                    table_name: this.current_table,
+                    table_name: table_id || this.current_table,
                     field_config: field_config
                 },
                 callback: (r) => {
