@@ -2235,6 +2235,38 @@ class EnhancedVisualBuilder {
         this.show_unified_field_dialog(table_id);
     }
 
+    // Helper functions to parse Logic Field expressions
+    parse_fetch_source_field(expression) {
+        if (!expression) return '';
+        // Parse FETCH(source_field, target_field) pattern
+        const match = expression.match(/FETCH\s*\(\s*([^,]+)\s*,/);
+        return match ? match[1].trim() : '';
+    }
+    
+    parse_fetch_target_field(expression) {
+        if (!expression) return '';
+        // Parse FETCH(source_field, target_field) pattern
+        const match = expression.match(/FETCH\s*\([^,]+,\s*([^)]+)\s*\)/);
+        return match ? match[1].trim() : '';
+    }
+    
+    parse_link_target_doctype(options) {
+        // For Link fields, target is stored in options
+        return options || '';
+    }
+    
+    get_link_fields_for_table(table_id) {
+        // This would normally make an API call to get Link fields for the table
+        // For now, return empty array and populate dynamically
+        return [];
+    }
+    
+    get_available_doctypes() {
+        // This would normally make an API call to get available DocTypes
+        // For now, return empty array and populate dynamically  
+        return [];
+    }
+
     // Helper function to map logic_type to template_type
     map_logic_type_to_template(logic_type, field) {
         // First, try to detect from field name patterns
@@ -2312,6 +2344,10 @@ class EnhancedVisualBuilder {
         const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
         
         console.log(is_edit_mode && is_logic_field ? `Creating unified dialog for Logic Field: ${field.field_name} (${logic_field_template})` : 'Creating unified dialog for standard field');
+        
+        // Pre-populate options for different field types
+        const fetch_source_options = is_logic_field && logic_field_template === 'fetch' ? this.get_link_fields_for_table(table_id) : [];
+        const link_target_options = is_logic_field && logic_field_template === 'link' ? this.get_available_doctypes() : [];
         
         const dialog = new frappe.ui.Dialog({
             title: dialog_title,
@@ -2397,7 +2433,25 @@ class EnhancedVisualBuilder {
                     depends_on: `eval:${logic_field_template === 'link' ? 'true' : 'false'}`
                 },
                 {
-                    label: 'Fetch Expression',
+                    label: 'Source Link Field',
+                    fieldname: 'fetch_source_field',
+                    fieldtype: 'Data',
+                    read_only: 1,
+                    default: logic_field_template === 'fetch' ? this.parse_fetch_source_field(field.expression) : '',
+                    description: 'Link field used to fetch data from',
+                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Target Field',
+                    fieldname: 'fetch_target_field', 
+                    fieldtype: 'Data',
+                    read_only: 1,
+                    default: logic_field_template === 'fetch' ? this.parse_fetch_target_field(field.expression) : '',
+                    description: 'Field fetched from the linked record',
+                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Raw Expression',
                     fieldname: 'fetch_expression',
                     fieldtype: 'Data',
                     read_only: 1,
