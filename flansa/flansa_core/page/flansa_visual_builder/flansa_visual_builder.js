@@ -1793,13 +1793,13 @@ class EnhancedVisualBuilder {
         console.log("Showing template wizard for:", template_id);
         
         if (template_id === 'link') {
-            this.show_link_wizard(table_id);
+            this.show_unified_field_dialog(table_id, null, 'link');
         } else if (template_id === 'fetch') {
-            this.show_fetch_wizard(table_id);
+            this.show_unified_field_dialog(table_id, null, 'fetch');
         } else if (template_id === 'rollup') {
-            this.show_rollup_wizard(table_id);
+            this.show_unified_field_dialog(table_id, null, 'rollup');
         } else if (template_id === 'formula') {
-            this.show_formula_wizard(table_id);
+            this.show_unified_field_dialog(table_id, null, 'formula');
         } else {
             // Fallback to basic dialog with template hint
             this.show_unified_field_dialog(table_id, null, template);
@@ -2267,63 +2267,148 @@ class EnhancedVisualBuilder {
         return [];
     }
     
+    
     update_fetch_expression(dialog) {
-        // Generate FETCH expression from selected source and target fields
-        const source_field = dialog.get_value('fetch_source_field');
-        const target_field = dialog.get_value('fetch_target_field');
-        
-        if (source_field && target_field) {
-            const expression = `FETCH(${source_field}, ${target_field})`;
+        try {
+            // Get selected values (fieldname for source, label for target)
+            const source_fieldname = dialog.get_value('fetch_source_field');
+            const target_label = dialog.get_value('fetch_target_field');
+            
+            if (!source_fieldname || !target_label) {
+                console.log('Missing source or target selection');
+                return;
+            }
+            
+            // Convert target label to fieldname using stored data
+            const target_fields_data = dialog._unified_target_fields_data;
+            if (!target_fields_data) {
+                console.warn('No target fields data available');
+                return;
+            }
+            
+            const target_field = target_fields_data.find(f => (f.label || f.fieldname) === target_label);
+            if (!target_field) {
+                console.warn('Target field not found for label:', target_label);
+                return;
+            }
+            
+            const target_fieldname = target_field.fieldname;
+            const expression = `FETCH(${source_fieldname}, ${target_fieldname})`;
             dialog.set_value('fetch_expression', expression);
-            console.log(`Updated FETCH expression: ${expression}`);
+            console.log(`✅ Updated FETCH expression: ${expression}`);
+        } catch (error) {
+            console.error('Error updating FETCH expression:', error);
         }
     }
     
     load_fetch_field_options(dialog, table_id) {
-        // Load available Link fields for the source dropdown
-        frappe.call({
-            method: 'flansa.native_fields.get_table_fields_native',
-            args: { table_name: table_id },
-            callback: (r) => {
-                if (r.message && r.message.success) {
-                    // Filter for Link fields only
-                    const link_fields = r.message.fields.filter(f => f.fieldtype === 'Link');
-                    const source_options = link_fields.map(f => ({ 
-                        label: f.label || f.fieldname, 
-                        value: f.fieldname 
-                    }));
-                    
-                    // Set options for source field dropdown
-                    const source_field = dialog.get_field('fetch_source_field');
-                    if (source_field) {
-                        source_field.df.options = source_options.map(opt => opt.value).join('\n');
-                        source_field.refresh();
-                        console.log(`Loaded ${source_options.length} source link fields`);
-                    }
-                    
-                    // Load target fields for currently selected source (if any)
-                    const current_source = dialog.get_value('fetch_source_field');
-                    if (current_source) {
-                        this.load_target_field_options(dialog, current_source);
+        try {
+            console.log(`Loading fetch field options for table: ${table_id}`, dialog);
+            
+            if (!dialog || typeof dialog.get_field !== 'function') {
+                console.error('Dialog object is invalid in load_fetch_field_options:', dialog);
+                return;
+            }
+            
+            // Load available Link fields for the source dropdown
+            frappe.call({
+                method: 'flansa.native_fields.get_table_fields_native',
+                args: { table_name: table_id },
+                callback: (r) => {
+                    try {
+                        if (r.message && r.message.success) {
+                            // Filter for Link fields only
+                            const link_fields = r.message.fields.filter(f => f.fieldtype === 'Link');
+                            const source_options = link_fields.map(f => ({ 
+                                label: f.label || f.fieldname, 
+                                value: f.fieldname 
+                            }));
+                            
+                            // Store source fields data for target field loading
+                            dialog._unified_source_fields_data = link_fields;
+                            
+                            // Set options for source field dropdown
+                            const source_field = dialog.get_field('fetch_source_field');
+                            if (source_field && source_field.df) {
+                                source_field.df.options = source_options.map(opt => opt.value).join('\n');
+                                source_field.refresh();
+                                console.log(`✅ Loaded ${source_options.length} source link fields`);
+                            } else {
+                                console.warn('Source field not found or invalid:', source_field);
+                            }
+                            
+                            // Target fields will be loaded when user selects a source field
+                            console.log('✅ Source field options loaded. Target fields will load on source selection.');
+                        } else {
+                            console.warn('Failed to load table fields:', r);
+                        }
+                    } catch (error) {
+                        console.error('Error in fetch field options callback:', error);
                     }
                 }
-            }
-        });
+            });
+        } catch (error) {
+            console.error('Error in load_fetch_field_options:', error);
+        }
     }
     
-    load_target_field_options(dialog, source_field_name) {
-        // This would load available fields from the target DocType
-        // For now, we'll show common field names
-        const common_target_fields = [
-            'name', 'title', 'full_name', 'customer_name', 'item_name', 
-            'description', 'status', 'email', 'phone', 'sku'
-        ];
-        
-        const target_field = dialog.get_field('fetch_target_field');
-        if (target_field) {
-            target_field.df.options = common_target_fields.join('\n');
-            target_field.refresh();
-            console.log(`Loaded target field options for: ${source_field_name}`);
+    load_unified_target_fields(dialog, table_id) {
+        try {
+            const source_field_value = dialog.get_value('fetch_source_field');
+            if (!source_field_value) {
+                console.log('No source field selected');
+                return;
+            }
+            
+            console.log(`Loading target fields for source: ${source_field_value}`);
+            
+            // Find the source field data from stored options
+            const source_fields_data = dialog._unified_source_fields_data;
+            if (!source_fields_data) {
+                console.warn('No source fields data stored');
+                return;
+            }
+            
+            const source_field = source_fields_data.find(f => f.fieldname === source_field_value);
+            if (!source_field || !source_field.options) {
+                console.warn('Source field not found or has no options:', source_field);
+                return;
+            }
+            
+            console.log(`Found source field with target DocType: ${source_field.options}`);
+            
+            // Load fields from the target DocType using the same API as existing fetch wizard
+            frappe.call({
+                method: 'flansa.logic_templates.get_linked_table_fields',
+                args: { linked_doctype: source_field.options },
+                callback: (r) => {
+                    try {
+                        console.log('Target fields response:', r);
+                        if (r.message && r.message.success) {
+                            const fields = r.message.fields;
+                            if (fields && fields.length > 0) {
+                                // Store target fields data for later lookup
+                                dialog._unified_target_fields_data = fields;
+                                
+                                // Show field labels in dropdown (same as existing pattern)
+                                const options = fields.map(f => f.label || f.fieldname).join('\n');
+                                dialog.set_df_property('fetch_target_field', 'options', options);
+                                console.log(`✅ Loaded ${fields.length} target field options`);
+                            } else {
+                                dialog.set_df_property('fetch_target_field', 'options', '');
+                                dialog._unified_target_fields_data = [];
+                                console.warn('No fields found in target DocType');
+                            }
+                        } else {
+                            console.warn('Failed to load target fields:', r);
+                        }
+                    } catch (error) {
+                        console.error('Error in target fields callback:', error);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error in load_unified_target_fields:', error);
         }
     }
 
@@ -2360,8 +2445,9 @@ class EnhancedVisualBuilder {
             // For edit mode, first detect if it's a Logic Field and then create appropriate dialog
             this.detect_and_show_field_dialog(table_id, field);
         } else {
-            // For create mode, show standard dialog
-            this.create_unified_dialog(table_id, field, false, null);
+            // For create mode, check if we have a template hint for Logic Fields
+            const is_logic_field = template_hint && ['link', 'fetch', 'formula', 'rollup'].includes(template_hint);
+            this.create_unified_dialog(table_id, field, is_logic_field, template_hint);
         }
     }
     
@@ -2403,7 +2489,25 @@ class EnhancedVisualBuilder {
         const is_edit_mode = !!field;
         const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
         
-        console.log(is_edit_mode && is_logic_field ? `Creating unified dialog for Logic Field: ${field.field_name} (${logic_field_template})` : 'Creating unified dialog for standard field');
+        // Special handling for regular Link fields in edit mode
+        const is_link_field = is_edit_mode && field.field_type === 'Link';
+        const show_link_controls = is_logic_field && logic_field_template === 'link' || is_link_field;
+        
+        // Debug logging for Link field detection
+        if (is_edit_mode) {
+            console.log('🔍 Field Detection Debug:', {
+                field_name: field.field_name,
+                field_type: field.field_type,
+                is_logic_field: is_logic_field,
+                logic_field_template: logic_field_template,
+                is_link_field: is_link_field,
+                show_link_controls: show_link_controls
+            });
+        }
+        
+        console.log(is_edit_mode && (is_logic_field || is_link_field) ? 
+            `Creating unified dialog for ${is_logic_field ? 'Logic' : 'Regular'} Field: ${field.field_name} (${logic_field_template || 'link'})` : 
+            'Creating unified dialog for standard field');
         
         // Pre-populate options for different field types
         const fetch_source_options = is_logic_field && logic_field_template === 'fetch' ? this.get_link_fields_for_table(table_id) : [];
@@ -2485,21 +2589,47 @@ class EnhancedVisualBuilder {
                     depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
                 },
                 {
-                    label: 'Link Target',
-                    fieldname: 'link_target',
-                    fieldtype: 'Data',
-                    default: logic_field_template === 'link' ? (field.options || '') : '',
-                    description: 'Target DocType for this Link field',
-                    depends_on: `eval:${logic_field_template === 'link' ? 'true' : 'false'}`
+                    label: 'Link Scope',
+                    fieldname: 'link_scope',
+                    fieldtype: 'Select',
+                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
+                    default: (logic_field_template === 'link' || is_link_field) ? 'Current App' : '',
+                    reqd: (logic_field_template === 'link' || is_link_field) ? 1 : 0,
+                    description: 'Choose the scope of tables to link to',
+                    depends_on: `eval:${logic_field_template === 'link' || is_link_field ? 'true' : 'false'}`,
+                    change: () => {
+                        this.load_target_tables(dialog, table_id);
+                    }
+                },
+                {
+                    label: 'Select App',
+                    fieldname: 'target_app',
+                    fieldtype: 'Select',
+                    description: 'Choose the Flansa app to select tables from',
+                    depends_on: `eval:${logic_field_template === 'link' || is_link_field ? 'doc.link_scope === "Other Flansa Apps"' : 'false'}`,
+                    change: () => {
+                        this.handle_app_selection_change(dialog);
+                    }
+                },
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_doctype',
+                    fieldtype: 'Select',
+                    reqd: (logic_field_template === 'link' || is_link_field) ? 1 : 0,
+                    description: 'Table/DocType to link to',
+                    depends_on: `eval:${logic_field_template === 'link' || is_link_field ? 'true' : 'false'}`,
+                    default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : ''
                 },
                 {
                     label: 'Source Link Field',
                     fieldname: 'fetch_source_field',
                     fieldtype: 'Select',
-                    default: logic_field_template === 'fetch' ? this.parse_fetch_source_field(field.expression) : '',
+                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_source_field(field.expression) : '',
                     description: 'Link field to fetch data from',
                     depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`,
                     change: () => {
+                        // Load target fields for the selected source
+                        this.load_unified_target_fields(dialog, table_id);
                         // Update FETCH expression when source field changes
                         this.update_fetch_expression(dialog);
                     }
@@ -2508,7 +2638,7 @@ class EnhancedVisualBuilder {
                     label: 'Target Field',
                     fieldname: 'fetch_target_field', 
                     fieldtype: 'Select',
-                    default: logic_field_template === 'fetch' ? this.parse_fetch_target_field(field.expression) : '',
+                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_target_field(field.expression) : '',
                     description: 'Field to fetch from the linked record',
                     depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`,
                     change: () => {
@@ -2521,14 +2651,14 @@ class EnhancedVisualBuilder {
                     fieldname: 'fetch_expression',
                     fieldtype: 'Data',
                     read_only: 1,
-                    default: logic_field_template === 'fetch' ? (field.expression || '') : '',
+                    default: logic_field_template === 'fetch' && field ? (field.expression || '') : '',
                     description: 'Auto-generated FETCH expression based on selections above',
                     depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
                 },
                 {
                     fieldtype: 'Section Break',
                     label: 'Formula (Optional)',
-                    depends_on: `eval:${is_edit_mode && is_logic_field ? 'false' : 'true'}`
+                    depends_on: `eval:${is_logic_field && logic_field_template !== 'formula' ? 'false' : 'true'}`
                 },
                 {
                     label: 'Formula',
@@ -2537,7 +2667,7 @@ class EnhancedVisualBuilder {
                     default: is_edit_mode && is_logic_field && logic_field_template === 'formula' ? field.expression : '',
                     description: 'Add formula to make this a calculated field (e.g., price * quantity)',
                     language: 'javascript',
-                    depends_on: `eval:${is_edit_mode && is_logic_field ? (logic_field_template === 'formula' ? 'true' : 'false') : 'true'}`
+                    depends_on: `eval:${is_logic_field && logic_field_template !== 'formula' ? 'false' : 'true'}`
                 },
                 {
                     fieldtype: 'Section Break',
@@ -2580,15 +2710,49 @@ class EnhancedVisualBuilder {
         
         dialog.show();
         
-        // Load dropdown options for Logic Fields after dialog is shown
-        if (is_logic_field && logic_field_template === 'fetch') {
-            this.load_fetch_field_options(dialog, table_id);
+        // Load dropdown options for Logic Fields and Link fields after dialog is shown
+        if (is_logic_field || (logic_field_template === 'link') || is_link_field) {
+            setTimeout(() => {
+                if (logic_field_template === 'fetch') {
+                    this.load_fetch_field_options(dialog, table_id);
+                } else if (logic_field_template === 'link' || is_link_field) {
+                    this.load_target_tables(dialog, table_id);
+                    
+                    // If editing Link field (Logic or regular), pre-populate the selections
+                    if (is_edit_mode && field && field.options) {
+                        this.pre_populate_link_field_values(dialog, field.options, table_id);
+                    }
+                }
+                // Add other field types as needed
+            }, 500); // Give dialog time to fully initialize
         }
         
-        // Set up formula field visibility based on read-only
+        // Set up formula field visibility and read-only behavior
         setTimeout(() => {
             const formula_field = dialog.get_field('formula');
             const read_only_field = dialog.get_field('read_only');
+            
+            // For logic type fields (link, fetch, rollup) and regular Link fields, make formula field read-only
+            if (formula_field && ((is_logic_field && ['link', 'fetch', 'rollup'].includes(logic_field_template)) || is_link_field)) {
+                formula_field.df.read_only = 1;
+                formula_field.refresh();
+                
+                // Set formula value based on field type for display purposes
+                if (is_edit_mode && field) {
+                    let formula_display = '';
+                    if ((logic_field_template === 'link' || is_link_field) && field.options) {
+                        formula_display = `LINK(${field.options})`;
+                    } else if (logic_field_template === 'fetch' && field.calculation_method) {
+                        formula_display = field.calculation_method;
+                    } else if (logic_field_template === 'rollup' && field.calculation_method) {
+                        formula_display = field.calculation_method;
+                    }
+                    
+                    if (formula_display) {
+                        dialog.set_value('formula', formula_display);
+                    }
+                }
+            }
             
             if (formula_field && read_only_field) {
                 read_only_field.$input.on('change', () => {
@@ -3560,34 +3724,122 @@ class EnhancedVisualBuilder {
     }
     
     delete_field(table_id, field_name) {
-        frappe.confirm('Delete field: ' + field_name + '?', () => {
+        // Always show initial confirmation
+        frappe.confirm(`Delete field: ${field_name}?`, () => {
+            // First, try smart delete to check for dependencies
             frappe.call({
-                method: 'flansa.native_fields.delete_field_native',
+                method: 'flansa.flansa_core.api.table_api.smart_delete_field',
                 args: {
                     table_name: table_id,
-                    field_name: field_name
+                    field_name: field_name,
+                    force_cascade: false
                 },
                 callback: (r) => {
                     if (r.message && r.message.success) {
+                        // Successful deletion
                         frappe.show_alert({
                             message: '✅ ' + r.message.message,
                             indicator: 'green'
                         });
-                        if (r.message.details) {
-                            console.log('Field operation details:', r.message.details);
-                        }
-                        // Set flag to force cache refresh since we modified fields
+                        
+                        // Force comprehensive cache refresh and reload table data with proper delay
                         this.force_cache_refresh = true;
-                        this.load_table_fields(table_id);
+                        
+                        // Clear browser cache if available
+                        if (window.frappe && frappe.clear_cache) {
+                            frappe.clear_cache();
+                        }
+                        
+                        // Use longer delay to ensure database changes are fully committed
+                        setTimeout(() => {
+                            this.load_table_data(table_id);
+                        }, 300);
+                    } else if (r.message && r.message.requires_confirmation) {
+                        // Has dependencies, show additional confirmation dialog
+                        this.show_cascade_delete_confirmation(table_id, field_name, r.message);
                     } else {
+                        // Error
                         frappe.msgprint({
-                            title: 'Operation Failed',
-                            message: r.message.error || 'Failed to delete field',
+                            title: 'Delete Failed',
+                            message: r.message?.error || r.message?.message || 'Failed to delete field',
                             indicator: 'red'
                         });
                     }
                 }
             });
+        });
+    }
+
+    show_cascade_delete_confirmation(table_id, field_name, info) {
+        const dependents_html = info.dependents.map(dep => 
+            `<li><strong>${dep.field_name}</strong> (${dep.logic_type}): <code>${dep.expression}</code></li>`
+        ).join('');
+
+        const confirmation_html = `
+            <div style="margin-bottom: 15px;">
+                <p><strong>⚠️ Warning:</strong> Field <code>${field_name}</code> has dependent fields that will also be deleted:</p>
+                <ul style="margin: 10px 0; padding-left: 20px; background: #fff3cd; padding: 10px; border-radius: 4px;">
+                    ${dependents_html}
+                </ul>
+                <p>Do you want to delete <strong>${field_name}</strong> and all its dependent fields?</p>
+            </div>
+        `;
+
+        const dialog = new frappe.ui.Dialog({
+            title: `Delete Field: ${field_name}`,
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'confirmation_html',
+                    options: confirmation_html
+                }
+            ],
+            primary_action_label: 'Delete All',
+            primary_action: () => {
+                dialog.hide();
+                this.execute_cascade_delete(table_id, field_name);
+            },
+            secondary_action_label: 'Cancel'
+        });
+
+        dialog.show();
+    }
+
+    execute_cascade_delete(table_id, field_name) {
+        frappe.call({
+            method: 'flansa.flansa_core.api.table_api.smart_delete_field',
+            args: {
+                table_name: table_id,
+                field_name: field_name,
+                force_cascade: true
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    frappe.show_alert({
+                        message: '✅ ' + r.message.message,
+                        indicator: 'green'
+                    });
+                    
+                    // Force comprehensive cache refresh and reload table data with proper delay
+                    this.force_cache_refresh = true;
+                    
+                    // Clear browser cache if available
+                    if (window.frappe && frappe.clear_cache) {
+                        frappe.clear_cache();
+                    }
+                    
+                    // Use longer delay to ensure database changes are fully committed
+                    setTimeout(() => {
+                        this.load_table_data(table_id);
+                    }, 300);
+                } else {
+                    frappe.msgprint({
+                        title: 'Delete Failed',
+                        message: r.message?.error || r.message?.message || 'Failed to delete field',
+                        indicator: 'red'
+                    });
+                }
+            }
         });
     }
     
@@ -5743,6 +5995,76 @@ class EnhancedVisualBuilder {
             }
         } catch (error) {
             console.warn("Could not pre-populate fetch values:", error);
+        }
+    }
+    
+    // Pre-populate Link field values in edit mode
+    pre_populate_link_field_values(dialog, target_doctype, table_id) {
+        try {
+            console.log("Pre-populating Link field values for target:", target_doctype);
+            
+            // First, we need to determine which scope this target belongs to
+            frappe.call({
+                method: 'flansa.logic_templates.get_link_wizard_data',
+                args: { table_name: table_id },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        const { current_app_tables, other_apps_data, system_tables } = r.message;
+                        
+                        // Check Current App first
+                        const current_app_match = current_app_tables?.find(t => t.value === target_doctype);
+                        if (current_app_match) {
+                            dialog.set_value('link_scope', 'Current App');
+                            setTimeout(() => {
+                                dialog.set_value('target_doctype', target_doctype);
+                            }, 300);
+                            return;
+                        }
+                        
+                        // Check Other Flansa Apps
+                        if (other_apps_data) {
+                            for (const [app_name, tables] of Object.entries(other_apps_data)) {
+                                const app_match = tables.find(t => t.value === target_doctype);
+                                if (app_match) {
+                                    dialog.set_value('link_scope', 'Other Flansa Apps');
+                                    
+                                    // Wait for app dropdown to populate, then set app
+                                    setTimeout(() => {
+                                        dialog.set_value('target_app', app_name);
+                                        // Wait for table dropdown to populate, then set table
+                                        setTimeout(() => {
+                                            dialog.set_value('target_doctype', target_doctype);
+                                        }, 500);
+                                    }, 300);
+                                    return;
+                                }
+                            }
+                        }
+                        
+                        // Check System Tables
+                        const system_match = system_tables?.find(t => t.value === target_doctype);
+                        if (system_match) {
+                            dialog.set_value('link_scope', 'System Tables');
+                            setTimeout(() => {
+                                dialog.set_value('target_doctype', target_doctype);
+                            }, 300);
+                            return;
+                        }
+                        
+                        // If not found in any scope, default to Current App and show the value anyway
+                        console.warn("Target doctype not found in any scope, defaulting to Current App");
+                        dialog.set_value('link_scope', 'Current App');
+                        setTimeout(() => {
+                            dialog.set_value('target_doctype', target_doctype);
+                        }, 300);
+                        
+                    } else {
+                        console.error("Failed to load link wizard data for pre-population");
+                    }
+                }
+            });
+        } catch (error) {
+            console.warn("Could not pre-populate Link field values:", error);
         }
     }
     

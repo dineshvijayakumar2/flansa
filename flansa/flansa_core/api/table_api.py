@@ -1376,3 +1376,212 @@ def update_logic_field(table_name, field_name, field_label=None, calculation_met
             "error": str(e)
         }
 
+@frappe.whitelist()
+def smart_delete_field(table_name, field_name, force_cascade=False):
+    """
+    Smart field deletion that handles different field types appropriately
+    """
+    try:
+        # Handle force_cascade parameter properly
+        if isinstance(force_cascade, str):
+            force_cascade = force_cascade.lower() in ('true', '1', 'yes')
+        else:
+            force_cascade = bool(force_cascade)
+        
+        # Step 1: Detect field type
+        field_info = _detect_field_type(table_name, field_name)
+        
+        # Step 2: Find dependent fields
+        dependents = _find_dependent_fields(table_name, field_name)
+        
+        # Step 3: Check for dependents and get user confirmation if needed
+        if dependents and not force_cascade:
+            return {
+                "success": False,
+                "requires_confirmation": True,
+                "message": f"Field '{field_name}' has {len(dependents)} dependent field(s) that will also be deleted",
+                "dependents": [
+                    {
+                        "field_name": dep["field_name"],
+                        "logic_type": dep["logic_type"],
+                        "expression": dep["expression"]
+                    } for dep in dependents
+                ],
+                "field_type": field_info['type']
+            }
+        
+        # Step 4: Perform the deletion
+        deleted_fields = []
+        
+        # Delete dependent fields first
+        if dependents:
+            for dep in dependents:
+                result = _delete_single_field(table_name, dep['field_name'], field_info['doctype_name'])
+                if result:
+                    deleted_fields.append(dep['field_name'])
+        
+        # Delete the main field
+        result = _delete_single_field(table_name, field_name, field_info['doctype_name'])
+        if result:
+            deleted_fields.append(field_name)
+        
+        # Ensure all changes are committed and database is updated
+        frappe.db.commit()
+        
+        # Clear comprehensive caches for better refresh
+        frappe.clear_cache(doctype=field_info['doctype_name'])
+        frappe.clear_cache()  # Clear global cache too
+        
+        # Additional cache clearing for Custom Fields
+        if hasattr(frappe.local, 'meta_cache'):
+            frappe.local.meta_cache.pop(field_info['doctype_name'], None)
+        
+        return {
+            "success": True,
+            "message": f"Successfully deleted field '{field_name}'" + 
+                      (f" and {len(dependents)} dependent field(s)" if dependents else ""),
+            "deleted_fields": deleted_fields,
+            "field_type": field_info['type'],
+            "doctype_name": field_info['doctype_name']  # Include for better refresh
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(f"Smart delete error: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "message": f"Failed to delete field '{field_name}': {str(e)}"
+        }
+
+def _detect_field_type(table_name, field_name):
+    """Detect field type and deletion strategy"""
+    # Get table DocType name
+    table_doc = frappe.get_doc("Flansa Table", table_name)
+    doctype_name = table_doc.doctype_name
+    
+    # Check if Logic Field exists
+    logic_field = frappe.get_value("Flansa Logic Field", 
+                                  {"table_name": table_name, "field_name": field_name},
+                                  ["name", "logic_type", "expression"])
+    
+    # Check if Custom Field exists
+    custom_field = frappe.get_value("Custom Field", 
+                                   {"dt": doctype_name, "fieldname": field_name})
+    
+    # Check if regular DocType field exists
+    meta = frappe.get_meta(doctype_name)
+    doctype_field_meta = next((f for f in meta.fields if f.fieldname == field_name), None)
+    
+    field_info = {
+        'field_name': field_name,
+        'table_name': table_name,
+        'doctype_name': doctype_name,
+        'logic_field': logic_field,
+        'custom_field': custom_field,
+        'doctype_field': doctype_field_meta,
+        'field_type': doctype_field_meta.fieldtype if doctype_field_meta else None
+    }
+    
+    # Determine field type
+    if logic_field and doctype_field_meta:
+        field_info['type'] = 'logic_field_with_doctype'
+        field_info['logic_type'] = logic_field[1] if len(logic_field) > 1 else 'Unknown'
+    elif logic_field and custom_field:
+        field_info['type'] = 'logic_field_with_custom'
+        field_info['logic_type'] = logic_field[1] if len(logic_field) > 1 else 'Unknown'
+    elif custom_field:
+        field_info['type'] = 'custom_field_only'
+    elif doctype_field_meta:
+        field_info['type'] = 'doctype_field_only'
+    else:
+        field_info['type'] = 'unknown'
+    
+    return field_info
+
+def _find_dependent_fields(table_name, field_name):
+    """Find fields that depend on this field"""
+    dependent_logic_fields = frappe.get_all("Flansa Logic Field",
+                                           filters=[
+                                               ["table_name", "=", table_name],
+                                               ["expression", "like", f"%{field_name}%"]
+                                           ],
+                                           fields=["name", "field_name", "logic_type", "expression"])
+    
+    dependents = []
+    for dlf in dependent_logic_fields:
+        if dlf.field_name != field_name and field_name in dlf.expression:
+            dependents.append({
+                'field_name': dlf.field_name,
+                'logic_type': dlf.logic_type,
+                'expression': dlf.expression,
+                'logic_field_name': dlf.name
+            })
+    
+    return dependents
+
+def _delete_single_field(table_name, field_name, doctype_name):
+    """Delete a single field based on its type"""
+    field_info = _detect_field_type(table_name, field_name)
+    
+    try:
+        if field_info['type'] == 'logic_field_with_doctype':
+            # Remove from DocType FIRST (important for proper cleanup)
+            _remove_field_from_doctype(doctype_name, field_name)
+            
+            # Then delete Logic Field record
+            if field_info['logic_field']:
+                frappe.delete_doc("Flansa Logic Field", field_info['logic_field'][0], force=True)
+            
+        elif field_info['type'] == 'logic_field_with_custom':
+            # Delete Custom Field FIRST with proper error handling
+            if field_info['custom_field']:
+                # Use direct database deletion for more reliable results
+                frappe.db.delete("Custom Field", {"name": field_info['custom_field']})
+                frappe.db.commit()  # Immediate commit for Custom Field
+                
+                # Clear DocType cache to reflect Custom Field removal
+                frappe.clear_cache(doctype=doctype_name)
+            
+            # Then delete Logic Field record  
+            if field_info['logic_field']:
+                frappe.delete_doc("Flansa Logic Field", field_info['logic_field'][0], force=True)
+                frappe.db.commit()  # Commit Logic Field deletion
+                
+        elif field_info['type'] == 'custom_field_only':
+            if field_info['custom_field']:
+                # Use direct database deletion for better reliability
+                frappe.db.delete("Custom Field", {"name": field_info['custom_field']})
+                frappe.db.commit()
+                frappe.clear_cache(doctype=doctype_name)
+                
+        elif field_info['type'] == 'doctype_field_only':
+            _remove_field_from_doctype(doctype_name, field_name)
+            
+        # Final commit and cache clear
+        frappe.db.commit()
+        frappe.clear_cache(doctype=doctype_name)
+        
+        return True
+        
+    except Exception as e:
+        frappe.log_error(f"Error in _delete_single_field for {field_name}: {str(e)}")
+        frappe.db.rollback()
+        return False
+
+def _remove_field_from_doctype(doctype_name, field_name):
+    """Remove a field from DocType definition"""
+    doctype_doc = frappe.get_doc("DocType", doctype_name)
+    
+    # Find and remove the field
+    field_to_remove = None
+    for field in doctype_doc.fields:
+        if field.fieldname == field_name:
+            field_to_remove = field
+            break
+    
+    if field_to_remove:
+        doctype_doc.fields.remove(field_to_remove)
+        doctype_doc.save()
+        frappe.db.commit()
+
