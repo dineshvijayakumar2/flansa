@@ -2266,6 +2266,66 @@ class EnhancedVisualBuilder {
         // For now, return empty array and populate dynamically  
         return [];
     }
+    
+    update_fetch_expression(dialog) {
+        // Generate FETCH expression from selected source and target fields
+        const source_field = dialog.get_value('fetch_source_field');
+        const target_field = dialog.get_value('fetch_target_field');
+        
+        if (source_field && target_field) {
+            const expression = `FETCH(${source_field}, ${target_field})`;
+            dialog.set_value('fetch_expression', expression);
+            console.log(`Updated FETCH expression: ${expression}`);
+        }
+    }
+    
+    load_fetch_field_options(dialog, table_id) {
+        // Load available Link fields for the source dropdown
+        frappe.call({
+            method: 'flansa.native_fields.get_table_fields_native',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    // Filter for Link fields only
+                    const link_fields = r.message.fields.filter(f => f.fieldtype === 'Link');
+                    const source_options = link_fields.map(f => ({ 
+                        label: f.label || f.fieldname, 
+                        value: f.fieldname 
+                    }));
+                    
+                    // Set options for source field dropdown
+                    const source_field = dialog.get_field('fetch_source_field');
+                    if (source_field) {
+                        source_field.df.options = source_options.map(opt => opt.value).join('\n');
+                        source_field.refresh();
+                        console.log(`Loaded ${source_options.length} source link fields`);
+                    }
+                    
+                    // Load target fields for currently selected source (if any)
+                    const current_source = dialog.get_value('fetch_source_field');
+                    if (current_source) {
+                        this.load_target_field_options(dialog, current_source);
+                    }
+                }
+            }
+        });
+    }
+    
+    load_target_field_options(dialog, source_field_name) {
+        // This would load available fields from the target DocType
+        // For now, we'll show common field names
+        const common_target_fields = [
+            'name', 'title', 'full_name', 'customer_name', 'item_name', 
+            'description', 'status', 'email', 'phone', 'sku'
+        ];
+        
+        const target_field = dialog.get_field('fetch_target_field');
+        if (target_field) {
+            target_field.df.options = common_target_fields.join('\n');
+            target_field.refresh();
+            console.log(`Loaded target field options for: ${source_field_name}`);
+        }
+    }
 
     // Helper function to map logic_type to template_type
     map_logic_type_to_template(logic_type, field) {
@@ -2435,28 +2495,34 @@ class EnhancedVisualBuilder {
                 {
                     label: 'Source Link Field',
                     fieldname: 'fetch_source_field',
-                    fieldtype: 'Data',
-                    read_only: 1,
+                    fieldtype: 'Select',
                     default: logic_field_template === 'fetch' ? this.parse_fetch_source_field(field.expression) : '',
-                    description: 'Link field used to fetch data from',
-                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
+                    description: 'Link field to fetch data from',
+                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`,
+                    change: () => {
+                        // Update FETCH expression when source field changes
+                        this.update_fetch_expression(dialog);
+                    }
                 },
                 {
                     label: 'Target Field',
                     fieldname: 'fetch_target_field', 
-                    fieldtype: 'Data',
-                    read_only: 1,
+                    fieldtype: 'Select',
                     default: logic_field_template === 'fetch' ? this.parse_fetch_target_field(field.expression) : '',
-                    description: 'Field fetched from the linked record',
-                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
+                    description: 'Field to fetch from the linked record',
+                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`,
+                    change: () => {
+                        // Update FETCH expression when target field changes
+                        this.update_fetch_expression(dialog);
+                    }
                 },
                 {
-                    label: 'Raw Expression',
+                    label: 'FETCH Expression',
                     fieldname: 'fetch_expression',
                     fieldtype: 'Data',
                     read_only: 1,
                     default: logic_field_template === 'fetch' ? (field.expression || '') : '',
-                    description: 'FETCH expression for this field',
+                    description: 'Auto-generated FETCH expression based on selections above',
                     depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
                 },
                 {
@@ -2513,6 +2579,11 @@ class EnhancedVisualBuilder {
         });
         
         dialog.show();
+        
+        // Load dropdown options for Logic Fields after dialog is shown
+        if (is_logic_field && logic_field_template === 'fetch') {
+            this.load_fetch_field_options(dialog, table_id);
+        }
         
         // Set up formula field visibility based on read-only
         setTimeout(() => {
