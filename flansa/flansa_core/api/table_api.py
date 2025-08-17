@@ -1313,7 +1313,7 @@ def test_logic_field(expression, sample_data=None):
         }
 
 @frappe.whitelist()
-def update_logic_field(table_name, field_name, field_label=None, calculation_method=None, options=None, template_type=None):
+def update_logic_field(table_name, field_name, field_label=None, calculation_method=None, options=None, template_type=None, logic_type=None):
     """Update an existing Logic Field"""
     try:
         # Find the Logic Field document
@@ -1333,6 +1333,9 @@ def update_logic_field(table_name, field_name, field_label=None, calculation_met
         
         if calculation_method:
             logic_field.expression = calculation_method
+            
+        if logic_type:
+            logic_field.logic_type = logic_type
         
         # Save the Logic Field
         logic_field.save()

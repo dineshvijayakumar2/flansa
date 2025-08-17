@@ -2235,6 +2235,31 @@ class EnhancedVisualBuilder {
         this.show_unified_field_dialog(table_id);
     }
 
+    // Helper function to map logic_type to template_type
+    map_logic_type_to_template(logic_type, field) {
+        // First, try to detect from field name patterns
+        if (field.field_name.includes('logic_link') && field.field_type === 'Link') {
+            return 'link';
+        } else if (field.field_name.includes('logic_fetch') || (field.expression && field.expression.includes('FETCH('))) {
+            return 'fetch';
+        } else if (field.expression && field.expression.includes('ROLLUP(')) {
+            return 'rollup';
+        } else if (field.expression && field.expression.trim()) {
+            return 'formula';
+        }
+        
+        // Fallback to logic_type mapping
+        const type_mapping = {
+            'Link': 'link',
+            'Fetch': 'fetch', 
+            'Rollup': 'rollup',
+            'Formula': 'formula',
+            'Calculation': 'formula'
+        };
+        
+        return type_mapping[logic_type] || 'formula';
+    }
+
     // Unified field dialog for add/edit with formula support
     show_unified_field_dialog(table_id, field = null, template_hint = null) {
         const is_edit_mode = !!field;
@@ -2253,27 +2278,28 @@ class EnhancedVisualBuilder {
                 args: {
                     doctype: 'Flansa Logic Field',
                     filters: { name: logic_field_name },
-                    fieldname: ['expression', 'template_type', 'result_type']
+                    fieldname: ['expression', 'logic_type', 'result_type']
                 },
                 async: false,
                 callback: (r) => {
-                    if (r.message && (r.message.expression || r.message.template_type)) {
+                    if (r.message && (r.message.expression || r.message.logic_type)) {
                         is_logic_field = true;
                         field.expression = r.message.expression;
                         field.result_type = r.message.result_type;
-                        logic_field_template = r.message.template_type;
                         
-                        console.log(`Detected Logic Field: ${field.field_name} (${logic_field_template})`);
+                        // Map logic_type to template_type for consistent routing
+                        const logic_type = r.message.logic_type || 'Calculation';
+                        logic_field_template = map_logic_type_to_template(logic_type, field);
+                        
+                        console.log(`Detected Logic Field: ${field.field_name} (${logic_type} → ${logic_field_template})`);
                     }
                 }
             });
         }
         
-        // If this is a Logic Field in edit mode, show the appropriate template wizard
-        if (is_edit_mode && is_logic_field && logic_field_template) {
-            this.show_logic_field_edit_wizard(table_id, field, logic_field_template);
-            return;
-        }
+        // Note: User requested unified dialog for all create/update operations
+        // Skip specialized wizards and use unified dialog for consistency
+        console.log(is_edit_mode && is_logic_field ? `Using unified dialog for Logic Field: ${field.field_name} (${logic_field_template})` : 'Using unified dialog for standard field');
         
         const dialog = new frappe.ui.Dialog({
             title: dialog_title,
@@ -2341,11 +2367,11 @@ class EnhancedVisualBuilder {
                     label: 'Formula (Optional)'
                 },
                 {
-                    label: 'Formula',
+                    label: 'Expression/Formula',
                     fieldname: 'formula',
                     fieldtype: 'Code',
-                    default: is_edit_mode && is_logic_field ? field.formula : '',
-                    description: 'Add formula to make this a calculated field (e.g., price * quantity)',
+                    default: is_edit_mode && is_logic_field ? field.expression : '',
+                    description: 'Logic expressions: FETCH(link_field, target_field), ROLLUP(...), or custom formulas',
                     language: 'javascript'
                 },
                 {
