@@ -2263,43 +2263,55 @@ class EnhancedVisualBuilder {
     // Unified field dialog for add/edit with formula support
     show_unified_field_dialog(table_id, field = null, template_hint = null) {
         const is_edit_mode = !!field;
-        const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
-        
-        // Check if it's a Logic Field for editing (optimized dual system approach)
-        let is_logic_field = false;
-        let logic_field_template = null;
         
         if (is_edit_mode) {
-            // Check if this field has a corresponding Logic Field record using optimized naming
-            const logic_field_name = `LOGIC-${table_id || this.current_table}-${field.field_name}`;
-            
-            frappe.call({
-                method: 'frappe.client.get_value',
-                args: {
-                    doctype: 'Flansa Logic Field',
-                    filters: { name: logic_field_name },
-                    fieldname: ['expression', 'logic_type', 'result_type']
-                },
-                async: false,
-                callback: (r) => {
-                    if (r.message && (r.message.expression || r.message.logic_type)) {
-                        is_logic_field = true;
-                        field.expression = r.message.expression;
-                        field.result_type = r.message.result_type;
-                        
-                        // Map logic_type to template_type for consistent routing
-                        const logic_type = r.message.logic_type || 'Calculation';
-                        logic_field_template = map_logic_type_to_template(logic_type, field);
-                        
-                        console.log(`Detected Logic Field: ${field.field_name} (${logic_type} → ${logic_field_template})`);
-                    }
-                }
-            });
+            // For edit mode, first detect if it's a Logic Field and then create appropriate dialog
+            this.detect_and_show_field_dialog(table_id, field);
+        } else {
+            // For create mode, show standard dialog
+            this.create_unified_dialog(table_id, field, false, null);
         }
+    }
+    
+    detect_and_show_field_dialog(table_id, field) {
+        // Check if this field has a corresponding Logic Field record using table_name and field_name
+        frappe.call({
+            method: 'frappe.client.get_value',
+            args: {
+                doctype: 'Flansa Logic Field',
+                filters: { 
+                    table_name: table_id || this.current_table,
+                    field_name: field.field_name
+                },
+                fieldname: ['name', 'expression', 'logic_type', 'result_type']
+            },
+            callback: (r) => {
+                let is_logic_field = false;
+                let logic_field_template = null;
+                
+                if (r.message && (r.message.expression || r.message.logic_type)) {
+                    is_logic_field = true;
+                    field.expression = r.message.expression;
+                    field.result_type = r.message.result_type;
+                    
+                    // Map logic_type to template_type for consistent routing
+                    const logic_type = r.message.logic_type || 'Calculation';
+                    logic_field_template = this.map_logic_type_to_template(logic_type, field);
+                    
+                    console.log(`Detected Logic Field: ${field.field_name} (${logic_type} → ${logic_field_template})`);
+                }
+                
+                // Now create the dialog with proper context
+                this.create_unified_dialog(table_id, field, is_logic_field, logic_field_template);
+            }
+        });
+    }
+    
+    create_unified_dialog(table_id, field, is_logic_field, logic_field_template) {
+        const is_edit_mode = !!field;
+        const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
         
-        // Note: User requested unified dialog for all create/update operations
-        // Skip specialized wizards and use unified dialog for consistency
-        console.log(is_edit_mode && is_logic_field ? `Using unified dialog for Logic Field: ${field.field_name} (${logic_field_template})` : 'Using unified dialog for standard field');
+        console.log(is_edit_mode && is_logic_field ? `Creating unified dialog for Logic Field: ${field.field_name} (${logic_field_template})` : 'Creating unified dialog for standard field');
         
         const dialog = new frappe.ui.Dialog({
             title: dialog_title,
@@ -2364,15 +2376,48 @@ class EnhancedVisualBuilder {
                 },
                 {
                     fieldtype: 'Section Break',
-                    label: 'Formula (Optional)'
+                    label: 'Logic Configuration',
+                    depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
                 },
                 {
-                    label: 'Expression/Formula',
+                    label: 'Logic Type',
+                    fieldname: 'logic_type_display',
+                    fieldtype: 'Data',
+                    read_only: 1,
+                    default: is_logic_field ? (logic_field_template || 'Unknown').toUpperCase() : '',
+                    description: 'Type of logic field',
+                    depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Link Target',
+                    fieldname: 'link_target',
+                    fieldtype: 'Data',
+                    default: logic_field_template === 'link' ? (field.options || '') : '',
+                    description: 'Target DocType for this Link field',
+                    depends_on: `eval:${logic_field_template === 'link' ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Fetch Expression',
+                    fieldname: 'fetch_expression',
+                    fieldtype: 'Data',
+                    read_only: 1,
+                    default: logic_field_template === 'fetch' ? (field.expression || '') : '',
+                    description: 'FETCH expression for this field',
+                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Formula (Optional)',
+                    depends_on: `eval:${is_edit_mode && is_logic_field ? 'false' : 'true'}`
+                },
+                {
+                    label: 'Formula',
                     fieldname: 'formula',
                     fieldtype: 'Code',
-                    default: is_edit_mode && is_logic_field ? field.expression : '',
-                    description: 'Logic expressions: FETCH(link_field, target_field), ROLLUP(...), or custom formulas',
-                    language: 'javascript'
+                    default: is_edit_mode && is_logic_field && logic_field_template === 'formula' ? field.expression : '',
+                    description: 'Add formula to make this a calculated field (e.g., price * quantity)',
+                    language: 'javascript',
+                    depends_on: `eval:${is_edit_mode && is_logic_field ? (logic_field_template === 'formula' ? 'true' : 'false') : 'true'}`
                 },
                 {
                     fieldtype: 'Section Break',

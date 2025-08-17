@@ -1316,16 +1316,22 @@ def test_logic_field(expression, sample_data=None):
 def update_logic_field(table_name, field_name, field_label=None, calculation_method=None, options=None, template_type=None, logic_type=None):
     """Update an existing Logic Field"""
     try:
-        # Find the Logic Field document
-        logic_field_name = f"LOGIC-{table_name}-{field_name}"
+        # Find the Logic Field document by table_name and field_name
+        logic_fields = frappe.get_all("Flansa Logic Field", 
+                                     filters={
+                                         "table_name": table_name,
+                                         "field_name": field_name
+                                     },
+                                     fields=["name"])
         
-        if not frappe.db.exists("Flansa Logic Field", logic_field_name):
+        if not logic_fields:
             return {
                 "success": False,
-                "error": f"Logic Field {logic_field_name} not found"
+                "error": f"Logic Field for {field_name} in table {table_name} not found"
             }
         
         # Get and update the Logic Field document
+        logic_field_name = logic_fields[0].name
         logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
         
         if field_label:
