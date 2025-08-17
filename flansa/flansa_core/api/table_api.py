@@ -1312,3 +1312,58 @@ def test_logic_field(expression, sample_data=None):
             "result": None
         }
 
+@frappe.whitelist()
+def update_logic_field(table_name, field_name, field_label=None, calculation_method=None, options=None, template_type=None):
+    """Update an existing Logic Field"""
+    try:
+        # Find the Logic Field document
+        logic_field_name = f"LOGIC-{table_name}-{field_name}"
+        
+        if not frappe.db.exists("Flansa Logic Field", logic_field_name):
+            return {
+                "success": False,
+                "error": f"Logic Field {logic_field_name} not found"
+            }
+        
+        # Get and update the Logic Field document
+        logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
+        
+        if field_label:
+            logic_field.label = field_label
+        
+        if calculation_method:
+            logic_field.expression = calculation_method
+        
+        # Save the Logic Field
+        logic_field.save()
+        
+        # Update the corresponding Custom Field if it exists
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        if flansa_table.doctype_name:
+            custom_field_name = f"{flansa_table.doctype_name}-{field_name}"
+            
+            if frappe.db.exists("Custom Field", custom_field_name):
+                custom_field = frappe.get_doc("Custom Field", custom_field_name)
+                
+                if field_label:
+                    custom_field.label = field_label
+                
+                if options and template_type == 'link':
+                    custom_field.options = options
+                
+                custom_field.save()
+        
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Logic Field '{field_label or field_name}' updated successfully"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error updating Logic Field: {str(e)}", "Logic Field Update")
+        return {
+            "success": False,
+            "error": str(e)
+        }
+

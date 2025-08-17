@@ -5459,7 +5459,7 @@ class EnhancedVisualBuilder {
                         dialog.set_df_property('source_link_field', 'options', options);
                         
                         // If editing, pre-populate values from existing field
-                        if (existing_field && existing_field.calculation_method) {
+                        if (existing_field) {
                             this.pre_populate_fetch_values(dialog, existing_field, link_fields);
                         }
                     } else {
@@ -5486,13 +5486,51 @@ class EnhancedVisualBuilder {
             // Debug: Log the field object to understand its structure
             console.log("Pre-populate field object:", field);
             
-            // Parse the calculation_method to extract source and target fields
-            // Expected format: "FETCH(source_field, target_field)"
-            // Try multiple possible property names for the formula
-            const calc_method = field.calculation_method || field.formula || field.expression || '';
-            console.log("Calculation method found:", calc_method);
+            // For Logic Fields, we need to fetch the expression from the Logic Field document
+            // since the field object from DocType meta won't have it
+            this.fetch_logic_field_expression(field.field_name, this.current_table).then(expression => {
+                if (expression) {
+                    console.log("Logic Field expression found:", expression);
+                    this.parse_and_populate_fetch_values(dialog, expression, link_fields);
+                } else {
+                    console.log("No Logic Field expression found for field:", field.field_name);
+                }
+            });
             
-            const match = calc_method.match(/FETCH\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/i);
+        } catch (error) {
+            console.warn("Could not pre-populate fetch values:", error);
+        }
+    }
+    
+    fetch_logic_field_expression(field_name, table_name) {
+        return new Promise((resolve) => {
+            const logic_field_name = `LOGIC-${table_name}-${field_name}`;
+            
+            frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: 'Flansa Logic Field',
+                    fieldname: 'expression',
+                    filters: { name: logic_field_name }
+                },
+                callback: (r) => {
+                    if (r.message && r.message.expression) {
+                        resolve(r.message.expression);
+                    } else {
+                        resolve(null);
+                    }
+                }
+            });
+        });
+    }
+    
+    parse_and_populate_fetch_values(dialog, expression, link_fields) {
+        try {
+            // Parse the expression to extract source and target fields
+            // Expected format: "FETCH(source_field, target_field)"
+            console.log("Parsing expression:", expression);
+            
+            const match = expression.match(/FETCH\s*\(\s*([^,]+)\s*,\s*([^)]+)\s*\)/i);
             
             if (match) {
                 const source_fieldname = match[1].trim();
