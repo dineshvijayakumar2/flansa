@@ -459,10 +459,11 @@ class FlansaReportBuilder {
             </div>
         `);
         
-        // Add click handler for single selection
+        // Add click handler for field selection (for transfer buttons)
         field_item.on('click', (e) => {
             e.preventDefault();
-            this.toggle_field_selection(field_item, field);
+            field_item.toggleClass('selected');
+            this.update_transfer_buttons();
         });
         
         return field_item;
@@ -579,31 +580,30 @@ class FlansaReportBuilder {
         const is_currently_selected = field_item.hasClass('selected');
         
         if (is_currently_selected) {
-            // Deselect field
+            // Deselect field for available fields selection
             field_item.removeClass('selected');
             field_item.find('.fa-check-circle').remove();
-            
-            // Remove from selected fields
-            this.selected_fields = this.selected_fields.filter(f => f.fieldname !== field.fieldname);
         } else {
-            // Clear other selections for single selection mode
-            $('.field-item.selected').each((_, elem) => {
-                $(elem).removeClass('selected');
-                $(elem).find('.fa-check-circle').remove();
-            });
+            // Allow multiple selection for transfer functionality
+            // BUT if user wants single selection, clear others first
+            const ctrlKey = event && (event.ctrlKey || event.metaKey);
+            
+            if (!ctrlKey) {
+                // Clear other selections for single selection mode
+                $('.field-item.selected').each((_, elem) => {
+                    $(elem).removeClass('selected');
+                    $(elem).find('.fa-check-circle').remove();
+                });
+            }
             
             // Select this field
             field_item.addClass('selected');
             if (!field_item.find('.fa-check-circle').length) {
-                field_item.find('.fa').after('<i class="fa fa-check-circle text-primary" style="margin-left: 6px;"></i>');
+                field_item.find('i:first').after(' <i class="fa fa-check-circle text-primary" style="margin-left: 6px;"></i>');
             }
-            
-            // Add to selected fields (replace current selection)
-            this.selected_fields = [field];
         }
         
-        this.update_selected_fields_display();
-        this.update_button_states();
+        this.update_transfer_buttons();
     }
 
     is_field_selected(fieldname) {
@@ -3331,10 +3331,11 @@ class FlansaReportBuilder {
             </div>
         `);
         
-        // Add click handler for single selection
+        // Add click handler for modal field selection (for transfer buttons)
         field_item.on('click', (e) => {
             e.preventDefault();
-            this.toggle_modal_field_selection(field_item, field);
+            field_item.toggleClass('selected');
+            this.update_modal_transfer_buttons();
         });
         
         return field_item;

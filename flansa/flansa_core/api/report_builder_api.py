@@ -76,24 +76,30 @@ def get_report_field_options(table_name):
                 else:
                     current_fields.append(field_info)
         
-        # Also add any system fields that might not be in the DocType meta but should be available
-        # This ensures all important system fields are always shown
-        for field_name, field_config in FRAPPE_SYSTEM_FIELDS.items():
-            # Check if this system field is already included
-            if not any(sf['fieldname'] == field_name for sf in system_fields):
-                system_fields.append({
-                    "fieldname": field_name,
-                    "label": field_config['label'],
-                    "fieldtype": field_config['fieldtype'],
-                    "table": table_name,
-                    "table_label": table_doc.table_label,
-                    "category": "system",
-                    "options": field_config.get('options', ''),
-                    "is_virtual": 0,
-                    "fetch_from": '',
-                    "is_gallery": False,
-                    "is_system_field": True
-                })
+        # Only include system fields that are consistent with visual builder
+        # Use the same approach as system_fields_manager to ensure consistency
+        from flansa.flansa_core.api.system_fields_manager import get_all_system_fields
+        manager_result = get_all_system_fields()
+        if manager_result.get('success'):
+            manager_system_fields = manager_result.get('fields', [])
+            
+            # Add any system fields from manager that aren't already in system_fields
+            for manager_field in manager_system_fields:
+                field_name = manager_field['fieldname']
+                if not any(sf['fieldname'] == field_name for sf in system_fields):
+                    system_fields.append({
+                        "fieldname": field_name,
+                        "label": manager_field['label'],
+                        "fieldtype": manager_field['fieldtype'],
+                        "table": table_name,
+                        "table_label": table_doc.table_label,
+                        "category": "system",
+                        "options": manager_field.get('options', ''),
+                        "is_virtual": 0,
+                        "fetch_from": '',
+                        "is_gallery": False,
+                        "is_system_field": True
+                    })
         
         # Get logic fields and categorize them properly
         logic_fields = []
@@ -103,7 +109,7 @@ def get_report_field_options(table_name):
         try:
             logic_field_docs = frappe.get_all("Flansa Logic Field",
                 filters={"table_name": table_name, "is_active": 1},
-                fields=["field_name", "label", "field_type", "logic_type", "target_table", "target_field"]
+                fields=["field_name", "label", "fieldtype", "logic_type", "target_table", "target_field"]
             )
             
             for logic_field in logic_field_docs:
@@ -111,7 +117,7 @@ def get_report_field_options(table_name):
                 logic_field_info = {
                     "fieldname": logic_field.field_name,
                     "label": logic_field.label or logic_field.field_name.replace('_', ' ').title(),
-                    "fieldtype": logic_field.field_type,
+                    "fieldtype": logic_field.fieldtype,
                     "table": table_name,
                     "table_label": table_doc.table_label,
                     "category": "current",
