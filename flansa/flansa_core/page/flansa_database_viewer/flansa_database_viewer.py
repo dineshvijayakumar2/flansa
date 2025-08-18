@@ -292,11 +292,29 @@ def scan_orphaned_tables():
                          AND table_name = %s) as column_count
                 """.format(table_name.replace('`', '``')), (table_name,), as_dict=True)
                 
+                # Check if a similar DocType exists (might have naming mismatch)
+                probable_doctype = table_name[3:].replace('_', ' ') if table_name.startswith('tab') else 'Unknown'
+                possible_doctype = None
+                
+                # Try to find a matching DocType with different naming
+                for potential_name in potential_doctype_names:
+                    # Check if DocType exists in list but table name doesn't match
+                    doctype_check = frappe.db.sql("""
+                        SELECT name FROM `tabDocType` 
+                        WHERE name LIKE %s
+                        LIMIT 1
+                    """, (f"%{potential_name.replace(' ', '%')}%",), as_dict=True)
+                    
+                    if doctype_check:
+                        possible_doctype = doctype_check[0]['name']
+                        break
+                
                 orphaned_tables.append({
                     'table_name': table_name,
                     'row_count': table_info[0]['row_count'] if table_info else 0,
                     'column_count': table_info[0]['column_count'] if table_info else 0,
-                    'probable_doctype': table_name[3:].replace('_', ' ') if table_name.startswith('tab') else 'Unknown'
+                    'probable_doctype': probable_doctype,
+                    'possible_doctype': possible_doctype  # DocType that might be related
                 })
             except:
                 # Skip tables we can't query
@@ -471,9 +489,15 @@ def delete_orphaned_table(table_name, confirm_delete=False):
             title="Orphaned Table Deletion"
         )
         
-        # Perform the deletion
-        frappe.db.sql(f"DROP TABLE IF EXISTS `{escaped_table}`")
-        frappe.db.commit()
+        # Perform the deletion - use frappe.db.sql_ddl for DDL operations
+        # DDL operations auto-commit, so we need to handle them specially
+        try:
+            frappe.db.sql_ddl(f"DROP TABLE IF EXISTS `{escaped_table}`")
+        except AttributeError:
+            # Fallback if sql_ddl doesn't exist
+            frappe.db.commit()  # Commit any pending transactions first
+            frappe.db.sql(f"DROP TABLE IF EXISTS `{escaped_table}`")
+            # No need to commit again as DROP TABLE auto-commits
         
         return {
             'success': True,
@@ -547,9 +571,14 @@ def delete_orphaned_field(doctype_name, field_name, confirm_delete=False):
             title="Orphaned Field Deletion"
         )
         
-        # Perform the deletion
-        frappe.db.sql(f"ALTER TABLE `{escaped_table}` DROP COLUMN `{field_name}`")
-        frappe.db.commit()
+        # Perform the deletion - ALTER TABLE also causes implicit commit
+        try:
+            frappe.db.sql_ddl(f"ALTER TABLE `{escaped_table}` DROP COLUMN `{field_name}`")
+        except AttributeError:
+            # Fallback if sql_ddl doesn't exist
+            frappe.db.commit()  # Commit any pending transactions first
+            frappe.db.sql(f"ALTER TABLE `{escaped_table}` DROP COLUMN `{field_name}`")
+            # No need to commit again as ALTER TABLE auto-commits
         
         return {
             'success': True,

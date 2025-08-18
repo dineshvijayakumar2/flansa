@@ -606,16 +606,27 @@ class FlansaDatabaseViewer {
             const hasData = table.row_count > 0;
             const rowClass = hasData ? 'table-danger' : '';
             
+            // Check if there's a possible DocType to link to
+            const viewDoctypeBtn = table.possible_doctype ? 
+                `<button class="btn btn-xs btn-outline-info ml-1" onclick="window.open('/app/list/${encodeURIComponent(table.possible_doctype)}', '_blank')" title="View DocType: ${table.possible_doctype}">
+                    <i class="fa fa-external-link"></i> DocType
+                </button>` : '';
+            
             html += `
                 <tr class="${rowClass}">
                     <td><code>${table.table_name}</code></td>
-                    <td>${table.probable_doctype}</td>
+                    <td>
+                        ${table.probable_doctype}
+                        ${table.possible_doctype && table.possible_doctype !== table.probable_doctype ? 
+                            `<br><small class="text-muted">Possible: ${table.possible_doctype}</small>` : ''}
+                    </td>
                     <td>${table.row_count} ${hasData ? '<span class="badge badge-danger">Has Data!</span>' : ''}</td>
                     <td>${table.column_count}</td>
-                    <td>
+                    <td style="white-space: nowrap;">
                         <button class="btn btn-xs btn-outline-primary" onclick="window.dbViewer.viewTableData('${table.table_name}')">
                             <i class="fa fa-eye"></i> View
                         </button>
+                        ${viewDoctypeBtn}
                         <button class="btn btn-xs btn-outline-danger ml-1" onclick="window.dbViewer.deleteOrphanedTable('${table.table_name}', ${table.row_count})">
                             <i class="fa fa-trash"></i> Delete
                         </button>
