@@ -389,9 +389,28 @@ def scan_orphaned_fields():
                 # Standard Frappe fields that are always present
                 standard_fields = {
                     'name', 'creation', 'modified', 'modified_by', 'owner', 
-                    'docstatus', 'idx', '_user_tags', '_comments', '_assign', '_liked_by'
+                    'docstatus', 'idx', '_user_tags', '_comments', '_assign', '_liked_by',
+                    '_seen', 'parent', 'parentfield', 'parenttype', 'doctype',
+                    # Additional standard fields
+                    'data', 'content', '_background_tasks', 'naming_series',
+                    'amended_from', 'is_submittable', 'submitted', 'cancelled',
+                    'custom', 'istable', 'issingle', 'is_virtual', 'module',
+                    'app', 'last_synced_on', 'color', 'text_color', 'icon',
+                    'workflow_state', 'owner_full_name', 'modified_by_full_name'
                 }
                 defined_fields.update(standard_fields)
+                
+                # Also check Property Setter fields which might add dynamic fields
+                property_setter_fields = frappe.db.sql("""
+                    SELECT DISTINCT field_name 
+                    FROM `tabProperty Setter` 
+                    WHERE doc_type = %s 
+                    AND field_name IS NOT NULL
+                """, (doctype_name,), as_dict=True)
+                
+                for ps_field in property_setter_fields:
+                    if ps_field['field_name']:
+                        defined_fields.add(ps_field['field_name'])
                 
                 # Find orphaned fields
                 orphaned = actual_column_names - defined_fields

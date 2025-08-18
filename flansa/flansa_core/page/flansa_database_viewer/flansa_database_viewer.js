@@ -226,13 +226,16 @@ class FlansaDatabaseViewer {
             return;
         }
         
-        // Create table HTML
-        let html = '<div class="table-responsive"><table class="table table-sm table-striped table-hover">';
+        // Create table HTML with fixed header and scrollable body
+        let html = `
+            <div class="table-data-container" style="height: 500px; overflow: auto; position: relative;">
+                <table class="table table-sm table-striped table-hover" style="margin-bottom: 0;">
+                    <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
+                        <tr>`;
         
         // Header
-        html += '<thead class="table-dark"><tr>';
         data.columns.forEach(col => {
-            html += `<th style="white-space: nowrap;">${col.Field}</th>`;
+            html += `<th style="white-space: nowrap; background-color: #343a40; position: sticky; top: 0;">${col.Field}</th>`;
         });
         html += '</tr></thead>';
         
@@ -245,11 +248,11 @@ class FlansaDatabaseViewer {
                 if (value === null) {
                     value = '<em class="text-muted">NULL</em>';
                 } else if (typeof value === 'string' && value.length > 100) {
-                    value = this.escapeHtml(value.substring(0, 100)) + '...';
+                    value = `<span title="${this.escapeHtml(String(value))}">${this.escapeHtml(value.substring(0, 100))}...</span>`;
                 } else {
                     value = this.escapeHtml(String(value));
                 }
-                html += `<td style="max-width: 200px; word-break: break-word;">${value}</td>`;
+                html += `<td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis;">${value}</td>`;
             });
             html += '</tr>';
         });
@@ -427,15 +430,15 @@ class FlansaDatabaseViewer {
             <div class="alert alert-success">
                 <i class="fa fa-check-circle"></i> Query executed successfully - ${data.row_count} rows returned
             </div>
-            <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover">
-                    <thead class="table-dark">
+            <div class="sql-results-container" style="height: 400px; overflow: auto; position: relative;">
+                <table class="table table-sm table-striped table-hover" style="margin-bottom: 0;">
+                    <thead class="table-dark" style="position: sticky; top: 0; z-index: 10;">
                         <tr>
         `;
         
         // Header
         data.columns.forEach(col => {
-            html += `<th>${col}</th>`;
+            html += `<th style="white-space: nowrap; background-color: #343a40; position: sticky; top: 0;">${col}</th>`;
         });
         html += '</tr></thead><tbody>';
         
@@ -446,10 +449,12 @@ class FlansaDatabaseViewer {
                 let value = row[col];
                 if (value === null) {
                     value = '<em class="text-muted">NULL</em>';
+                } else if (typeof value === 'string' && value.length > 100) {
+                    value = `<span title="${this.escapeHtml(String(value))}">${this.escapeHtml(value.substring(0, 100))}...</span>`;
                 } else {
                     value = this.escapeHtml(String(value));
                 }
-                html += `<td>${value}</td>`;
+                html += `<td style="max-width: 300px; overflow: hidden; text-overflow: ellipsis;">${value}</td>`;
             });
             html += '</tr>';
         });
@@ -606,27 +611,16 @@ class FlansaDatabaseViewer {
             const hasData = table.row_count > 0;
             const rowClass = hasData ? 'table-danger' : '';
             
-            // Check if there's a possible DocType to link to
-            const viewDoctypeBtn = table.possible_doctype ? 
-                `<button class="btn btn-xs btn-outline-info ml-1" onclick="window.open('/app/list/${encodeURIComponent(table.possible_doctype)}', '_blank')" title="View DocType: ${table.possible_doctype}">
-                    <i class="fa fa-external-link"></i> DocType
-                </button>` : '';
-            
             html += `
                 <tr class="${rowClass}">
                     <td><code>${table.table_name}</code></td>
-                    <td>
-                        ${table.probable_doctype}
-                        ${table.possible_doctype && table.possible_doctype !== table.probable_doctype ? 
-                            `<br><small class="text-muted">Possible: ${table.possible_doctype}</small>` : ''}
-                    </td>
+                    <td>${table.probable_doctype}</td>
                     <td>${table.row_count} ${hasData ? '<span class="badge badge-danger">Has Data!</span>' : ''}</td>
                     <td>${table.column_count}</td>
                     <td style="white-space: nowrap;">
                         <button class="btn btn-xs btn-outline-primary" onclick="window.dbViewer.viewTableData('${table.table_name}')">
                             <i class="fa fa-eye"></i> View
                         </button>
-                        ${viewDoctypeBtn}
                         <button class="btn btn-xs btn-outline-danger ml-1" onclick="window.dbViewer.deleteOrphanedTable('${table.table_name}', ${table.row_count})">
                             <i class="fa fa-trash"></i> Delete
                         </button>
