@@ -188,6 +188,24 @@ def create_record(table_name, values):
                 "error": "No doctype associated with table"
             }
         
+        # Handle case where values might be a JSON string
+        import json
+        if isinstance(values, str):
+            try:
+                values = json.loads(values)
+            except json.JSONDecodeError:
+                return {
+                    "success": False,
+                    "error": "Invalid values format - expected dictionary or JSON string"
+                }
+        
+        # Ensure values is a dictionary
+        if not isinstance(values, dict):
+            return {
+                "success": False,
+                "error": "Values must be a dictionary"
+            }
+        
         # Create new document
         doc = frappe.get_doc({
             "doctype": table_doc.doctype_name,
@@ -204,7 +222,17 @@ def create_record(table_name, values):
         
     except Exception as e:
         frappe.db.rollback()
-        frappe.log_error(f"Error creating record in table {table_name}: {str(e)}", "Table API Error")
+        
+        # Enhanced error logging for debugging
+        error_details = {
+            "table_name": table_name,
+            "values_type": type(values).__name__,
+            "values_content": str(values)[:500],  # First 500 chars to avoid huge logs
+            "error": str(e),
+            "traceback": frappe.get_traceback()
+        }
+        frappe.log_error(f"Error creating record in table {table_name}: {str(e)}\nDetails: {error_details}", "Table API Create Record Error")
+        
         return {
             "success": False,
             "error": str(e)
