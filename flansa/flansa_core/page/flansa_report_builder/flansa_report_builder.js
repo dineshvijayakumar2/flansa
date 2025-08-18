@@ -329,6 +329,9 @@ class FlansaReportBuilder {
                 this.available_fields = response.message.fields;
                 this.display_table_info(response.message.table, response.message.capabilities);
                 this.populate_available_fields();
+                
+                // Show the report builder interface
+                $('#report-builder-container').show();
                 this.show_field_selection();
                 
                 // Only reset state if explicitly requested (default true for backward compatibility)
@@ -501,11 +504,11 @@ class FlansaReportBuilder {
     }
 
     show_field_selection() {
-        // Don't show these on main page anymore - using modal instead
-        // $('#field-selection-section').show();
-        // $('#filters-section').show();
-        // $('#sort-section').show();
-        // $('#run-report-btn').show();
+        // Show field selection interface
+        $('#field-selection-section').show();
+        $('#filters-section').show();
+        $('#sort-section').show();
+        $('#run-report-btn').show();
     }
 
     reset_report_state() {

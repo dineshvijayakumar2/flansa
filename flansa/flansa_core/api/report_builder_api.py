@@ -109,7 +109,7 @@ def get_report_field_options(table_name):
         try:
             logic_field_docs = frappe.get_all("Flansa Logic Field",
                 filters={"table_name": table_name, "is_active": 1},
-                fields=["field_name", "label", "fieldtype", "logic_type", "target_table", "target_field"]
+                fields=["field_name", "label", "result_type", "logic_type", "expression"]
             )
             
             for logic_field in logic_field_docs:
@@ -117,7 +117,7 @@ def get_report_field_options(table_name):
                 logic_field_info = {
                     "fieldname": logic_field.field_name,
                     "label": logic_field.label or logic_field.field_name.replace('_', ' ').title(),
-                    "fieldtype": logic_field.fieldtype,
+                    "fieldtype": logic_field.result_type,
                     "table": table_name,
                     "table_label": table_doc.table_label,
                     "category": "current",
@@ -129,12 +129,19 @@ def get_report_field_options(table_name):
                 }
                 
                 # Store link fields for related field lookup
-                if logic_field.logic_type == "link" and logic_field.target_table:
-                    link_fields_in_current.append({
-                        "field_name": logic_field.field_name,
-                        "target_table": logic_field.target_table,
-                        "label": logic_field.label
-                    })
+                if logic_field.logic_type == "link":
+                    # For link fields, we need to extract target table from expression or field definition
+                    target_table = None
+                    if logic_field.expression:
+                        # Try to extract target table from expression if it contains table reference
+                        pass  # For now, skip target table extraction
+                    
+                    if target_table:
+                        link_fields_in_current.append({
+                            "field_name": logic_field.field_name,
+                            "target_table": target_table,
+                            "label": logic_field.label
+                        })
                 
                 current_fields.append(logic_field_info)
                 
