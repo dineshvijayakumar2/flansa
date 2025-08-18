@@ -191,8 +191,6 @@ def scan_orphaned_tables():
             FROM information_schema.tables 
             WHERE table_schema = DATABASE()
             AND table_name LIKE 'tab%'
-            AND table_name NOT LIKE 'tabSingles'
-            AND table_name NOT LIKE 'tabDefaultValue'
             ORDER BY table_name
         """, as_dict=True)
         
@@ -204,20 +202,87 @@ def scan_orphaned_tables():
         # Create set of expected table names
         expected_tables = set()
         for dt in registered_doctypes:
-            expected_table_name = f"tab{dt['name'].replace(' ', '_')}"
-            expected_tables.add(expected_table_name)
+            # Handle different naming conventions
+            table_name = f"tab{dt['name']}"
+            expected_tables.add(table_name)
+            
+            # Also add with underscores replacing spaces
+            table_name_underscore = f"tab{dt['name'].replace(' ', '_')}"
+            expected_tables.add(table_name_underscore)
+            
+            # Also add with + replacing spaces (for tables like tabCustomize+Form+Field)
+            table_name_plus = f"tab{dt['name'].replace(' ', '+')}"
+            expected_tables.add(table_name_plus)
         
-        # Add system tables that are expected
+        # Get actual table names from database for more accurate matching
+        actual_doctype_tables = frappe.db.sql("""
+            SELECT DISTINCT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = DATABASE()
+            AND table_name IN (
+                SELECT CONCAT('tab', name) FROM `tabDocType`
+                UNION
+                SELECT CONCAT('tab', REPLACE(name, ' ', '_')) FROM `tabDocType`
+                UNION
+                SELECT CONCAT('tab', REPLACE(name, ' ', '+')) FROM `tabDocType`
+            )
+        """, as_dict=True)
+        
+        for table in actual_doctype_tables:
+            expected_tables.add(table['table_name'])
+        
+        # Add known system tables that are expected
         system_tables = {
             'tabSingles', 'tabDefaultValue', 'tabDocType', 'tabDocField',
-            'tabCustom_Field', 'tabProperty_Setter', 'tabSeries', 'tabVersion'
+            'tabCustom_Field', 'tabCustom Field', 'tabProperty_Setter', 
+            'tabProperty Setter', 'tabSeries', 'tabVersion', 'tabFile',
+            'tabCommunication', 'tabActivity_Log', 'tabActivity Log',
+            'tabError_Log', 'tabError Log', 'tabScheduled_Job_Log',
+            'tabScheduled Job Log', 'tabAccess_Log', 'tabAccess Log'
         }
         expected_tables.update(system_tables)
         
-        # Find orphaned tables
+        # Known system tables that don't need DocTypes
+        known_system_tables = {
+            'tabSingles', 'tabDefaultValue', 'tabVersion', 'tabSeries',
+            'tabScheduled Job Type', 'tabSessions', 'tabDeleted Document'
+        }
+        
+        # Find orphaned tables with better accuracy
         for table in all_tables:
             table_name = table['table_name']
-            if table_name not in expected_tables:
+            
+            # Skip known system tables
+            if table_name in known_system_tables:
+                continue
+                
+            # Check if table is truly orphaned
+            is_orphaned = True
+            
+            if table_name.startswith('tab'):
+                # Extract base name without 'tab' prefix
+                base_name = table_name[3:]
+                
+                # Try different naming patterns to find the DocType
+                potential_doctype_names = [
+                    base_name,  # Exact match
+                    base_name.replace('_', ' '),  # Underscores to spaces
+                    base_name.replace('+', ' '),  # Plus signs to spaces
+                    base_name.replace('_', '+'),  # Underscores to plus signs
+                ]
+                
+                # Check if any of these DocType names exist
+                for potential_name in potential_doctype_names:
+                    if frappe.db.exists('DocType', potential_name):
+                        is_orphaned = False
+                        break
+            
+            # If still appears orphaned, double-check against our expected tables set
+            if not is_orphaned or table_name in expected_tables:
+                continue
+                
+            # This table is truly orphaned - get its info
+            try:
                 # Get table info
                 table_info = frappe.db.sql("""
                     SELECT 
@@ -233,6 +298,9 @@ def scan_orphaned_tables():
                     'column_count': table_info[0]['column_count'] if table_info else 0,
                     'probable_doctype': table_name[3:].replace('_', ' ') if table_name.startswith('tab') else 'Unknown'
                 })
+            except:
+                # Skip tables we can't query
+                pass
         
         return {
             'success': True,
