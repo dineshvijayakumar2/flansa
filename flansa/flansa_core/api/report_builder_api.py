@@ -27,15 +27,22 @@ def get_report_field_options(table_name):
         if not doctype_name or not frappe.db.exists("DocType", doctype_name):
             return {"success": False, "error": "DocType not found or not generated"}
         
-        # Get current table fields
+        # Use centralized system fields manager
+        from flansa.flansa_core.api.system_fields_manager import FRAPPE_SYSTEM_FIELDS
+        
+        # Get current table fields (non-system fields)
         meta = frappe.get_meta(doctype_name)
         current_fields = []
+        system_fields = []
         
         for field in meta.fields:
-            # Skip layout and system fields
+            # Skip layout fields but include important system fields  
+            # Important system fields like name, owner, creation, etc. should be available in reports
             if (field.fieldtype not in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Table']
-                and field.fieldname not in ['docstatus', 'idx']
+                and field.fieldname not in ['idx']  # Keep idx hidden but allow name, docstatus, etc.
                 and not field.fieldname.startswith('_')):
+                
+                is_system_field = field.fieldname in FRAPPE_SYSTEM_FIELDS
                 
                 field_info = {
                     "fieldname": field.fieldname,
@@ -43,11 +50,12 @@ def get_report_field_options(table_name):
                     "fieldtype": field.fieldtype,
                     "table": table_name,
                     "table_label": table_doc.table_label,
-                    "category": "current",
+                    "category": "system" if is_system_field else "current",
                     "options": getattr(field, 'options', ''),
                     "is_virtual": getattr(field, 'is_virtual', 0),
                     "fetch_from": getattr(field, 'fetch_from', ''),
-                    "is_gallery": field.fieldtype in ['Attach Image', 'Attach'] or 'image' in field.fieldname.lower()
+                    "is_gallery": field.fieldtype in ['Attach Image', 'Attach'] or 'image' in field.fieldname.lower(),
+                    "is_system_field": is_system_field  # Add system field indicator
                 }
                 
                 # Check if field has flansa_config for computed fields
@@ -62,7 +70,30 @@ def get_report_field_options(table_name):
                     except:
                         pass
                 
-                current_fields.append(field_info)
+                # Separate system fields from regular fields
+                if is_system_field:
+                    system_fields.append(field_info)
+                else:
+                    current_fields.append(field_info)
+        
+        # Also add any system fields that might not be in the DocType meta but should be available
+        # This ensures all important system fields are always shown
+        for field_name, field_config in FRAPPE_SYSTEM_FIELDS.items():
+            # Check if this system field is already included
+            if not any(sf['fieldname'] == field_name for sf in system_fields):
+                system_fields.append({
+                    "fieldname": field_name,
+                    "label": field_config['label'],
+                    "fieldtype": field_config['fieldtype'],
+                    "table": table_name,
+                    "table_label": table_doc.table_label,
+                    "category": "system",
+                    "options": field_config.get('options', ''),
+                    "is_virtual": 0,
+                    "fetch_from": '',
+                    "is_gallery": False,
+                    "is_system_field": True
+                })
         
         # Get available fields from parent tables via relationships
         parent_fields = []
@@ -85,7 +116,7 @@ def get_report_field_options(table_name):
                         
                         for field in parent_meta.fields:
                             if (field.fieldtype not in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Table'] 
-                                and field.fieldname not in ['docstatus', 'idx']
+                                and field.fieldname not in ['idx']  # Keep idx hidden but allow name, docstatus, etc.
                                 and not field.fieldname.startswith('_')):
                                 
                                 parent_fields.append({
@@ -106,7 +137,7 @@ def get_report_field_options(table_name):
                     continue
         
         # Check for gallery capability
-        has_gallery = any(field.get("is_gallery", False) for field in current_fields + parent_fields)
+        has_gallery = any(field.get("is_gallery", False) for field in current_fields + parent_fields + system_fields)
         
         return {
             "success": True,
@@ -117,11 +148,12 @@ def get_report_field_options(table_name):
             },
             "fields": {
                 "current": current_fields,
+                "system": system_fields,
                 "parent": parent_fields
             },
             "capabilities": {
                 "has_gallery": has_gallery,
-                "total_fields": len(current_fields) + len(parent_fields)
+                "total_fields": len(current_fields) + len(system_fields) + len(parent_fields)
             }
         }
         

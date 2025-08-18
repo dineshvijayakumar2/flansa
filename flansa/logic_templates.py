@@ -550,7 +550,8 @@ def debug_table_structure(table_name=None):
 def get_link_wizard_data(table_name=None):
     """Get data for link field wizard"""
     try:
-        print(f"get_link_wizard_data called with table_name: {table_name}", flush=True)
+        # Debug: Log API call for troubleshooting
+        frappe.logger().debug(f"get_link_wizard_data called with table_name: {table_name}")
         
         if not table_name:
             return {
@@ -589,7 +590,8 @@ def get_link_wizard_data(table_name=None):
         current_flansa_table = frappe.get_doc("Flansa Table", table_name)
         current_table_name = current_flansa_table.table_label or current_flansa_table.name
         
-        print(f"Current table: {table_name} ({current_table_name})", flush=True)
+        # Debug: Current table processing
+        frappe.logger().debug(f"Processing table: {table_name} ({current_table_name})")
         
         # Check if there's a direct app field in the Flansa Table
         current_app_name = None
@@ -622,11 +624,8 @@ def get_link_wizard_data(table_name=None):
         
         # Store the raw current app name for comparison
         raw_current_app_name = current_app_name
-        print(f"Raw current app name: {raw_current_app_name}", flush=True)
-        
         # Apply friendly naming to current app for display
         current_app_name_friendly = get_friendly_app_name(current_app_name)
-        print(f"Current app (friendly): {current_app_name_friendly}", flush=True)
         
         # Get all Flansa Tables
         flansa_tables = frappe.get_all("Flansa Table",
@@ -704,39 +703,46 @@ def get_link_wizard_data(table_name=None):
         
         try:
             # Query for all standard DocTypes that are not custom and not tables
-            print("Querying for system DocTypes dynamically", flush=True)
-            system_doctypes = frappe.get_all("DocType", 
-                                           filters={
-                                               "custom": 0,        # Standard DocTypes only
-                                               "istable": 0,       # Not child tables
-                                               "issingle": 0       # Not singleton documents
-                                           },
-                                           fields=["name", "module"],
-                                           limit=50)  # Reasonable limit for UI
-            
-            print(f"Found {len(system_doctypes)} potential system DocTypes", flush=True)
+            # Use SQL query instead of frappe.get_all to bypass potential permission filtering
+            system_doctypes = frappe.db.sql("""
+                SELECT name, module
+                FROM `tabDocType`
+                WHERE custom = 0 
+                AND istable = 0 
+                AND issingle = 0
+                ORDER BY name
+            """, as_dict=True)
             
             # Filter out DocTypes that are already in Flansa tables
             existing_flansa_doctypes = [ft["value"] for ft in current_app_tables + other_app_tables]
             
-            for dt in system_doctypes:
-                if dt.name not in existing_flansa_doctypes:
-                    system_tables.append({
-                        "value": dt.name,
-                        "label": dt.name,
-                        "type": "system",
-                        "module": dt.module
-                    })
-                    system_found += 1
-                    if system_found <= 5:  # Log first few found
-                        print(f"Found system DocType: {dt.name} (module: {dt.module})", flush=True)
+            # Define commonly used DocTypes that should appear first
+            # These are dynamically identified by common Link field usage patterns
+            common_link_targets = {"User", "Role", "Company", "Customer", "Supplier", "Item", "Employee"}
+            
+            # Sort DocTypes: priority ones first, then alphabetical
+            filtered_doctypes = [dt for dt in system_doctypes if dt.name not in existing_flansa_doctypes]
+            
+            # Separate priority and regular DocTypes
+            priority_dts = [dt for dt in filtered_doctypes if dt.name in common_link_targets]
+            regular_dts = [dt for dt in filtered_doctypes if dt.name not in common_link_targets]
+            
+            # Add all DocTypes (priority first, then regular)
+            for dt in priority_dts + regular_dts:
+                is_priority = dt.name in common_link_targets
+                system_tables.append({
+                    "value": dt.name,
+                    "label": dt.name,
+                    "type": "system",
+                    "module": dt.module,
+                    **({"priority": True} if is_priority else {})
+                })
+                system_found += 1
                         
         except Exception as e:
-            print(f"Error querying system DocTypes: {e}", flush=True)
+            frappe.logger().error(f"Error querying system DocTypes: {str(e)}")
             # Fallback to empty list if query fails
             system_tables = []
-        
-        print(f"Total found: {system_found} system DocTypes", flush=True)
         
         # Group other app tables by app for hierarchical selection
         other_apps_grouped = {}
@@ -756,10 +762,9 @@ def get_link_wizard_data(table_name=None):
                 available_apps.append(display_app_name)
             other_apps_grouped[display_app_name].append(table)
         
-        print(f"Found {len(current_app_tables)} current app tables", flush=True)
-        print(f"Found {len(other_app_tables)} other Flansa app tables grouped into {len(available_apps)} apps", flush=True)
-        print(f"Available apps: {available_apps}", flush=True)
-        print(f"Found {len(system_tables)} system tables", flush=True)
+        # Log summary for debugging if needed
+        frappe.logger().debug(f"Link wizard data: {len(current_app_tables)} current app tables, "
+                            f"{len(other_app_tables)} other app tables, {len(system_tables)} system tables")
         
         return {
             "success": True,

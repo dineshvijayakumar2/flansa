@@ -445,23 +445,47 @@ def get_record(table_name, record_id):
         # Get the record
         record = frappe.get_doc(table_doc.doctype_name, record_id).as_dict()
         
-        # Get fields metadata (similar to get_table_meta)
+        # Get fields metadata using native fields API (same as form builder)
+        # This ensures system fields are included and properly handled
         fields = []
-        if frappe.db.exists("DocType", table_doc.doctype_name):
-            doctype_meta = frappe.get_meta(table_doc.doctype_name)
-            
-            for field in doctype_meta.fields:
-                fields.append({
-                    "fieldname": field.fieldname,
-                    "fieldtype": field.fieldtype,
-                    "label": field.label,
-                    "reqd": field.reqd,
-                    "options": field.options,
-                    "description": field.description,
-                    "read_only": field.read_only,
-                    "hidden": field.hidden,
-                    "default": field.default
-                })
+        try:
+            from flansa.native_fields import get_table_fields_native
+            native_result = get_table_fields_native(table_name)
+            if native_result.get('success'):
+                for field in native_result.get('fields', []):
+                    # Skip layout fields but include system fields
+                    if field.get('fieldtype') not in ['Section Break', 'Column Break', 'Tab Break']:
+                        fields.append({
+                            "fieldname": field.get('fieldname'),
+                            "fieldtype": field.get('fieldtype'),
+                            "label": field.get('label'),
+                            "reqd": field.get('reqd', 0),
+                            "options": field.get('options', ''),
+                            "description": field.get('description', ''),
+                            "read_only": field.get('read_only', 0),
+                            "hidden": field.get('hidden', 0),
+                            "default": field.get('default', ''),
+                            "is_system_field": field.get('is_system_field', False)
+                        })
+        except Exception as native_error:
+            # Fallback to DocType meta if native fields fails
+            frappe.log_error(f"Native fields failed for {table_name}: {str(native_error)}", "Record API Fallback")
+            if frappe.db.exists("DocType", table_doc.doctype_name):
+                doctype_meta = frappe.get_meta(table_doc.doctype_name)
+                
+                for field in doctype_meta.fields:
+                    fields.append({
+                        "fieldname": field.fieldname,
+                        "fieldtype": field.fieldtype,
+                        "label": field.label,
+                        "reqd": field.reqd,
+                        "options": field.options,
+                        "description": field.description,
+                        "read_only": field.read_only,
+                        "hidden": field.hidden,
+                        "default": field.default,
+                        "is_system_field": False
+                    })
         
         return {
             "success": True,
@@ -569,23 +593,47 @@ def get_table_meta(table_name):
                 "error": "No doctype associated with table"
             }
         
-        # Get fields metadata
+        # Get fields metadata using native fields API (same as form builder)
+        # This ensures system fields are included and properly handled
         fields = []
-        if frappe.db.exists("DocType", table_doc.doctype_name):
-            doctype_meta = frappe.get_meta(table_doc.doctype_name)
-            
-            for field in doctype_meta.fields:
-                fields.append({
-                    "fieldname": field.fieldname,
-                    "fieldtype": field.fieldtype,
-                    "label": field.label,
-                    "reqd": field.reqd,
-                    "options": field.options,
-                    "description": field.description,
-                    "read_only": field.read_only,
-                    "hidden": field.hidden,
-                    "default": field.default
-                })
+        try:
+            from flansa.native_fields import get_table_fields_native
+            native_result = get_table_fields_native(table_name)
+            if native_result.get('success'):
+                for field in native_result.get('fields', []):
+                    # Skip layout fields but include system fields
+                    if field.get('fieldtype') not in ['Section Break', 'Column Break', 'Tab Break']:
+                        fields.append({
+                            "fieldname": field.get('fieldname'),
+                            "fieldtype": field.get('fieldtype'),
+                            "label": field.get('label'),
+                            "reqd": field.get('reqd', 0),
+                            "options": field.get('options', ''),
+                            "description": field.get('description', ''),
+                            "read_only": field.get('read_only', 0),
+                            "hidden": field.get('hidden', 0),
+                            "default": field.get('default', ''),
+                            "is_system_field": field.get('is_system_field', False)
+                        })
+        except Exception as native_error:
+            # Fallback to DocType meta if native fields fails
+            frappe.log_error(f"Native fields failed for table meta {table_name}: {str(native_error)}", "Table Meta API Fallback")
+            if frappe.db.exists("DocType", table_doc.doctype_name):
+                doctype_meta = frappe.get_meta(table_doc.doctype_name)
+                
+                for field in doctype_meta.fields:
+                    fields.append({
+                        "fieldname": field.fieldname,
+                        "fieldtype": field.fieldtype,
+                        "label": field.label,
+                        "reqd": field.reqd,
+                        "options": field.options,
+                        "description": field.description,
+                        "read_only": field.read_only,
+                        "hidden": field.hidden,
+                        "default": field.default,
+                        "is_system_field": False
+                    })
         
         return {
             "success": True,

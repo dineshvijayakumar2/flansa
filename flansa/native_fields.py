@@ -38,6 +38,48 @@ def get_table_fields_native(table_name):
         meta = frappe.get_meta(table_doc.doctype_name)
         fields = []
         
+        # Use centralized system fields manager to avoid duplication
+        from flansa.flansa_core.api.system_fields_manager import FRAPPE_SYSTEM_FIELDS
+        
+        # Get applicable system fields for this DocType
+        applicable_system_fields = ['name', 'owner', 'creation', 'modified', 'modified_by']
+        
+        # Add docstatus and amended_from for submittable documents
+        if meta.is_submittable:
+            applicable_system_fields.extend(['docstatus', 'amended_from'])
+        
+        # Add system fields to the fields list using centralized definitions
+        for fieldname in applicable_system_fields:
+            if fieldname in FRAPPE_SYSTEM_FIELDS:
+                config = FRAPPE_SYSTEM_FIELDS[fieldname]
+                
+                # Handle special case for amended_from link target
+                options = config.get('options', '')
+                if fieldname == 'amended_from':
+                    options = table_doc.doctype_name  # Link to same DocType
+                
+                field_data = {
+                    "fieldname": config["fieldname"],
+                    "label": config["label"],
+                    "fieldtype": config["fieldtype"],
+                    "options": options,
+                    "reqd": config.get('reqd', 0),
+                    "read_only": config.get('read_only', 1),  # System fields are read-only by default
+                    "hidden": config.get('hidden', 0),
+                    "is_virtual": 0,
+                    "fetch_from": "",
+                    "depends_on": config.get('depends_on', ''),
+                    "description": config.get('description', f"System field: {config['label']}")
+                }
+            
+            # Mark as system field
+            field_data["created_by_flansa"] = False
+            field_data["flansa_field_type"] = "system"
+            field_data["is_system_field"] = True
+            
+            fields.append(field_data)
+        
+        # Then add user-defined fields from DocType
         for field in meta.get("fields"):
             field_data = {
                 "fieldname": field.fieldname,
@@ -56,6 +98,7 @@ def get_table_fields_native(table_name):
             # Check if field was created by Flansa (from description metadata)
             field_data["created_by_flansa"] = is_flansa_created_field(field)
             field_data["flansa_field_type"] = get_flansa_field_type(field)
+            field_data["is_system_field"] = False
             
             fields.append(field_data)
         

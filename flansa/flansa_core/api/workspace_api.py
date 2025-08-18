@@ -79,7 +79,7 @@ def get_application_details(app_name):
 
 @frappe.whitelist()
 def create_flansa_table(table_data, app_name=None):
-    """Create a new Flansa Table"""
+    """Create a new Flansa Table with auto-included system fields"""
     try:
         if isinstance(table_data, str):
             table_data = frappe.parse_json(table_data)
@@ -103,11 +103,15 @@ def create_flansa_table(table_data, app_name=None):
         })
         
         table_doc.insert(ignore_permissions=True)
+        
+        # Auto-add system fields to the table
+        _add_system_fields_to_new_table(table_doc.name, table_data.get("is_submittable", 0))
+        
         frappe.db.commit()
         
         return {
             "success": True,
-            "message": f"Table '{table_data.get('table_label')}' created successfully",
+            "message": f"Table '{table_data.get('table_label')}' created successfully with system fields",
             "table": table_doc.as_dict(),
             "table_name": table_doc.name,  # Add table_name at root level for easy access
             "table_id": table_doc.name     # Also provide as table_id
@@ -119,6 +123,74 @@ def create_flansa_table(table_data, app_name=None):
             "success": False,
             "error": str(e)
         }
+
+def _add_system_fields_to_new_table(table_name, is_submittable=0):
+    """
+    Internal function to add system fields to newly created table
+    This ensures all new tables have the built-in Frappe fields available
+    """
+    try:
+        import json
+        from flansa.flansa_core.api.system_fields_manager import FRAPPE_SYSTEM_FIELDS
+        
+        # Get the table document
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        # Get current fields JSON or initialize empty list
+        current_fields = []
+        if table_doc.fields_json:
+            current_fields = json.loads(table_doc.fields_json)
+        
+        # Core system fields that should always be added
+        core_system_fields = ["name", "owner", "creation", "modified", "modified_by"]
+        
+        # Add docstatus for submittable documents
+        if is_submittable:
+            core_system_fields.extend(["docstatus", "amended_from"])
+        
+        # Add system fields to the fields JSON
+        for field_name in core_system_fields:
+            if field_name in FRAPPE_SYSTEM_FIELDS:
+                field_config = FRAPPE_SYSTEM_FIELDS[field_name]
+                
+                # Check if field already exists
+                field_exists = any(f.get("field_name") == field_name for f in current_fields)
+                if not field_exists:
+                    system_field_entry = {
+                        "field_name": field_config["fieldname"],
+                        "field_label": field_config["label"],
+                        "field_type": field_config["fieldtype"],
+                        "description": field_config.get("description", ""),
+                        "is_system_field": True,
+                        "is_readonly": True,
+                        "category": field_config.get("category", "system"),
+                        "options": field_config.get("options", ""),
+                        "in_list_view": field_config.get("in_list_view", 0),
+                        "in_standard_filter": field_config.get("in_standard_filter", 0),
+                        "depends_on": field_config.get("depends_on", ""),
+                        "bold": field_config.get("bold", 0),
+                        "hidden": field_config.get("hidden", 0)
+                    }
+                    
+                    # Handle special cases
+                    if field_name == "amended_from":
+                        # Link amended_from to the same table
+                        system_field_entry["options"] = table_doc.table_name
+                    
+                    current_fields.append(system_field_entry)
+        
+        # Update the table's fields JSON
+        table_doc.fields_json = json.dumps(current_fields)
+        table_doc.save()
+        
+        # Note: System fields are now directly available through native_fields.py
+        # No need to create Logic Fields for system fields as they are handled natively
+        
+        frappe.msgprint(f"Added {len(core_system_fields)} system fields to table {table_name}", alert=True)
+        
+    except Exception as e:
+        frappe.log_error(f"Error adding system fields to table {table_name}: {str(e)}", "System Fields Auto-Add")
+
 
 @frappe.whitelist()
 def delete_flansa_table(table_name):

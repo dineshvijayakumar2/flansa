@@ -2844,6 +2844,25 @@ class EnhancedVisualBuilder {
                 },
                 {
                     fieldtype: 'Section Break',
+                    label: 'System Fields',
+                    depends_on: `eval:!${is_edit_mode ? 'true' : 'false'} && !doc.logic_field_template`
+                },
+                {
+                    label: 'Add System Field',
+                    fieldname: 'system_field_selector',
+                    fieldtype: 'Select',
+                    options: '', // Will be populated dynamically
+                    depends_on: `eval:!${is_edit_mode ? 'true' : 'false'} && !doc.logic_field_template`,
+                    description: 'Add built-in Frappe fields (read-only)',
+                    change: () => {
+                        const selected_system_field = dialog.get_value('system_field_selector');
+                        if (selected_system_field) {
+                            this.populate_system_field_details(dialog, selected_system_field);
+                        }
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
                     label: 'Field Conversion Options',
                     depends_on: `eval:${is_edit_mode ? 'true' : 'false'}`
                 },
@@ -3103,6 +3122,9 @@ class EnhancedVisualBuilder {
         });
         
         dialog.show();
+        
+        // Load system fields dynamically for the system field selector
+        this.load_system_fields_for_dialog(table_id, dialog);
         
         // Fallback Link field detection for edit mode
         if (is_edit_mode && !is_link_field && field) {
@@ -7140,6 +7162,67 @@ class EnhancedVisualBuilder {
         
         // Parse current rollup formula and populate fields
         this.parse_rollup_formula_for_edit(dialog, field);
+    }
+    
+    load_system_fields_for_dialog(table_id, dialog) {
+        // Load system fields dynamically from backend
+        frappe.call({
+            method: 'flansa.flansa_core.api.system_fields_manager.get_all_system_fields',
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const system_fields = r.message.fields;
+                    
+                    // Create options string for the system field selector
+                    const options = [''].concat(system_fields.map(field => field.fieldname)).join('\n');
+                    
+                    // Update the system field selector options
+                    const selector_field = dialog.get_field('system_field_selector');
+                    if (selector_field) {
+                        selector_field.df.options = options;
+                        selector_field.refresh();
+                    }
+                    
+                    // Store system fields data for later use
+                    dialog._system_fields_data = system_fields;
+                } else {
+                    console.error('Failed to load system fields:', r.message?.error);
+                }
+            }
+        });
+    }
+
+    populate_system_field_details(dialog, system_field_name) {
+        // Use dynamically loaded system fields data
+        const system_fields_data = dialog._system_fields_data || [];
+        const field_info = system_fields_data.find(f => f.fieldname === system_field_name);
+        
+        if (field_info) {
+            dialog.set_value('field_label', field_info.label);
+            dialog.set_value('field_name', field_info.fieldname);
+            dialog.set_value('field_type', field_info.fieldtype);
+            dialog.set_value('description', field_info.description || `System field: ${field_info.label}`);
+            
+            // Handle Link field options (like User for owner/modified_by)
+            if (field_info.fieldtype === 'Link' && field_info.options) {
+                dialog.set_value('target_doctype', field_info.options);
+                // Show the target doctype field if it's a Link field
+                const target_field = dialog.get_field('target_doctype');
+                if (target_field) {
+                    target_field.toggle(true);
+                }
+            }
+            
+            // Mark as system field
+            dialog.system_field_mode = true;
+            
+            // Show info about system field
+            frappe.show_alert({
+                message: `System field selected: ${field_info.label}${field_info.options ? ` → ${field_info.options}` : ''}`,
+                indicator: 'blue'
+            });
+        } else {
+            console.error('System field not found:', system_field_name);
+        }
     }
     
     show_standard_field_dialog(table_id, field) {

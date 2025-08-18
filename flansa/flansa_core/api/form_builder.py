@@ -307,23 +307,33 @@ def get_table_form_config(table_name, force_refresh=False):
             # Users can choose which fields to display in their forms
             # This includes Logic Fields, Custom Fields, and standard DocType fields
             
-            # Skip system/internal fields that shouldn't be in forms
+            # Skip only truly internal fields, but include important system fields
+            # Important system fields like name, owner, creation, etc. should be available in forms
             skip_field = (
                 field.get('fieldname', '').startswith('_') or
-                field.get('fieldname') in ['docstatus', 'idx', 'name'] or
+                field.get('fieldname') in ['idx'] or  # Keep idx hidden but allow name, docstatus, etc.
                 field.get('fieldtype') in ['Section Break', 'Column Break', 'Tab Break']
             )
             
             if not skip_field:
                 # Determine field source for UI categorization
+                fieldname = field.get('fieldname', '')
+                
+                # Use centralized system fields manager
+                from flansa.flansa_core.api.system_fields_manager import FRAPPE_SYSTEM_FIELDS
+                
                 field_source = "system"
+                is_system_field = fieldname in FRAPPE_SYSTEM_FIELDS
+                
                 if field.get('created_by_flansa'):
                     field_source = "flansa"
-                elif frappe.db.exists("Custom Field", {"dt": table_doc.doctype_name, "fieldname": field.get('fieldname')}):
+                elif frappe.db.exists("Custom Field", {"dt": table_doc.doctype_name, "fieldname": fieldname}):
                     field_source = "custom"
+                elif is_system_field:
+                    field_source = "system"
                 
                 # Check if it's a Logic Field
-                is_logic_field = frappe.db.exists("Flansa Logic Field", {"table_name": table_name, "field_name": field.get('fieldname')})
+                is_logic_field = frappe.db.exists("Flansa Logic Field", {"table_name": table_name, "field_name": fieldname})
                 
                 formatted_fields.append({
                     'field_name': field['fieldname'],
@@ -331,7 +341,7 @@ def get_table_form_config(table_name, force_refresh=False):
                     'field_type': field['fieldtype'],
                     'options': field.get('options', ''),
                     'is_required': field.get('reqd', 0),
-                    'is_readonly': field.get('read_only', 0),
+                    'is_readonly': field.get('read_only', 0) or is_system_field,  # System fields are always read-only
                     'description': field.get('description', ''),
                     'default_value': field.get('default', ''),
                     'hidden': field.get('hidden', 0),
@@ -343,7 +353,8 @@ def get_table_form_config(table_name, force_refresh=False):
                     'field_order': field.get('idx', 0),
                     'field_source': field_source,
                     'is_logic_field': is_logic_field,
-                    'is_virtual': field.get('is_virtual', 0)
+                    'is_virtual': field.get('is_virtual', 0),
+                    'is_system_field': is_system_field  # Add system field indicator
                 })
         
         # Check if form configuration already exists
