@@ -161,6 +161,10 @@ class EnhancedVisualBuilder {
                                     <i class="fa fa-download" style="width: 16px;"></i>
                                     <span>Export Schema</span>
                                 </div>
+                                <div class="context-menu-item" data-action="database-viewer" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-database" style="width: 16px;"></i>
+                                    <span>Database Viewer</span>
+                                </div>
                                 <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
                                     <i class="fa fa-keyboard-o" style="width: 16px;"></i>
                                     <span>Keyboard Shortcuts</span>
@@ -423,6 +427,10 @@ class EnhancedVisualBuilder {
                                 <div class="context-menu-item" data-action="export-schema" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
                                     <i class="fa fa-download" style="width: 16px;"></i>
                                     <span>Export Schema</span>
+                                </div>
+                                <div class="context-menu-item" data-action="database-viewer" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-database" style="width: 16px;"></i>
+                                    <span>Database Viewer</span>
                                 </div>
                                 <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
                                     <i class="fa fa-keyboard-o" style="width: 16px;"></i>
@@ -6122,6 +6130,10 @@ class EnhancedVisualBuilder {
                 
             case 'export-schema':
                 this.export_table_schema();
+                break;
+                
+            case 'database-viewer':
+                window.open('/app/flansa-database-viewer', '_blank');
                 break;
                 
             case 'keyboard-shortcuts':
