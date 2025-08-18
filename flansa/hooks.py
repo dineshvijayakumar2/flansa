@@ -194,9 +194,10 @@ user_data_fields = [
 # ---------------
 # Hook on document methods and events
 
-# Document Events for Logic Field calculations
+# Document Events for Logic Field calculations and validation
 doc_events = {
     "*": {
+        "validate": "flansa.flansa_core.doctype_hooks.validate_logic_fields",
         "before_save": "flansa.flansa_core.doctype_hooks.calculate_logic_fields",
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
     }

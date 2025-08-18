@@ -56,3 +56,48 @@ def setup_logic_field_hooks():
     # This would be called from hooks.py to setup global hooks
     # For now, we'll handle this per-DocType when Logic Fields are added
     pass
+
+def validate_logic_fields(doc, method=None):
+    """Prevent manual editing of Logic Fields"""
+    
+    try:
+        # Get Logic Fields for this DocType
+        logic_fields = frappe.get_all("Flansa Logic Field", 
+                                     filters={
+                                         "is_active": 1
+                                     },
+                                     fields=["field_name", "table_name"])
+        
+        # Filter Logic Fields for this DocType
+        doctype_logic_fields = []
+        for field in logic_fields:
+            try:
+                flansa_table = frappe.get_doc("Flansa Table", field.table_name)
+                if flansa_table.doctype_name == doc.doctype:
+                    doctype_logic_fields.append(field.field_name)
+            except:
+                continue
+        
+        if not doctype_logic_fields:
+            return
+        
+        # Check if any logic fields were manually modified
+        if hasattr(doc, '_doc_before_save') and doc._doc_before_save:
+            for field_name in doctype_logic_fields:
+                old_value = getattr(doc._doc_before_save, field_name, None)
+                new_value = getattr(doc, field_name, None)
+                
+                # Allow system/calculation updates but prevent manual user edits
+                if (old_value != new_value and 
+                    not getattr(doc, '_logic_field_update', False) and
+                    frappe.session.user != 'Administrator'):
+                    
+                    frappe.throw(
+                        f"Field '{field_name}' is a calculated Logic Field and cannot be edited manually. "
+                        f"It will be automatically calculated based on its formula."
+                    )
+                    
+    except Exception as e:
+        # Don't break document save if validation fails
+        frappe.log_error(f"Logic Field validation error: {str(e)}", "FlansaLogic Validation")
+

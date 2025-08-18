@@ -1095,7 +1095,10 @@ def add_logic_field_entry_with_migration(table_name, field_config):
                     calculated_value = engine.evaluate(expression, doc_context)
                     
                     # Set the calculated value
+                    # Set flag to allow logic field updates
+                    doc._logic_field_update = True
                     setattr(doc, field_name, calculated_value)
+                    doc._logic_field_update = False
                     
                     # Save without triggering hooks to avoid recursion
                     doc.save(ignore_permissions=True)
