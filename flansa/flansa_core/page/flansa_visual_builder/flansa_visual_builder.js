@@ -1090,6 +1090,14 @@ class EnhancedVisualBuilder {
             }
         });
         
+                // Set dialog field values for depends_on conditions
+        if (logic_field_template) {
+            dialog.set_value('logic_field_template', logic_field_template);
+        }
+        if (is_link_field) {
+            dialog.set_value('is_link_field', is_link_field);
+        }
+        
         dialog.show();
         
         // Initialize live testing with enhanced features
@@ -1217,7 +1225,7 @@ class EnhancedVisualBuilder {
                 args: {
                     table_name: table_id,
                     field_config: {
-                        field_name: values.field_name,
+                        field_name: this.generate_field_id(values.field_name),
                         field_label: values.field_label,
                         field_type: values.field_type,
                         options: values.options || '',
@@ -1327,6 +1335,7 @@ class EnhancedVisualBuilder {
                     description: 'DocType to link to (e.g., Customer, Item)',
                     depends_on: 'eval:doc.field_type === "Link"'
                 },
+                
                 {
                     fieldtype: 'Section Break',
                     label: 'Field Properties'
@@ -1474,7 +1483,7 @@ class EnhancedVisualBuilder {
             primary_action: (values) => {
                 // Create the gallery field with enhanced configuration using JSON field
                 const field_data = {
-                    field_name: values.field_name,
+                    field_name: this.generate_field_id(values.field_name),
                     field_label: values.field_label,
                     field_type: 'JSON',  // Using JSON field to store multiple image data
                     options: '',  // No options needed for JSON
@@ -1494,7 +1503,7 @@ class EnhancedVisualBuilder {
                     args: {
                         table_name: table_id,
                         gallery_config: {
-                            field_name: values.field_name,
+                            field_name: this.generate_field_id(values.field_name),
                             field_label: values.field_label,
                             gallery_type: values.gallery_type,
                             max_files: values.max_files,
@@ -1877,6 +1886,11 @@ class EnhancedVisualBuilder {
                 {
                     fieldtype: 'Section Break',
                     label: 'Target Selection'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Link Field Configuration',
+                    description: 'Configure relationship to other tables'
                 },
                 {
                     label: 'Link Scope',
@@ -2412,10 +2426,20 @@ class EnhancedVisualBuilder {
         }
     }
 
-    // Helper function to map logic_type to template_type
+    // Helper function to map logic_type to template_type (simplified)
     map_logic_type_to_template(logic_type, field) {
-        // First, try to detect from field name patterns
-        if (field.field_name.includes('logic_link') && field.field_type === 'Link') {
+        // First priority: Check logic_type directly (case-insensitive)
+        if (logic_type && logic_type.toLowerCase() === 'link') {
+            return 'link';
+        }
+        
+        // Second priority: Check field type for Link fields
+        if (field.field_type === 'Link') {
+            return 'link';
+        }
+        
+        // Third priority: Pattern detection
+        if (field.field_name.includes('logic_link')) {
             return 'link';
         } else if (field.field_name.includes('logic_fetch') || (field.expression && field.expression.includes('FETCH('))) {
             return 'fetch';
@@ -2425,19 +2449,255 @@ class EnhancedVisualBuilder {
             return 'formula';
         }
         
-        // Fallback to logic_type mapping
-        const type_mapping = {
-            'Link': 'link',
-            'Fetch': 'fetch', 
-            'Rollup': 'rollup',
-            'Formula': 'formula',
-            'Calculation': 'formula'
-        };
-        
-        return type_mapping[logic_type] || 'formula';
+        // Fallback mapping - use lowercase consistently
+        return logic_type?.toLowerCase() || 'formula';
     }
 
     // Unified field dialog for add/edit with formula support
+    
+    // Load Link field configuration for editing
+    load_link_field_configuration(dialog, field, table_id) {
+        try {
+            console.log("Loading Link field configuration for:", field);
+            
+            // Get the target table from field options
+            const target_doctype = field.options;
+            
+            if (!target_doctype) {
+                console.warn("No target doctype found for Link field");
+                return;
+            }
+            
+            // Set the target doctype in the dialog
+            dialog.set_value('target_doctype', target_doctype);
+            
+            // Determine and set the link scope based on target doctype
+            this.determine_and_set_link_scope(dialog, target_doctype, table_id);
+            
+            // Check if this Link field has a Logic Field entry
+            frappe.call({
+                method: 'flansa.flansa_core.api.table_api.get_logic_field_for_field',
+                args: {
+                    table_name: table_id,
+                    field_name: field.field_name
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success && r.message.logic_field) {
+                        console.log("Found Logic Field entry:", r.message.logic_field);
+                        
+                        // Show Logic Field information
+                        const logic_info = r.message.logic_field;
+                        
+                        // Update dialog with Logic Field info
+                        if (logic_info.expression) {
+                            dialog.set_value('formula', logic_info.expression);
+                        }
+                        
+                        if (logic_info.result_type) {
+                            dialog.set_value('result_type', logic_info.result_type);
+                        }
+                        
+                        // Show that this is a calculated Link field
+                        frappe.show_alert({
+                            message: `This Link field has ${logic_info.logic_type || 'formula'} calculations`,
+                            indicator: 'blue'
+                        });
+                    } else {
+                        console.log("No Logic Field entry found for this Link field");
+                    }
+                }
+            });
+            
+        } catch (e) {
+            console.error("Error loading Link field configuration:", e);
+        }
+    }
+    
+    // Determine link scope from target doctype
+    determine_and_set_link_scope(dialog, target_doctype, table_id) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_link_wizard_data',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const link_data = r.message;
+                    if (!link_data || !link_data.success) {
+                        console.warn("Failed to load link wizard data");
+                        return;
+                    }
+                    
+                    const { current_app_tables, other_apps_data, system_tables } = link_data;
+                    
+                    // Check Current App first
+                    const current_app_match = current_app_tables?.find(t => t.value === target_doctype);
+                    if (current_app_match) {
+                        dialog.set_value('link_scope', 'Current App');
+                        this.load_target_tables(dialog, table_id);
+                        setTimeout(() => {
+                            dialog.set_value('target_doctype', current_app_match.label);
+                        }, 300);
+                        return;
+                    }
+                    
+                    // Check Other Flansa Apps
+                    if (other_apps_data) {
+                        for (const [app_name, tables] of Object.entries(other_apps_data)) {
+                            const app_match = tables.find(t => t.value === target_doctype);
+                            if (app_match) {
+                                dialog.set_value('link_scope', 'Other Flansa Apps');
+                                setTimeout(() => {
+                                    dialog.set_value('target_app', app_name);
+                                    setTimeout(() => {
+                                        dialog.set_value('target_doctype', app_match.label);
+                                    }, 500);
+                                }, 300);
+                                return;
+                            }
+                        }
+                    }
+                    
+                    // Check System Tables
+                    const system_match = system_tables?.find(t => t.value === target_doctype);
+                    if (system_match) {
+                        dialog.set_value('link_scope', 'System Tables');
+                        this.load_target_tables(dialog, table_id);
+                        setTimeout(() => {
+                            dialog.set_value('target_doctype', system_match.label);
+                        }, 300);
+                        return;
+                    }
+                    
+                    // If not found in any scope, default to Current App
+                    console.warn("Target doctype not found in any scope, defaulting to Current App");
+                    dialog.set_value('link_scope', 'Current App');
+                    dialog.set_value('target_doctype', target_doctype);
+                }
+            }
+        });
+    }
+
+    
+    // Load Link field configuration for editing
+    load_link_field_configuration(dialog, field, table_id) {
+        try {
+            console.log("Loading Link field configuration for:", field);
+            
+            // Get the target table from field options
+            const target_doctype = field.options;
+            
+            if (!target_doctype) {
+                console.warn("No target doctype found for Link field");
+                return;
+            }
+            
+            // Set the target doctype in the dialog
+            dialog.set_value('target_doctype', target_doctype);
+            
+            // Determine and set the link scope based on target doctype
+            this.determine_and_set_link_scope(dialog, target_doctype, table_id);
+            
+            // Check if this Link field has a Logic Field entry
+            frappe.call({
+                method: 'flansa.flansa_core.api.table_api.get_logic_field_for_field',
+                args: {
+                    table_name: table_id,
+                    field_name: field.field_name
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success && r.message.logic_field) {
+                        console.log("Found Logic Field entry:", r.message.logic_field);
+                        
+                        // Show Logic Field information
+                        const logic_info = r.message.logic_field;
+                        
+                        // Update dialog with Logic Field info
+                        if (logic_info.expression) {
+                            dialog.set_value('formula', logic_info.expression);
+                        }
+                        
+                        if (logic_info.result_type) {
+                            dialog.set_value('result_type', logic_info.result_type);
+                        }
+                        
+                        // Show that this is a calculated Link field
+                        frappe.show_alert({
+                            message: `This Link field has ${logic_info.logic_type || 'formula'} calculations`,
+                            indicator: 'blue'
+                        });
+                    } else {
+                        console.log("No Logic Field entry found for this Link field");
+                    }
+                }
+            });
+            
+        } catch (e) {
+            console.error("Error loading Link field configuration:", e);
+        }
+    }
+    
+    // Determine link scope from target doctype
+    determine_and_set_link_scope(dialog, target_doctype, table_id) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_link_wizard_data',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const link_data = r.message;
+                    if (!link_data || !link_data.success) {
+                        console.warn("Failed to load link wizard data");
+                        return;
+                    }
+                    
+                    const { current_app_tables, other_apps_data, system_tables } = link_data;
+                    
+                    // Check Current App first
+                    const current_app_match = current_app_tables?.find(t => t.value === target_doctype);
+                    if (current_app_match) {
+                        dialog.set_value('link_scope', 'Current App');
+                        this.load_target_tables(dialog, table_id);
+                        setTimeout(() => {
+                            dialog.set_value('target_doctype', current_app_match.label);
+                        }, 300);
+                        return;
+                    }
+                    
+                    // Check Other Flansa Apps
+                    if (other_apps_data) {
+                        for (const [app_name, tables] of Object.entries(other_apps_data)) {
+                            const app_match = tables.find(t => t.value === target_doctype);
+                            if (app_match) {
+                                dialog.set_value('link_scope', 'Other Flansa Apps');
+                                setTimeout(() => {
+                                    dialog.set_value('target_app', app_name);
+                                    setTimeout(() => {
+                                        dialog.set_value('target_doctype', app_match.label);
+                                    }, 500);
+                                }, 300);
+                                return;
+                            }
+                        }
+                    }
+                    
+                    // Check System Tables
+                    const system_match = system_tables?.find(t => t.value === target_doctype);
+                    if (system_match) {
+                        dialog.set_value('link_scope', 'System Tables');
+                        this.load_target_tables(dialog, table_id);
+                        setTimeout(() => {
+                            dialog.set_value('target_doctype', system_match.label);
+                        }, 300);
+                        return;
+                    }
+                    
+                    // If not found in any scope, default to Current App
+                    console.warn("Target doctype not found in any scope, defaulting to Current App");
+                    dialog.set_value('link_scope', 'Current App');
+                    dialog.set_value('target_doctype', target_doctype);
+                }
+            }
+        });
+    }
+
     show_unified_field_dialog(table_id, field = null, template_hint = null) {
         const is_edit_mode = !!field;
         
@@ -2485,13 +2745,43 @@ class EnhancedVisualBuilder {
         });
     }
     
+
+    // Helper function for consistent ID generation
+    generate_field_id(base_name) {
+        // Keep it simple - just use the field name with basic cleanup
+        return base_name.toLowerCase()
+            .replace(/[^a-zA-Z0-9]/g, '_')  // Replace non-alphanumeric with underscore
+            .replace(/_+/g, '_')            // Remove multiple underscores
+            .replace(/^_|_$/g, '');         // Remove leading/trailing underscores
+    }
     create_unified_dialog(table_id, field, is_logic_field, logic_field_template) {
         const is_edit_mode = !!field;
         const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
         
-        // Special handling for regular Link fields in edit mode
-        const is_link_field = is_edit_mode && field.field_type === 'Link';
-        const show_link_controls = is_logic_field && logic_field_template === 'link' || is_link_field;
+        // Enhanced Link field detection for edit mode
+        const is_link_field = is_edit_mode && (
+            field.field_type === 'Link' || 
+            field.fieldtype === 'Link' ||
+            (field.options && field.options.trim() && !field.options.includes('\n'))
+        );
+        
+        // Ensure logic_field_template is set to 'link' for any Link field
+        if (is_link_field && !logic_field_template) {
+            logic_field_template = 'link';
+        }
+        
+        // Additional debug logging for Link field detection
+        if (is_edit_mode) {
+            console.log('🔍 Enhanced Link Field Detection:', {
+                field_name: field.field_name,
+                field_type: field.field_type,
+                fieldtype: field.fieldtype,
+                options: field.options,
+                is_link_field: is_link_field,
+                logic_field_template: logic_field_template
+            });
+        }
+        const show_link_controls = (is_logic_field && logic_field_template === 'link') || is_link_field;
         
         // Debug logging for Link field detection
         if (is_edit_mode) {
@@ -2516,6 +2806,19 @@ class EnhancedVisualBuilder {
         const dialog = new frappe.ui.Dialog({
             title: dialog_title,
             fields: [
+                // Hidden fields for depends_on conditions
+                {
+                    fieldname: 'logic_field_template',
+                    fieldtype: 'Data',
+                    hidden: 1,
+                    default: logic_field_template || ''
+                },
+                {
+                    fieldname: 'is_link_field',
+                    fieldtype: 'Check', 
+                    hidden: 1,
+                    default: is_link_field ? 1 : 0
+                },
                 {
                     label: 'Field Label',
                     fieldname: 'field_label',
@@ -2555,9 +2858,77 @@ class EnhancedVisualBuilder {
                     fieldname: 'field_type',
                     fieldtype: 'Select',
                     options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach',
-                    default: is_edit_mode ? field.field_type : 'Data',
-                    reqd: 1
+                    default: is_edit_mode ? field.field_type : (logic_field_template === 'link' ? 'Link' : 'Data'),
+                    reqd: 1,
+                    read_only: (logic_field_template === 'link' || (is_edit_mode && is_link_field)) ? 1 : 0  // Make it read-only for Link template and existing Link fields
                 },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Conversion Options',
+                    depends_on: `eval:${is_edit_mode ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Convert to Link Field',
+                    fieldname: 'convert_to_link',
+                    fieldtype: 'Check',
+                    default: 0,
+                    description: 'Convert this field to a Link field for relationships',
+                    depends_on: `eval:${is_edit_mode && !is_link_field ? 'true' : 'false'}`,
+                    change: () => {
+                        const convert_checked = dialog.get_value('convert_to_link');
+                        if (convert_checked) {
+                            dialog.set_value('field_type', 'Link');
+                            // Set default link scope
+                            dialog.set_value('link_scope', 'Current App');
+                            // Load target tables for the default scope
+                            this.load_target_tables(dialog, table_id);
+                            frappe.msgprint({
+                                title: 'Convert to Link Field',
+                                message: 'This will convert the field to a Link field for creating relationships with other tables.',
+                                indicator: 'blue'
+                            });
+                        }
+                        dialog.refresh();
+                    }
+                },
+                {
+                    label: 'Add Logic',
+                    fieldname: 'add_logic',
+                    fieldtype: 'Check',
+                    default: 0,
+                    description: 'Add formula-based calculations to this field',
+                    depends_on: `eval:${is_edit_mode && !is_logic_field ? 'true' : 'false'}`,
+                    change: () => {
+                        const add_logic_checked = dialog.get_value('add_logic');
+                        if (add_logic_checked) {
+                            frappe.msgprint({
+                                title: 'Add Logic to Field',
+                                message: 'This will add formula-based calculations to the field. The field will become read-only and calculated.',
+                                indicator: 'blue'
+                            });
+                        }
+                        dialog.refresh();
+                    }
+                },
+                {
+                    label: 'Remove Logic',
+                    fieldname: 'remove_logic',
+                    fieldtype: 'Check',
+                    default: 0,
+                    description: '⚠️ Remove formula calculations and make field editable again',
+                    depends_on: `eval:${is_edit_mode && is_logic_field ? 'true' : 'false'}`,
+                    change: () => {
+                        const remove_logic_checked = dialog.get_value('remove_logic');
+                        if (remove_logic_checked) {
+                            // Just show a simple alert, no confirmation (main handler will confirm)
+                            frappe.show_alert({
+                                message: '⚠️ Click Update Field to remove logic from this field',
+                                indicator: 'orange'
+                            });
+                        }
+                    }
+                },
+                
                 {
                     label: 'Options',
                     fieldname: 'options',
@@ -2572,7 +2943,7 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Data',
                     default: is_edit_mode ? (field.options || '') : '',
                     description: 'DocType to link to (e.g., Customer, Item)',
-                    depends_on: 'eval:doc.field_type === "Link"'
+                    depends_on: `eval:doc.field_type === "Link" && ${logic_field_template !== 'link' && !is_link_field ? 'true' : 'false'}`
                 },
                 {
                     fieldtype: 'Section Break',
@@ -2584,19 +2955,22 @@ class EnhancedVisualBuilder {
                     fieldname: 'logic_type_display',
                     fieldtype: 'Data',
                     read_only: 1,
-                    default: is_logic_field ? (logic_field_template || 'Unknown').toUpperCase() : '',
+                    default: is_logic_field ? (logic_field_template || (is_link_field ? 'link' : 'formula')) : '',
                     description: 'Type of logic field',
                     depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Link Field Configuration',
+                    description: 'Configure relationship to other tables'
                 },
                 {
                     label: 'Link Scope',
                     fieldname: 'link_scope',
                     fieldtype: 'Select',
                     options: 'Current App\nOther Flansa Apps\nSystem Tables',
-                    default: (logic_field_template === 'link' || is_link_field) ? 'Current App' : '',
-                    reqd: (logic_field_template === 'link' || is_link_field) ? 1 : 0,
+                    default: 'Current App',
                     description: 'Choose the scope of tables to link to',
-                    depends_on: `eval:${logic_field_template === 'link' || is_link_field ? 'true' : 'false'}`,
                     change: () => {
                         this.load_target_tables(dialog, table_id);
                     }
@@ -2606,7 +2980,7 @@ class EnhancedVisualBuilder {
                     fieldname: 'target_app',
                     fieldtype: 'Select',
                     description: 'Choose the Flansa app to select tables from',
-                    depends_on: `eval:${logic_field_template === 'link' || is_link_field ? 'doc.link_scope === "Other Flansa Apps"' : 'false'}`,
+                    depends_on: "eval:doc.link_scope == 'Other Flansa Apps'",
                     change: () => {
                         this.handle_app_selection_change(dialog);
                     }
@@ -2615,10 +2989,14 @@ class EnhancedVisualBuilder {
                     label: 'Target Table',
                     fieldname: 'target_doctype',
                     fieldtype: 'Select',
-                    reqd: (logic_field_template === 'link' || is_link_field) ? 1 : 0,
                     description: 'Table/DocType to link to',
-                    depends_on: `eval:${logic_field_template === 'link' || is_link_field ? 'true' : 'false'}`,
                     default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : ''
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Fetch Field Configuration', 
+                    description: 'Configure which field to fetch from linked records',
+                    depends_on: "eval:doc.logic_field_template == 'fetch'"
                 },
                 {
                     label: 'Source Link Field',
@@ -2626,7 +3004,7 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Select',
                     default: logic_field_template === 'fetch' && field ? this.parse_fetch_source_field(field.expression) : '',
                     description: 'Link field to fetch data from',
-                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`,
+                    depends_on: "eval:doc.logic_field_template == 'fetch'",
                     change: () => {
                         // Load target fields for the selected source
                         this.load_unified_target_fields(dialog, table_id);
@@ -2640,7 +3018,7 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Select',
                     default: logic_field_template === 'fetch' && field ? this.parse_fetch_target_field(field.expression) : '',
                     description: 'Field to fetch from the linked record',
-                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`,
+                    depends_on: "eval:doc.logic_field_template == 'fetch'",
                     change: () => {
                         // Update FETCH expression when target field changes
                         this.update_fetch_expression(dialog);
@@ -2653,22 +3031,55 @@ class EnhancedVisualBuilder {
                     read_only: 1,
                     default: logic_field_template === 'fetch' && field ? (field.expression || '') : '',
                     description: 'Auto-generated FETCH expression based on selections above',
-                    depends_on: `eval:${logic_field_template === 'fetch' ? 'true' : 'false'}`
+                    depends_on: "eval:doc.logic_field_template == 'fetch'"
                 },
                 {
                     fieldtype: 'Section Break',
-                    label: 'Formula (Optional)',
-                    depends_on: `eval:${is_logic_field && logic_field_template !== 'formula' ? 'false' : 'true'}`
+                    label: 'Formula Configuration',
+                    depends_on: `eval:${is_logic_field && logic_field_template !== 'formula' ? 'false' : 'true'} || doc.add_logic`
+                },
+                {
+                    label: 'Result Type',
+                    fieldname: 'result_type',
+                    fieldtype: 'Select',
+                    options: 'Data\nInt\nFloat\nCurrency\nDate\nDatetime\nCheck',
+                    default: is_edit_mode && is_logic_field ? (field.result_type || 'Data') : 'Data',
+                    description: 'Expected data type that the formula will return',
+                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'} && ${logic_field_template !== 'link' ? 'true' : 'false'}) || doc.add_logic`,
+                    change: () => {
+                        const result_type = dialog.get_value('result_type');
+                        const formula = dialog.get_value('formula');
+                        
+                        // Immediate validation when result type changes
+                        this.validate_formula_result_type(formula || '', result_type, dialog);
+                    }
                 },
                 {
                     label: 'Formula',
                     fieldname: 'formula',
                     fieldtype: 'Code',
                     default: is_edit_mode && is_logic_field && logic_field_template === 'formula' ? field.expression : '',
-                    description: 'Add formula to make this a calculated field (e.g., price * quantity)',
+                    description: 'Add formula to make this a calculated field (e.g., price * quantity, today(), field1 + field2)',
                     language: 'javascript',
-                    depends_on: `eval:${is_logic_field && logic_field_template !== 'formula' ? 'false' : 'true'}`
+                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'} && ${logic_field_template !== 'link' ? 'true' : 'false'}) || doc.add_logic`,
+                    change: () => {
+                        const formula = dialog.get_value('formula');
+                        const result_type = dialog.get_value('result_type') || 'Data';
+                        
+                        // Immediate validation with visual feedback
+                        const validation_result = this.validate_formula_result_type(formula, result_type, dialog);
+                        
+                        // Update primary action based on validation
+                        if (validation_result && !validation_result.valid) {
+                            dialog.set_primary_action('⚠️ Create with Issues', 
+                                (values) => this.handle_unified_field_action(table_id, values, is_edit_mode, field, dialog));
+                        } else {
+                            dialog.set_primary_action(is_edit_mode ? 'Update Field' : 'Create Field', 
+                                (values) => this.handle_unified_field_action(table_id, values, is_edit_mode, field, dialog));
+                        }
+                    }
                 },
+                
                 {
                     fieldtype: 'Section Break',
                     label: 'Field Properties'
@@ -2704,23 +3115,112 @@ class EnhancedVisualBuilder {
             ],
             primary_action_label: is_edit_mode ? 'Update Field' : 'Create Field',
             primary_action: (values) => {
-                this.handle_unified_field_action(table_id, values, is_edit_mode, field);
+                this.handle_unified_field_action(table_id, values, is_edit_mode, field, dialog);
             }
         });
         
         dialog.show();
+        
+        // Fallback Link field detection for edit mode
+        if (is_edit_mode && !is_link_field && field) {
+            // Check if field has Link-like characteristics
+            const field_type_value = dialog.get_value('field_type');
+            const options_value = field.options;
+            
+            if (field_type_value === 'Link' || (options_value && options_value.trim() && !options_value.includes('\n'))) {
+                console.log('🔍 Fallback detected Link field:', field.field_name);
+                
+                // Force show Link controls
+                setTimeout(() => {
+                    const link_scope_field = dialog.get_field('link_scope');
+                    const target_doctype_field = dialog.get_field('target_doctype');
+                    
+                    if (link_scope_field) {
+                        link_scope_field.df.hidden = 0;
+                        link_scope_field.refresh();
+                        dialog.set_value('link_scope', 'Current App');
+                    }
+                    
+                    if (target_doctype_field) {
+                        target_doctype_field.df.hidden = 0;
+                        target_doctype_field.refresh();
+                    }
+                    
+                    // Load target tables
+                    this.load_target_tables(dialog, table_id);
+                    
+                    console.log('✅ Fallback Link field controls shown');
+                }, 200);
+            }
+        }
+        
+        // Simple Link field loading - always load for all fields
+        setTimeout(() => {
+            console.log('🔍 Loading target tables for all fields');
+            
+            // Always load target tables - let user decide if they need Link functionality
+            this.load_target_tables(dialog, table_id);
+            
+            // Set default values for Link fields
+            if (is_edit_mode && (logic_field_template === 'link' || is_link_field)) {
+                dialog.set_value('link_scope', 'Current App');
+                if (field && field.options) {
+                    // Pre-populate target doctype for existing Link fields
+                    setTimeout(() => {
+                        dialog.set_value('target_doctype', field.options);
+                    }, 500);
+                }
+            }
+            
+            console.log('✅ Target tables loading initiated');
+            
+            // Handle convert_to_link checkbox changes
+            const convert_checkbox = dialog.get_field('convert_to_link');
+            if (convert_checkbox) {
+                convert_checkbox.$input.on('change', () => {
+                    const is_converting = dialog.get_value('convert_to_link');
+                    if (is_converting) {
+                        dialog.get_field('link_scope').df.hidden = 0;
+                        dialog.get_field('link_scope').refresh();
+                        dialog.get_field('target_doctype').df.hidden = 0;
+                        dialog.get_field('target_doctype').refresh();
+                        this.load_target_tables(dialog, table_id);
+                    }
+                });
+            }
+        }, 100);
+        
+        // Load Link field configuration if editing a Link field
+        if (is_edit_mode && is_link_field && field) {
+            setTimeout(() => {
+                this.load_link_field_configuration(dialog, field, table_id);
+            }, 100);
+        }
         
         // Load dropdown options for Logic Fields and Link fields after dialog is shown
         if (is_logic_field || (logic_field_template === 'link') || is_link_field) {
             setTimeout(() => {
                 if (logic_field_template === 'fetch') {
                     this.load_fetch_field_options(dialog, table_id);
+                    
+                    // For edit mode, populate target field after loading
+                    if (is_edit_mode && field && field.expression) {
+                        setTimeout(() => {
+                            const target_field = this.parse_fetch_target_field(field.expression);
+                            if (target_field) {
+                                dialog.set_value('fetch_target_field', target_field);
+                                console.log('✅ Populated target field:', target_field);
+                            }
+                        }, 1000); // Wait for options to load
+                    }
                 } else if (logic_field_template === 'link' || is_link_field) {
                     this.load_target_tables(dialog, table_id);
                     
-                    // If editing Link field (Logic or regular), pre-populate the selections
+                    // If editing Link field (Logic or regular), pre-populate after target tables load
                     if (is_edit_mode && field && field.options) {
-                        this.pre_populate_link_field_values(dialog, field.options, table_id);
+                        setTimeout(() => {
+                            this.pre_populate_link_field_values(dialog, field.options, table_id);
+                        }, 1000); // Wait for target tables to load first
                     }
                 }
                 // Add other field types as needed
@@ -2741,7 +3241,7 @@ class EnhancedVisualBuilder {
                 if (is_edit_mode && field) {
                     let formula_display = '';
                     if ((logic_field_template === 'link' || is_link_field) && field.options) {
-                        formula_display = `LINK(${field.options})`;
+                        formula_display = "";  // Keep blank for Link fields
                     } else if (logic_field_template === 'fetch' && field.calculation_method) {
                         formula_display = field.calculation_method;
                     } else if (logic_field_template === 'rollup' && field.calculation_method) {
@@ -2774,12 +3274,384 @@ class EnhancedVisualBuilder {
     }
 
     // Handle unified field dialog action (create or update)
-    handle_unified_field_action(table_id, values, is_edit_mode, existing_field) {
+    handle_unified_field_action(table_id, values, is_edit_mode, existing_field, dialog) {
         const has_formula = values.formula && values.formula.trim();
         
-        // Prepare field configuration
+        // Debug logging for field creation
+        console.log('🔍 Field Action Debug:', {
+            is_edit_mode: is_edit_mode,
+            field_name: this.generate_field_id(values.field_name),
+            field_type: values.field_type,
+            has_fetch_fields: !!(values.fetch_source_field && values.fetch_target_field),
+            has_link_fields: !!(values.target_doctype && values.link_scope),
+            values: values
+        });
+        
+        // Debug logging for field creation
+        console.log('🔍 Field Action Debug:', {
+            is_edit_mode: is_edit_mode,
+            field_name: this.generate_field_id(values.field_name),
+            field_type: values.field_type,
+            has_fetch_fields: !!(values.fetch_source_field && values.fetch_target_field),
+            has_link_fields: !!(values.target_doctype && values.link_scope),
+            values: values
+        });
+        
+        
+
+        // Check if this is removing logic from a field
+        const is_removing_logic = is_edit_mode && values.remove_logic;
+        
+        if (is_removing_logic) {
+            frappe.confirm(
+                'Remove Logic from Field?',
+                () => {
+                    frappe.call({
+                        method: 'flansa.flansa_core.api.remove_logic_api.remove_logic_from_field',
+                        args: {
+                            table_name: table_id,
+                            field_name: this.generate_field_id(values.field_name)
+                        },
+                        callback: (r) => {
+                            if (r.message && r.message.success) {
+                                frappe.show_alert({
+                                    message: r.message.message,
+                                    indicator: 'green'
+                                });
+                                dialog.hide();
+                                this.load_table_fields(table_id);
+                            } else {
+                                frappe.show_alert({
+                                    message: `Failed to remove logic: ${r.message?.error || 'Unknown error'}`,
+                                    indicator: 'red'
+                                });
+                            }
+                        }
+                    });
+                },
+                'This will make the field editable again and remove all formula calculations.'
+            );
+            return;
+        }
+        
+                // Check for combined conversions (both Link and Logic)
+        const is_combined_conversion = is_edit_mode && values.convert_to_link && values.add_logic;
+        
+        if (is_combined_conversion) {
+            // Handle combined conversion: Convert to Link AND add Logic
+            if (!values.target_doctype) {
+                frappe.show_alert({
+                    message: 'Please select a target table for the Link field conversion',
+                    indicator: 'orange'
+                });
+                return;
+            }
+            
+            if (!values.formula || !values.formula.trim()) {
+                frappe.show_alert({
+                    message: 'Please provide a formula for adding logic to the field',
+                    indicator: 'orange'
+                });
+                return;
+            }
+            
+            // First convert to Link field
+            let actual_target_doctype = values.target_doctype;
+            if (dialog && dialog._table_data) {
+                const selected_table = dialog._table_data.find(t => t.label === values.target_doctype);
+                if (selected_table) {
+                    actual_target_doctype = selected_table.value;
+                }
+            }
+            
+            frappe.call({
+                method: 'flansa.flansa_core.api.field_conversion.convert_field_to_link',
+                args: {
+                    table_name: table_id,
+                    field_name: this.generate_field_id(values.field_name),
+                    target_doctype: actual_target_doctype
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        // Now add logic to the converted Link field
+                        frappe.call({
+                            method: 'flansa.flansa_core.api.table_api.add_logic_field_entry_with_migration',
+                            args: {
+                                table_name: table_id,
+                                field_config: {
+                                    field_name: this.generate_field_id(values.field_name),
+                                    field_label: values.field_label,
+                                    expression: values.formula,
+                                    result_type: 'Data',
+                                    logic_type: 'formula',
+                                    logic_field_template: 'formula'
+                                }
+                            },
+                            callback: (r2) => {
+                                if (r2.message && r2.message.success) {
+                                    frappe.show_alert({
+                                        message: `Field converted to Link field and logic added successfully. Field is now a calculated Link field.`,
+                                        indicator: 'green'
+                                    });
+                                    
+                                    dialog.hide();
+                                    this.load_table_fields(table_id);
+                                } else {
+                                    frappe.show_alert({
+                                        message: `Link conversion succeeded but adding logic failed: ${r2.message?.error || 'Unknown error'}`,
+                                        indicator: 'orange'
+                                    });
+                                }
+                            }
+                        });
+                    } else {
+                        frappe.show_alert({
+                            message: `Combined conversion failed: ${r.message?.error || 'Unknown error'}`,
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Check if this is a field conversion to Link
+        const is_conversion_to_link = is_edit_mode && values.convert_to_link && values.target_doctype;
+        
+        if (is_conversion_to_link) {
+            // Handle field conversion to Link
+            let actual_target_doctype = values.target_doctype;
+            if (dialog && dialog._table_data) {
+                const selected_table = dialog._table_data.find(t => t.label === values.target_doctype);
+                if (selected_table) {
+                    actual_target_doctype = selected_table.value;
+                }
+            }
+            
+            frappe.call({
+                method: 'flansa.flansa_core.api.field_conversion.convert_field_to_link',
+                args: {
+                    table_name: table_id,
+                    field_name: this.generate_field_id(values.field_name),
+                    target_doctype: actual_target_doctype
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        frappe.show_alert({
+                            message: `Field converted to Link field successfully. Behavior: ${r.message.behavior}`,
+                            indicator: 'green'
+                        });
+                        
+                        dialog.hide();
+                        this.load_table_data(table_id);
+                    } else {
+                        frappe.show_alert({
+                            message: `Conversion failed: ${r.message?.error || 'Unknown error'}`,
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Check if this is a field conversion to Logic Field
+        const is_conversion_to_logic = is_edit_mode && values.add_logic;
+        
+        if (is_conversion_to_logic) {
+            // Validate formula is provided
+            if (!values.formula || !values.formula.trim()) {
+                frappe.show_alert({
+                    message: 'Please provide a formula before adding logic to the field',
+                    indicator: 'orange'
+                });
+                return;
+            }
+            
+            // Handle field conversion to Logic Field
+            frappe.call({
+                method: 'flansa.flansa_core.api.table_api.add_logic_field_entry_with_migration',
+                args: {
+                    table_name: table_id,
+                    field_config: {
+                        field_name: this.generate_field_id(values.field_name),
+                        field_label: values.field_label,
+                        expression: values.formula,
+                        result_type: values.field_type === 'Int' || values.field_type === 'Float' || values.field_type === 'Currency' ? 'Float' : 'Data',
+                        logic_type: 'formula',
+                        logic_field_template: 'formula'
+                    }
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        frappe.show_alert({
+                            message: `Logic added to field successfully. Field is now calculated.`,
+                            indicator: 'green'
+                        });
+                        
+                        dialog.hide();
+                        this.load_table_fields(table_id);
+                    } else {
+                        frappe.show_alert({
+                            message: `Adding logic failed: ${r.message?.error || 'Unknown error'}`,
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Check if this is a Fetch template field creation
+        const is_fetch_template = !is_edit_mode && values.fetch_source_field && values.fetch_target_field;
+        
+        if (is_fetch_template) {
+            // Handle Fetch template field creation
+            const template_data = {
+                field_name: this.generate_field_id(values.field_name),
+                field_label: values.field_label,
+                source_link_field: values.fetch_source_field,
+                target_field: values.fetch_target_field,
+                fetch_expression: values.fetch_expression,
+                reqd: values.reqd || 0,
+                read_only: values.read_only || 1, // Fetch fields are usually read-only
+                description: values.description || ''
+            };
+            
+            frappe.call({
+                method: 'flansa.logic_templates.create_field_from_template',
+                args: {
+                    table_name: table_id || this.current_table,
+                    template_id: 'fetch',
+                    template_data: template_data
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        frappe.show_alert({
+                            message: `Fetch field '${values.field_label}' created successfully`,
+                            indicator: 'green'
+                        });
+                        
+                        // Close dialog and refresh
+                        if (dialog) {
+                            dialog.hide();
+                        }
+                        this.load_table_data(table_id);
+                    } else {
+                        frappe.show_alert({
+                            message: r.message?.error || 'Failed to create Fetch field',
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Check if this is a Fetch template field creation
+        const is_fetch_template = !is_edit_mode && values.fetch_source_field && values.fetch_target_field;
+        
+        if (is_fetch_template) {
+            // Handle Fetch template field creation
+            const template_data = {
+                field_name: this.generate_field_id(values.field_name),
+                field_label: values.field_label,
+                source_link_field: values.fetch_source_field,
+                target_field: values.fetch_target_field,
+                fetch_expression: values.fetch_expression,
+                reqd: values.reqd || 0,
+                read_only: values.read_only || 1, // Fetch fields are usually read-only
+                description: values.description || ''
+            };
+            
+            frappe.call({
+                method: 'flansa.logic_templates.create_field_from_template',
+                args: {
+                    table_name: table_id || this.current_table,
+                    template_id: 'fetch',
+                    template_data: template_data
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        frappe.show_alert({
+                            message: `Fetch field '${values.field_label}' created successfully`,
+                            indicator: 'green'
+                        });
+                        
+                        // Close dialog and refresh
+                        if (dialog) {
+                            dialog.hide();
+                        }
+                        this.load_table_data(table_id);
+                    } else {
+                        frappe.show_alert({
+                            message: r.message?.error || 'Failed to create Fetch field',
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Check if this is a Link template field creation
+        const is_link_template = !is_edit_mode && values.target_doctype && values.link_scope;
+        
+        if (is_link_template) {
+            // Map the selected label back to the actual DocType value
+            let actual_target_doctype = values.target_doctype;
+            if (dialog && dialog._table_data) {
+                const selected_table = dialog._table_data.find(t => t.label === values.target_doctype);
+                if (selected_table) {
+                    actual_target_doctype = selected_table.value;
+                    console.log(`Mapped target_doctype from label "${values.target_doctype}" to value "${actual_target_doctype}"`);
+                }
+            }
+            
+            // Handle Link template field creation
+            const template_data = {
+                field_name: this.generate_field_id(values.field_name),
+                field_label: values.field_label,
+                target_doctype: actual_target_doctype,
+                reqd: values.reqd || 0,
+                read_only: values.read_only || 0,
+                description: values.description || ''
+            };
+            
+            frappe.call({
+                method: 'flansa.logic_templates.create_field_from_template',
+                args: {
+                    table_name: table_id || this.current_table,
+                    template_id: 'link',
+                    template_data: template_data
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        // Link field created successfully - no Logic Field entry needed
+                        frappe.show_alert({
+                            message: `Link field '${values.field_label}' created successfully`,
+                            indicator: 'green'
+                        });
+                        
+                        // Close dialog and refresh
+                        if (dialog) {
+                            dialog.hide();
+                        }
+                        this.load_table_data(table_id);
+                    } else {
+                        frappe.show_alert({
+                            message: r.message?.error || 'Failed to create Link field',
+                            indicator: 'red'
+                        });
+                    }
+                }
+            });
+            return;
+        }
+        
+        // Prepare field configuration for non-Link fields
         const field_config = {
-            field_name: values.field_name,
+            field_name: this.generate_field_id(values.field_name),
             field_label: values.field_label,
             field_type: values.field_type,
             options: values.options || '',
@@ -2802,7 +3674,7 @@ class EnhancedVisualBuilder {
                     method: 'flansa.native_fields.edit_field_formula',
                     args: {
                         table_name: table_id || this.current_table,
-                        field_name: values.field_name,
+                        field_name: this.generate_field_id(values.field_name),
                         new_formula: values.formula
                     },
                     callback: (r) => {
@@ -2811,6 +3683,9 @@ class EnhancedVisualBuilder {
                                 message: 'Formula updated successfully',
                                 indicator: 'green'
                             });
+                            if (dialog) {
+                                dialog.hide();
+                            }
                             this.load_table_data(table_id);
                         } else {
                             frappe.show_alert({
@@ -2821,10 +3696,42 @@ class EnhancedVisualBuilder {
                     }
                 });
             } else {
-                // Regular field update - would need a separate API for field property updates
-                frappe.show_alert({
-                    message: 'Field property updates not yet implemented',
-                    indicator: 'orange'
+                // Regular field property update
+                frappe.call({
+                    method: 'flansa.flansa_core.api.field_update.update_field_properties',
+                    args: {
+                        table_name: table_id || this.current_table,
+                        field_name: this.generate_field_id(values.field_name),
+                        field_config: {
+                            field_label: values.field_label,
+                            field_type: values.field_type,
+                            options: values.options || '',
+                            reqd: values.reqd || 0,
+                            read_only: values.read_only || 0,
+                            hidden: values.hidden || 0
+                        }
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            const updateMsg = r.message.updates && r.message.updates.length > 0 
+                                ? `Field updated: ${r.message.updates.join(', ')}`
+                                : 'Field properties updated successfully';
+                                
+                            frappe.show_alert({
+                                message: updateMsg,
+                                indicator: 'green'
+                            });
+                            if (dialog) {
+                                dialog.hide();
+                            }
+                            this.load_table_data(table_id);
+                        } else {
+                            frappe.show_alert({
+                                message: r.message?.error || 'Failed to update field properties',
+                                indicator: 'red'
+                            });
+                        }
+                    }
                 });
             }
         } else {
@@ -2846,6 +3753,9 @@ class EnhancedVisualBuilder {
                             indicator: 'green'
                         });
                         
+                        if (dialog) {
+                            dialog.hide();
+                        }
                         this.load_table_data(table_id);
                     } else {
                         frappe.show_alert({
@@ -3078,7 +3988,7 @@ class EnhancedVisualBuilder {
     // Create lookup field from wizard data
     create_lookup_field(table_id, values, dialog) {
         const template_data = {
-            field_name: values.field_name,
+            field_name: this.generate_field_id(values.field_name),
             field_label: values.field_label,
             source_field: values.source_field,
             target_table: values.target_table,
@@ -3374,7 +4284,7 @@ class EnhancedVisualBuilder {
     // Create summary field from wizard data
     create_summary_field(table_id, values, dialog) {
         const template_data = {
-            field_name: values.field_name,
+            field_name: this.generate_field_id(values.field_name),
             field_label: values.field_label,
             child_table: values.child_table,
             operation_type: values.operation_type,
@@ -5583,7 +6493,7 @@ class EnhancedVisualBuilder {
                 args: {
                     table_name: table_name,
                     field_config: {
-                        field_name: values.field_name,
+                        field_name: this.generate_field_id(values.field_name),
                         label: values.label,
                         expression: values.expression,
                         result_type: values.result_type
@@ -5696,6 +6606,11 @@ class EnhancedVisualBuilder {
                 {
                     fieldtype: 'Section Break',
                     label: 'Target Selection'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Link Field Configuration',
+                    description: 'Configure relationship to other tables'
                 },
                 {
                     label: 'Link Scope',
@@ -6016,7 +6931,8 @@ class EnhancedVisualBuilder {
                         if (current_app_match) {
                             dialog.set_value('link_scope', 'Current App');
                             setTimeout(() => {
-                                dialog.set_value('target_doctype', target_doctype);
+                                // Set the label (what user sees) not the value
+                                dialog.set_value('target_doctype', current_app_match.label);
                             }, 300);
                             return;
                         }
@@ -6033,7 +6949,8 @@ class EnhancedVisualBuilder {
                                         dialog.set_value('target_app', app_name);
                                         // Wait for table dropdown to populate, then set table
                                         setTimeout(() => {
-                                            dialog.set_value('target_doctype', target_doctype);
+                                            // Set the label (what user sees) not the value
+                                            dialog.set_value('target_doctype', app_match.label);
                                         }, 500);
                                     }, 300);
                                     return;
@@ -6046,7 +6963,8 @@ class EnhancedVisualBuilder {
                         if (system_match) {
                             dialog.set_value('link_scope', 'System Tables');
                             setTimeout(() => {
-                                dialog.set_value('target_doctype', target_doctype);
+                                // Set the label (what user sees) not the value
+                                dialog.set_value('target_doctype', system_match.label);
                             }, 300);
                             return;
                         }
@@ -6272,6 +7190,156 @@ class EnhancedVisualBuilder {
         this.show_unified_field_dialog(table_id, field);
     }
     
+    
+    // Streamlined formula validation with immediate feedback
+    validate_formula_result_type(formula, result_type, dialog) {
+        try {
+            const formula_field = dialog.get_field('formula');
+            const formula_wrapper = formula_field?.$wrapper;
+            
+            // Clear previous styling and messages
+            this.clear_formula_feedback(formula_wrapper);
+            
+            if (!formula || !formula.trim()) {
+                this.show_formula_feedback(formula_wrapper, 'neutral', 'Enter formula', '#6c757d');
+                return { valid: true, message: 'Empty formula' };
+            }
+            
+            // Quick syntax validation
+            const syntax_error = this.check_formula_syntax(formula);
+            if (syntax_error) {
+                this.show_formula_feedback(formula_wrapper, 'error', syntax_error, '#dc3545');
+                return { valid: false, message: syntax_error };
+            }
+            
+            // Type-specific validation with clear rules
+            const validation_result = this.validate_formula_for_type(formula, result_type);
+            this.show_formula_feedback(formula_wrapper, validation_result.status, validation_result.message, validation_result.color);
+            
+            return { valid: validation_result.status !== 'error', message: validation_result.message };
+            
+        } catch (e) {
+            console.warn('Formula validation error:', e);
+            return { valid: false, message: 'Validation failed' };
+        }
+    }
+    
+    // Clear all visual feedback
+    clear_formula_feedback(wrapper) {
+        if (!wrapper) return;
+        wrapper.removeClass('formula-valid formula-invalid formula-warning formula-neutral');
+        wrapper.find('.formula-feedback').remove();
+        wrapper.find('.control-input').css({
+            'border-color': '',
+            'border-width': ''
+        });
+    }
+    
+    // Show formula feedback prominently
+    show_formula_feedback(wrapper, status, message, color) {
+        if (!wrapper) return;
+        
+        // Add status class
+        wrapper.addClass(`formula-${status}`);
+        
+        // Style the input border
+        wrapper.find('.control-input').css({
+            'border-color': color,
+            'border-width': '2px'
+        });
+        
+        // Show message prominently below the field
+        const icon = status === 'valid' ? '✅' : status === 'error' ? '❌' : status === 'warning' ? '⚠️' : 'ℹ️';
+        const feedback_html = `<div class="formula-feedback" style="
+            margin-top: 5px;
+            padding: 8px 12px;
+            background: ${color}15;
+            border-left: 3px solid ${color};
+            border-radius: 4px;
+            font-size: 13px;
+            color: ${color};
+            font-weight: 500;
+        ">${icon} ${message}</div>`;
+        
+        wrapper.append(feedback_html);
+    }
+    
+    // Quick syntax validation
+    check_formula_syntax(formula) {
+        // Check parentheses matching
+        let openParens = 0;
+        for (let char of formula) {
+            if (char === '(') openParens++;
+            if (char === ')') openParens--;
+            if (openParens < 0) return 'Unmatched closing parenthesis';
+        }
+        if (openParens > 0) return 'Unmatched opening parenthesis';
+        
+        // Check for consecutive operators
+        if (/[+\-*/]{2,}/.test(formula)) return 'Invalid consecutive operators';
+        
+        // Check for invalid patterns
+        if (/[+\-*/]$/.test(formula.trim())) return 'Formula cannot end with operator';
+        if (/^[+\-*/]/.test(formula.trim())) return 'Formula cannot start with operator';
+        
+        return null; // No syntax errors
+    }
+    
+    // Type-specific validation with clear rules
+    validate_formula_for_type(formula, result_type) {
+        const formula_lower = formula.toLowerCase();
+        
+        switch (result_type) {
+            case 'Date':
+            case 'Datetime':
+                if (formula_lower.includes('today()') || formula_lower.includes('now()') || 
+                    formula_lower.includes('add_days(') || formula_lower.includes('add_months(')) {
+                    return { status: 'valid', message: 'Valid date formula', color: '#28a745' };
+                } else if (/[+\-*/]/.test(formula) && !/add_/.test(formula_lower)) {
+                    return { status: 'error', message: 'Date fields need date functions', color: '#dc3545' };
+                } else {
+                    return { status: 'warning', message: 'May not be a date value', color: '#ffc107' };
+                }
+                
+            case 'Int':
+                if (/^\d+$/.test(formula.trim())) {
+                    return { status: 'valid', message: 'Valid integer', color: '#28a745' };
+                } else if (formula_lower.includes('count(') || formula_lower.includes('floor(') || 
+                          formula_lower.includes('ceil(') || formula_lower.includes('round(')) {
+                    return { status: 'valid', message: 'Valid integer formula', color: '#28a745' };
+                } else if (/\d*\.\d+/.test(formula)) {
+                    return { status: 'error', message: 'Decimal not allowed for integer', color: '#dc3545' };
+                } else if (formula_lower.includes('today(')) {
+                    return { status: 'error', message: 'Date function not allowed', color: '#dc3545' };
+                } else {
+                    return { status: 'warning', message: 'May not return integer', color: '#ffc107' };
+                }
+                
+            case 'Float':
+            case 'Currency':
+                if (/^\d*\.?\d+$/.test(formula.trim())) {
+                    return { status: 'valid', message: 'Valid number', color: '#28a745' };
+                } else if (/[+\-*/]/.test(formula) && !/today|add_/.test(formula_lower)) {
+                    return { status: 'valid', message: 'Valid calculation', color: '#28a745' };
+                } else if (formula_lower.includes('today(')) {
+                    return { status: 'error', message: 'Date function not allowed', color: '#dc3545' };
+                } else {
+                    return { status: 'warning', message: 'May not return number', color: '#ffc107' };
+                }
+                
+            case 'Check':
+                if (/[<>=!]/.test(formula) || formula_lower.includes('if(') || 
+                    /\b(true|false)\b/.test(formula_lower)) {
+                    return { status: 'valid', message: 'Valid boolean formula', color: '#28a745' };
+                } else {
+                    return { status: 'error', message: 'Must return true/false', color: '#dc3545' };
+                }
+                
+            default: // Data and other types
+                return { status: 'valid', message: 'Formula accepted', color: '#28a745' };
+        }
+    }
+
     show_logic_examples() {
         /**Show Logic Field examples dialog*/
         
@@ -6281,29 +7349,7 @@ class EnhancedVisualBuilder {
                 <ul>
                     <li><code>price * quantity</code> - Multiply two fields</li>
                     <li><code>(sales - cost) / sales * 100</code> - Profit margin percentage</li>
-                    <li><code>amount + (amount * 0.15)</code> - Add 15% tax</li>
-                </ul>
-                
-                <h5>Functions:</h5>
-                <ul>
-                    <li><code>SUM(10, 20, 30, 40)</code> - Sum of values</li>
-                    <li><code>MAX(price, cost, tax)</code> - Maximum value</li>
-                    <li><code>MIN(price, cost, tax)</code> - Minimum value</li>
-                    <li><code>ROUND(amount * 1.15, 2)</code> - Round to 2 decimals</li>
-                </ul>
-                
-                <h5>Conditions:</h5>
-                <ul>
-                    <li><code>IF(status == "Active", 1, 0)</code> - Status check</li>
-                    <li><code>IF(amount > 1000, amount * 0.1, 0)</code> - Discount logic</li>
-                    <li><code>IF(priority == "High", "🔴", "🟢")</code> - Priority indicator</li>
-                </ul>
-                
-                <h5>Text Functions:</h5>
-                <ul>
-                    <li><code>UPPER(status)</code> - Convert to uppercase</li>
-                    <li><code>CONCAT(first_name, " ", last_name)</code> - Join text</li>
-                    <li><code>LEN(description)</code> - Text length</li>
+                    <li><code>IF(status == "Active", price, 0)</code> - Conditional values</li>
                 </ul>
                 
                 <h5>Date Functions:</h5>

@@ -910,6 +910,287 @@ def add_logic_field_to_table(table_name, field_config):
             "error": str(e)
         }
 
+@frappe.whitelist()
+def add_logic_field_entry(table_name, field_config):
+    """Add a Logic Field entry for any field type"""
+    try:
+        # Handle Frappe's JSON string conversion
+        if isinstance(field_config, str):
+            try:
+                import json
+                field_config = json.loads(field_config)
+            except (json.JSONDecodeError, ValueError):
+                return {"success": False, "error": f"field_config is a string but not valid JSON: {field_config}"}
+        
+        if not isinstance(field_config, dict):
+            return {"success": False, "error": f"field_config must be a dictionary, got {type(field_config)}"}
+        
+        # Get target DocType
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        target_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
+        
+        # Check if Logic Field already exists
+        existing_logic_field = frappe.db.exists("Flansa Logic Field", 
+                                               {"table_name": table_name, "field_name": field_config.get("field_name")})
+        if existing_logic_field:
+            return {
+                "success": True,
+                "message": f"Logic Field entry already exists for field '{field_config.get('field_name')}' - using existing entry",
+                "existing": True
+            }
+        
+        # Create Logic Field document
+        logic_field = frappe.new_doc("Flansa Logic Field")
+        logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
+        logic_field.table_name = table_name
+        logic_field.field_name = field_config.get("field_name")
+        logic_field.label = field_config.get("field_label") or field_config.get("label")
+        logic_field.expression = field_config.get("expression", "")
+        logic_field.result_type = field_config.get("result_type", "Data")
+        logic_field.logic_type = field_config.get("logic_type", "formula")
+        logic_field.logic_field_template = field_config.get("logic_field_template", "formula")
+        logic_field.is_active = 1
+        logic_field.insert()
+        
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Logic Field entry created for '{field_config.get('field_name')}'",
+            "logic_field": logic_field.name
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(f"Error creating Logic Field entry: {str(e)}", "Table API")
+        return {"success": False, "error": str(e)}
+
+
+@frappe.whitelist()
+def add_logic_field_entry_with_migration(table_name, field_config):
+    """Add Logic Field entry and handle data migration properly"""
+    try:
+        # Handle Frappe's JSON string conversion
+        if isinstance(field_config, str):
+            try:
+                import json
+                field_config = json.loads(field_config)
+            except (json.JSONDecodeError, ValueError):
+                return {"success": False, "error": f"field_config is a string but not valid JSON: {field_config}"}
+        
+        if not isinstance(field_config, dict):
+            return {"success": False, "error": f"field_config must be a dictionary, got {type(field_config)}"}
+        
+        # Get target DocType
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        target_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
+        field_name = field_config.get("field_name")
+        expression = field_config.get("expression", "")
+        
+        # Validate required fields
+        if not field_name:
+            return {"success": False, "error": "field_name is required"}
+        
+        if not expression or not expression.strip():
+            return {"success": False, "error": "Formula expression is required"}
+        
+        # Check if Logic Field already exists
+        existing_logic_field = frappe.db.exists("Flansa Logic Field", 
+                                               {"table_name": table_name, "field_name": field_name})
+        if existing_logic_field:
+            return {
+                "success": True,
+                "message": f"Logic Field entry already exists for field '{field_name}' - using existing entry",
+                "existing": True
+            }
+        
+        # Step 1: Validate formula by testing on a sample record or empty context
+        try:
+            from flansa.flansa_core.api.flansa_logic_engine import FlansaLogicEngine
+            engine = FlansaLogicEngine()
+            
+            # Test formula with sample context for date functions
+            test_context = {
+                'today': frappe.utils.today,  # Remove lambda for today
+                'now': frappe.utils.now,      # Remove lambda for now
+                'add_days': frappe.utils.add_days,
+                'add_months': frappe.utils.add_months,
+                'date_diff': frappe.utils.date_diff
+            }
+            
+            test_result = engine.evaluate(expression, test_context)
+            print(f"Formula test result: {test_result}", flush=True)
+            
+        except Exception as formula_error:
+            return {
+                "success": False, 
+                "error": f"Formula validation failed: {str(formula_error)}",
+                "formula_error": True
+            }
+        
+        # Step 2: Get all existing records to process
+        try:
+            existing_records = frappe.get_all(target_doctype, fields=["name"])
+            record_count = len(existing_records)
+            print(f"Found {record_count} existing records to process", flush=True)
+            
+        except Exception as e:
+            return {"success": False, "error": f"Failed to get existing records: {str(e)}"}
+        
+        # Step 3: Create Logic Field entry first
+        logic_field = frappe.new_doc("Flansa Logic Field")
+        logic_field.name = f"LOGIC-{table_name}-{field_name}"
+        logic_field.table_name = table_name
+        logic_field.field_name = field_name
+        logic_field.label = field_config.get("field_label") or field_config.get("label")
+        logic_field.expression = expression
+        logic_field.result_type = field_config.get("result_type", "Data")
+        logic_field.logic_type = field_config.get("logic_type", "formula")
+        logic_field.logic_field_template = field_config.get("logic_field_template", "formula")
+        logic_field.is_active = 1
+        logic_field.insert()
+        
+        # Step 4: Clear existing data and evaluate formula for all records
+        migration_results = {
+            "cleared_records": 0,
+            "calculated_records": 0,
+            "failed_records": 0,
+            "errors": []
+        }
+        
+        if record_count > 0:
+            print(f"Starting data migration for {record_count} records...", flush=True)
+            
+            for i, record in enumerate(existing_records):
+                try:
+                    # Get the full record for formula evaluation
+                    doc = frappe.get_doc(target_doctype, record.name)
+                    
+                    # Clear the existing manual data
+                    old_value = getattr(doc, field_name, None)
+                    setattr(doc, field_name, None)
+                    migration_results["cleared_records"] += 1
+                    
+                    # Create context for formula evaluation
+                    doc_context = {}
+                    for field in doc.meta.fields:
+                        if field.fieldname != field_name:  # Don't include the field we're calculating
+                            value = getattr(doc, field.fieldname, None)
+                            doc_context[field.fieldname] = value
+                    
+                    # Add special context variables
+                    doc_context.update({
+                        'name': doc.name,
+                        'creation': doc.creation,
+                        'modified': doc.modified,
+                        'owner': doc.owner,
+                        'today': frappe.utils.today,  # Remove lambda for today
+                        'now': frappe.utils.now,      # Remove lambda for now  
+                        'add_days': frappe.utils.add_days,
+                        'add_months': frappe.utils.add_months,
+                        'date_diff': frappe.utils.date_diff
+                    })
+                    
+                    # Evaluate formula
+                    calculated_value = engine.evaluate(expression, doc_context)
+                    
+                    # Set the calculated value
+                    setattr(doc, field_name, calculated_value)
+                    
+                    # Save without triggering hooks to avoid recursion
+                    doc.save(ignore_permissions=True)
+                    
+                    migration_results["calculated_records"] += 1
+                    
+                    if (i + 1) % 10 == 0:  # Progress update every 10 records
+                        print(f"Processed {i + 1}/{record_count} records...", flush=True)
+                        
+                except Exception as record_error:
+                    migration_results["failed_records"] += 1
+                    error_msg = f"Record {record.name}: {str(record_error)}"
+                    migration_results["errors"].append(error_msg)
+                    print(f"Error processing record {record.name}: {str(record_error)}", flush=True)
+                    
+                    # Don't fail the entire migration for individual record errors
+                    continue
+        
+        frappe.db.commit()
+        
+        # Step 5: Return comprehensive results
+        return {
+            "success": True,
+            "message": f"Logic Field entry created and data migrated for '{field_name}'",
+            "logic_field": logic_field.name,
+            "migration_results": migration_results,
+            "summary": f"Processed {record_count} records: {migration_results['calculated_records']} successful, {migration_results['failed_records']} failed"
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        frappe.log_error(f"Error creating Logic Field with migration: {str(e)}", "Table API")
+        return {"success": False, "error": str(e)}
+
+
+@frappe.whitelist()
+def add_logic_field_entry_for_link(table_name, field_config):
+    """Add only a Logic Field entry for an existing Link field (no Custom Field creation)"""
+    try:
+        # Handle Frappe's JSON string conversion
+        if isinstance(field_config, str):
+            try:
+                import json
+                field_config = json.loads(field_config)
+            except (json.JSONDecodeError, ValueError):
+                return {"success": False, "error": f"field_config is a string but not valid JSON: {field_config}"}
+        
+        if not isinstance(field_config, dict):
+            return {"success": False, "error": f"field_config must be a dictionary, got {type(field_config)}"}
+        
+        # Get target DocType
+        flansa_table = frappe.get_doc("Flansa Table", table_name)
+        target_doctype = flansa_table.doctype_name if hasattr(flansa_table, 'doctype_name') and flansa_table.doctype_name else flansa_table.table_name
+        
+        # Check if Logic Field already exists
+        existing_logic_field = frappe.db.exists("Flansa Logic Field", 
+                                               {"table_name": table_name, "field_name": field_config.get("field_name")})
+        if existing_logic_field:
+            return {
+                "success": True,
+                "message": f"Logic Field entry already exists for field '{field_config.get('field_name')}' - using existing entry",
+                "existing": True
+            }
+        
+        # Create Logic Field document for the Link field
+        logic_field = frappe.new_doc("Flansa Logic Field")
+        logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
+        logic_field.table_name = table_name
+        logic_field.field_name = field_config.get("field_name")
+        logic_field.label = field_config.get("field_label") or field_config.get("label")
+        logic_field.expression = field_config.get("expression", "")
+        logic_field.result_type = "Data"  # Use Data type for Logic Field entries
+        logic_field.logic_type = "link"  # Set logic_type field
+        logic_field.logic_field_template = "link"  # Set template field if it exists
+        logic_field.is_active = 1
+        logic_field.insert()
+        
+        frappe.clear_cache(doctype=target_doctype)
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "logic_field_name": logic_field.name,
+            "target_doctype": target_doctype,
+            "message": f"Logic Field entry created for Link field '{field_config.get('field_name')}'"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error adding Logic Field entry for Link: {str(e)}", "FlansaLogic Integration")
+        frappe.db.rollback()
+        return {
+            "success": False,
+            "error": str(e)
+        }
+
 # ====== PHASE 1 AUTO-DETECTION FUNCTIONS ======
 
 def detect_calculation_type(expression):
@@ -1585,3 +1866,63 @@ def _remove_field_from_doctype(doctype_name, field_name):
         doctype_doc.save()
         frappe.db.commit()
 
+
+@frappe.whitelist()
+def get_logic_field_for_field(table_name, field_name):
+    """Get Logic Field entry for a specific field if it exists"""
+    try:
+        logic_field_name = frappe.db.exists("Flansa Logic Field", 
+                                           {"table_name": table_name, "field_name": field_name})
+        
+        if not logic_field_name:
+            return {"success": True, "logic_field": None, "message": "No Logic Field found"}
+        
+        logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
+        
+        return {
+            "success": True,
+            "logic_field": {
+                "name": logic_field.name,
+                "field_name": logic_field.field_name,
+                "label": logic_field.label,
+                "expression": logic_field.expression,
+                "result_type": logic_field.result_type,
+                "logic_type": logic_field.logic_type,
+                "logic_field_template": getattr(logic_field, 'logic_field_template', ''),
+                "is_active": logic_field.is_active
+            }
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting Logic Field for field: {str(e)}", "Table API")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def get_logic_field_for_field(table_name, field_name):
+    """Get Logic Field entry for a specific field if it exists"""
+    try:
+        logic_field_name = frappe.db.exists("Flansa Logic Field", 
+                                           {"table_name": table_name, "field_name": field_name})
+        
+        if not logic_field_name:
+            return {"success": True, "logic_field": None, "message": "No Logic Field found"}
+        
+        logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
+        
+        return {
+            "success": True,
+            "logic_field": {
+                "name": logic_field.name,
+                "field_name": logic_field.field_name,
+                "label": logic_field.label,
+                "expression": logic_field.expression,
+                "result_type": logic_field.result_type,
+                "logic_type": logic_field.logic_type,
+                "logic_field_template": getattr(logic_field, 'logic_field_template', ''),
+                "is_active": logic_field.is_active
+            }
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting Logic Field for field: {str(e)}", "Table API")
+        return {"success": False, "error": str(e)}

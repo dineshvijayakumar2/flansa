@@ -8,10 +8,15 @@ class FlansaLogicEngine:
             'IF': lambda condition, true_val, false_val: true_val if condition else false_val,
             'UPPER': lambda s: str(s or '').upper(),
             'LOWER': lambda s: str(s or '').lower(),
+            'LINK': lambda doctype: f"LINK_{doctype}",  # Placeholder for Link fields
         }
     
     def evaluate(self, expression, doc_context):
         try:
+            # Handle empty expressions (like Link fields)
+            if not expression or not expression.strip():
+                return None
+                
             safe_context = {'doc': frappe._dict(doc_context), '__builtins__': {}, **self.functions}
             python_expr = expression
             for field in doc_context.keys():

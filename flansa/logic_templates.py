@@ -983,30 +983,73 @@ def create_link_field_direct(table_name, field_config, template_data):
                 "error": "DocType not generated for this table"
             }
         
-        # Import the safe field addition function from existing code
-        from flansa.flansa_core.doctype.flansa_relationship.flansa_relationship import safe_add_field_to_doctype
+        # Validate target DocType exists
+        target_doctype = template_data.get("target_doctype")
+        if not target_doctype:
+            return {
+                "success": False,
+                "error": "Target DocType is required for Link field"
+            }
         
-        # Prepare field definition for direct DocType addition
+        # Check if target DocType is valid
+        try:
+            frappe.get_meta(target_doctype)
+        except Exception as e:
+            return {
+                "success": False,
+                "error": f"Target DocType '{target_doctype}' is not valid. Please select a valid DocType to link to."
+            }
+        
+        # Get the DocType document and add field properly to the definition
+        doctype_doc = frappe.get_doc("DocType", flansa_table.doctype_name)
+        
+        # Check if field already exists
+        existing_field = None
+        for field in doctype_doc.fields:
+            if field.fieldname == field_config["field_name"]:
+                existing_field = field
+                break
+        
+        if existing_field:
+            return {
+                "success": False,
+                "error": f"Field '{field_config['field_name']}' already exists in DocType"
+            }
+        
+        # Prepare field definition for DocType
         field_definition = {
             "fieldname": field_config["field_name"],
             "label": field_config["field_label"], 
             "fieldtype": "Link",
-            "options": template_data.get("target_doctype"),
+            "options": target_doctype,
             "reqd": field_config.get("reqd", 0),
             "read_only": field_config.get("read_only", 0),
             "description": field_config.get("description", ""),
-            "idx": len(frappe.get_meta(flansa_table.doctype_name).get("fields")) + 1
+            "hidden": 0,
+            "in_list_view": 0,
+            "bold": 0,
+            "unique": 0,
+            "no_copy": 0,
+            "allow_in_quick_entry": 0,
+            "ignore_user_permissions": 0,
+            "allow_on_submit": 0,
+            "translatable": 0,
+            "print_hide": 0,
+            "print_hide_if_no_value": 0,
+            "report_hide": 0,
+            "permlevel": 0,
+            "idx": len(doctype_doc.fields) + 1
         }
         
-        # Add field directly to DocType
-        safe_add_field_to_doctype(flansa_table.doctype_name, field_definition)
+        # Add field to DocType definition
+        doctype_doc.append("fields", field_definition)
         
-        # Reload and save the DocType to apply changes
-        doctype_doc = frappe.get_doc("DocType", flansa_table.doctype_name)
+        # Save the DocType (this will update both definition and database schema)
         doctype_doc.save()
+        frappe.db.commit()
         
-        # Update database schema
-        frappe.db.updatedb(flansa_table.doctype_name)
+        # Note: Logic Field entry is created separately by the JavaScript caller
+        # via add_logic_field_entry_for_link method to avoid duplication
         
         return {
             "success": True,
