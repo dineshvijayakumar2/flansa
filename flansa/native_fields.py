@@ -163,20 +163,9 @@ def add_basic_field_native(table_name, field_config):
             logic_field.insert()
             logic_field_name = logic_field.name
         
-        # Create Custom Field instead of adding directly to DocType
-        custom_field = frappe.new_doc("Custom Field")
-        custom_field.dt = table_doc.doctype_name
-        custom_field.fieldname = field_config["field_name"]
-        custom_field.label = field_config["field_label"] 
-        custom_field.fieldtype = field_config["field_type"]
-        custom_field.reqd = field_config.get("required", 0)
-        custom_field.hidden = field_config.get("hidden", 0)
-        custom_field.read_only = field_config.get("read_only", 1 if is_calculated else 0)
-        custom_field.options = field_config.get("options", "")
-        custom_field.insert_after = "name"  # Safe insertion point
-        custom_field.module = "Flansa Core"  # Organize under Flansa module
-        custom_field.description = create_flansa_field_description("basic" if not is_calculated else "calculated", field_config)
-        custom_field.insert()
+        # Add field directly to DocType (correct approach)
+        doctype_doc.append("fields", field_def)
+        doctype_doc.save()
         
         # If calculated field, populate existing records
         if is_calculated:

@@ -430,7 +430,6 @@ class FlansaReportBuilder {
         const gallery_badge = field.is_gallery ? '<span class="label label-info">Gallery</span>' : '';
         const logic_badge = field.is_logic_field ? `<span class="label label-success">${field.logic_type}</span>` : '';
         const system_badge = field.is_system_field ? '<span class="label label-warning">System</span>' : '';
-        const is_selected = this.is_field_selected(field.fieldname);
         
         const category_info = field.category === 'related' ? 
             `<small class="text-info"><i class="fa fa-link"></i> ${field.table_label}</small>` :
@@ -438,11 +437,11 @@ class FlansaReportBuilder {
             `<small class="text-warning"><i class="fa fa-cog"></i> System</small>` : '';
         
         const field_item = $(`
-            <div class="field-item ${is_selected ? 'selected' : ''}" 
+            <div class="field-item" 
                  data-fieldname="${field.fieldname}" 
                  data-category="${field.category}"
-                 style="cursor: pointer; user-select: none;">
-                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px;">
+                 style="cursor: pointer; user-select: none; padding: 8px; border-radius: 4px; margin-bottom: 2px; transition: all 0.2s ease;">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div style="flex: 1;">
                         <i class="${icon}" style="margin-right: 6px; color: #666;"></i>
                         <strong>${field.label}</strong>
@@ -451,9 +450,9 @@ class FlansaReportBuilder {
                         ${logic_badge}
                         ${system_badge}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 6px;">
+                    <div class="field-actions" style="display: flex; align-items: center; gap: 6px;">
                         ${category_info}
-                        ${is_selected ? '<i class="fa fa-check-circle text-primary"></i>' : ''}
+                        <i class="fa fa-check-circle selection-indicator" style="color: #007bff; display: none;"></i>
                     </div>
                 </div>
             </div>
@@ -462,7 +461,21 @@ class FlansaReportBuilder {
         // Add click handler for field selection (for transfer buttons)
         field_item.on('click', (e) => {
             e.preventDefault();
+            
+            // Toggle selection
+            const isSelected = field_item.hasClass('selected');
             field_item.toggleClass('selected');
+            
+            // Update visual indicator
+            const indicator = field_item.find('.selection-indicator');
+            if (field_item.hasClass('selected')) {
+                indicator.show();
+                field_item.css('background-color', '#e3f2fd');
+            } else {
+                indicator.hide();
+                field_item.css('background-color', '');
+            }
+            
             this.update_transfer_buttons();
         });
         
