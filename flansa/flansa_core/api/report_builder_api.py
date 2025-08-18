@@ -95,49 +95,98 @@ def get_report_field_options(table_name):
                     "is_system_field": True
                 })
         
-        # Get available fields from parent tables via relationships
-        parent_fields = []
-        relationships = frappe.get_all("Flansa Relationship", 
-            filters={
-                "child_table": table_name, 
-                "relationship_type": ["in", ["One to Many", "Self Referential"]]
-            },
-            fields=["name", "parent_table", "relationship_name", "relationship_type"]
-        )
+        # Get logic fields and categorize them properly
+        logic_fields = []
+        link_fields_in_current = []
         
-        for rel in relationships:
-            if rel.parent_table:
-                try:
-                    parent_table_doc = frappe.get_doc("Flansa Table", rel.parent_table)
-                    parent_doctype = parent_table_doc.doctype_name
+        # Get logic fields for this table
+        try:
+            logic_field_docs = frappe.get_all("Flansa Logic Field",
+                filters={"table_name": table_name, "is_active": 1},
+                fields=["field_name", "label", "field_type", "logic_type", "target_table", "target_field"]
+            )
+            
+            for logic_field in logic_field_docs:
+                # Add logic fields to current fields (they belong to current table)
+                logic_field_info = {
+                    "fieldname": logic_field.field_name,
+                    "label": logic_field.label or logic_field.field_name.replace('_', ' ').title(),
+                    "fieldtype": logic_field.field_type,
+                    "table": table_name,
+                    "table_label": table_doc.table_label,
+                    "category": "current",
+                    "logic_type": logic_field.logic_type,
+                    "is_logic_field": True,
+                    "options": "",
+                    "is_gallery": False,
+                    "is_system_field": False
+                }
+                
+                # Store link fields for related field lookup
+                if logic_field.logic_type == "link" and logic_field.target_table:
+                    link_fields_in_current.append({
+                        "field_name": logic_field.field_name,
+                        "target_table": logic_field.target_table,
+                        "label": logic_field.label
+                    })
+                
+                current_fields.append(logic_field_info)
+                
+        except Exception as logic_error:
+            frappe.log_error(f"Error getting logic fields for {table_name}: {str(logic_error)}", "Report Builder Logic Fields")
+
+        # Get related fields grouped by link fields
+        related_field_groups = []
+        
+        # Process each link field to get its target table fields
+        for link_field in link_fields_in_current:
+            try:
+                target_table_doc = frappe.get_doc("Flansa Table", link_field["target_table"])
+                target_doctype = target_table_doc.doctype_name
+                
+                if target_doctype and frappe.db.exists("DocType", target_doctype):
+                    target_meta = frappe.get_meta(target_doctype)
+                    group_fields = []
                     
-                    if parent_doctype and frappe.db.exists("DocType", parent_doctype):
-                        parent_meta = frappe.get_meta(parent_doctype)
+                    for field in target_meta.fields:
+                        if (field.fieldtype not in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Table'] 
+                            and field.fieldname not in ['idx']
+                            and not field.fieldname.startswith('_')):
+                            
+                            group_fields.append({
+                                "fieldname": f"{link_field['field_name']}_{field.fieldname}",
+                                "label": f"{field.label or field.fieldname.replace('_', ' ').title()}",
+                                "fieldtype": field.fieldtype,
+                                "table": link_field["target_table"],
+                                "table_label": target_table_doc.table_label,
+                                "category": "related",
+                                "link_field": link_field["field_name"],
+                                "link_field_label": link_field["label"],
+                                "source_field": field.fieldname,
+                                "options": getattr(field, 'options', ''),
+                                "is_gallery": field.fieldtype in ['Attach Image', 'Attach'] or 'image' in field.fieldname.lower()
+                            })
+                    
+                    if group_fields:
+                        related_field_groups.append({
+                            "link_field": link_field["field_name"],
+                            "link_field_label": link_field["label"],
+                            "target_table": link_field["target_table"],
+                            "target_table_label": target_table_doc.table_label,
+                            "fields": group_fields
+                        })
                         
-                        for field in parent_meta.fields:
-                            if (field.fieldtype not in ['Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button', 'Table'] 
-                                and field.fieldname not in ['idx']  # Keep idx hidden but allow name, docstatus, etc.
-                                and not field.fieldname.startswith('_')):
-                                
-                                parent_fields.append({
-                                    "fieldname": f"{rel.parent_table}_{field.fieldname}",
-                                    "label": f"{parent_table_doc.table_label}: {field.label or field.fieldname.replace('_', ' ').title()}",
-                                    "fieldtype": field.fieldtype,
-                                    "table": rel.parent_table,
-                                    "table_label": parent_table_doc.table_label,
-                                    "category": "parent",
-                                    "relationship": rel.name,
-                                    "relationship_name": rel.relationship_name,
-                                    "source_field": field.fieldname,
-                                    "options": getattr(field, 'options', ''),
-                                    "is_gallery": field.fieldtype in ['Attach Image', 'Attach'] or 'image' in field.fieldname.lower()
-                                })
-                except Exception as rel_error:
-                    frappe.log_error(f"Error processing relationship {rel.name}: {str(rel_error)}", "Report Builder")
-                    continue
+            except Exception as related_error:
+                frappe.log_error(f"Error getting related fields for link {link_field['field_name']}: {str(related_error)}", "Report Builder Related Fields")
+                continue
+
+        # Flatten related fields for backward compatibility
+        related_fields = []
+        for group in related_field_groups:
+            related_fields.extend(group["fields"])
         
         # Check for gallery capability
-        has_gallery = any(field.get("is_gallery", False) for field in current_fields + parent_fields + system_fields)
+        has_gallery = any(field.get("is_gallery", False) for field in current_fields + related_fields + system_fields)
         
         return {
             "success": True,
@@ -149,11 +198,12 @@ def get_report_field_options(table_name):
             "fields": {
                 "current": current_fields,
                 "system": system_fields,
-                "parent": parent_fields
+                "related": related_fields,
+                "related_groups": related_field_groups  # Grouped by link field
             },
             "capabilities": {
                 "has_gallery": has_gallery,
-                "total_fields": len(current_fields) + len(system_fields) + len(parent_fields)
+                "total_fields": len(current_fields) + len(system_fields) + len(related_fields)
             }
         }
         

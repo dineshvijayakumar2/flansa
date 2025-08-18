@@ -378,39 +378,94 @@ class FlansaReportBuilder {
         
         $('#current-fields-count').text(this.available_fields.current.length);
 
-        // Populate parent table fields
-        const parent_container = $('#parent-fields');
-        parent_container.empty();
+        // Populate system fields
+        const system_container = $('#system-fields');
+        system_container.empty();
         
-        if (this.available_fields.parent.length > 0) {
-            this.available_fields.parent.forEach(field => {
+        if (this.available_fields.system && this.available_fields.system.length > 0) {
+            this.available_fields.system.forEach(field => {
                 const field_item = this.create_field_item(field);
-                parent_container.append(field_item);
+                system_container.append(field_item);
             });
         } else {
-            parent_container.html('<div class="text-muted" style="padding: 15px;">No related tables available</div>');
+            system_container.html('<div class="text-muted" style="padding: 15px;">No system fields available</div>');
         }
         
-        $('#parent-fields-count').text(this.available_fields.parent.length);
+        $('#system-fields-count').text(this.available_fields.system ? this.available_fields.system.length : 0);
+
+        // Populate related fields (grouped by link field)
+        const related_container = $('#related-fields');
+        related_container.empty();
+        
+        if (this.available_fields.related_groups && this.available_fields.related_groups.length > 0) {
+            this.available_fields.related_groups.forEach(group => {
+                // Create group header
+                const group_header = $(`
+                    <div class="related-field-group" style="margin-bottom: 10px;">
+                        <div class="group-header" style="background: #f0f8ff; padding: 8px 12px; font-weight: 600; color: #0066cc; border-radius: 4px; margin-bottom: 5px;">
+                            <i class="fa fa-link"></i> ${group.link_field_label} → ${group.target_table_label}
+                        </div>
+                        <div class="group-fields"></div>
+                    </div>
+                `);
+                
+                const group_fields_container = group_header.find('.group-fields');
+                group.fields.forEach(field => {
+                    const field_item = this.create_field_item(field);
+                    group_fields_container.append(field_item);
+                });
+                
+                related_container.append(group_header);
+            });
+        } else {
+            related_container.html('<div class="text-muted" style="padding: 15px;">No related fields available<br><small>Add Link fields to access related table data</small></div>');
+        }
+        
+        const total_related = this.available_fields.related ? this.available_fields.related.length : 0;
+        $('#related-fields-count').text(total_related);
     }
 
     create_field_item(field) {
         const icon = this.get_field_icon(field.fieldtype);
         const gallery_badge = field.is_gallery ? '<span class="label label-info">Gallery</span>' : '';
+        const logic_badge = field.is_logic_field ? `<span class="label label-success">${field.logic_type}</span>` : '';
+        const system_badge = field.is_system_field ? '<span class="label label-warning">System</span>' : '';
+        const is_selected = this.is_field_selected(field.fieldname);
         
-        return $(`
-            <div class="field-item" data-fieldname="${field.fieldname}" data-category="${field.category}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <i class="${icon}"></i>
+        const category_info = field.category === 'related' ? 
+            `<small class="text-info"><i class="fa fa-link"></i> ${field.table_label}</small>` :
+            field.category === 'system' ? 
+            `<small class="text-warning"><i class="fa fa-cog"></i> System</small>` : '';
+        
+        const field_item = $(`
+            <div class="field-item ${is_selected ? 'selected' : ''}" 
+                 data-fieldname="${field.fieldname}" 
+                 data-category="${field.category}"
+                 style="cursor: pointer; user-select: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 8px;">
+                    <div style="flex: 1;">
+                        <i class="${icon}" style="margin-right: 6px; color: #666;"></i>
                         <strong>${field.label}</strong>
                         <small class="text-muted">(${field.fieldtype})</small>
                         ${gallery_badge}
+                        ${logic_badge}
+                        ${system_badge}
                     </div>
-                    ${field.category === 'parent' ? `<small class="text-info">${field.table_label}</small>` : ''}
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        ${category_info}
+                        ${is_selected ? '<i class="fa fa-check-circle text-primary"></i>' : ''}
+                    </div>
                 </div>
             </div>
         `);
+        
+        // Add click handler for single selection
+        field_item.on('click', (e) => {
+            e.preventDefault();
+            this.toggle_field_selection(field_item, field);
+        });
+        
+        return field_item;
     }
 
     get_field_icon(fieldtype) {
@@ -504,9 +559,51 @@ class FlansaReportBuilder {
     }
 
     find_field_by_name(fieldname, category) {
-        const fields_list = category === 'current' ? 
-            this.available_fields.current : this.available_fields.parent;
+        let fields_list = [];
+        
+        if (category === 'current') {
+            fields_list = this.available_fields.current || [];
+        } else if (category === 'system') {
+            fields_list = this.available_fields.system || [];
+        } else if (category === 'related') {
+            fields_list = this.available_fields.related || [];
+        } else if (category === 'parent') {
+            // Backward compatibility
+            fields_list = this.available_fields.parent || [];
+        }
+        
         return fields_list.find(f => f.fieldname === fieldname);
+    }
+
+    toggle_field_selection(field_item, field) {
+        const is_currently_selected = field_item.hasClass('selected');
+        
+        if (is_currently_selected) {
+            // Deselect field
+            field_item.removeClass('selected');
+            field_item.find('.fa-check-circle').remove();
+            
+            // Remove from selected fields
+            this.selected_fields = this.selected_fields.filter(f => f.fieldname !== field.fieldname);
+        } else {
+            // Clear other selections for single selection mode
+            $('.field-item.selected').each((_, elem) => {
+                $(elem).removeClass('selected');
+                $(elem).find('.fa-check-circle').remove();
+            });
+            
+            // Select this field
+            field_item.addClass('selected');
+            if (!field_item.find('.fa-check-circle').length) {
+                field_item.find('.fa').after('<i class="fa fa-check-circle text-primary" style="margin-left: 6px;"></i>');
+            }
+            
+            // Add to selected fields (replace current selection)
+            this.selected_fields = [field];
+        }
+        
+        this.update_selected_fields_display();
+        this.update_button_states();
     }
 
     is_field_selected(fieldname) {
@@ -2754,14 +2851,24 @@ class FlansaReportBuilder {
                                     <div id="modal-current-fields" class="field-list collapse in"></div>
                                 </div>
                                 
-                                <!-- Parent Table Fields -->
+                                <!-- System Fields -->
                                 <div class="field-category">
-                                    <div class="category-header" data-toggle="collapse" data-target="#modal-parent-fields" aria-expanded="true">
-                                        <i class="fa fa-chevron-down"></i>
-                                        <strong>Related Table Fields</strong>
-                                        <span class="badge" id="modal-parent-fields-count">0</span>
+                                    <div class="category-header" data-toggle="collapse" data-target="#modal-system-fields" aria-expanded="false">
+                                        <i class="fa fa-chevron-right"></i>
+                                        <strong>System Fields</strong>
+                                        <span class="badge" id="modal-system-fields-count">0</span>
                                     </div>
-                                    <div id="modal-parent-fields" class="field-list collapse in"></div>
+                                    <div id="modal-system-fields" class="field-list collapse"></div>
+                                </div>
+                                
+                                <!-- Related Fields -->
+                                <div class="field-category">
+                                    <div class="category-header" data-toggle="collapse" data-target="#modal-related-fields" aria-expanded="false">
+                                        <i class="fa fa-chevron-right"></i>
+                                        <strong>Related Fields</strong>
+                                        <span class="badge" id="modal-related-fields-count">0</span>
+                                    </div>
+                                    <div id="modal-related-fields" class="field-list collapse"></div>
                                 </div>
                             </div>
                         </div>
@@ -3142,40 +3249,119 @@ class FlansaReportBuilder {
         }
         $('#modal-current-fields-count').text(this.available_fields.current.length);
 
-        // Parent table fields
-        const parent_container = $('#modal-parent-fields');
-        parent_container.empty();
+        // System fields
+        const system_container = $('#modal-system-fields');
+        system_container.empty();
         
-        if (this.available_fields.parent.length > 0) {
-            this.available_fields.parent.forEach(field => {
+        if (this.available_fields.system && this.available_fields.system.length > 0) {
+            this.available_fields.system.forEach(field => {
                 const field_item = this.create_modal_field_item(field);
-                parent_container.append(field_item);
+                system_container.append(field_item);
             });
         } else {
-            parent_container.html('<div class="text-muted" style="padding: 15px;">No related tables available</div>');
+            system_container.html('<div class="text-muted" style="padding: 15px;">No system fields available</div>');
         }
-        $('#modal-parent-fields-count').text(this.available_fields.parent.length);
+        $('#modal-system-fields-count').text(this.available_fields.system ? this.available_fields.system.length : 0);
+
+        // Related fields (grouped by link field)
+        const related_container = $('#modal-related-fields');
+        related_container.empty();
+        
+        if (this.available_fields.related_groups && this.available_fields.related_groups.length > 0) {
+            this.available_fields.related_groups.forEach(group => {
+                // Create group header
+                const group_header = $(`
+                    <div class="related-field-group" style="margin-bottom: 10px;">
+                        <div class="group-header" style="background: #f0f8ff; padding: 6px 10px; font-weight: 600; color: #0066cc; border-radius: 4px; margin-bottom: 3px; font-size: 12px;">
+                            <i class="fa fa-link"></i> ${group.link_field_label} → ${group.target_table_label}
+                        </div>
+                        <div class="group-fields"></div>
+                    </div>
+                `);
+                
+                const group_fields_container = group_header.find('.group-fields');
+                group.fields.forEach(field => {
+                    const field_item = this.create_modal_field_item(field);
+                    group_fields_container.append(field_item);
+                });
+                
+                related_container.append(group_header);
+            });
+        } else {
+            related_container.html('<div class="text-muted" style="padding: 15px;">No related fields available<br><small>Add Link fields to access related table data</small></div>');
+        }
+        
+        const total_related = this.available_fields.related ? this.available_fields.related.length : 0;
+        $('#modal-related-fields-count').text(total_related);
     }
 
     create_modal_field_item(field) {
         const icon = this.get_field_icon(field.fieldtype);
-        const category_badge = field.category === 'parent' ? 
-            `<small class="badge badge-info">${field.table_label}</small>` : '';
-        const gallery_badge = field.is_gallery ? '<small class="badge badge-success">Gallery</small>' : '';
+        const gallery_badge = field.is_gallery ? '<span class="label label-info">Gallery</span>' : '';
+        const logic_badge = field.is_logic_field ? `<span class="label label-success">${field.logic_type}</span>` : '';
+        const system_badge = field.is_system_field ? '<span class="label label-warning">System</span>' : '';
+        const is_selected = this.is_field_selected(field.fieldname);
         
-        return $(`
-            <div class="field-item" data-fieldname="${field.fieldname}" data-category="${field.category}">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                    <div>
-                        <i class="${icon}"></i>
+        const category_info = field.category === 'related' ? 
+            `<small class="text-info"><i class="fa fa-link"></i> ${field.table_label}</small>` :
+            field.category === 'system' ? 
+            `<small class="text-warning"><i class="fa fa-cog"></i> System</small>` :
+            field.category === 'parent' ? 
+            `<small class="text-info">${field.table_label}</small>` : '';
+        
+        const field_item = $(`
+            <div class="field-item ${is_selected ? 'selected' : ''}" 
+                 data-fieldname="${field.fieldname}" 
+                 data-category="${field.category}"
+                 style="cursor: pointer; user-select: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px;">
+                    <div style="flex: 1;">
+                        <i class="${icon}" style="margin-right: 6px; color: #666;"></i>
                         <strong>${field.label}</strong>
                         <small class="text-muted">(${field.fieldtype})</small>
                         ${gallery_badge}
+                        ${logic_badge}
+                        ${system_badge}
                     </div>
-                    ${category_badge}
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        ${category_info}
+                        ${is_selected ? '<i class="fa fa-check-circle text-primary"></i>' : ''}
+                    </div>
                 </div>
             </div>
         `);
+        
+        // Add click handler for single selection
+        field_item.on('click', (e) => {
+            e.preventDefault();
+            this.toggle_modal_field_selection(field_item, field);
+        });
+        
+        return field_item;
+    }
+
+    toggle_modal_field_selection(field_item, field) {
+        const is_currently_selected = field_item.hasClass('selected');
+        
+        if (is_currently_selected) {
+            // Deselect field
+            field_item.removeClass('selected');
+            field_item.find('.fa-check-circle').remove();
+        } else {
+            // Clear other selections for single selection mode
+            $('.report-builder-modal-content .field-item.selected').each((_, elem) => {
+                $(elem).removeClass('selected');
+                $(elem).find('.fa-check-circle').remove();
+            });
+            
+            // Select this field
+            field_item.addClass('selected');
+            if (!field_item.find('.fa-check-circle').length) {
+                field_item.find('.text-primary').last().after('<i class="fa fa-check-circle text-primary" style="margin-left: 6px;"></i>');
+            }
+        }
+        
+        this.update_modal_transfer_buttons();
     }
 
     update_modal_transfer_buttons() {

@@ -152,14 +152,24 @@
                                 <div id="current-fields" class="field-list collapse in"></div>
                             </div>
                             
-                            <!-- Parent Table Fields -->
+                            <!-- System Fields -->
                             <div class="field-category">
-                                <div class="category-header" data-toggle="collapse" data-target="#parent-fields" aria-expanded="true">
-                                    <i class="fa fa-chevron-down"></i>
-                                    <strong>Related Table Fields</strong>
-                                    <span class="badge" id="parent-fields-count">0</span>
+                                <div class="category-header" data-toggle="collapse" data-target="#system-fields" aria-expanded="false">
+                                    <i class="fa fa-chevron-right"></i>
+                                    <strong>System Fields</strong>
+                                    <span class="badge" id="system-fields-count">0</span>
                                 </div>
-                                <div id="parent-fields" class="field-list collapse in"></div>
+                                <div id="system-fields" class="field-list collapse"></div>
+                            </div>
+                            
+                            <!-- Related Table Fields -->
+                            <div class="field-category">
+                                <div class="category-header" data-toggle="collapse" data-target="#related-fields" aria-expanded="false">
+                                    <i class="fa fa-chevron-right"></i>
+                                    <strong>Related Fields</strong>
+                                    <span class="badge" id="related-fields-count">0</span>
+                                </div>
+                                <div id="related-fields" class="field-list collapse"></div>
                             </div>
                         </div>
                     </div>
@@ -459,10 +469,67 @@
 
 .field-item:hover {
     background: #f8f9fa;
+    border-left: 3px solid #007bff;
 }
 
 .field-item.selected {
     background: #e3f2fd;
+    border-left: 3px solid #007bff;
+    box-shadow: 0 1px 3px rgba(0,123,255,0.2);
+}
+
+/* Related field groups styling */
+.related-field-group .group-header {
+    background: #f0f8ff;
+    padding: 8px 12px;
+    font-weight: 600;
+    color: #0066cc;
+    border-radius: 4px;
+    margin-bottom: 5px;
+    border-left: 3px solid #0066cc;
+}
+
+.related-field-group .group-fields .field-item {
+    margin-left: 10px;
+    border-left: 2px solid #e0e0e0;
+}
+
+/* Category badges */
+.label-success {
+    background-color: #28a745;
+}
+
+.label-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.label-info {
+    background-color: #17a2b8;
+}
+
+/* Field selection improvements */
+.field-item {
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    margin-bottom: 2px;
+}
+
+.field-item:hover {
+    transform: translateX(2px);
+}
+
+/* Collapse indicators */
+.category-header[aria-expanded="true"] .fa-chevron-right {
+    transform: rotate(90deg);
+}
+
+.category-header[aria-expanded="false"] .fa-chevron-down {
+    transform: rotate(-90deg);
+}
+
+.category-header .fa {
+    transition: transform 0.2s ease;
 }
 
 .selected-field-list {
