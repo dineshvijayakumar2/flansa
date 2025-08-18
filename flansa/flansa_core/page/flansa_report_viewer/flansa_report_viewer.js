@@ -164,6 +164,12 @@ class FlansaReportViewer {
             console.log('👆 Delete button clicked for record:', recordName);
             this.delete_record(recordName);
         });
+        
+        // New record button in view controls
+        $(document).on('click', '#new-record-btn', (e) => {
+            e.preventDefault();
+            this.navigate_to_new_record();
+        });
     }
     
     async load_report() {
@@ -1692,6 +1698,24 @@ class FlansaReportViewer {
                 $(document).trigger('flansa:mode-changed', { mode: 'edit' });
             }
         }, 200);
+    }
+    
+    navigate_to_new_record() {
+        const tableName = this.get_table_name();
+        if (!tableName) {
+            console.error('No table name available for creating new record');
+            frappe.msgprint('Unable to determine table for new record creation');
+            return;
+        }
+        
+        console.log('➕ Navigating to create new record for table:', tableName);
+        
+        // Use FlansaNav if available, otherwise use frappe.set_route
+        if (window.FlansaNav) {
+            window.FlansaNav.navigateToNewRecord(tableName);
+        } else {
+            frappe.set_route('flansa-record-viewer', tableName, 'new');
+        }
     }
     
     async delete_record(recordName) {
