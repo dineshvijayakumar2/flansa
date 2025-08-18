@@ -72,8 +72,8 @@ class FlansaDatabaseViewer {
         });
         
         // Tab switching
-        $(this.wrapper).find('button[data-bs-toggle="tab"]').on('shown.bs.tab', (e) => {
-            const target = $(e.target).attr('data-bs-target');
+        $(this.wrapper).find('a[data-toggle="tab"]').on('shown.bs.tab', (e) => {
+            const target = $(e.target).attr('href');
             if (target === '#structure') {
                 this.load_structure_tables();
             }
@@ -129,7 +129,7 @@ class FlansaDatabaseViewer {
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
                             <strong>${table.name}</strong>
-                            <small class="badge ${badgeClass} ms-2">${badgeText}</small>
+                            <small class="badge ${badgeClass} ml-2">${badgeText}</small>
                         </div>
                         <i class="fa fa-chevron-right text-muted"></i>
                     </div>

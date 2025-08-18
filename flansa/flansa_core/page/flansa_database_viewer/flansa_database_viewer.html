@@ -17,26 +17,26 @@
         <!-- Navigation Tabs -->
         <div class="row mb-3">
             <div class="col-12">
-                <ul class="nav nav-tabs" id="dbViewerTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tables-tab" data-bs-toggle="tab" data-bs-target="#tables" type="button" role="tab">
+                <ul class="nav nav-tabs" id="dbViewerTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" id="tables-tab" href="#tables" data-toggle="tab">
                             <i class="fa fa-table"></i> Tables
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="structure-tab" data-bs-toggle="tab" data-bs-target="#structure" type="button" role="tab">
+                    <li class="nav-item">
+                        <a class="nav-link" id="structure-tab" href="#structure" data-toggle="tab">
                             <i class="fa fa-cogs"></i> Structure
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="sql-tab" data-bs-toggle="tab" data-bs-target="#sql" type="button" role="tab">
+                    <li class="nav-item">
+                        <a class="nav-link" id="sql-tab" href="#sql" data-toggle="tab">
                             <i class="fa fa-code"></i> SQL Query
-                        </button>
+                        </a>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="orphaned-tab" data-bs-toggle="tab" data-bs-target="#orphaned" type="button" role="tab">
+                    <li class="nav-item">
+                        <a class="nav-link" id="orphaned-tab" href="#orphaned" data-toggle="tab">
                             <i class="fa fa-exclamation-triangle"></i> Orphaned Fields
-                        </button>
+                        </a>
                     </li>
                 </ul>
             </div>
@@ -68,7 +68,7 @@
                                     <button class="btn btn-sm btn-outline-primary" id="refreshTableData">
                                         <i class="fa fa-refresh"></i> Refresh
                                     </button>
-                                    <select class="form-select form-select-sm d-inline-block w-auto ms-2" id="limitRows">
+                                    <select class="form-control form-control-sm d-inline-block w-auto ml-2" id="limitRows">
                                         <option value="50">50 rows</option>
                                         <option value="100">100 rows</option>
                                         <option value="500">500 rows</option>
