@@ -559,7 +559,7 @@ class FlansaRecordViewer {
                 actionHtml = `
                     <div style="display: flex; gap: 8px;">
                         <button type="button" class="btn btn-sm btn-success save-record" style="display: flex; align-items: center; gap: 6px;">
-                            <i class="fa fa-plus"></i> Create Record
+                            <i class="fa fa-save"></i> Save
                         </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary cancel-create" style="display: flex; align-items: center; gap: 6px;">
                             <i class="fa fa-times"></i> Cancel
@@ -1195,8 +1195,13 @@ class FlansaRecordViewer {
                             indicator: 'green'
                         });
                         
-                        // Redirect to view the new record
-                        frappe.set_route('flansa-record-viewer', this.table_name, response.message.record_name);
+                        // Go back to previous page (typically the report view)
+                        if (window.history.length > 1) {
+                            window.history.back();
+                        } else {
+                            // Fallback: redirect to the table's report view
+                            window.location.href = `/app/flansa-report-viewer/${this.table_name}?type=table`;
+                        }
                     } else {
                         frappe.show_alert({
                             message: 'Failed to create record: ' + (response.message?.error || 'Unknown error'),
