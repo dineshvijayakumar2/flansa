@@ -254,18 +254,6 @@ class FlansaRecordViewer {
                     position: relative;
                 }
                 
-                .logic-field-calculated::after {
-                    content: '✓ Read-only';
-                    position: absolute;
-                    top: -8px;
-                    right: 8px;
-                    background: #17a2b8;
-                    color: white;
-                    font-size: 9px;
-                    padding: 2px 6px;
-                    border-radius: 8px;
-                    font-weight: 500;
-                }
                 
                 .flansa-record-viewer-page {
                     padding-bottom: 60px; /* Space for status bar */
