@@ -71,6 +71,11 @@ class FlansaDatabaseViewer {
             this.scan_orphaned_fields();
         });
         
+        // Orphaned tables scan
+        $(this.wrapper).find('#scanOrphanedTables').click(() => {
+            this.scan_orphaned_tables();
+        });
+        
         // Tab switching
         $(this.wrapper).find('.nav-link').click((e) => {
             e.preventDefault();
@@ -539,6 +544,101 @@ class FlansaDatabaseViewer {
         `;
         
         container.html(html);
+    }
+    
+    scan_orphaned_tables() {
+        this.update_status('Scanning for orphaned tables...');
+        
+        $(this.wrapper).find('#scanOrphanedTables').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Scanning...');
+        
+        frappe.call({
+            method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.scan_orphaned_tables',
+            callback: (r) => {
+                $(this.wrapper).find('#scanOrphanedTables').prop('disabled', false).html('<i class="fa fa-search"></i> Scan for Orphaned Tables');
+                
+                if (r.message && r.message.success) {
+                    this.render_orphaned_tables(r.message);
+                    this.update_status(r.message.scan_summary);
+                } else {
+                    this.show_error('Orphaned tables scan failed: ' + (r.message?.error || 'Unknown error'));
+                }
+            }
+        });
+    }
+    
+    render_orphaned_tables(data) {
+        const container = $(this.wrapper).find('#orphanedTablesResults');
+        
+        if (!data.orphaned_tables || data.orphaned_tables.length === 0) {
+            container.html(`
+                <div class="alert alert-success">
+                    <i class="fa fa-check-circle"></i> <strong>Excellent!</strong> No orphaned tables found. All database tables have corresponding DocType definitions.
+                </div>
+            `);
+            return;
+        }
+        
+        let html = `
+            <div class="alert alert-warning">
+                <i class="fa fa-database"></i> <strong>Found ${data.total_count} orphaned tables</strong> that exist in database but have no DocType definition.
+            </div>
+            <div class="table-responsive">
+                <table class="table table-sm table-striped">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>Table Name</th>
+                            <th>Probable DocType</th>
+                            <th>Rows</th>
+                            <th>Columns</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.orphaned_tables.forEach(table => {
+            const hasData = table.row_count > 0;
+            const rowClass = hasData ? 'table-danger' : '';
+            
+            html += `
+                <tr class="${rowClass}">
+                    <td><code>${table.table_name}</code></td>
+                    <td>${table.probable_doctype}</td>
+                    <td>${table.row_count} ${hasData ? '<span class="badge badge-danger">Has Data!</span>' : ''}</td>
+                    <td>${table.column_count}</td>
+                    <td>
+                        <button class="btn btn-xs btn-outline-primary" onclick="window.dbViewer.viewTableData('${table.table_name}')">
+                            View Data
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += '</tbody></table></div>';
+        
+        html += `
+            <div class="mt-3">
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i> <strong>What are orphaned tables?</strong><br>
+                    These are database tables (usually starting with 'tab') that exist in the database but have no corresponding DocType definition. 
+                    They might be:<br>
+                    • Leftover from deleted custom DocTypes<br>
+                    • Created by third-party apps that were uninstalled<br>
+                    • Result of incomplete migrations or manual database operations<br>
+                    <strong class="text-danger">⚠️ Tables with data (highlighted in red) need careful review before deletion!</strong>
+                </div>
+            </div>
+        `;
+        
+        container.html(html);
+    }
+    
+    viewTableData(tableName) {
+        // Switch to tables tab and load the data
+        this.showTab('tables');
+        this.current_table = tableName;
+        this.load_table_data(tableName);
     }
     
     show_error(message) {

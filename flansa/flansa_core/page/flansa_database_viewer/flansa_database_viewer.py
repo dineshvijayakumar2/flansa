@@ -180,6 +180,74 @@ def execute_sql_query(query):
         }
 
 @frappe.whitelist()
+def scan_orphaned_tables():
+    """Scan for tables that exist in database but have no DocType definition"""
+    try:
+        orphaned_tables = []
+        
+        # Get all tables that start with 'tab' (DocType tables)
+        all_tables = frappe.db.sql("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = DATABASE()
+            AND table_name LIKE 'tab%'
+            AND table_name NOT LIKE 'tabSingles'
+            AND table_name NOT LIKE 'tabDefaultValue'
+            ORDER BY table_name
+        """, as_dict=True)
+        
+        # Get all registered DocTypes
+        registered_doctypes = frappe.db.sql("""
+            SELECT name FROM `tabDocType`
+        """, as_dict=True)
+        
+        # Create set of expected table names
+        expected_tables = set()
+        for dt in registered_doctypes:
+            expected_table_name = f"tab{dt['name'].replace(' ', '_')}"
+            expected_tables.add(expected_table_name)
+        
+        # Add system tables that are expected
+        system_tables = {
+            'tabSingles', 'tabDefaultValue', 'tabDocType', 'tabDocField',
+            'tabCustom_Field', 'tabProperty_Setter', 'tabSeries', 'tabVersion'
+        }
+        expected_tables.update(system_tables)
+        
+        # Find orphaned tables
+        for table in all_tables:
+            table_name = table['table_name']
+            if table_name not in expected_tables:
+                # Get table info
+                table_info = frappe.db.sql("""
+                    SELECT 
+                        (SELECT COUNT(*) FROM `{}`) as row_count,
+                        (SELECT COUNT(*) FROM information_schema.columns 
+                         WHERE table_schema = DATABASE() 
+                         AND table_name = %s) as column_count
+                """.format(table_name.replace('`', '``')), (table_name,), as_dict=True)
+                
+                orphaned_tables.append({
+                    'table_name': table_name,
+                    'row_count': table_info[0]['row_count'] if table_info else 0,
+                    'column_count': table_info[0]['column_count'] if table_info else 0,
+                    'probable_doctype': table_name[3:].replace('_', ' ') if table_name.startswith('tab') else 'Unknown'
+                })
+        
+        return {
+            'success': True,
+            'orphaned_tables': orphaned_tables,
+            'total_count': len(orphaned_tables),
+            'scan_summary': f"Found {len(orphaned_tables)} orphaned tables in the database"
+        }
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f"Scan error: {str(e)[:100]}"
+        }
+
+@frappe.whitelist()
 def scan_orphaned_fields():
     """Scan for fields that exist in database but not in DocType definitions"""
     try:
