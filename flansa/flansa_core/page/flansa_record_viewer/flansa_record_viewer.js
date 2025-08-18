@@ -122,8 +122,25 @@ class FlansaRecordViewer {
     
     get_route_params() {
         const route = frappe.get_route();
-        this.table_name = route[1];
-        this.record_id = route[2];
+        const new_table_name = route[1];
+        const new_record_id = route[2];
+        
+        // Check if we're navigating to a different record/table
+        const is_different_context = (
+            this.table_name !== new_table_name || 
+            this.record_id !== new_record_id
+        );
+        
+        // If context changed, clear cached data
+        if (is_different_context && (this.table_name || this.record_id)) {
+            console.log('🔄 Route parameters changed, clearing cached data');
+            console.log('   Previous:', { table: this.table_name, record: this.record_id });
+            console.log('   New:', { table: new_table_name, record: new_record_id });
+            this.clear_cached_data();
+        }
+        
+        this.table_name = new_table_name;
+        this.record_id = new_record_id;
         
         // Get mode from query parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -473,13 +490,46 @@ class FlansaRecordViewer {
     bind_events() {
         // Event handlers will be added here as needed
         console.log('🔗 Binding events for record viewer');
+        
+        // Listen for route changes to handle navigation between records
+        $(window).on('hashchange.record-viewer', () => {
+            console.log('🔄 Hash changed, checking for route changes');
+            this.handle_route_change();
+        });
+        
+        // Also listen for Frappe route changes
+        frappe.router.on('change', () => {
+            console.log('🔄 Frappe route changed, checking parameters');
+            this.handle_route_change();
+        });
+    }
+    
+    handle_route_change() {
+        // Get current route parameters
+        const current_route = frappe.get_route();
+        
+        // Check if we're still in record viewer and parameters changed
+        if (current_route[0] === 'flansa-record-viewer') {
+            const new_table = current_route[1];
+            const new_record = current_route[2];
+            
+            // If context changed, reload
+            if (this.table_name !== new_table || this.record_id !== new_record) {
+                console.log('🔄 Record viewer context changed, reloading');
+                this.get_route_params();
+                this.load_data();
+            }
+        }
     }
     
     load_data() {
         console.log('📊 Loading data for record viewer');
         
-        // Clear any existing cached data first
-        this.clear_cached_data();
+        // Clear any existing cached data first, but only for existing records
+        // New records need to keep the loading state until table structure is loaded
+        if (this.mode !== 'new') {
+            this.clear_cached_data();
+        }
         
         // First load form configuration, then load data
         this.load_form_configuration().then((hasFormConfig) => {
@@ -493,11 +543,22 @@ class FlansaRecordViewer {
 
     
     load_table_structure() {
+        // For new records, clear previous record data but show loading state
+        this.record_data = {};
+        const content = document.getElementById('record-content');
+        if (content) {
+            content.innerHTML = '<div class="text-center"><div class="spinner"></div><p>Loading form structure...</p></div>';
+        }
+        
         this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name })
         .then(metaResponse => {
             if (metaResponse.success) {
                 this.table_fields = metaResponse.fields || [];
                 this.doctype_name = metaResponse.doctype_name;
+                console.log('📋 Loaded table structure:', { 
+                    fields_count: this.table_fields.length, 
+                    doctype: this.doctype_name 
+                });
                 this.render_new_record_form();
             } else {
                 this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
@@ -710,18 +771,55 @@ class FlansaRecordViewer {
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
+        this.form_config = {};
+        
+        // Clear any form input values that might be cached
+        this.clear_form_inputs();
         
         // Also clear any DOM elements that might contain cached data
         const content = document.getElementById('record-content');
         if (content) {
             content.innerHTML = '<div class="text-center"><div class="spinner"></div><p>Loading record...</p></div>';
         }
+        
+        // Clear actions container
+        const actionsContainer = document.getElementById('record-actions');
+        if (actionsContainer) {
+            actionsContainer.innerHTML = '';
+        }
+    }
+    
+    clear_form_inputs() {
+        // Clear all form inputs to prevent cached values from showing
+        const content = document.getElementById('record-content');
+        if (content) {
+            const inputs = content.querySelectorAll('input, textarea, select');
+            inputs.forEach(input => {
+                if (input.type === 'checkbox') {
+                    input.checked = false;
+                } else {
+                    input.value = '';
+                }
+                // Clear data attributes that might cache values
+                input.removeAttribute('data-value');
+                
+                // Clear Frappe link field data
+                if (input._frappe_link_field) {
+                    try {
+                        input._frappe_link_field.set_value('');
+                    } catch (e) {
+                        console.log('Could not clear Frappe link field:', e);
+                    }
+                }
+            });
+        }
     }
     
     render_new_record_form() {
         // Use the same render_record method but with empty data
-        this.clear_cached_data(); // Ensure all data is cleared for new record
-        this.record_data = {}; // Ensure empty data for new record
+        // Only clear record data, but keep table_fields and doctype_name for rendering
+        console.log('🆕 Rendering new record form');
+        this.record_data = {}; // Clear only record data for empty form
         this.render_record();
     }
     
