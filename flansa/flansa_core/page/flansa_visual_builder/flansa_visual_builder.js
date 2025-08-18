@@ -1100,34 +1100,6 @@ class EnhancedVisualBuilder {
         
         dialog.show();
         
-        // For Fetch fields in edit mode, populate target field options
-        if (is_edit_mode && logic_field_template === 'fetch' && field && field.expression) {
-            setTimeout(() => {
-                // First populate source field options
-                this.load_fetch_source_options(dialog, table_id);
-                
-                // Then set the source field value
-                const source_field = this.parse_fetch_source_field(field.expression);
-                if (source_field) {
-                    dialog.set_value('fetch_source_field', source_field);
-                    
-                    // After setting source, load target options
-                    setTimeout(() => {
-                        this.load_unified_target_fields(dialog, table_id);
-                        
-                        // Finally set the target field value
-                        const target_field = this.parse_fetch_target_field(field.expression);
-                        if (target_field) {
-                            setTimeout(() => {
-                                dialog.set_value('fetch_target_field', target_field);
-                                console.log('✅ Populated fetch target field:', target_field);
-                            }, 300);
-                        }
-                    }, 300);
-                }
-            }, 500);
-        }
-        
         // Initialize live testing with enhanced features
         ;
     }
@@ -1918,8 +1890,16 @@ class EnhancedVisualBuilder {
                 {
                     fieldtype: 'Section Break',
                     label: 'Link Field Configuration',
-                    description: 'Configure relationship to other tables',
-                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'"
+                    description: 'Configure relationship to other tables'
+                },
+                {
+                    label: 'Link Scope',
+                    fieldname: 'link_scope',
+                    fieldtype: 'Select',
+                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
+                    default: 'Current App',
+                    reqd: 1,
+                    change: () => this.load_target_tables(dialog, table_id)
                 },
                 {
                     label: 'Select App',
@@ -2309,7 +2289,7 @@ class EnhancedVisualBuilder {
             const target_label = dialog.get_value('fetch_target_field');
             
             if (!source_fieldname || !target_label) {
-                // Don't log during initial loading to avoid console noise
+                console.log('Missing source or target selection');
                 return;
             }
             
@@ -2979,7 +2959,11 @@ class EnhancedVisualBuilder {
                     description: 'Type of logic field',
                     depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
                 },
-
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Link Field Configuration',
+                    description: 'Configure relationship to other tables'
+                },
                 {
                     label: 'Link Scope',
                     fieldname: 'link_scope',
@@ -2987,7 +2971,6 @@ class EnhancedVisualBuilder {
                     options: 'Current App\nOther Flansa Apps\nSystem Tables',
                     default: 'Current App',
                     description: 'Choose the scope of tables to link to',
-                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'",
                     change: () => {
                         this.load_target_tables(dialog, table_id);
                     }
@@ -3007,8 +2990,7 @@ class EnhancedVisualBuilder {
                     fieldname: 'target_doctype',
                     fieldtype: 'Select',
                     description: 'Table/DocType to link to',
-                    default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : '',
-                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'"
+                    default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : ''
                 },
                 {
                     fieldtype: 'Section Break',
@@ -3792,8 +3774,19 @@ class EnhancedVisualBuilder {
                     reqd: 1,
                     description: 'Which field in this table contains the reference?',
                     options: []  // Will be populated
-                }
-                
+                },
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_table',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    description: 'Which table should we lookup data from?',
+                    options: [],  // Will be populated
+                    change: () => {
+                        const target_table = dialog.get_value('target_table');
+                        if (target_table) {
+                            this.load_target_fields_for_lookup(target_table, dialog);
+                        }
                     }
                 },
                 {
@@ -6568,7 +6561,11 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Section Break',
                     label: 'Target Selection'
                 },
-
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Link Field Configuration',
+                    description: 'Configure relationship to other tables'
+                },
                 {
                     label: 'Link Scope',
                     fieldname: 'link_scope',
@@ -6586,7 +6583,14 @@ class EnhancedVisualBuilder {
                     description: 'Choose the Flansa app to select tables from',
                     change: () => this.handle_app_selection_change(dialog)
                 },
-                
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_doctype',
+                    fieldtype: 'Select',
+                    reqd: 1,
+                    default: field.options || '',
+                    description: 'Table to link to'
+                }
             ],
             primary_action_label: 'Update Link Field',
             primary_action: (values) => {
@@ -7226,7 +7230,7 @@ class EnhancedVisualBuilder {
         if (openParens > 0) return 'Unmatched opening parenthesis';
         
         // Check for consecutive operators
-        if (/[+\-*/]{2}/.test(formula)) return 'Invalid consecutive operators';
+        if (/[+\-*/]{2,}/.test(formula)) return 'Invalid consecutive operators';
         
         // Check for invalid patterns
         if (/[+\-*/]$/.test(formula.trim())) return 'Formula cannot end with operator';
