@@ -231,6 +231,42 @@ class FlansaRecordViewer {
                     100% { transform: rotate(360deg); }
                 }
                 
+                /* Logic Field Styling */
+                .logic-field-readonly {
+                    position: relative;
+                }
+                
+                .logic-field-readonly::before {
+                    content: '';
+                    position: absolute;
+                    left: -10px;
+                    top: 0;
+                    bottom: 0;
+                    width: 4px;
+                    background: linear-gradient(45deg, #17a2b8, #007bff);
+                    border-radius: 2px;
+                    opacity: 0.8;
+                }
+                
+                .logic-field-calculated {
+                    border: 1px solid #bee5eb !important;
+                    background-color: #f8fdff !important;
+                    position: relative;
+                }
+                
+                .logic-field-calculated::after {
+                    content: '✓ Read-only';
+                    position: absolute;
+                    top: -8px;
+                    right: 8px;
+                    background: #17a2b8;
+                    color: white;
+                    font-size: 9px;
+                    padding: 2px 6px;
+                    border-radius: 8px;
+                    font-weight: 500;
+                }
+                
                 .flansa-record-viewer-page {
                     padding-bottom: 60px; /* Space for status bar */
                 }
@@ -689,15 +725,26 @@ class FlansaRecordViewer {
         const fieldName = field.fieldname || 'unnamed_field';
         const fieldLabel = field.label || fieldName;
         const fieldValue = value !== null ? value : (this.record_data[fieldName] || '');
-        const isReadonly = this.mode === 'view' && !isEdit;
+        
+        // Check both mode and field's read_only property
+        const isFieldReadOnly = field.read_only || field.readonly || false;
+        const isReadonly = (this.mode === 'view' && !isEdit) || isFieldReadOnly;
         
         // Enhanced label styling with prominence and custom options
         const labelStyle = this.getLabelStyle(field);
         const fieldContainerStyle = this.getFieldContainerStyle(field);
         
+        // Add read-only indicator for Logic Fields
+        const readOnlyIndicator = isFieldReadOnly ? 
+            `<small class="text-muted" style="font-size: 11px; margin-left: 8px;">
+                <i class="fa fa-lock" title="Read-only field - cannot be edited"></i> Read-only
+             </small>` : '';
+        
         let html = `
-            <div class="form-group" style="${fieldContainerStyle}">
-                <label class="control-label enhanced-field-label" style="${labelStyle}">${fieldLabel}</label>
+            <div class="form-group ${isFieldReadOnly ? 'logic-field-readonly' : ''}" style="${fieldContainerStyle}">
+                <label class="control-label enhanced-field-label" style="${labelStyle}">
+                    ${fieldLabel}${readOnlyIndicator}
+                </label>
         `;
         
         // Check if this is a gallery field
@@ -711,7 +758,13 @@ class FlansaRecordViewer {
             }
         } else if (isReadonly) {
             // View mode for regular fields
-            html += `<div class="form-control-static">${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}</div>`;
+            const readOnlyClass = isFieldReadOnly ? 'logic-field-calculated' : '';
+            const readOnlyStyle = isFieldReadOnly ? 
+                'background: #f8f9fa; border-left: 3px solid #17a2b8; padding: 8px 12px; border-radius: 4px; font-family: monospace;' : '';
+            
+            html += `<div class="form-control-static ${readOnlyClass}" style="${readOnlyStyle}">
+                ${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}
+            </div>`;
         } else {
             // Edit mode for regular fields
             const fieldType = field.fieldtype || 'Data';
