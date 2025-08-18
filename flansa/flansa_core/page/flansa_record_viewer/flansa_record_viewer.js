@@ -478,6 +478,9 @@ class FlansaRecordViewer {
     load_data() {
         console.log('📊 Loading data for record viewer');
         
+        // Clear any existing cached data first
+        this.clear_cached_data();
+        
         // First load form configuration, then load data
         this.load_form_configuration().then((hasFormConfig) => {
             if (this.mode === 'new') {
@@ -701,8 +704,23 @@ class FlansaRecordViewer {
         }
     }
     
-        render_new_record_form() {
+    clear_cached_data() {
+        // Clear all cached record data to prevent showing previous record's data
+        console.log('🧹 Clearing cached record data');
+        this.record_data = {};
+        this.table_fields = [];
+        this.doctype_name = null;
+        
+        // Also clear any DOM elements that might contain cached data
+        const content = document.getElementById('record-content');
+        if (content) {
+            content.innerHTML = '<div class="text-center"><div class="spinner"></div><p>Loading record...</p></div>';
+        }
+    }
+    
+    render_new_record_form() {
         // Use the same render_record method but with empty data
+        this.clear_cached_data(); // Ensure all data is cleared for new record
         this.record_data = {}; // Ensure empty data for new record
         this.render_record();
     }
