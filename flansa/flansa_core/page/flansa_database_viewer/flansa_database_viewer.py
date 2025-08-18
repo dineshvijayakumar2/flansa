@@ -41,12 +41,17 @@ def get_database_tables():
 def get_table_data(table_name, limit=50):
     """Get data from a specific table"""
     try:
+        # Decode URL-encoded table name
+        import urllib.parse
+        table_name = urllib.parse.unquote_plus(table_name)
+        
         # Validate table name to prevent SQL injection
-        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
-            raise ValueError("Invalid table name")
+        # Allow tab prefix and various characters commonly found in table names
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_\s\+\-]*$', table_name):
+            raise ValueError(f"Invalid table name format: {table_name}")
         
         # Check if table exists
-        table_exists = frappe.db.sql(f"SHOW TABLES LIKE '{table_name}'")
+        table_exists = frappe.db.sql(f"SHOW TABLES LIKE %s", (table_name,))
         if not table_exists:
             raise ValueError(f"Table '{table_name}' does not exist")
         
@@ -55,13 +60,14 @@ def get_table_data(table_name, limit=50):
         if limit > 1000:  # Safety limit
             limit = 1000
             
-        data = frappe.db.sql(f"SELECT * FROM `{table_name}` LIMIT {limit}", as_dict=True)
+        escaped_table = table_name.replace('`', '``')
+        data = frappe.db.sql("SELECT * FROM `{}` LIMIT {}".format(escaped_table, limit), as_dict=True)
         
         # Get column information
-        columns = frappe.db.sql(f"DESCRIBE `{table_name}`", as_dict=True)
+        columns = frappe.db.sql("DESCRIBE `{}`".format(escaped_table), as_dict=True)
         
         # Get table row count
-        count_result = frappe.db.sql(f"SELECT COUNT(*) as count FROM `{table_name}`", as_dict=True)
+        count_result = frappe.db.sql("SELECT COUNT(*) as count FROM `{}`".format(escaped_table), as_dict=True)
         total_rows = count_result[0]['count'] if count_result else 0
         
         return {
@@ -84,21 +90,25 @@ def get_table_data(table_name, limit=50):
 def get_table_structure(table_name):
     """Get detailed structure of a table"""
     try:
+        # Decode URL-encoded table name
+        import urllib.parse
+        table_name = urllib.parse.unquote_plus(table_name)
+        
         # Validate table name
-        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', table_name):
-            raise ValueError("Invalid table name")
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_\s\+\-]*$', table_name):
+            raise ValueError(f"Invalid table name format: {table_name}")
         
         # Get column details
-        structure = frappe.db.sql(f"DESCRIBE `{table_name}`", as_dict=True)
+        structure = frappe.db.sql("DESCRIBE `{}`".format(table_name.replace('`', '``')), as_dict=True)
         
         # Get indexes
-        indexes = frappe.db.sql(f"SHOW INDEX FROM `{table_name}`", as_dict=True)
+        indexes = frappe.db.sql("SHOW INDEX FROM `{}`".format(table_name.replace('`', '``')), as_dict=True)
         
         # Get table status (size, engine, etc.)
-        status = frappe.db.sql(f"SHOW TABLE STATUS LIKE '{table_name}'", as_dict=True)
+        status = frappe.db.sql("SHOW TABLE STATUS LIKE %s", (table_name,), as_dict=True)
         
         # Get create table statement
-        create_table = frappe.db.sql(f"SHOW CREATE TABLE `{table_name}`", as_dict=True)
+        create_table = frappe.db.sql("SHOW CREATE TABLE `{}`".format(table_name.replace('`', '``')), as_dict=True)
         
         return {
             'success': True,
@@ -186,13 +196,14 @@ def scan_orphaned_fields():
             table_name = f"tab{doctype_name.replace(' ', '_')}"
             
             try:
-                # Check if table exists
-                table_exists = frappe.db.sql(f"SHOW TABLES LIKE '{table_name}'")
+                # Check if table exists - use proper parameter binding
+                table_exists = frappe.db.sql("SHOW TABLES LIKE %s", (table_name,))
                 if not table_exists:
                     continue
                 
-                # Get actual table columns
-                actual_columns = frappe.db.sql(f"DESCRIBE `{table_name}`", as_dict=True)
+                # Get actual table columns - escape table name properly
+                escaped_table = table_name.replace('`', '``')
+                actual_columns = frappe.db.sql("DESCRIBE `{}`".format(escaped_table), as_dict=True)
                 actual_column_names = {col['Field'] for col in actual_columns}
                 
                 # Get defined fields from DocType and Custom Fields
