@@ -420,3 +420,151 @@ def scan_orphaned_fields():
             'success': False,
             'error': f"Scan error: {str(e)[:100]}"  # Limit error message length
         }
+
+@frappe.whitelist()
+def delete_orphaned_table(table_name, confirm_delete=False):
+    """Delete an orphaned table after verification"""
+    try:
+        # Security checks
+        if not frappe.session.user == 'Administrator':
+            raise frappe.PermissionError("Only Administrator can delete tables")
+        
+        if not confirm_delete:
+            raise ValueError("Deletion not confirmed")
+        
+        # Validate table name format
+        if not re.match(r'^tab[a-zA-Z0-9_\+\s]*$', table_name):
+            raise ValueError(f"Invalid table name format: {table_name}")
+        
+        # Verify table exists
+        table_exists = frappe.db.sql("SHOW TABLES LIKE %s", (table_name,))
+        if not table_exists:
+            raise ValueError(f"Table '{table_name}' does not exist")
+        
+        # Double-check it's truly orphaned (no DocType exists)
+        base_name = table_name[3:] if table_name.startswith('tab') else table_name
+        potential_names = [
+            base_name,
+            base_name.replace('_', ' '),
+            base_name.replace('+', ' ')
+        ]
+        
+        for name in potential_names:
+            if frappe.db.exists('DocType', name):
+                raise ValueError(f"Table has corresponding DocType: {name}. Cannot delete.")
+        
+        # Get row count before deletion
+        escaped_table = table_name.replace('`', '``')
+        row_count = frappe.db.sql(f"SELECT COUNT(*) FROM `{escaped_table}`")[0][0]
+        
+        # Create backup information
+        backup_info = {
+            'table_name': table_name,
+            'row_count': row_count,
+            'deleted_by': frappe.session.user,
+            'deleted_at': frappe.utils.now()
+        }
+        
+        # Log the deletion attempt
+        frappe.log_error(
+            message=f"Deleting orphaned table: {table_name} with {row_count} rows",
+            title="Orphaned Table Deletion"
+        )
+        
+        # Perform the deletion
+        frappe.db.sql(f"DROP TABLE IF EXISTS `{escaped_table}`")
+        frappe.db.commit()
+        
+        return {
+            'success': True,
+            'message': f"Successfully deleted table '{table_name}' with {row_count} rows",
+            'backup_info': backup_info
+        }
+        
+    except frappe.PermissionError as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            'success': False,
+            'error': f"Failed to delete table: {str(e)}"
+        }
+
+@frappe.whitelist()
+def delete_orphaned_field(doctype_name, field_name, confirm_delete=False):
+    """Delete an orphaned field from a table"""
+    try:
+        # Security checks
+        if not frappe.session.user == 'Administrator':
+            raise frappe.PermissionError("Only Administrator can delete fields")
+        
+        if not confirm_delete:
+            raise ValueError("Deletion not confirmed")
+        
+        # Get the table name
+        table_name = f"tab{doctype_name.replace(' ', '_')}"
+        
+        # Validate field name
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', field_name):
+            raise ValueError(f"Invalid field name format: {field_name}")
+        
+        # Verify table exists
+        table_exists = frappe.db.sql("SHOW TABLES LIKE %s", (table_name,))
+        if not table_exists:
+            raise ValueError(f"Table '{table_name}' does not exist")
+        
+        # Verify field exists in table
+        escaped_table = table_name.replace('`', '``')
+        columns = frappe.db.sql(f"DESCRIBE `{escaped_table}`", as_dict=True)
+        field_exists = any(col['Field'] == field_name for col in columns)
+        
+        if not field_exists:
+            raise ValueError(f"Field '{field_name}' does not exist in table '{table_name}'")
+        
+        # Double-check it's truly orphaned (not in DocField or Custom Field)
+        docfield_exists = frappe.db.exists('DocField', {
+            'parent': doctype_name,
+            'fieldname': field_name
+        })
+        
+        custom_field_exists = frappe.db.exists('Custom Field', {
+            'dt': doctype_name,
+            'fieldname': field_name
+        })
+        
+        if docfield_exists or custom_field_exists:
+            raise ValueError(f"Field '{field_name}' has DocField/Custom Field definition. Cannot delete.")
+        
+        # Get field info before deletion
+        field_info = next((col for col in columns if col['Field'] == field_name), {})
+        
+        # Log the deletion
+        frappe.log_error(
+            message=f"Deleting orphaned field: {field_name} from {table_name}",
+            title="Orphaned Field Deletion"
+        )
+        
+        # Perform the deletion
+        frappe.db.sql(f"ALTER TABLE `{escaped_table}` DROP COLUMN `{field_name}`")
+        frappe.db.commit()
+        
+        return {
+            'success': True,
+            'message': f"Successfully deleted field '{field_name}' from '{doctype_name}'",
+            'field_info': field_info
+        }
+        
+    except frappe.PermissionError as e:
+        return {
+            'success': False,
+            'error': str(e)
+        }
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            'success': False,
+            'error': f"Failed to delete field: {str(e)}"
+        }

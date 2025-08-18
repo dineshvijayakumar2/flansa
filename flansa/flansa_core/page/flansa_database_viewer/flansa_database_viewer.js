@@ -513,6 +513,7 @@ class FlansaDatabaseViewer {
                             <th>Type</th>
                             <th>Nullable</th>
                             <th>Default</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -527,6 +528,11 @@ class FlansaDatabaseViewer {
                     <td><code>${field.field_type}</code></td>
                     <td>${field.is_nullable ? 'Yes' : 'No'}</td>
                     <td>${field.default_value || '<em class="text-muted">None</em>'}</td>
+                    <td>
+                        <button class="btn btn-xs btn-outline-danger" onclick="window.dbViewer.deleteOrphanedField('${field.doctype}', '${field.field_name}')">
+                            <i class="fa fa-trash"></i> Delete
+                        </button>
+                    </td>
                 </tr>
             `;
         });
@@ -608,7 +614,10 @@ class FlansaDatabaseViewer {
                     <td>${table.column_count}</td>
                     <td>
                         <button class="btn btn-xs btn-outline-primary" onclick="window.dbViewer.viewTableData('${table.table_name}')">
-                            View Data
+                            <i class="fa fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-xs btn-outline-danger ml-1" onclick="window.dbViewer.deleteOrphanedTable('${table.table_name}', ${table.row_count})">
+                            <i class="fa fa-trash"></i> Delete
                         </button>
                     </td>
                 </tr>
@@ -639,6 +648,102 @@ class FlansaDatabaseViewer {
         this.showTab('tables');
         this.current_table = tableName;
         this.load_table_data(tableName);
+    }
+    
+    deleteOrphanedTable(tableName, rowCount) {
+        const hasData = rowCount > 0;
+        
+        frappe.confirm(
+            `<div>
+                <h4>⚠️ Delete Orphaned Table</h4>
+                <p>Are you sure you want to delete the table:</p>
+                <p><strong><code>${tableName}</code></strong></p>
+                ${hasData ? `<div class="alert alert-danger">
+                    <strong>WARNING:</strong> This table contains ${rowCount} rows of data!
+                    <br>This action cannot be undone.
+                </div>` : ''}
+                <div class="alert alert-warning">
+                    <strong>Important:</strong>
+                    <ul>
+                        <li>Make sure you have a backup before proceeding</li>
+                        <li>This operation is irreversible</li>
+                        <li>Only Administrator can perform this action</li>
+                    </ul>
+                </div>
+            </div>`,
+            () => {
+                // User confirmed, now delete
+                frappe.call({
+                    method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.delete_orphaned_table',
+                    args: {
+                        table_name: tableName,
+                        confirm_delete: true
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.show_alert({
+                                message: r.message.message,
+                                indicator: 'green'
+                            });
+                            // Refresh the orphaned tables list
+                            this.scan_orphaned_tables();
+                        } else {
+                            frappe.msgprint({
+                                title: 'Deletion Failed',
+                                message: r.message?.error || 'Failed to delete table',
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
+            }
+        );
+    }
+    
+    deleteOrphanedField(doctype, fieldName) {
+        frappe.confirm(
+            `<div>
+                <h4>⚠️ Delete Orphaned Field</h4>
+                <p>Are you sure you want to delete the field:</p>
+                <p><strong><code>${fieldName}</code></strong> from <strong>${doctype}</strong></p>
+                <div class="alert alert-warning">
+                    <strong>Important:</strong>
+                    <ul>
+                        <li>Make sure you have a backup before proceeding</li>
+                        <li>This will permanently remove the column from the database</li>
+                        <li>Any data in this field will be lost</li>
+                        <li>Only Administrator can perform this action</li>
+                    </ul>
+                </div>
+            </div>`,
+            () => {
+                // User confirmed, now delete
+                frappe.call({
+                    method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.delete_orphaned_field',
+                    args: {
+                        doctype_name: doctype,
+                        field_name: fieldName,
+                        confirm_delete: true
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.show_alert({
+                                message: r.message.message,
+                                indicator: 'green'
+                            });
+                            // Refresh the orphaned fields list
+                            this.scan_orphaned_fields();
+                        } else {
+                            frappe.msgprint({
+                                title: 'Deletion Failed',
+                                message: r.message?.error || 'Failed to delete field',
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
+            }
+        );
     }
     
     show_error(message) {
