@@ -8,7 +8,7 @@ frappe.pages['flansa-database-viewer'].on_page_load = function(wrapper) {
     page.main.html(frappe.render_template("flansa_database_viewer"));
     
     // Initialize the database viewer
-    new FlansaDatabaseViewer(page);
+    window.dbViewer = new FlansaDatabaseViewer(page);
 };
 
 class FlansaDatabaseViewer {
@@ -72,16 +72,30 @@ class FlansaDatabaseViewer {
         });
         
         // Tab switching
-        $(this.wrapper).find('a[data-toggle="tab"]').on('shown.bs.tab', (e) => {
-            const target = $(e.target).attr('href');
-            if (target === '#structure') {
-                this.load_structure_tables();
-            }
+        $(this.wrapper).find('.nav-link').click((e) => {
+            e.preventDefault();
+            const tabName = $(e.currentTarget).data('tab');
+            this.showTab(tabName);
         });
     }
     
     update_status(message) {
         $(this.wrapper).find('#statusMessage').text(message);
+    }
+    
+    showTab(tabName) {
+        // Remove active class from all tabs
+        $(this.wrapper).find('.nav-link').removeClass('active');
+        $(this.wrapper).find('.tab-pane').removeClass('show active');
+        
+        // Add active class to clicked tab
+        $(this.wrapper).find(`#${tabName}-tab`).addClass('active');
+        $(this.wrapper).find(`#${tabName}`).addClass('show active');
+        
+        // Load data for specific tabs
+        if (tabName === 'structure') {
+            this.load_structure_tables();
+        }
     }
     
     load_tables() {

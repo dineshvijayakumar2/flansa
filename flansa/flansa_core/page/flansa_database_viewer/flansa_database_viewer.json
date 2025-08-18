@@ -10,14 +10,7 @@
  "name": "flansa-database-viewer",
  "owner": "Administrator",
  "page_name": "flansa-database-viewer",
- "roles": [
-  {
-   "role": "System Manager"
-  },
-  {
-   "role": "Administrator"
-  }
- ],
+ "roles": [],
  "script": null,
  "standard": "Yes",
  "style": null,
