@@ -3548,53 +3548,7 @@ class EnhancedVisualBuilder {
             return;
         }
         
-        // Check if this is a Fetch template field creation
-        const is_fetch_template = !is_edit_mode && values.fetch_source_field && values.fetch_target_field;
-        
-        if (is_fetch_template) {
-            // Handle Fetch template field creation
-            const template_data = {
-                field_name: this.generate_field_id(values.field_name),
-                field_label: values.field_label,
-                source_link_field: values.fetch_source_field,
-                target_field: values.fetch_target_field,
-                fetch_expression: values.fetch_expression,
-                reqd: values.reqd || 0,
-                read_only: values.read_only || 1, // Fetch fields are usually read-only
-                description: values.description || ''
-            };
-            
-            frappe.call({
-                method: 'flansa.logic_templates.create_field_from_template',
-                args: {
-                    table_name: table_id || this.current_table,
-                    template_id: 'fetch',
-                    template_data: template_data
-                },
-                callback: (r) => {
-                    if (r.message && r.message.success) {
-                        frappe.show_alert({
-                            message: `Fetch field '${values.field_label}' created successfully`,
-                            indicator: 'green'
-                        });
-                        
-                        // Close dialog and refresh
-                        if (dialog) {
-                            dialog.hide();
-                        }
-                        this.load_table_data(table_id);
-                    } else {
-                        frappe.show_alert({
-                            message: r.message?.error || 'Failed to create Fetch field',
-                            indicator: 'red'
-                        });
-                    }
-                }
-            });
-            return;
-        }
-        
-        // Check if this is a Link template field creation
+                // Check if this is a Link template field creation
         const is_link_template = !is_edit_mode && values.target_doctype && values.link_scope;
         
         if (is_link_template) {
