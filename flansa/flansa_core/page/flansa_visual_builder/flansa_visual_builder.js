@@ -1887,35 +1887,7 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Section Break',
                     label: 'Target Selection'
                 },
-                {
-                    fieldtype: 'Section Break',
-                    label: 'Link Field Configuration',
-                    description: 'Configure relationship to other tables'
-                },
-                {
-                    label: 'Link Scope',
-                    fieldname: 'link_scope',
-                    fieldtype: 'Select',
-                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
-                    default: 'Current App',
-                    reqd: 1,
-                    change: () => this.load_target_tables(dialog, table_id)
-                },
-                {
-                    label: 'Select App',
-                    fieldname: 'target_app',
-                    fieldtype: 'Select',
-                    depends_on: 'eval:doc.link_scope === "Other Flansa Apps"',
-                    description: 'Choose the Flansa app to select tables from',
-                    change: () => this.handle_app_selection_change(dialog)
-                },
-                {
-                    label: 'Target Table',
-                    fieldname: 'target_doctype',
-                    fieldtype: 'Select',
-                    reqd: 1,
-                    description: 'Table to link to'
-                }
+                // Link field configuration removed from legacy dialog - using unified dialog instead
             ],
             primary_action_label: is_edit_mode ? 'Update Link Field' : 'Create Link Field',
             primary_action: (values) => {
@@ -2962,7 +2934,8 @@ class EnhancedVisualBuilder {
                 {
                     fieldtype: 'Section Break',
                     label: 'Link Field Configuration',
-                    description: 'Configure relationship to other tables'
+                    description: 'Configure relationship to other tables',
+                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'"
                 },
                 {
                     label: 'Link Scope',
@@ -2971,6 +2944,7 @@ class EnhancedVisualBuilder {
                     options: 'Current App\nOther Flansa Apps\nSystem Tables',
                     default: 'Current App',
                     description: 'Choose the scope of tables to link to',
+                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'",
                     change: () => {
                         this.load_target_tables(dialog, table_id);
                     }
@@ -2980,7 +2954,7 @@ class EnhancedVisualBuilder {
                     fieldname: 'target_app',
                     fieldtype: 'Select',
                     description: 'Choose the Flansa app to select tables from',
-                    depends_on: "eval:doc.link_scope == 'Other Flansa Apps'",
+                    depends_on: "eval:(doc.logic_field_template == 'link' || doc.field_type == 'Link') && doc.link_scope == 'Other Flansa Apps'",
                     change: () => {
                         this.handle_app_selection_change(dialog);
                     }
@@ -2990,7 +2964,8 @@ class EnhancedVisualBuilder {
                     fieldname: 'target_doctype',
                     fieldtype: 'Select',
                     description: 'Table/DocType to link to',
-                    default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : ''
+                    default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : '',
+                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'"
                 },
                 {
                     fieldtype: 'Section Break',
@@ -3203,15 +3178,33 @@ class EnhancedVisualBuilder {
                 if (logic_field_template === 'fetch') {
                     this.load_fetch_field_options(dialog, table_id);
                     
-                    // For edit mode, populate target field after loading
+                    // For edit mode, populate target field after loading with smart matching
                     if (is_edit_mode && field && field.expression) {
                         setTimeout(() => {
                             const target_field = this.parse_fetch_target_field(field.expression);
                             if (target_field) {
-                                dialog.set_value('fetch_target_field', target_field);
-                                console.log('✅ Populated target field:', target_field);
+                                // Smart target field matching - handle fieldname vs label
+                                const target_fields_data = dialog._unified_target_fields_data || [];
+                                
+                                // Try to find field by fieldname first
+                                let field_to_set = target_field;
+                                const field_by_name = target_fields_data.find(f => f.fieldname === target_field);
+                                
+                                if (field_by_name) {
+                                    // Use label for dropdown (since options show labels)
+                                    field_to_set = field_by_name.label || field_by_name.fieldname;
+                                } else {
+                                    // Try finding by label
+                                    const field_by_label = target_fields_data.find(f => f.label === target_field);
+                                    if (field_by_label) {
+                                        field_to_set = field_by_label.label || field_by_label.fieldname;
+                                    }
+                                }
+                                
+                                dialog.set_value('fetch_target_field', field_to_set);
+                                console.log('✅ Smart-populated target field:', field_to_set, 'from:', target_field);
                             }
-                        }, 1000); // Wait for options to load
+                        }, 1200); // Wait longer for options and data to load
                     }
                 } else if (logic_field_template === 'link' || is_link_field) {
                     this.load_target_tables(dialog, table_id);
@@ -6561,36 +6554,7 @@ class EnhancedVisualBuilder {
                     fieldtype: 'Section Break',
                     label: 'Target Selection'
                 },
-                {
-                    fieldtype: 'Section Break',
-                    label: 'Link Field Configuration',
-                    description: 'Configure relationship to other tables'
-                },
-                {
-                    label: 'Link Scope',
-                    fieldname: 'link_scope',
-                    fieldtype: 'Select',
-                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
-                    default: 'Current App',
-                    reqd: 1,
-                    change: () => this.load_target_tables(dialog, table_id)
-                },
-                {
-                    label: 'Select App',
-                    fieldname: 'target_app',
-                    fieldtype: 'Select',
-                    depends_on: 'eval:doc.link_scope === "Other Flansa Apps"',
-                    description: 'Choose the Flansa app to select tables from',
-                    change: () => this.handle_app_selection_change(dialog)
-                },
-                {
-                    label: 'Target Table',
-                    fieldname: 'target_doctype',
-                    fieldtype: 'Select',
-                    reqd: 1,
-                    default: field.options || '',
-                    description: 'Table to link to'
-                }
+                // Link field configuration removed from this dialog - using unified dialog instead
             ],
             primary_action_label: 'Update Link Field',
             primary_action: (values) => {
