@@ -185,10 +185,13 @@ def scan_orphaned_fields():
     try:
         orphaned_fields = []
         
-        # Get all DocType tables
+        # Get all DocType tables - exclude virtual and single doctypes
         doctype_tables = frappe.db.sql("""
             SELECT name FROM `tabDocType` 
-            WHERE custom = 0 OR custom = 1
+            WHERE (custom = 0 OR custom = 1)
+            AND issingle = 0
+            AND istable = 0
+            AND IFNULL(is_virtual, 0) = 0
         """, as_dict=True)
         
         for doctype_row in doctype_tables:
@@ -255,23 +258,29 @@ def scan_orphaned_fields():
                         })
                         
             except Exception as table_error:
-                # Skip individual table errors but log them
-                frappe.log_error(f"Error checking table {table_name}: {str(table_error)}")
-                continue
+                # Skip individual table errors silently
+                # This is expected for:
+                # - Virtual DocTypes without actual tables
+                # - DocTypes with naming issues
+                # - Child tables that may have been removed
+                pass
         
         # Sort by doctype and field name
         orphaned_fields.sort(key=lambda x: (x['doctype'], x['field_name']))
+        
+        # Calculate unique doctypes safely
+        unique_doctypes = len(set(f['doctype'] for f in orphaned_fields)) if orphaned_fields else 0
         
         return {
             'success': True,
             'orphaned_fields': orphaned_fields,
             'total_count': len(orphaned_fields),
-            'scan_summary': f"Found {len(orphaned_fields)} orphaned fields across {len(set(f['doctype'] for f in orphaned_fields))} DocTypes"
+            'scan_summary': f"Found {len(orphaned_fields)} orphaned fields across {unique_doctypes} DocTypes"
         }
         
     except Exception as e:
-        frappe.log_error(f"Error scanning for orphaned fields: {str(e)}")
+        # Don't log to avoid cluttering error log, just return error to UI
         return {
             'success': False,
-            'error': str(e)
+            'error': f"Scan error: {str(e)[:100]}"  # Limit error message length
         }
