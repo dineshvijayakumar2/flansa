@@ -2261,7 +2261,7 @@ class EnhancedVisualBuilder {
             const target_label = dialog.get_value('fetch_target_field');
             
             if (!source_fieldname || !target_label) {
-                console.log('Missing source or target selection');
+                // Don't log during initialization - only when user is actively selecting
                 return;
             }
             
@@ -3178,33 +3178,60 @@ class EnhancedVisualBuilder {
                 if (logic_field_template === 'fetch') {
                     this.load_fetch_field_options(dialog, table_id);
                     
-                    // For edit mode, populate target field after loading with smart matching
+                    // For edit mode, populate both source and target fields properly
                     if (is_edit_mode && field && field.expression) {
-                        setTimeout(() => {
-                            const target_field = this.parse_fetch_target_field(field.expression);
-                            if (target_field) {
-                                // Smart target field matching - handle fieldname vs label
-                                const target_fields_data = dialog._unified_target_fields_data || [];
+                        // First, populate the source field with smart matching
+                        const source_field = this.parse_fetch_source_field(field.expression);
+                        if (source_field) {
+                            setTimeout(() => {
+                                // Ensure we have the right format for source field
+                                const source_fields_data = dialog._unified_source_fields_data || [];
+                                let source_field_to_set = source_field;
                                 
-                                // Try to find field by fieldname first
-                                let field_to_set = target_field;
-                                const field_by_name = target_fields_data.find(f => f.fieldname === target_field);
-                                
-                                if (field_by_name) {
-                                    // Use label for dropdown (since options show labels)
-                                    field_to_set = field_by_name.label || field_by_name.fieldname;
+                                // Verify the source field exists in our data
+                                const source_exists = source_fields_data.find(f => f.fieldname === source_field);
+                                if (source_exists) {
+                                    source_field_to_set = source_exists.fieldname; // Use fieldname for dropdown
                                 } else {
-                                    // Try finding by label
-                                    const field_by_label = target_fields_data.find(f => f.label === target_field);
-                                    if (field_by_label) {
-                                        field_to_set = field_by_label.label || field_by_label.fieldname;
-                                    }
+                                    console.warn('Source field not found in source fields data:', source_field);
                                 }
                                 
-                                dialog.set_value('fetch_target_field', field_to_set);
-                                console.log('✅ Smart-populated target field:', field_to_set, 'from:', target_field);
-                            }
-                        }, 1200); // Wait longer for options and data to load
+                                dialog.set_value('fetch_source_field', source_field_to_set);
+                                console.log('✅ Populated source field:', source_field_to_set, 'exists:', !!source_exists);
+                                
+                                // After source is set, load target fields
+                                setTimeout(() => {
+                                    this.load_unified_target_fields(dialog, table_id);
+                                    
+                                    // Finally, populate target field
+                                    setTimeout(() => {
+                                        const target_field = this.parse_fetch_target_field(field.expression);
+                                        if (target_field) {
+                                            // Smart target field matching - handle fieldname vs label
+                                            const target_fields_data = dialog._unified_target_fields_data || [];
+                                            
+                                            // Try to find field by fieldname first
+                                            let field_to_set = target_field;
+                                            const field_by_name = target_fields_data.find(f => f.fieldname === target_field);
+                                            
+                                            if (field_by_name) {
+                                                // Use label for dropdown (since options show labels)
+                                                field_to_set = field_by_name.label || field_by_name.fieldname;
+                                            } else {
+                                                // Try finding by label
+                                                const field_by_label = target_fields_data.find(f => f.label === target_field);
+                                                if (field_by_label) {
+                                                    field_to_set = field_by_label.label || field_by_label.fieldname;
+                                                }
+                                            }
+                                            
+                                            dialog.set_value('fetch_target_field', field_to_set);
+                                            console.log('✅ Smart-populated target field:', field_to_set, 'from:', target_field);
+                                        }
+                                    }, 800); // Wait for target fields to load
+                                }, 400); // Wait for source field to be set
+                            }, 600); // Initial delay for fetch options to load
+                        }
                     }
                 } else if (logic_field_template === 'link' || is_link_field) {
                     this.load_target_tables(dialog, table_id);
