@@ -25,43 +25,64 @@ class FlansaReportViewer {
     }
     
     extract_url_parameters() {
-        // Extract identifier from URL path: /app/flansa-report-viewer/[identifier]
-        const path = window.location.pathname;
-        const pathParts = path.split('/');
-        
-        // Check for query parameters first
+        // Extract parameters from URL query string for hierarchical structure
         const urlParams = new URLSearchParams(window.location.search);
-        const typeParam = urlParams.get('type'); // 'report' or 'table'
+        
+        // Hierarchical parameters
+        this.app_id = urlParams.get('app');
+        this.table_name = urlParams.get('table');
+        this.report_id = urlParams.get('report');
         this.is_temp_report = urlParams.get('temp') === '1';
         
-        // URL structure: /app/flansa-report-viewer/IDENTIFIER?type=table|report
-        if (pathParts.length >= 4) {
-            this.identifier = pathParts[3];
+        // Determine mode based on hierarchical parameters
+        if (this.report_id) {
+            this.is_table_direct = false;
+            console.log('📊 Report viewer mode: Loading report', this.report_id, 
+                this.app_id ? `(app: ${this.app_id})` : '', 
+                this.table_name ? `(table: ${this.table_name})` : '');
+        } else if (this.table_name) {
+            this.is_table_direct = true;
+            console.log('📋 Table viewer mode: Loading table', this.table_name, 
+                this.app_id ? `(app: ${this.app_id})` : '');
+        } else {
+            // Fallback: try to extract from path for backward compatibility
+            const path = window.location.pathname;
+            const pathParts = path.split('/');
+            const typeParam = urlParams.get('type'); // 'report' or 'table'
             
-            // Explicit type parameter takes precedence
-            if (typeParam === 'report') {
-                this.report_id = this.identifier;
-                this.is_table_direct = false;
-                console.log('📊 Report viewer mode: Loading report', this.report_id);
-            } else if (typeParam === 'table') {
-                this.table_name = this.identifier;
-                this.is_table_direct = true;
-                console.log('📋 Table viewer mode: Loading table', this.table_name);
-            } else {
-                // Fallback to pattern matching for backward compatibility
-                if (this.identifier && this.identifier.startsWith('FR-')) {
-                    // Report ID format: FR-YYYY-XXXXX
+            if (pathParts.length >= 4) {
+                this.identifier = pathParts[3];
+                
+                // Explicit type parameter takes precedence
+                if (typeParam === 'report') {
                     this.report_id = this.identifier;
                     this.is_table_direct = false;
-                    console.log('📊 Report viewer mode (fallback): Loading report', this.report_id);
-                } else {
-                    // Treat as table name (even if it contains dashes like FT-0044)
+                    console.log('📊 Report viewer mode (legacy): Loading report', this.report_id);
+                } else if (typeParam === 'table') {
                     this.table_name = this.identifier;
                     this.is_table_direct = true;
-                    console.log('📋 Table viewer mode (fallback): Loading table', this.table_name);
+                    console.log('📋 Table viewer mode (legacy): Loading table', this.table_name);
+                } else {
+                    // Pattern matching fallback
+                    if (this.identifier && this.identifier.startsWith('FR-')) {
+                        this.report_id = this.identifier;
+                        this.is_table_direct = false;
+                        console.log('📊 Report viewer mode (pattern): Loading report', this.report_id);
+                    } else {
+                        this.table_name = this.identifier;
+                        this.is_table_direct = true;
+                        console.log('📋 Table viewer mode (pattern): Loading table', this.table_name);
+                    }
                 }
             }
         }
+        
+        // Store context for breadcrumbs and navigation
+        this.context = {
+            app_id: this.app_id,
+            table_name: this.table_name,
+            report_id: this.report_id
+        };
     }
     
     bind_events() {
@@ -199,6 +220,8 @@ class FlansaReportViewer {
                     if (response.message && response.message.success) {
                         const report = response.message.report;
                         console.log('Loaded report:', report);
+                        // Set table_name from report for action buttons to work
+                        this.table_name = report.base_table;
                         this.update_page_title(report);
                         this.add_action_buttons(report);
                         this.setup_navigation_with_context(report);
@@ -299,12 +322,12 @@ class FlansaReportViewer {
                 }));
                 
                 const defaultReport = {
-                    title: `${metadata.tableName || metadata.tableLabel || this.table_id} Records (Default View)`,
-                    base_table: this.table_id,
+                    title: `${metadata.tableName || metadata.tableLabel || this.table_name} Records (Default View)`,
+                    base_table: this.table_name,
                     table_label: metadata.tableName || metadata.tableLabel,
                     doctype_name: metadata.doctype_name,
                     config: {
-                        base_table: this.table_id,
+                        base_table: this.table_name,
                         selected_fields: selectedFields,
                         filters: [],
                         sort: [{ field: 'modified', order: 'desc' }]
@@ -440,8 +463,8 @@ class FlansaReportViewer {
         // Edit Report button will be added to view controls instead
         // Set up the edit button click handler
         $('#edit-report-btn').off('click').on('click', () => {
-            // Include table filter when editing report
-            const url = `/app/flansa-report-builder?edit=${this.report_id}&table=${report.base_table}`;
+            // Use unified report builder for editing
+            const url = `/app/flansa-unified-report-builder?edit=${this.report_id}&table=${report.base_table}&source=report_viewer`;
             window.location.href = url;
         });
         
@@ -462,21 +485,17 @@ class FlansaReportViewer {
         if (this.page && this.page.add_action_button) {
             // Add "View Saved Reports" button for all views
             this.page.add_action_button('📋 Saved Reports', () => {
-                const params = new URLSearchParams({
-                    table: this.table_id,
-                    source: 'report_viewer'
-                });
-                frappe.set_route('flansa-saved-reports?' + params.toString());
+                // Use direct URL navigation to preserve query parameters
+                const url = `/app/flansa-saved-reports?table=${encodeURIComponent(this.table_name)}&source=report_viewer`;
+                window.location.href = url;
             });
             
             if (isTemporaryView) {
                 this.page.add_action_button('📊 Create Report', () => {
                     // Open unified report builder to create a proper report
-                    const params = new URLSearchParams({
-                        table: this.table_id,
-                        source: 'report_viewer'
-                    });
-                    frappe.set_route('flansa-unified-report-builder?' + params.toString());
+                    // Use direct URL navigation to preserve query parameters
+                    const url = `/app/flansa-unified-report-builder?table=${encodeURIComponent(this.table_name)}&source=report_viewer`;
+                    window.location.href = url;
                 });
             }
             
@@ -491,7 +510,7 @@ class FlansaReportViewer {
         } else if (this.page && this.page.add_button) {
             if (isTemporaryView) {
                 this.page.add_button('📊 Create Report', () => {
-                    const url = `/app/flansa-report-builder?base_table=${this.table_name}&configure=true&new_report=true`;
+                    const url = `/app/flansa-unified-report-builder?table=${this.table_name}&source=report_viewer`;
                     window.location.href = url;
                 }, 'btn-primary');
             }
@@ -508,8 +527,8 @@ class FlansaReportViewer {
         // For direct table access, update edit button behavior
         $('#edit-report-btn').off('click').on('click', () => {
             if (isTemporaryView) {
-                // Open report builder to create proper report
-                const url = `/app/flansa-report-builder?base_table=${this.table_name}&configure=true&new_report=true`;
+                // Open unified report builder to create proper report
+                const url = `/app/flansa-unified-report-builder?table=${this.table_name}&source=report_viewer`;
                 window.location.href = url;
             } else {
                 // Should not reach here for temporary views
@@ -526,7 +545,7 @@ class FlansaReportViewer {
         if (this.page && this.page.add_menu_item) {
             if (isTemporaryView) {
                 this.page.add_menu_item('📊 Create Report', () => {
-                    const url = `/app/flansa-report-builder?base_table=${this.table_name}&configure=true&new_report=true`;
+                    const url = `/app/flansa-unified-report-builder?table=${this.table_name}&source=report_viewer`;
                     window.location.href = url;
                 });
                 
@@ -554,16 +573,11 @@ class FlansaReportViewer {
             let response;
             
             if (this.is_table_direct) {
-                // Use enhanced table API for direct table access
+                // Use table API for direct table access
                 response = await frappe.call({
-                    method: 'flansa.flansa_core.api.table_api.get_records',
+                    method: 'flansa.flansa_core.api.table_api.get_table_records',
                     args: {
-                        table_name: this.table_name,  // Use the table_name from URL, not report.base_table
-                        filters: this.build_search_filters(),
-                        sort: { field: 'modified', order: 'desc' },
-                        page: this.current_page,
-                        page_size: this.page_size,
-                        fields: ['*']
+                        table_name: this.table_name
                     }
                 });
                 
@@ -589,12 +603,24 @@ class FlansaReportViewer {
                 }
             } else {
                 // Use existing report builder API for saved reports
+                // Transform selected_fields to expected format if they're strings
+                let selected_fields = report.config.selected_fields || [];
+                if (selected_fields.length > 0 && typeof selected_fields[0] === 'string') {
+                    // Convert string array to object array with proper labels
+                    selected_fields = selected_fields.map(fieldname => ({
+                        fieldname: fieldname,
+                        category: 'current',
+                        label: fieldname.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert snake_case to Title Case
+                        fieldtype: 'Data' // Default fieldtype
+                    }));
+                }
+                
                 response = await frappe.call({
                     method: 'flansa.flansa_core.api.report_builder_api.execute_report',
                     args: {
                         report_config: {
                             base_table: report.base_table,
-                            selected_fields: report.config.selected_fields || [],
+                            selected_fields: selected_fields,
                             filters: report.config.filters || [],
                             sort: report.config.sort || []
                         },
@@ -609,7 +635,11 @@ class FlansaReportViewer {
                 
                 if (response.message && response.message.success) {
                     this.current_report_data = response.message;
-                    this.current_report_config = report.config;
+                    // Use the transformed config with proper field objects
+                    this.current_report_config = {
+                        ...report.config,
+                        selected_fields: selected_fields
+                    };
                     
                     // Capture total unfiltered count when no search is active
                     if (!this.search_term) {
@@ -730,7 +760,7 @@ class FlansaReportViewer {
                 
                 // Add image rendering for image fields in table view
                 if (['Attach Image', 'Attach'].includes(field.fieldtype) || 
-                    field.fieldname.toLowerCase().includes('image')) {
+                    (field.fieldname && field.fieldname.toLowerCase().includes('image'))) {
                     const images = this.extract_all_image_urls(value);
                     if (images.length > 0) {
                         formatted_value = `
@@ -743,7 +773,7 @@ class FlansaReportViewer {
                 }
                 
                 const cell = $('<td>');
-                if (['Attach Image', 'Attach'].includes(field.fieldtype) || field.fieldname.toLowerCase().includes('image')) {
+                if (['Attach Image', 'Attach'].includes(field.fieldtype) || (field.fieldname && field.fieldname.toLowerCase().includes('image'))) {
                     cell.html(formatted_value);
                 } else {
                     cell.text(formatted_value);

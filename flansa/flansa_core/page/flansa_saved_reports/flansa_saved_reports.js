@@ -47,42 +47,244 @@ class SavedReportsPage {
     }
     
     setup_ui() {
-        // Clear existing content and add our custom HTML
+        // Clear existing content and add our custom HTML directly
         this.$container.empty();
         
-        // Load our custom HTML
-        fetch('/assets/flansa/flansa/flansa_core/page/flansa_saved_reports/flansa_saved_reports.html')
-            .then(response => response.text())
-            .then(html => {
-                // Extract just the body content
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const content = doc.querySelector('.layout-wrapper').innerHTML;
-                this.$container.html(content);
-                
-                // Initialize UI components after HTML is loaded
-                this.initialize_components();
-            })
-            .catch(error => {
-                console.error('Error loading HTML:', error);
-                this.setup_fallback_ui();
-            });
+        // Use inline HTML for better reliability
+        this.setup_inline_html();
+        this.initialize_components();
     }
     
-    setup_fallback_ui() {
-        // Fallback UI if HTML loading fails
+    setup_inline_html() {
+        // Inline HTML for saved reports page
         this.$container.html(`
-            <div class="saved-reports-fallback">
-                <div class="alert alert-info">
-                    <h4>Saved Reports</h4>
-                    <p>Loading your saved reports...</p>
+            <div class="page-header-reports">
+                <div class="header-content">
+                    <h2 class="page-title-reports">
+                        <i class="fa fa-chart-line" style="color: #007bff;"></i>
+                        <span id="page-title-text">Saved Reports</span>
+                    </h2>
+                    <p class="page-subtitle-reports" id="page-subtitle-text">Manage and view your saved reports</p>
                 </div>
-                <div id="reports-content">
-                    <!-- Content will be loaded here -->
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" id="back-to-table-btn" style="display: none;">
+                        <i class="fa fa-arrow-left"></i> Back to Table
+                    </button>
+                    <button class="btn btn-primary btn-sm" id="create-new-report-btn">
+                        <i class="fa fa-plus"></i> Create New Report
+                    </button>
                 </div>
             </div>
+
+            <div class="filter-section" id="filter-section">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Filter by Table</label>
+                            <select class="form-control" id="table-filter">
+                                <option value="">All Tables</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Report Type</label>
+                            <select class="form-control" id="type-filter">
+                                <option value="">All Types</option>
+                                <option value="Table">Table Reports</option>
+                                <option value="Chart">Chart Reports</option>
+                                <option value="Summary">Summary Reports</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Search</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="search-input" placeholder="Search reports...">
+                                <div class="input-group-append">
+                                    <button class="btn btn-outline-secondary" id="search-btn">
+                                        <i class="fa fa-search"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reports-container">
+                <div class="reports-grid" id="reports-grid">
+                    <div class="loading-state">
+                        <div class="text-center">
+                            <i class="fa fa-spinner fa-spin fa-2x"></i>
+                            <p class="mt-2">Loading reports...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="empty-state" id="empty-state" style="display: none;">
+                    <div class="text-center">
+                        <i class="fa fa-chart-bar fa-3x text-muted"></i>
+                        <h4 class="mt-3">No Reports Found</h4>
+                        <p class="text-muted">Create your first report to get started</p>
+                        <button class="btn btn-primary" id="create-first-report-btn">
+                            <i class="fa fa-plus"></i> Create Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="pagination-container" id="pagination-container" style="display: none;">
+                <nav aria-label="Reports pagination">
+                    <ul class="pagination justify-content-center" id="pagination">
+                    </ul>
+                </nav>
+            </div>
+
+            <style>
+                .page-header-reports {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 20px 0;
+                    border-bottom: 1px solid #eee;
+                    margin-bottom: 20px;
+                }
+
+                .header-content h2.page-title-reports {
+                    margin: 0;
+                    font-size: 1.8rem;
+                    font-weight: 600;
+                    color: #333;
+                }
+
+                .page-subtitle-reports {
+                    margin: 5px 0 0 0;
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+
+                .filter-section {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    border: 1px solid #eee;
+                }
+
+                .reports-container {
+                    min-height: 400px;
+                }
+
+                .reports-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                    gap: 20px;
+                    padding: 20px 0;
+                }
+
+                .report-card {
+                    height: 100%;
+                }
+
+                .report-card .card {
+                    height: 100%;
+                    border: 1px solid #e0e0e0;
+                    border-radius: 8px;
+                    transition: all 0.3s ease;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+
+                .report-card .card:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                    border-color: #007bff;
+                }
+
+                .card-header {
+                    background: #f8f9fa;
+                    border-bottom: 1px solid #e0e0e0;
+                    padding: 15px;
+                }
+
+                .card-title {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 0;
+                }
+
+                .report-title {
+                    margin: 0;
+                    font-size: 1.1rem;
+                    font-weight: 600;
+                    color: #333;
+                    flex: 1;
+                }
+
+                .report-type-badge {
+                    padding: 2px 8px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 500;
+                    margin-left: 10px;
+                }
+
+                .report-type-badge.table {
+                    background: #e7f3ff;
+                    color: #0066cc;
+                }
+
+                .card-body {
+                    padding: 15px;
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+
+                .report-description {
+                    color: #666;
+                    font-size: 0.9rem;
+                    margin-bottom: 15px;
+                    flex: 1;
+                }
+
+                .report-meta {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 5px;
+                }
+
+                .report-meta small {
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                }
+
+                .card-footer {
+                    background: white;
+                    border-top: 1px solid #e0e0e0;
+                    padding: 10px 15px;
+                }
+
+                .empty-state {
+                    padding: 60px 20px;
+                    text-align: center;
+                }
+
+                .loading-state {
+                    padding: 60px 20px;
+                    text-align: center;
+                }
+
+                .pagination-container {
+                    margin-top: 30px;
+                    padding-top: 20px;
+                    border-top: 1px solid #eee;
+                }
+            </style>
         `);
-        this.initialize_components();
     }
     
     initialize_components() {
@@ -140,15 +342,14 @@ class SavedReportsPage {
         const createFirstBtn = document.getElementById('create-first-report-btn');
         
         const createReportHandler = () => {
-            let route = 'flansa-unified-report-builder';
-            let params = { source: 'saved_reports' };
+            // Build URL with proper encoding
+            let url = '/app/flansa-unified-report-builder?source=saved_reports';
             
             if (this.filter_table) {
-                params.table = this.filter_table;
+                url += `&table=${encodeURIComponent(this.filter_table)}`;
             }
             
-            const queryString = new URLSearchParams(params).toString();
-            frappe.set_route(route + '?' + queryString);
+            window.location.href = url;
         };
         
         if (createBtn) createBtn.addEventListener('click', createReportHandler);
@@ -313,26 +514,68 @@ class SavedReportsPage {
     }
     
     create_report_card(report) {
-        const template = document.getElementById('report-card-template');
-        if (!template) return document.createElement('div');
-        
-        const card = template.content.cloneNode(true);
-        const cardElement = card.querySelector('.report-card');
-        
-        // Set data
+        // Create report card directly without template
+        const cardElement = document.createElement('div');
+        cardElement.className = 'report-card';
         cardElement.dataset.reportId = report.name;
         
-        // Fill content
-        card.querySelector('.report-title').textContent = report.report_title;
-        card.querySelector('.report-description').textContent = report.description || 'No description';
-        card.querySelector('.table-name').textContent = report.base_table;
-        card.querySelector('.created-by').textContent = report.created_by_user;
-        card.querySelector('.created-date').textContent = frappe.datetime.str_to_user(report.created_on);
-        
-        // Set type badge
-        const typeBadge = card.querySelector('.report-type-badge');
-        typeBadge.textContent = report.report_type || 'Table';
-        typeBadge.className = `report-type-badge ${(report.report_type || 'table').toLowerCase()}`;
+        // Create card HTML directly
+        cardElement.innerHTML = `
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <h6 class="report-title">${report.report_title}</h6>
+                        <span class="report-type-badge ${(report.report_type || 'table').toLowerCase()}">${report.report_type || 'Table'}</span>
+                    </div>
+                    <div class="card-actions">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">
+                                <i class="fa fa-ellipsis-v"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item view-report" href="#">
+                                    <i class="fa fa-eye"></i> View Report
+                                </a>
+                                <a class="dropdown-item edit-report" href="#">
+                                    <i class="fa fa-edit"></i> Edit Report
+                                </a>
+                                <a class="dropdown-item duplicate-report" href="#">
+                                    <i class="fa fa-copy"></i> Duplicate
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger delete-report" href="#">
+                                    <i class="fa fa-trash"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="report-description">${report.description || 'No description'}</p>
+                    <div class="report-meta">
+                        <small class="text-muted">
+                            <i class="fa fa-table"></i> <span class="table-name">${report.base_table}</span>
+                        </small>
+                        <small class="text-muted">
+                            <i class="fa fa-user"></i> <span class="created-by">${report.created_by_user}</span>
+                        </small>
+                        <small class="text-muted">
+                            <i class="fa fa-calendar"></i> <span class="created-date">${frappe.datetime.str_to_user(report.created_on)}</span>
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group btn-group-sm w-100">
+                        <button class="btn btn-primary view-report-btn">
+                            <i class="fa fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-outline-primary edit-report-btn">
+                            <i class="fa fa-edit"></i> Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
         
         return cardElement;
     }
@@ -392,7 +635,8 @@ class SavedReportsPage {
         const reportId = reportCard?.dataset.reportId;
         
         if (reportId) {
-            frappe.set_route('flansa-report-viewer', reportId);
+            // Use hierarchical URL format with query parameters
+            window.location.href = `/app/flansa-report-viewer?report=${encodeURIComponent(reportId)}`;
         }
     }
     
@@ -402,16 +646,14 @@ class SavedReportsPage {
         const reportId = reportCard?.dataset.reportId;
         
         if (reportId) {
-            const params = new URLSearchParams({
-                edit: reportId,
-                source: 'saved_reports'
-            });
+            // Build URL with proper encoding
+            let url = `/app/flansa-unified-report-builder?edit=${encodeURIComponent(reportId)}&source=saved_reports`;
             
             if (this.filter_table) {
-                params.set('table', this.filter_table);
+                url += `&table=${encodeURIComponent(this.filter_table)}`;
             }
             
-            frappe.set_route('flansa-unified-report-builder?' + params.toString());
+            window.location.href = url;
         }
     }
     
@@ -478,20 +720,23 @@ class SavedReportsPage {
         if (!confirm_delete) return;
         
         try {
-            await frappe.call({
-                method: 'frappe.client.delete',
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.delete_report',
                 args: {
-                    doctype: 'Flansa Saved Report',
-                    name: reportId
+                    report_id: reportId
                 }
             });
             
-            frappe.show_alert({
-                message: 'Report deleted successfully!',
-                indicator: 'green'
-            });
-            
-            this.load_reports(); // Reload reports
+            if (response.message && response.message.success) {
+                frappe.show_alert({
+                    message: response.message.message,
+                    indicator: 'green'
+                });
+                
+                this.load_reports(); // Reload reports
+            } else {
+                frappe.msgprint(response.message?.error || 'Error deleting report');
+            }
         } catch (error) {
             console.error('Error deleting report:', error);
             frappe.msgprint('Error deleting report');

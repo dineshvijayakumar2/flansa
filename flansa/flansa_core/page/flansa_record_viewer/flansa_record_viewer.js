@@ -1214,11 +1214,9 @@ class FlansaRecordViewer {
                 viewReportsBtn.addEventListener('click', (e) => {
                     console.log('View Reports button clicked!');
                     e.preventDefault();
-                    const params = new URLSearchParams({
-                        table: this.table_name,
-                        source: 'record_viewer'
-                    });
-                    frappe.set_route('flansa-saved-reports?' + params.toString());
+                    // Use direct URL navigation to preserve query parameters
+                    const url = `/app/flansa-saved-reports?table=${encodeURIComponent(this.table_name)}&source=record_viewer`;
+                    window.location.href = url;
                 });
             }
             
@@ -1227,11 +1225,9 @@ class FlansaRecordViewer {
                 createReportBtn.addEventListener('click', (e) => {
                     console.log('Create Report button clicked!');
                     e.preventDefault();
-                    const params = new URLSearchParams({
-                        table: this.table_name,
-                        source: 'record_viewer'
-                    });
-                    frappe.set_route('flansa-unified-report-builder?' + params.toString());
+                    // Use direct URL navigation to preserve query parameters
+                    const url = `/app/flansa-unified-report-builder?table=${encodeURIComponent(this.table_name)}&source=record_viewer`;
+                    window.location.href = url;
                 });
             }
             

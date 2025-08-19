@@ -126,8 +126,36 @@ class UnifiedReportBuilder {
                             <div class="row">
                                 <div class="col-md-6">
                                     <h6>Available Fields</h6>
-                                    <div class="available-fields-list" id="available-fields">
-                                        <p class="text-muted">Select a table first</p>
+                                    <div class="field-categories">
+                                        <div class="field-category mb-3">
+                                            <h6 class="field-category-title">
+                                                <i class="fa fa-table text-primary"></i> Current Table Fields
+                                                <span class="field-count" id="current-field-count">0</span>
+                                            </h6>
+                                            <div class="available-fields-list" id="current-fields">
+                                                <p class="text-muted">Select a table first</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="field-category mb-3">
+                                            <h6 class="field-category-title">
+                                                <i class="fa fa-cog text-secondary"></i> System Fields
+                                                <span class="field-count" id="system-field-count">0</span>
+                                            </h6>
+                                            <div class="available-fields-list" id="system-fields">
+                                                <p class="text-muted">No system fields</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="field-category mb-3">
+                                            <h6 class="field-category-title">
+                                                <i class="fa fa-link text-success"></i> Related Table Fields
+                                                <span class="field-count" id="related-field-count">0</span>
+                                            </h6>
+                                            <div id="related-fields-groups">
+                                                <p class="text-muted">No related fields</p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="col-md-6">
@@ -213,6 +241,9 @@ class UnifiedReportBuilder {
                     </button>
                     <button class="btn btn-success" id="save-final-report" style="display: none;">
                         <i class="fa fa-save"></i> Save Report
+                    </button>
+                    <button class="btn btn-danger" id="delete-report-btn" style="display: none;">
+                        <i class="fa fa-trash"></i> Delete Report
                     </button>
                 </div>
             </div>
@@ -317,9 +348,48 @@ class UnifiedReportBuilder {
                 .available-fields-list, .selected-fields-list {
                     border: 1px solid #ddd;
                     border-radius: 4px;
-                    min-height: 300px;
+                    min-height: 120px;
+                    max-height: 200px;
                     padding: 10px;
                     background: white;
+                    overflow-y: auto;
+                }
+                .field-category {
+                    border: 1px solid #e9ecef;
+                    border-radius: 6px;
+                    padding: 10px;
+                    background: #f8f9fa;
+                }
+                .field-category-title {
+                    font-size: 0.9rem;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                .field-count {
+                    background: #007bff;
+                    color: white;
+                    padding: 2px 6px;
+                    border-radius: 10px;
+                    font-size: 0.75rem;
+                    font-weight: normal;
+                }
+                .related-field-group {
+                    margin-bottom: 15px;
+                    padding: 8px;
+                    border: 1px solid #dee2e6;
+                    border-radius: 4px;
+                    background: white;
+                }
+                .related-field-group-title {
+                    font-size: 0.85rem;
+                    font-weight: 600;
+                    color: #495057;
+                    margin-bottom: 8px;
+                    border-bottom: 1px solid #eee;
+                    padding-bottom: 4px;
                 }
                 .field-item {
                     padding: 8px 12px;
@@ -338,6 +408,20 @@ class UnifiedReportBuilder {
                     background: #e7f3ff;
                     border-color: #007bff;
                     color: #007bff;
+                    padding: 12px;
+                }
+                .selected-field-header {
+                    padding-bottom: 8px;
+                    border-bottom: 1px solid #ddd;
+                }
+                .custom-label-section {
+                    background: #f8f9fa;
+                    padding: 8px;
+                    border-radius: 4px;
+                    border: 1px solid #e9ecef;
+                }
+                .custom-label-input {
+                    font-size: 0.85rem;
                 }
                 .preview-area {
                     border: 1px solid #ddd;
@@ -425,6 +509,7 @@ class UnifiedReportBuilder {
         $(document).on('click', '#next-step', () => this.next_step());
         $(document).on('click', '#prev-step', () => this.prev_step());
         $(document).on('click', '#save-final-report', () => this.save_report());
+        $(document).on('click', '#delete-report-btn', () => this.delete_report());
         $(document).on('click', '#refresh-preview', () => this.refresh_preview());
         
         // Table selection
@@ -523,7 +608,7 @@ class UnifiedReportBuilder {
     async load_table_fields() {
         try {
             const response = await frappe.call({
-                method: 'flansa.flansa_core.api.table_api.get_table_fields',
+                method: 'flansa.flansa_core.api.report_builder_api.get_report_field_options',
                 args: { table_name: this.selected_table }
             });
             
@@ -537,20 +622,55 @@ class UnifiedReportBuilder {
     }
     
     display_available_fields() {
-        const container = document.getElementById('available-fields');
+        if (!this.available_fields) return;
+        
+        // Categorize fields
+        const currentFields = this.available_fields.current || [];
+        const systemFields = this.available_fields.system || [];
+        const relatedGroups = this.available_fields.related_groups || [];
+        
+        // Display current table fields
+        this.display_field_category('current-fields', currentFields, 'current-field-count');
+        
+        // Display system fields
+        this.display_field_category('system-fields', systemFields, 'system-field-count');
+        
+        // Display related field groups
+        this.display_related_field_groups(relatedGroups);
+    }
+    
+    display_field_category(containerId, fields, countId) {
+        const container = document.getElementById(containerId);
+        const countElement = document.getElementById(countId);
+        
         if (!container) return;
+        
+        // Update count
+        if (countElement) {
+            countElement.textContent = fields.length;
+        }
         
         container.innerHTML = '';
         
-        this.available_fields.forEach(field => {
+        if (fields.length === 0) {
+            container.innerHTML = '<p class="text-muted">No fields available</p>';
+            return;
+        }
+        
+        fields.forEach(field => {
             const fieldItem = document.createElement('div');
             fieldItem.className = 'field-item available';
             fieldItem.dataset.fieldname = field.fieldname;
+            fieldItem.dataset.category = field.category;
             fieldItem.innerHTML = `
                 <div style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                        <strong>${field.label || field.fieldname}</strong>
-                        <div style="font-size: 0.8em; color: #666;">${field.fieldtype}</div>
+                        <strong>${field.field_label || field.label || field.fieldname}</strong>
+                        <div style="font-size: 0.8em; color: #666;">
+                            ${field.fieldtype}
+                            ${field.is_virtual ? ' (Virtual)' : ''}
+                            ${field.is_logic_field ? ' (Logic)' : ''}
+                        </div>
                     </div>
                     <i class="fa fa-plus" style="color: #28a745;"></i>
                 </div>
@@ -559,13 +679,86 @@ class UnifiedReportBuilder {
         });
     }
     
+    display_related_field_groups(groups) {
+        const container = document.getElementById('related-fields-groups');
+        const countElement = document.getElementById('related-field-count');
+        
+        if (!container) return;
+        
+        // Update count - count total fields across all groups
+        let totalRelatedFields = 0;
+        groups.forEach(group => totalRelatedFields += group.fields.length);
+        
+        if (countElement) {
+            countElement.textContent = totalRelatedFields;
+        }
+        
+        container.innerHTML = '';
+        
+        if (groups.length === 0) {
+            container.innerHTML = '<p class="text-muted">No related fields</p>';
+            return;
+        }
+        
+        groups.forEach(group => {
+            const groupDiv = document.createElement('div');
+            groupDiv.className = 'related-field-group';
+            
+            const groupTitle = document.createElement('div');
+            groupTitle.className = 'related-field-group-title';
+            groupTitle.innerHTML = `<i class="fa fa-link"></i> ${group.link_field_label} → ${group.target_table_label}`;
+            groupDiv.appendChild(groupTitle);
+            
+            const groupFieldsContainer = document.createElement('div');
+            group.fields.forEach(field => {
+                const fieldItem = document.createElement('div');
+                fieldItem.className = 'field-item available';
+                fieldItem.dataset.fieldname = field.fieldname;
+                fieldItem.dataset.category = field.category;
+                fieldItem.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div>
+                            <strong>${field.field_label}</strong>
+                            <div style="font-size: 0.8em; color: #666;">${field.fieldtype}</div>
+                        </div>
+                        <i class="fa fa-plus" style="color: #28a745;"></i>
+                    </div>
+                `;
+                groupFieldsContainer.appendChild(fieldItem);
+            });
+            
+            groupDiv.appendChild(groupFieldsContainer);
+            container.appendChild(groupDiv);
+        });
+    }
+    
     select_field(e) {
         const fieldItem = e.currentTarget;
         const fieldname = fieldItem.dataset.fieldname;
-        const field = this.available_fields.find(f => f.fieldname === fieldname);
+        const category = fieldItem.dataset.category;
+        
+        // Find field from appropriate category
+        let field = null;
+        if (category === 'current') {
+            field = this.available_fields.current?.find(f => f.fieldname === fieldname);
+        } else if (category === 'system') {
+            field = this.available_fields.system?.find(f => f.fieldname === fieldname);
+        } else if (category === 'related') {
+            // Find in related field groups
+            for (const group of (this.available_fields.related_groups || [])) {
+                field = group.fields.find(f => f.fieldname === fieldname);
+                if (field) break;
+            }
+        }
         
         if (field && !this.selected_fields.find(f => f.fieldname === fieldname)) {
-            this.selected_fields.push(field);
+            // Add custom label property for report scope customization
+            const fieldCopy = { 
+                ...field, 
+                custom_label: field.field_label || field.label || field.fieldname,
+                original_label: field.field_label || field.label || field.fieldname
+            };
+            this.selected_fields.push(fieldCopy);
             this.update_field_displays();
         }
     }
@@ -586,20 +779,49 @@ class UnifiedReportBuilder {
                 selectedContainer.innerHTML = '<p class="text-muted">No fields selected</p>';
             } else {
                 selectedContainer.innerHTML = '';
-                this.selected_fields.forEach(field => {
+                this.selected_fields.forEach((field, index) => {
                     const fieldItem = document.createElement('div');
                     fieldItem.className = 'field-item selected';
                     fieldItem.dataset.fieldname = field.fieldname;
                     fieldItem.innerHTML = `
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <div class="selected-field-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                             <div>
-                                <strong>${field.label || field.fieldname}</strong>
-                                <div style="font-size: 0.8em; color: #666;">${field.fieldtype}</div>
+                                <strong>${field.custom_label || field.field_label || field.label || field.fieldname}</strong>
+                                <div style="font-size: 0.8em; color: #666;">
+                                    ${field.fieldtype}
+                                    ${field.category === 'system' ? ' (System)' : ''}
+                                    ${field.category === 'related' ? ' (Related)' : ''}
+                                </div>
                             </div>
-                            <i class="fa fa-times" style="color: #dc3545;"></i>
+                            <i class="fa fa-times" style="color: #dc3545; cursor: pointer;" title="Remove field"></i>
+                        </div>
+                        <div class="custom-label-section" style="margin-top: 5px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label style="font-size: 0.75em; color: #666;">Custom Label for Report:</label>
+                                <input type="text" class="form-control form-control-sm custom-label-input" 
+                                       data-field-index="${index}"
+                                       value="${field.custom_label || field.field_label || field.label || field.fieldname}" 
+                                       placeholder="Enter custom label">
+                            </div>
                         </div>
                     `;
                     selectedContainer.appendChild(fieldItem);
+                });
+                
+                // Bind custom label input events
+                selectedContainer.querySelectorAll('.custom-label-input').forEach(input => {
+                    input.addEventListener('blur', (e) => {
+                        const fieldIndex = parseInt(e.target.dataset.fieldIndex);
+                        const newLabel = e.target.value.trim();
+                        if (newLabel && this.selected_fields[fieldIndex]) {
+                            this.selected_fields[fieldIndex].custom_label = newLabel;
+                            // Update the field header display
+                            const fieldHeader = e.target.closest('.field-item').querySelector('.selected-field-header strong');
+                            if (fieldHeader) {
+                                fieldHeader.textContent = newLabel;
+                            }
+                        }
+                    });
                 });
             }
         }
@@ -683,6 +905,7 @@ class UnifiedReportBuilder {
         const prevBtn = document.getElementById('prev-step');
         const nextBtn = document.getElementById('next-step');
         const saveBtn = document.getElementById('save-final-report');
+        const deleteBtn = document.getElementById('delete-report-btn');
         
         if (prevBtn) {
             prevBtn.style.display = this.current_step > 1 ? 'inline-block' : 'none';
@@ -699,6 +922,11 @@ class UnifiedReportBuilder {
         
         if (saveBtn) {
             saveBtn.style.display = this.current_step === 4 ? 'inline-block' : 'none';
+        }
+        
+        if (deleteBtn) {
+            // Only show delete button when editing existing report and on final step
+            deleteBtn.style.display = (this.current_step === 4 && this.edit_report_id) ? 'inline-block' : 'none';
         }
     }
     
@@ -908,6 +1136,55 @@ class UnifiedReportBuilder {
         };
     }
     
+    async delete_report() {
+        if (!this.edit_report_id) {
+            frappe.msgprint('No report to delete');
+            return;
+        }
+        
+        const reportTitle = document.getElementById('report-title').value || 'this report';
+        
+        const confirm_delete = await new Promise(resolve => {
+            frappe.confirm(
+                `Are you sure you want to delete "${reportTitle}"?`,
+                () => resolve(true),
+                () => resolve(false)
+            );
+        });
+        
+        if (!confirm_delete) return;
+        
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.delete_report',
+                args: {
+                    report_id: this.edit_report_id
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                frappe.show_alert({
+                    message: response.message.message,
+                    indicator: 'green'
+                });
+                
+                // Navigate back to saved reports
+                setTimeout(() => {
+                    if (this.source_context === 'report_viewer') {
+                        frappe.set_route('flansa-saved-reports', { table: this.selected_table });
+                    } else {
+                        frappe.set_route('flansa-saved-reports', { table: this.selected_table });
+                    }
+                }, 1500);
+            } else {
+                frappe.msgprint(response.message?.error || 'Error deleting report');
+            }
+        } catch (error) {
+            console.error('Error deleting report:', error);
+            frappe.msgprint('Error deleting report');
+        }
+    }
+
     async save_report() {
         const title = document.getElementById('report-title').value;
         const description = document.getElementById('report-description').value;
@@ -921,27 +1198,52 @@ class UnifiedReportBuilder {
         const config = this.get_current_config();
         
         try {
-            const response = await frappe.call({
-                method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.save_report',
-                args: {
-                    report_title: title,
-                    description: description,
-                    base_table: this.selected_table,
-                    report_type: 'Table',
-                    report_config: config,
-                    is_public: isPublic ? 1 : 0
-                }
-            });
+            let response;
+            
+            if (this.edit_report_id) {
+                // Update existing report
+                response = await frappe.call({
+                    method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.update_report',
+                    args: {
+                        report_id: this.edit_report_id,
+                        report_title: title,
+                        description: description,
+                        base_table: this.selected_table,
+                        report_type: 'Table',
+                        report_config: config,
+                        is_public: isPublic ? 1 : 0
+                    }
+                });
+            } else {
+                // Create new report
+                response = await frappe.call({
+                    method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.save_report',
+                    args: {
+                        report_title: title,
+                        description: description,
+                        base_table: this.selected_table,
+                        report_type: 'Table',
+                        report_config: config,
+                        is_public: isPublic ? 1 : 0
+                    }
+                });
+            }
             
             if (response.message && response.message.success) {
                 frappe.show_alert({
-                    message: 'Report saved successfully!',
+                    message: this.edit_report_id ? 'Report updated successfully!' : 'Report saved successfully!',
                     indicator: 'green'
                 });
                 
                 // Navigate back to saved reports
                 setTimeout(() => {
-                    frappe.set_route('flansa-saved-reports', { table: this.selected_table });
+                    if (this.source_context === 'report_viewer') {
+                        // Go back to report viewer with updated report
+                        const reportId = this.edit_report_id || response.message.report_id;
+                        frappe.set_route('flansa-report-viewer', { report: reportId });
+                    } else {
+                        frappe.set_route('flansa-saved-reports', { table: this.selected_table });
+                    }
                 }, 1500);
             } else {
                 frappe.msgprint(response.message.error || 'Error saving report');
@@ -983,10 +1285,21 @@ class UnifiedReportBuilder {
         
         // Apply saved configuration after fields load
         setTimeout(() => {
-            if (report.config && report.config.selected_fields) {
-                this.selected_fields = this.available_fields.filter(f => 
+            if (report.config && report.config.selected_fields && this.available_fields) {
+                // Collect all fields from all categories
+                const allFields = [
+                    ...(this.available_fields.current || []),
+                    ...(this.available_fields.system || []),
+                    ...(this.available_fields.related_groups || []).flatMap(group => group.fields)
+                ];
+                
+                this.selected_fields = allFields.filter(f => 
                     report.config.selected_fields.includes(f.fieldname)
-                );
+                ).map(field => ({
+                    ...field,
+                    custom_label: field.field_label || field.label || field.fieldname,
+                    original_label: field.field_label || field.label || field.fieldname
+                }));
                 this.update_field_displays();
             }
         }, 1000);

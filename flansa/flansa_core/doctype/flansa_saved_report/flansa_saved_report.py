@@ -128,6 +128,84 @@ def save_report(report_title, description, base_table, report_type, report_confi
         return {"success": False, "error": str(e)}
 
 @frappe.whitelist()
+def update_report(report_id, report_title, description, base_table, report_type, report_config, view_options=None, is_public=0):
+    """Update an existing report"""
+    try:
+        # Validate inputs
+        if not report_id or not report_title or not base_table or not report_config:
+            return {"success": False, "error": "Missing required fields"}
+        
+        # Check if report exists and user has permission to edit
+        if not frappe.db.exists("Flansa Saved Report", report_id):
+            return {"success": False, "error": "Report not found"}
+        
+        report = frappe.get_doc("Flansa Saved Report", report_id)
+        
+        # Check if user can edit this report
+        if not report.can_user_access():
+            return {"success": False, "error": "Access denied"}
+        
+        # Only owner or system manager can edit
+        if report.created_by_user != frappe.session.user and "System Manager" not in frappe.get_roles():
+            return {"success": False, "error": "Only the report creator can edit this report"}
+        
+        # Update the report
+        report.report_title = report_title
+        report.description = description or ""
+        report.base_table = base_table
+        report.report_type = report_type or "Table"
+        report.report_config = json.dumps(report_config) if isinstance(report_config, dict) else report_config
+        report.view_options = json.dumps(view_options) if view_options and isinstance(view_options, dict) else (view_options or "{}")
+        report.is_public = int(is_public)
+        
+        # Save the report
+        report.save()
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Report '{report_title}' updated successfully",
+            "report_id": report.name
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error updating report: {str(e)}", "Update Report")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def delete_report(report_id):
+    """Delete a saved report"""
+    try:
+        if not report_id:
+            return {"success": False, "error": "report_id parameter is required"}
+        
+        # Check if report exists
+        if not frappe.db.exists("Flansa Saved Report", report_id):
+            return {"success": False, "error": "Report not found"}
+        
+        report = frappe.get_doc("Flansa Saved Report", report_id)
+        
+        # Check permissions - only owner or system manager can delete
+        if report.created_by_user != frappe.session.user and "System Manager" not in frappe.get_roles():
+            return {"success": False, "error": "Only the report creator can delete this report"}
+        
+        # Store report title for response
+        report_title = report.report_title
+        
+        # Delete the report
+        frappe.delete_doc("Flansa Saved Report", report_id)
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Report '{report_title}' deleted successfully"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error deleting report: {str(e)}", "Delete Report")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
 def load_report(report_id=None):
     """Load a saved report"""
     # Handle both positional and keyword arguments
