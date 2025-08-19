@@ -144,7 +144,8 @@ class TenantSwitcher {
             this.render_tenant_list(tenants, currentTenant.tenant_id);
             
         } catch (error) {
-            this.show_error('Failed to load tenant data: ' + error.message);
+            console.error('Tenant data load error:', error);
+            this.show_error('Failed to load tenant data: ' + (error.message || 'Unknown error'));
         }
     }
     
@@ -236,14 +237,15 @@ class TenantSwitcher {
                 method: `flansa.flansa_core.page.tenant_switcher.tenant_switcher.${method}`,
                 args: args,
                 callback: (response) => {
-                    if (response.message) {
+                    if (response && response.message !== undefined) {
                         resolve(response.message);
                     } else {
-                        reject(new Error('No response data'));
+                        reject(new Error('No response data from API'));
                     }
                 },
                 error: (error) => {
-                    reject(error);
+                    console.error(`API Error for ${method}:`, error);
+                    reject(new Error(`API call failed: ${error.responseText || error.message || 'Unknown error'}`));
                 }
             });
         });

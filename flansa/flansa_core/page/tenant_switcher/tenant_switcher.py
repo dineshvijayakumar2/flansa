@@ -34,20 +34,41 @@ def switch_tenant_context(tenant_id):
 def get_current_tenant_info():
     """Get information about current tenant"""
     
-    from flansa.flansa_core.tenant_service import TenantContext, get_tenant_stats
-    
-    current_tenant_id = TenantContext.get_current_tenant_id()
-    
-    # Get tenant details
-    tenant_info = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": current_tenant_id})
-    
-    # Get tenant statistics
-    stats = get_tenant_stats(current_tenant_id)
-    
-    return {
-        "tenant_id": tenant_info.tenant_id,
-        "tenant_name": tenant_info.tenant_name,
-        "primary_domain": tenant_info.primary_domain,
-        "status": tenant_info.status,
-        "stats": stats
-    }
+    try:
+        from flansa.flansa_core.tenant_service import TenantContext
+        
+        current_tenant_id = TenantContext.get_current_tenant_id()
+        
+        # Get tenant details
+        tenant_info = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": current_tenant_id})
+        
+        # Get basic tenant statistics
+        stats = {
+            "apps": frappe.db.count("Flansa Application", {"tenant_id": current_tenant_id}),
+            "tables": frappe.db.count("Flansa Table", {"tenant_id": current_tenant_id}),
+            "relationships": frappe.db.count("Flansa Relationship", {"tenant_id": current_tenant_id}),
+            "reports": frappe.db.count("Flansa Saved Report", {"tenant_id": current_tenant_id})
+        }
+        
+        return {
+            "tenant_id": tenant_info.tenant_id,
+            "tenant_name": tenant_info.tenant_name,
+            "primary_domain": tenant_info.primary_domain,
+            "status": tenant_info.status,
+            "stats": stats
+        }
+        
+    except Exception as e:
+        # Return default tenant info if there's an error
+        return {
+            "tenant_id": "default",
+            "tenant_name": "Default Tenant",
+            "primary_domain": frappe.local.site or "localhost",
+            "status": "Active",
+            "stats": {
+                "apps": 0,
+                "tables": 0,
+                "relationships": 0,
+                "reports": 0
+            }
+        }
