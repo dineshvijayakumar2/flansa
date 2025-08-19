@@ -100,6 +100,14 @@ class FlansaApplicationsWorkspace {
                                 ⋯
                             </button>
                             <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
+                                <div class="context-menu-item" data-action="tenant-switcher" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-users" style="width: 16px;"></i>
+                                    <span>Switch Tenant</span>
+                                </div>
+                                <div class="context-menu-item" data-action="register-tenant" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
+                                    <i class="fa fa-plus-circle" style="width: 16px;"></i>
+                                    <span>Register New Tenant</span>
+                                </div>
                                 <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
                                     <i class="fa fa-paint-brush" style="width: 16px;"></i>
                                     <span>Theme Settings</span>
@@ -980,6 +988,14 @@ class FlansaApplicationsWorkspace {
     
     handle_context_menu_action(action) {
         switch (action) {
+            case 'tenant-switcher':
+                frappe.set_route('tenant-switcher');
+                break;
+                
+            case 'register-tenant':
+                frappe.set_route('tenant-registration');
+                break;
+                
             case 'theme':
                 this.show_theme_settings();
                 break;
