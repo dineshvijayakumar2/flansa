@@ -1140,3 +1140,77 @@ def reverse_map_field_type(frappe_type):
     }
     
     return reverse_mapping.get(frappe_type, "Text")
+
+@frappe.whitelist()
+def apply_naming_to_doctype(table_name):
+    """Apply naming configuration from Flansa Table to its DocType"""
+    try:
+        # Get the Flansa Table record
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        if not table_doc.doctype_name:
+            return {"success": False, "message": "No DocType associated with this table"}
+        
+        if not frappe.db.exists("DocType", table_doc.doctype_name):
+            return {"success": False, "message": f"DocType {table_doc.doctype_name} not found"}
+        
+        # Get the DocType
+        doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
+        
+        # Apply naming configuration based on the Flansa Table settings
+        naming_type = getattr(table_doc, 'naming_type', 'Naming Series')
+        
+        if naming_type == "Naming Series":
+            # Frappe naming series format: PREFIX-.#####
+            prefix = getattr(table_doc, 'naming_prefix', 'REC')
+            digits = getattr(table_doc, 'naming_digits', 5)
+            new_autoname = f"{prefix}-.{'#' * digits}"
+            doctype_doc.naming_rule = "By \"Naming Series\" field"
+            
+        elif naming_type == "Auto Increment":
+            # Pure auto increment: .#####
+            digits = getattr(table_doc, 'naming_digits', 5)
+            new_autoname = f".{'#' * digits}"
+            doctype_doc.naming_rule = "Autoincrement"
+            
+        elif naming_type == "Field Based":
+            # Field-based naming
+            field_name = getattr(table_doc, 'naming_field', '')
+            if field_name:
+                new_autoname = f"field:{field_name}"
+                doctype_doc.naming_rule = "By fieldname"
+            else:
+                return {"success": False, "message": "Field-based naming selected but no field specified"}
+                
+        elif naming_type == "Prompt":
+            # User prompt
+            new_autoname = "Prompt"
+            doctype_doc.naming_rule = "Set by user"
+            
+        elif naming_type == "Random":
+            # Random naming (Frappe default)
+            new_autoname = None
+            doctype_doc.naming_rule = "Random"
+        else:
+            return {"success": False, "message": f"Unknown naming type: {naming_type}"}
+        
+        # Update the DocType
+        if new_autoname is not None:
+            doctype_doc.autoname = new_autoname
+        else:
+            # Remove autoname for random naming
+            doctype_doc.autoname = None
+            
+        doctype_doc.save()
+        frappe.db.commit()
+        
+        return {
+            "success": True, 
+            "message": f"Applied naming configuration: {naming_type}",
+            "autoname": new_autoname,
+            "naming_rule": doctype_doc.naming_rule
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error applying naming to DocType: {str(e)}", "Apply Naming Error")
+        return {"success": False, "message": f"Error applying naming: {str(e)}"}

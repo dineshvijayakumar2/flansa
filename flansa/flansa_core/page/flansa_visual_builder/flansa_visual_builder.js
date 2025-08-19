@@ -7603,9 +7603,13 @@ class EnhancedVisualBuilder {
                     options: '<div id="naming-preview" style="padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff;"><strong>Record IDs will look like:</strong><br><span id="preview-examples" style="font-family: monospace; color: #495057;">Loading preview...</span></div>'
                 }
             ],
-            primary_action_label: 'Save',
+            primary_action_label: 'Save & Apply',
             primary_action: (values) => {
                 this.save_naming_settings(values, dialog);
+            },
+            secondary_action_label: 'Test Pattern',
+            secondary_action: (values) => {
+                this.test_naming_pattern_preview(values);
             }
         });
         
@@ -7631,7 +7635,7 @@ class EnhancedVisualBuilder {
                     naming_digits: table_data.naming_digits || 5,
                     naming_start_from: table_data.naming_start_from || 1,
                     naming_field: table_data.naming_field || '',
-                    naming_separator: table_data.naming_separator || '-'
+                    naming_separator: '-'  // Always use dash for Frappe compatibility
                 });
                 
                 // Load available fields for field-based naming
@@ -7662,16 +7666,13 @@ class EnhancedVisualBuilder {
                     indicator: 'green'
                 });
                 
-                // Ask if user wants to recreate DocType with new naming
-                frappe.confirm(
-                    'Do you want to recreate the DocType with the new naming configuration? This will affect how new records are named.',
-                    () => {
-                        this.recreate_doctype_with_naming(dialog);
-                    },
-                    () => {
-                        dialog.hide();
-                    }
-                );
+                // Apply naming configuration directly
+                frappe.show_alert({
+                    message: 'Applying naming configuration...',
+                    indicator: 'blue'
+                });
+                
+                this.apply_naming_to_doctype(dialog);
             }
         } catch (error) {
             console.error('Error saving naming settings:', error);
@@ -7764,33 +7765,75 @@ class EnhancedVisualBuilder {
         $('#preview-examples').html(examples_html);
     }
     
-    // Recreate DocType with new naming configuration
-    async recreate_doctype_with_naming(dialog) {
+    // Apply naming configuration to DocType
+    async apply_naming_to_doctype(dialog) {
         try {
             frappe.show_alert({
-                message: 'Recreating DocType with new naming...',
+                message: 'Applying naming configuration to DocType...',
                 indicator: 'blue'
             });
             
             const result = await frappe.call({
-                method: 'flansa.flansa_core.api.field_management.recreate_doctype',
+                method: 'flansa.flansa_core.api.field_management.apply_naming_to_doctype',
                 args: { table_name: this.single_table_id }
             });
             
             if (result.message && result.message.success) {
                 frappe.show_alert({
-                    message: 'DocType recreated successfully! New records will use the updated naming.',
+                    message: 'Naming configuration applied! New records will use the updated pattern.',
                     indicator: 'green'
                 });
                 dialog.hide();
             } else {
-                frappe.msgprint('Error recreating DocType: ' + (result.message?.message || 'Unknown error'));
+                frappe.msgprint('Error applying naming: ' + (result.message?.message || 'Unknown error'));
             }
             
         } catch (error) {
-            console.error('Error recreating DocType:', error);
-            frappe.msgprint('Error recreating DocType');
+            console.error('Error applying naming:', error);
+            frappe.msgprint('Error applying naming configuration');
         }
+    }
+    
+    // Test naming pattern with sample
+    test_naming_pattern_preview(values) {
+        const naming_type = values.naming_type || 'Naming Series';
+        const prefix = values.naming_prefix || 'REC';
+        const digits = parseInt(values.naming_digits) || 5;
+        const start_from = parseInt(values.naming_start_from) || 1;
+        
+        let sample_id = '';
+        
+        switch (naming_type) {
+            case 'Naming Series':
+                const zeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
+                sample_id = `${prefix}-${zeros}${start_from}`;
+                break;
+            case 'Auto Increment':
+                const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
+                sample_id = `${autoZeros}${start_from}`;
+                break;
+            case 'Field Based':
+                sample_id = 'FieldValue_123';
+                break;
+            case 'Prompt':
+                sample_id = 'USER_PROMPT';
+                break;
+            default:
+                sample_id = 'RANDOM_ID123';
+                break;
+        }
+        
+        frappe.msgprint({
+            title: 'Naming Pattern Test',
+            message: `<div style="text-align: center; padding: 20px;">
+                <h4>Sample Record ID:</h4>
+                <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin: 15px 0;">
+                    <code style="font-size: 18px; font-weight: bold; color: #007bff;">${sample_id}</code>
+                </div>
+                <p style="color: #6c757d;">This is how new record IDs will look</p>
+            </div>`,
+            indicator: 'blue'
+        });
     }
 
 }
