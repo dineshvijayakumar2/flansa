@@ -46,7 +46,7 @@ def get_report_field_options(table_name):
                 
                 field_info = {
                     "fieldname": field.fieldname,
-                    "label": field.label or field.fieldname.replace('_', ' ').title(),
+                    "field_label": field.label or field.fieldname.replace('_', ' ').title(),
                     "fieldtype": field.fieldtype,
                     "table": table_name,
                     "table_label": table_doc.table_label,
@@ -89,7 +89,7 @@ def get_report_field_options(table_name):
                 if not any(sf['fieldname'] == field_name for sf in system_fields):
                     system_fields.append({
                         "fieldname": field_name,
-                        "label": manager_field['label'],
+                        "field_label": manager_field['label'],
                         "fieldtype": manager_field['fieldtype'],
                         "table": table_name,
                         "table_label": table_doc.table_label,
@@ -109,14 +109,14 @@ def get_report_field_options(table_name):
         try:
             logic_field_docs = frappe.get_all("Flansa Logic Field",
                 filters={"table_name": table_name, "is_active": 1},
-                fields=["field_name", "label", "result_type", "logic_type", "expression"]
+                fields=["field_name", "field_label", "result_type", "logic_type", "logic_expression"]
             )
             
             for logic_field in logic_field_docs:
                 # Add logic fields to current fields (they belong to current table)
                 logic_field_info = {
                     "fieldname": logic_field.field_name,
-                    "label": logic_field.label or logic_field.field_name.replace('_', ' ').title(),
+                    "field_label": logic_field.field_label or logic_field.field_name.replace('_', ' ').title(),
                     "fieldtype": logic_field.result_type,
                     "table": table_name,
                     "table_label": table_doc.table_label,
@@ -132,7 +132,7 @@ def get_report_field_options(table_name):
                 if logic_field.logic_type == "link":
                     # For link fields, we need to extract target table from expression or field definition
                     target_table = None
-                    if logic_field.expression:
+                    if logic_field.logic_expression:
                         # Try to extract target table from expression if it contains table reference
                         pass  # For now, skip target table extraction
                     
@@ -140,7 +140,7 @@ def get_report_field_options(table_name):
                         link_fields_in_current.append({
                             "field_name": logic_field.field_name,
                             "target_table": target_table,
-                            "label": logic_field.label
+                            "field_label": logic_field.field_label
                         })
                 
                 current_fields.append(logic_field_info)
@@ -168,13 +168,13 @@ def get_report_field_options(table_name):
                             
                             group_fields.append({
                                 "fieldname": f"{link_field['field_name']}_{field.fieldname}",
-                                "label": f"{field.label or field.fieldname.replace('_', ' ').title()}",
+                                "field_label": f"{field.label or field.fieldname.replace('_', ' ').title()}",
                                 "fieldtype": field.fieldtype,
                                 "table": link_field["target_table"],
                                 "table_label": target_table_doc.table_label,
                                 "category": "related",
                                 "link_field": link_field["field_name"],
-                                "link_field_label": link_field["label"],
+                                "link_field_label": link_field["field_label"],
                                 "source_field": field.fieldname,
                                 "options": getattr(field, 'options', ''),
                                 "is_gallery": field.fieldtype in ['Attach Image', 'Attach'] or 'image' in field.fieldname.lower()
@@ -183,7 +183,7 @@ def get_report_field_options(table_name):
                     if group_fields:
                         related_field_groups.append({
                             "link_field": link_field["field_name"],
-                            "link_field_label": link_field["label"],
+                            "link_field_label": link_field["field_label"],
                             "target_table": link_field["target_table"],
                             "target_table_label": target_table_doc.table_label,
                             "fields": group_fields
@@ -205,7 +205,7 @@ def get_report_field_options(table_name):
             "success": True,
             "table": {
                 "name": table_name,
-                "label": table_doc.table_label,
+                "field_label": table_doc.table_label,
                 "doctype": doctype_name
             },
             "fields": {
@@ -231,72 +231,72 @@ def get_filter_operators():
         "success": True,
         "operators": {
             "Data": [
-                {"value": "=", "label": "Equals"},
-                {"value": "!=", "label": "Not Equals"},
-                {"value": "like", "label": "Contains"},
-                {"value": "not like", "label": "Does Not Contain"},
-                {"value": "in", "label": "In List"},
-                {"value": "not in", "label": "Not In List"}
+                {"value": "=", "field_label": "Equals"},
+                {"value": "!=", "field_label": "Not Equals"},
+                {"value": "like", "field_label": "Contains"},
+                {"value": "not like", "field_label": "Does Not Contain"},
+                {"value": "in", "field_label": "In List"},
+                {"value": "not in", "field_label": "Not In List"}
             ],
             "Int": [
-                {"value": "=", "label": "Equals"},
-                {"value": "!=", "label": "Not Equals"},
-                {"value": ">", "label": "Greater Than"},
-                {"value": ">=", "label": "Greater Than or Equal"},
-                {"value": "<", "label": "Less Than"},
-                {"value": "<=", "label": "Less Than or Equal"},
-                {"value": "between", "label": "Between"}
+                {"value": "=", "field_label": "Equals"},
+                {"value": "!=", "field_label": "Not Equals"},
+                {"value": ">", "field_label": "Greater Than"},
+                {"value": ">=", "field_label": "Greater Than or Equal"},
+                {"value": "<", "field_label": "Less Than"},
+                {"value": "<=", "field_label": "Less Than or Equal"},
+                {"value": "between", "field_label": "Between"}
             ],
             "Float": [
-                {"value": "=", "label": "Equals"},
-                {"value": "!=", "label": "Not Equals"},
-                {"value": ">", "label": "Greater Than"},
-                {"value": ">=", "label": "Greater Than or Equal"},
-                {"value": "<", "label": "Less Than"},
-                {"value": "<=", "label": "Less Than or Equal"},
-                {"value": "between", "label": "Between"}
+                {"value": "=", "field_label": "Equals"},
+                {"value": "!=", "field_label": "Not Equals"},
+                {"value": ">", "field_label": "Greater Than"},
+                {"value": ">=", "field_label": "Greater Than or Equal"},
+                {"value": "<", "field_label": "Less Than"},
+                {"value": "<=", "field_label": "Less Than or Equal"},
+                {"value": "between", "field_label": "Between"}
             ],
             "Currency": [
-                {"value": "=", "label": "Equals"},
-                {"value": "!=", "label": "Not Equals"},
-                {"value": ">", "label": "Greater Than"},
-                {"value": ">=", "label": "Greater Than or Equal"},
-                {"value": "<", "label": "Less Than"},
-                {"value": "<=", "label": "Less Than or Equal"},
-                {"value": "between", "label": "Between"}
+                {"value": "=", "field_label": "Equals"},
+                {"value": "!=", "field_label": "Not Equals"},
+                {"value": ">", "field_label": "Greater Than"},
+                {"value": ">=", "field_label": "Greater Than or Equal"},
+                {"value": "<", "field_label": "Less Than"},
+                {"value": "<=", "field_label": "Less Than or Equal"},
+                {"value": "between", "field_label": "Between"}
             ],
             "Date": [
-                {"value": "=", "label": "On Date"},
-                {"value": "!=", "label": "Not On Date"},
-                {"value": ">", "label": "After"},
-                {"value": ">=", "label": "On or After"},
-                {"value": "<", "label": "Before"},
-                {"value": "<=", "label": "On or Before"},
-                {"value": "between", "label": "Between Dates"}
+                {"value": "=", "field_label": "On Date"},
+                {"value": "!=", "field_label": "Not On Date"},
+                {"value": ">", "field_label": "After"},
+                {"value": ">=", "field_label": "On or After"},
+                {"value": "<", "field_label": "Before"},
+                {"value": "<=", "field_label": "On or Before"},
+                {"value": "between", "field_label": "Between Dates"}
             ],
             "Datetime": [
-                {"value": "=", "label": "At Time"},
-                {"value": "!=", "label": "Not At Time"},
-                {"value": ">", "label": "After"},
-                {"value": ">=", "label": "On or After"},
-                {"value": "<", "label": "Before"},
-                {"value": "<=", "label": "On or Before"},
-                {"value": "between", "label": "Between Times"}
+                {"value": "=", "field_label": "At Time"},
+                {"value": "!=", "field_label": "Not At Time"},
+                {"value": ">", "field_label": "After"},
+                {"value": ">=", "field_label": "On or After"},
+                {"value": "<", "field_label": "Before"},
+                {"value": "<=", "field_label": "On or Before"},
+                {"value": "between", "field_label": "Between Times"}
             ],
             "Select": [
-                {"value": "=", "label": "Equals"},
-                {"value": "!=", "label": "Not Equals"},
-                {"value": "in", "label": "In List"},
-                {"value": "not in", "label": "Not In List"}
+                {"value": "=", "field_label": "Equals"},
+                {"value": "!=", "field_label": "Not Equals"},
+                {"value": "in", "field_label": "In List"},
+                {"value": "not in", "field_label": "Not In List"}
             ],
             "Link": [
-                {"value": "=", "label": "Equals"},
-                {"value": "!=", "label": "Not Equals"},
-                {"value": "in", "label": "In List"},
-                {"value": "not in", "label": "Not In List"}
+                {"value": "=", "field_label": "Equals"},
+                {"value": "!=", "field_label": "Not Equals"},
+                {"value": "in", "field_label": "In List"},
+                {"value": "not in", "field_label": "Not In List"}
             ],
             "Check": [
-                {"value": "=", "label": "Equals"}
+                {"value": "=", "field_label": "Equals"}
             ]
         }
     }
@@ -631,7 +631,7 @@ def get_gallery_field_info(doctype_name, selected_fields):
             if field_config.get("is_gallery", False):
                 gallery_fields.append({
                     "fieldname": field_config["fieldname"],
-                    "label": field_config["label"],
+                    "field_label": field_config["field_label"],
                     "fieldtype": field_config["fieldtype"],
                     "category": field_config["category"]
                 })
@@ -644,7 +644,7 @@ def get_gallery_field_info(doctype_name, selected_fields):
                     'image' in field.fieldname.lower()):
                     gallery_fields.append({
                         "fieldname": field.fieldname,
-                        "label": field.label or field.fieldname.replace('_', ' ').title(),
+                        "field_label": field.label or field.fieldname.replace('_', ' ').title(),
                         "fieldtype": field.fieldtype,
                         "category": "current"
                     })

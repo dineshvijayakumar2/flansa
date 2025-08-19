@@ -281,10 +281,10 @@ def create_logic_field_for_system_field(table_name, system_field_name, logic_exp
         logic_field = frappe.new_doc("Flansa Logic Field")
         logic_field.table_name = table_name
         logic_field.field_name = logic_field_name
-        logic_field.label = f"{field_config['label']} (System)"
+        logic_field.field_label = f"{field_config['label']} (System)"
         logic_field.field_type = field_config["fieldtype"]
         logic_field.logic_type = "formula"
-        logic_field.expression = logic_expression
+        logic_field.logic_expression = logic_expression
         logic_field.description = f"System field: {field_config.get('description', '')}"
         logic_field.is_active = 1
         logic_field.insert()

@@ -134,6 +134,7 @@ def add_basic_field_native(table_name, field_config):
         # Check if this is a calculated field (has formula)
         has_formula = field_config.get("formula") or field_config.get("expression")
         is_calculated = bool(has_formula)
+        is_link_field = field_config["field_type"] == "Link"
         
         # Create field definition
         field_def = {
@@ -147,18 +148,28 @@ def add_basic_field_native(table_name, field_config):
             "description": create_flansa_field_description("basic" if not is_calculated else "calculated", field_config)
         }
         
-        # If it's a calculated field, create Logic Field record for management
+        # Create Logic Field record for calculated fields OR Link fields
         logic_field_name = None
-        if is_calculated:
+        if is_calculated or is_link_field:
             formula = field_config.get("formula") or field_config.get("expression")
             
             # Create Logic Field document for editing capability
             logic_field = frappe.new_doc("Flansa Logic Field")
             logic_field.table_name = table_name
             logic_field.field_name = field_config["field_name"]
-            logic_field.label = field_config["field_label"]
-            logic_field.expression = formula
-            logic_field.result_type = field_config["field_type"]
+            logic_field.field_label = field_config["field_label"]
+            
+            if is_link_field:
+                # For Link fields, set appropriate logic_type and expression
+                logic_field.logic_type = "link"
+                logic_field.logic_expression = field_config.get("options", "")  # Link target DocType
+                logic_field.result_type = "Link"
+            else:
+                # For calculated fields
+                logic_field.logic_type = "formula"
+                logic_field.logic_expression = formula
+                logic_field.result_type = field_config["field_type"]
+            
             logic_field.is_active = 1
             logic_field.insert()
             logic_field_name = logic_field.name
@@ -179,20 +190,27 @@ def add_basic_field_native(table_name, field_config):
         frappe.clear_cache(doctype=table_doc.doctype_name)
         frappe.db.commit()
         
+        # Determine field description for result
+        field_description = "Link" if is_link_field else ("Calculated" if is_calculated else "Basic")
+        
         result = {
             "success": True,
-            "message": f"{'Calculated' if is_calculated else 'Basic'} field '{field_config['field_label']}' added successfully",
+            "message": f"{field_description} field '{field_config['field_label']}' added successfully",
             "method": "native_doctype_direct",
             "field_name": field_config["field_name"],
-            "is_calculated": is_calculated
+            "is_calculated": is_calculated,
+            "is_link_field": is_link_field
         }
         
-        if is_calculated:
+        if is_calculated or is_link_field:
             result.update({
                 "logic_field_name": logic_field_name,
-                "formula": formula,
+                "logic_type": "link" if is_link_field else "formula",
                 "editable": True  # Can be edited via Logic Field DocType
             })
+            
+            if is_calculated:
+                result["formula"] = formula
         
         return result
         
@@ -219,7 +237,7 @@ def edit_field_formula(table_name, field_name, new_formula):
         # Update Logic Field record
         logic_field_name = frappe.db.get_value("Flansa Logic Field", logic_field_filters, "name")
         logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
-        logic_field.expression = new_formula
+        logic_field.logic_expression = new_formula
         logic_field.save()
         
         # Get table info
@@ -501,7 +519,7 @@ def update_field_native(table_name, field_name, field_updates):
                 if "field_type" in field_updates:
                     logic_field_doc.result_type = field_updates["field_type"]
                 if "formula" in field_updates or "expression" in field_updates:
-                    logic_field_doc.expression = field_updates.get("formula") or field_updates.get("expression")
+                    logic_field_doc.logic_expression = field_updates.get("formula") or field_updates.get("expression")
                 logic_field_doc.save()
             
             # Clear cache

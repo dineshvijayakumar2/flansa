@@ -848,7 +848,7 @@ def calculate_record_logic(table_name, record_name):
         logic_values = {}
         for field in logic_fields:
             try:
-                result = engine.evaluate(field.expression, doc_context)
+                result = engine.evaluate(field.logic_expression, doc_context)
                 logic_values[field.field_name] = result
             except Exception as field_error:
                 frappe.log_error(f"Error calculating {field.field_name}: {str(field_error)}")
@@ -938,8 +938,8 @@ def add_logic_field_to_table(table_name, field_config):
         logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
         logic_field.table_name = table_name
         logic_field.field_name = field_config.get("field_name")
-        logic_field.label = field_config.get("label")
-        logic_field.expression = expression
+        logic_field.field_label = field_config.get("label")
+        logic_field.logic_expression = expression
         logic_field.result_type = field_type
         logic_field.calculation_type = calc_type
         logic_field.storage_strategy = storage_strategy
@@ -1021,8 +1021,8 @@ def add_logic_field_entry(table_name, field_config):
         logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
         logic_field.table_name = table_name
         logic_field.field_name = field_config.get("field_name")
-        logic_field.label = field_config.get("field_label") or field_config.get("label")
-        logic_field.expression = field_config.get("expression", "")
+        logic_field.field_label = field_config.get("field_label") or field_config.get("label")
+        logic_field.logic_expression = field_config.get("expression", "")
         logic_field.result_type = field_config.get("result_type", "Data")
         logic_field.logic_type = field_config.get("logic_type", "formula")
         logic_field.logic_field_template = field_config.get("logic_field_template", "formula")
@@ -1119,8 +1119,8 @@ def add_logic_field_entry_with_migration(table_name, field_config):
         logic_field.name = f"LOGIC-{table_name}-{field_name}"
         logic_field.table_name = table_name
         logic_field.field_name = field_name
-        logic_field.label = field_config.get("field_label") or field_config.get("label")
-        logic_field.expression = expression
+        logic_field.field_label = field_config.get("field_label") or field_config.get("label")
+        logic_field.logic_expression = expression
         logic_field.result_type = field_config.get("result_type", "Data")
         logic_field.logic_type = field_config.get("logic_type", "formula")
         logic_field.logic_field_template = field_config.get("logic_field_template", "formula")
@@ -1245,8 +1245,8 @@ def add_logic_field_entry_for_link(table_name, field_config):
         logic_field.name = f"LOGIC-{table_name}-{field_config.get('field_name')}"
         logic_field.table_name = table_name
         logic_field.field_name = field_config.get("field_name")
-        logic_field.label = field_config.get("field_label") or field_config.get("label")
-        logic_field.expression = field_config.get("expression", "")
+        logic_field.field_label = field_config.get("field_label") or field_config.get("label")
+        logic_field.logic_expression = field_config.get("expression", "")
         logic_field.result_type = "Data"  # Use Data type for Logic Field entries
         logic_field.logic_type = "link"  # Set logic_type field
         logic_field.logic_field_template = "link"  # Set template field if it exists
@@ -1402,7 +1402,7 @@ def populate_cached_field_background(doctype, logic_field_name):
 def calculate_field_value_by_type(doc, logic_field):
     """Calculate field value based on type"""
     
-    expression = logic_field.expression
+    expression = logic_field.logic_expression
     
     # Auto-detect calculation type from expression if not set
     calc_type = getattr(logic_field, 'calculation_type', None)
@@ -1696,10 +1696,10 @@ def update_logic_field(table_name, field_name, field_label=None, calculation_met
         logic_field = frappe.get_doc("Flansa Logic Field", logic_field_name)
         
         if field_label:
-            logic_field.label = field_label
+            logic_field.field_label = field_label
         
         if calculation_method:
-            logic_field.expression = calculation_method
+            logic_field.logic_expression = calculation_method
             
         if logic_type:
             logic_field.logic_type = logic_type
@@ -1865,17 +1865,17 @@ def _find_dependent_fields(table_name, field_name):
     dependent_logic_fields = frappe.get_all("Flansa Logic Field",
                                            filters=[
                                                ["table_name", "=", table_name],
-                                               ["expression", "like", f"%{field_name}%"]
+                                               ["logic_expression", "like", f"%{field_name}%"]
                                            ],
-                                           fields=["name", "field_name", "logic_type", "expression"])
+                                           fields=["name", "field_name", "logic_type", "logic_expression"])
     
     dependents = []
     for dlf in dependent_logic_fields:
-        if dlf.field_name != field_name and field_name in dlf.expression:
+        if dlf.field_name != field_name and field_name in dlf.logic_expression:
             dependents.append({
                 'field_name': dlf.field_name,
                 'logic_type': dlf.logic_type,
-                'expression': dlf.expression,
+                'logic_expression': dlf.logic_expression,
                 'logic_field_name': dlf.name
             })
     
@@ -1965,7 +1965,7 @@ def get_logic_field_for_field(table_name, field_name):
                 "name": logic_field.name,
                 "field_name": logic_field.field_name,
                 "label": logic_field.label,
-                "expression": logic_field.expression,
+                "logic_expression": logic_field.logic_expression,
                 "result_type": logic_field.result_type,
                 "logic_type": logic_field.logic_type,
                 "logic_field_template": getattr(logic_field, 'logic_field_template', ''),
@@ -1995,7 +1995,7 @@ def get_logic_field_for_field(table_name, field_name):
                 "name": logic_field.name,
                 "field_name": logic_field.field_name,
                 "label": logic_field.label,
-                "expression": logic_field.expression,
+                "logic_expression": logic_field.logic_expression,
                 "result_type": logic_field.result_type,
                 "logic_type": logic_field.logic_type,
                 "logic_field_template": getattr(logic_field, 'logic_field_template', ''),

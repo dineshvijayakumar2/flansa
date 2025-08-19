@@ -2709,15 +2709,15 @@ class EnhancedVisualBuilder {
                     table_name: table_id || this.current_table,
                     field_name: field.field_name
                 },
-                fieldname: ['name', 'expression', 'logic_type', 'result_type']
+                fieldname: ['name', 'logic_expression', 'logic_type', 'result_type']
             },
             callback: (r) => {
                 let is_logic_field = false;
                 let logic_field_template = null;
                 
-                if (r.message && (r.message.expression || r.message.logic_type)) {
+                if (r.message && (r.message.logic_expression || r.message.logic_type)) {
                     is_logic_field = true;
-                    field.expression = r.message.expression;
+                    field.expression = r.message.logic_expression;
                     field.result_type = r.message.result_type;
                     
                     // Map logic_type to template_type for consistent routing
@@ -6966,12 +6966,12 @@ class EnhancedVisualBuilder {
                 method: 'frappe.client.get_value',
                 args: {
                     doctype: 'Flansa Logic Field',
-                    fieldname: 'expression',
+                    fieldname: 'logic_expression',
                     filters: { name: logic_field_name }
                 },
                 callback: (r) => {
-                    if (r.message && r.message.expression) {
-                        resolve(r.message.expression);
+                    if (r.message && r.message.logic_expression) {
+                        resolve(r.message.logic_expression);
                     } else {
                         resolve(null);
                     }
