@@ -7785,7 +7785,15 @@ class EnhancedVisualBuilder {
                 });
                 dialog.hide();
             } else {
-                frappe.msgprint('Error applying naming: ' + (result.message?.message || 'Unknown error'));
+                const errorMsg = result.message?.message || 'Unknown error';
+                const suggestions = result.message?.suggestions || [];
+                
+                if (suggestions.length > 0) {
+                    // Show conflict resolution dialog with suggestions
+                    this.show_naming_conflict_dialog(suggestions, dialog);
+                } else {
+                    frappe.msgprint('Error applying naming: ' + errorMsg);
+                }
             }
             
         } catch (error) {
@@ -7834,6 +7842,51 @@ class EnhancedVisualBuilder {
             </div>`,
             indicator: 'blue'
         });
+    }
+    
+    // Show naming conflict resolution dialog
+    show_naming_conflict_dialog(suggestions, originalDialog) {
+        const conflictDialog = new frappe.ui.Dialog({
+            title: 'Naming Series Conflict',
+            fields: [
+                {
+                    fieldname: 'conflict_info',
+                    fieldtype: 'HTML',
+                    options: `<div style="margin-bottom: 15px;">
+                        <p style="color: #856404; background: #fff3cd; padding: 10px; border-radius: 4px; border-left: 4px solid #ffc107;">
+                            <strong>Series Already in Use</strong><br>
+                            The naming series you selected is already being used by another table. 
+                            Please choose an alternative prefix from the suggestions below.
+                        </p>
+                    </div>`
+                },
+                {
+                    fieldname: 'new_prefix',
+                    fieldtype: 'Select',
+                    label: 'Choose Alternative Prefix',
+                    options: suggestions.join('\n'),
+                    reqd: 1
+                }
+            ],
+            primary_action_label: 'Use Selected Prefix',
+            primary_action: (values) => {
+                // Update the original dialog with new prefix
+                originalDialog.set_value('naming_prefix', values.new_prefix);
+                
+                // Update preview
+                this.update_naming_preview(originalDialog);
+                
+                // Close conflict dialog
+                conflictDialog.hide();
+                
+                frappe.show_alert({
+                    message: `Updated prefix to '${values.new_prefix}'. You can now save the configuration.`,
+                    indicator: 'blue'
+                });
+            }
+        });
+        
+        conflictDialog.show();
     }
 
 }

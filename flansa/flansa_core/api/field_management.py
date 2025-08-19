@@ -1165,6 +1165,39 @@ def apply_naming_to_doctype(table_name):
             prefix = getattr(table_doc, 'naming_prefix', 'REC')
             digits = getattr(table_doc, 'naming_digits', 5)
             new_autoname = f"{prefix}-.{'#' * digits}"
+            
+            # Check for naming series conflicts (Frappe enforces global uniqueness)
+            conflict_check = frappe.db.sql("""
+                SELECT COUNT(*) as count
+                FROM `tabDocType` 
+                WHERE autoname LIKE %s 
+                AND name != %s
+            """, (f"{prefix}-.%", table_doc.doctype_name), as_dict=True)
+            
+            if conflict_check[0]['count'] > 0:
+                # Suggest alternative prefixes
+                suggestions = []
+                for i in range(1, 6):  # Try 5 alternatives
+                    alt_prefix = f"{prefix}{i}"
+                    alt_check = frappe.db.sql("""
+                        SELECT COUNT(*) as count
+                        FROM `tabDocType` 
+                        WHERE autoname LIKE %s
+                    """, (f"{alt_prefix}-.%",), as_dict=True)
+                    
+                    if alt_check[0]['count'] == 0:
+                        suggestions.append(alt_prefix)
+                        if len(suggestions) >= 3:  # Provide 3 suggestions
+                            break
+                
+                suggestion_text = ', '.join([f"'{s}'" for s in suggestions[:3]]) if suggestions else "'REC1', 'TBL1'"
+                
+                return {
+                    "success": False, 
+                    "message": f"Series '{prefix}-' is already in use by another table. Please try: {suggestion_text}",
+                    "suggestions": suggestions[:3] if suggestions else [f"{prefix}1", "REC1", "TBL1"]
+                }
+            
             doctype_doc.naming_rule = "By \"Naming Series\" field"
             
         elif naming_type == "Auto Increment":
