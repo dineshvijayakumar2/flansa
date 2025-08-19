@@ -364,19 +364,12 @@ class TenantRegistration {
                 max_users: $('#max_users').val(),
                 max_tables: $('#max_tables').val(),
                 storage_limit_gb: $('#storage_limit_gb').val(),
-                custom_branding: $('#custom_branding').is(':checked') ? 1 : 0
+                custom_branding: $('#custom_branding').is(':checked') ? 1 : 0,
+                custom_domains: $('#custom_domains').val()
             };
             
-            // Process custom domains
-            const customDomainsText = $('#custom_domains').val();
-            if (customDomainsText) {
-                formData.custom_domains = customDomainsText.split('\n').filter(d => d.trim());
-            }
-            
             // Register tenant
-            const result = await this.call_api('register_new_tenant', {
-                tenant_data: formData
-            });
+            const result = await this.call_api('register_new_tenant', formData);
             
             // Show success message
             frappe.msgprint({

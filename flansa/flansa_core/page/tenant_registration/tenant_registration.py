@@ -4,51 +4,70 @@ import hashlib
 import time
 
 @frappe.whitelist()
-def register_new_tenant(tenant_data):
+def register_new_tenant(**kwargs):
     """Register a new tenant in the system"""
     
     try:
+        # Extract parameters from kwargs
+        tenant_name = kwargs.get('tenant_name')
+        admin_email = kwargs.get('admin_email')
+        primary_domain = kwargs.get('primary_domain')
+        max_users = kwargs.get('max_users', 100)
+        max_tables = kwargs.get('max_tables', 50)
+        storage_limit_gb = kwargs.get('storage_limit_gb', 10.0)
+        custom_branding = kwargs.get('custom_branding', 0)
+        custom_domains = kwargs.get('custom_domains')
+        
         # Validate required fields
-        if not tenant_data.get('tenant_name'):
+        if not tenant_name:
             frappe.throw("Tenant Name is required")
         
-        if not tenant_data.get('admin_email'):
+        if not admin_email:
             frappe.throw("Admin Email is required")
         
         # Generate tenant ID from tenant name
-        tenant_id = generate_tenant_id(tenant_data['tenant_name'])
+        tenant_id = generate_tenant_id(tenant_name)
         
         # Check if tenant ID already exists
         if frappe.db.exists("Flansa Tenant Registry", {"tenant_id": tenant_id}):
             frappe.throw(f"Tenant with ID '{tenant_id}' already exists")
         
         # Validate email format
-        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', tenant_data['admin_email']):
+        if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', admin_email):
             frappe.throw("Invalid email format")
         
         # Generate primary domain if not provided
-        primary_domain = tenant_data.get('primary_domain') or f"{tenant_id}.flansa.local"
+        if not primary_domain:
+            primary_domain = f"{tenant_id}.flansa.local"
         
         # Create tenant registry document
         tenant_doc = frappe.get_doc({
             "doctype": "Flansa Tenant Registry",
             "tenant_id": tenant_id,
-            "tenant_name": tenant_data['tenant_name'],
+            "tenant_name": tenant_name,
             "status": "Active",
             "primary_domain": primary_domain,
-            "admin_email": tenant_data['admin_email'],
-            "max_users": int(tenant_data.get('max_users', 100)),
-            "max_tables": int(tenant_data.get('max_tables', 50)),
-            "storage_limit_gb": float(tenant_data.get('storage_limit_gb', 10.0)),
+            "admin_email": admin_email,
+            "max_users": int(max_users),
+            "max_tables": int(max_tables),
+            "storage_limit_gb": float(storage_limit_gb),
             "features_enabled": 1,
             "api_access_enabled": 1,
-            "custom_branding": int(tenant_data.get('custom_branding', 0))
+            "custom_branding": int(custom_branding)
         })
         
         # Add custom domains if provided
-        if tenant_data.get('custom_domains'):
-            for domain in tenant_data['custom_domains']:
-                if domain.strip():
+        if custom_domains:
+            # Handle string input
+            if isinstance(custom_domains, str) and custom_domains.strip():
+                domains_list = custom_domains.split('\n')
+            elif isinstance(custom_domains, list):
+                domains_list = custom_domains
+            else:
+                domains_list = []
+                
+            for domain in domains_list:
+                if domain and domain.strip():
                     tenant_doc.append('custom_domains', {
                         'domain': domain.strip(),
                         'is_verified': 0,
@@ -61,9 +80,9 @@ def register_new_tenant(tenant_data):
         return {
             "status": "success",
             "tenant_id": tenant_id,
-            "tenant_name": tenant_data['tenant_name'],
+            "tenant_name": tenant_name,
             "primary_domain": primary_domain,
-            "message": f"Tenant '{tenant_data['tenant_name']}' registered successfully"
+            "message": f"Tenant '{tenant_name}' registered successfully"
         }
         
     except Exception as e:
