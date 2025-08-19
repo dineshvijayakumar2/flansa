@@ -27,6 +27,7 @@ class FlansaApplicationsWorkspace {
         this.setup_layout();
         this.setup_context_menu();
         this.bind_events();
+        this.load_tenant_info();
         this.load_applications();
         
         // Store reference for theme functions
@@ -92,6 +93,10 @@ class FlansaApplicationsWorkspace {
                     <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
                         <i class="fa fa-cubes" style="font-size: 18px; opacity: 0.9;"></i>
                         <span style="font-size: 16px; font-weight: 600;">Flansa Platform</span>
+                        <div class="tenant-info-badge" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px;" id="current-tenant-badge">
+                            <i class="fa fa-user" style="font-size: 10px;"></i>
+                            <span id="tenant-name-display">Loading...</span>
+                        </div>
                     </div>
                     <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
                         <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;">Flansa Workspace</h3>
@@ -1079,6 +1084,57 @@ class FlansaApplicationsWorkspace {
             title: 'Keyboard Shortcuts',
             message: content,
             indicator: 'blue'
+        });
+    }
+    
+    async load_tenant_info() {
+        try {
+            const response = await this.call_tenant_api('get_current_tenant_info');
+            const tenantInfo = response;
+            
+            // Update tenant display in header
+            const tenantDisplay = document.getElementById('tenant-name-display');
+            const tenantBadge = document.getElementById('current-tenant-badge');
+            
+            if (tenantDisplay && tenantInfo) {
+                tenantDisplay.textContent = tenantInfo.tenant_name || 'Unknown';
+                
+                // Add click handler to show tenant details
+                tenantBadge.style.cursor = 'pointer';
+                tenantBadge.title = `Tenant: ${tenantInfo.tenant_name}\nID: ${tenantInfo.tenant_id}\nApps: ${tenantInfo.stats?.apps || 0} | Tables: ${tenantInfo.stats?.tables || 0}`;
+                
+                // Optional: Add click to show tenant switcher
+                tenantBadge.onclick = () => {
+                    frappe.set_route('tenant-switcher');
+                };
+            }
+            
+        } catch (error) {
+            console.warn('Could not load tenant info:', error);
+            // Set fallback display
+            const tenantDisplay = document.getElementById('tenant-name-display');
+            if (tenantDisplay) {
+                tenantDisplay.textContent = 'Default';
+            }
+        }
+    }
+    
+    async call_tenant_api(method, args = {}) {
+        return new Promise((resolve, reject) => {
+            frappe.call({
+                method: `flansa.flansa_core.page.tenant_switcher.tenant_switcher.${method}`,
+                args: args,
+                callback: (response) => {
+                    if (response && response.message !== undefined) {
+                        resolve(response.message);
+                    } else {
+                        reject(new Error('No response data from tenant API'));
+                    }
+                },
+                error: (error) => {
+                    reject(error);
+                }
+            });
         });
     }
 }
