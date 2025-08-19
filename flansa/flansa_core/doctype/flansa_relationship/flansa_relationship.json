@@ -1,7 +1,7 @@
 {
  "actions": [],
  "allow_rename": 1,
- "autoname": "FR-.#####",
+ "autoname": "hash",
  "creation": "2025-01-31 10:00:00",
  "default_view": "List",
  "doctype": "DocType",
@@ -28,7 +28,6 @@
   "required_reference",
   "create_parent_link",
   "advanced_section",
-  "computed_fields",
   "auto_create_fields",
   "legacy_section",
   "from_table",
@@ -36,7 +35,11 @@
   "from_field",
   "to_field",
   "from_junction_field",
-  "to_junction_field"
+  "to_junction_field",
+  "behaviors",
+  "trigger_code",
+  "ui_config",
+  "performance_config"
  ],
  "fields": [
   {
@@ -76,33 +79,33 @@
    "label": "Tables"
   },
   {
+   "description": "The table that will show a list/link to child records",
    "fieldname": "parent_table",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Parent Table",
    "options": "Flansa Table",
-   "reqd": 1,
-   "description": "The table that will show a list/link to child records"
+   "reqd": 1
   },
   {
    "fieldname": "column_break_2",
    "fieldtype": "Column Break"
   },
   {
+   "description": "The table that will have a reference field to parent",
    "fieldname": "child_table",
    "fieldtype": "Link",
    "in_list_view": 1,
    "label": "Child Table",
    "options": "Flansa Table",
-   "reqd": 1,
-   "description": "The table that will have a reference field to parent"
+   "reqd": 1
   },
   {
    "depends_on": "eval:doc.relationship_type == 'One to Many'",
+   "description": "Field name in child table that references parent (auto-generated if blank)",
    "fieldname": "child_reference_field",
    "fieldtype": "Data",
-   "label": "Child Reference Field",
-   "description": "Field name in child table that references parent (auto-generated if blank)"
+   "label": "Child Reference Field"
   },
   {
    "depends_on": "eval:doc.relationship_type == 'Many to Many'",
@@ -118,17 +121,17 @@
   },
   {
    "depends_on": "eval:doc.relationship_type == 'Many to Many'",
+   "description": "Field in junction table referencing parent (auto-generated if blank)",
    "fieldname": "parent_junction_field",
    "fieldtype": "Data",
-   "label": "Parent Junction Field",
-   "description": "Field in junction table referencing parent (auto-generated if blank)"
+   "label": "Parent Junction Field"
   },
   {
    "depends_on": "eval:doc.relationship_type == 'Many to Many'",
+   "description": "Field in junction table referencing child (auto-generated if blank)",
    "fieldname": "child_junction_field",
    "fieldtype": "Data",
-   "label": "Child Junction Field",
-   "description": "Field in junction table referencing child (auto-generated if blank)"
+   "label": "Child Junction Field"
   },
   {
    "fieldname": "advanced_section",
@@ -141,102 +144,103 @@
    "label": "Relationship Options"
   },
   {
+   "default": "0",
+   "description": "Delete child records when parent is deleted",
    "fieldname": "cascade_delete",
    "fieldtype": "Check",
-   "label": "Cascade Delete",
-   "description": "Delete child records when parent is deleted"
+   "label": "Cascade Delete"
   },
   {
    "fieldname": "column_break_options",
    "fieldtype": "Column Break"
   },
   {
+   "default": "0",
    "depends_on": "eval:doc.relationship_type == 'One to Many'",
+   "description": "Make the child reference field required",
    "fieldname": "required_reference",
    "fieldtype": "Check",
-   "label": "Required Reference",
-   "description": "Make the child reference field required"
+   "label": "Required Reference"
   },
   {
+   "default": "1",
    "depends_on": "eval:doc.relationship_type == 'One to Many'",
+   "description": "Create a hyperlink field in parent to show child records",
    "fieldname": "create_parent_link",
    "fieldtype": "Check",
-   "label": "Create Parent Link Field",
-   "default": 1,
-   "description": "Create a hyperlink field in parent to show child records"
+   "label": "Create Parent Link Field"
   },
   {
+   "default": "1",
+   "description": "Automatically create fields in tables",
    "fieldname": "auto_create_fields",
    "fieldtype": "Check",
-   "label": "Auto Create Fields",
-   "default": "1",
-   "description": "Automatically create fields in tables"
+   "label": "Auto Create Fields"
   },
   {
+   "collapsible": 1,
+   "description": "Old field names for backward compatibility - automatically populated",
    "fieldname": "legacy_section",
    "fieldtype": "Section Break",
-   "label": "Legacy Fields (Backward Compatibility)",
-   "collapsible": 1,
-   "collapsed": 1,
-   "description": "Old field names for backward compatibility - automatically populated"
+   "label": "Legacy Fields (Backward Compatibility)"
   },
   {
+   "description": "Legacy field - use Parent Table instead",
    "fieldname": "from_table",
    "fieldtype": "Link",
    "label": "From Table (Legacy)",
    "options": "Flansa Table",
-   "read_only": 1,
-   "description": "Legacy field - use Parent Table instead"
+   "read_only": 1
   },
   {
+   "description": "Legacy field - use Child Table instead",
    "fieldname": "to_table",
-   "fieldtype": "Link", 
+   "fieldtype": "Link",
    "label": "To Table (Legacy)",
    "options": "Flansa Table",
-   "read_only": 1,
-   "description": "Legacy field - use Child Table instead"
+   "read_only": 1
   },
   {
+   "description": "Legacy field - automatically mapped",
    "fieldname": "from_field",
    "fieldtype": "Data",
    "label": "From Field (Legacy)",
-   "read_only": 1,
-   "description": "Legacy field - automatically mapped"
+   "read_only": 1
   },
   {
+   "description": "Legacy field - use Child Reference Field instead",
    "fieldname": "to_field",
    "fieldtype": "Data",
    "label": "To Field (Legacy)",
-   "read_only": 1,
-   "description": "Legacy field - use Child Reference Field instead"
+   "read_only": 1
   },
   {
+   "description": "Legacy field - use Parent Junction Field instead",
    "fieldname": "from_junction_field",
    "fieldtype": "Data",
    "label": "From Junction Field (Legacy)",
-   "read_only": 1,
-   "description": "Legacy field - use Parent Junction Field instead"
+   "read_only": 1
   },
   {
+   "description": "Legacy field - use Child Junction Field instead",
    "fieldname": "to_junction_field",
    "fieldtype": "Data",
    "label": "To Junction Field (Legacy)",
-   "read_only": 1,
-   "description": "Legacy field - use Child Junction Field instead"
+   "read_only": 1
   },
   {
+   "description": "Enterprise behavior configuration",
    "fieldname": "behaviors",
    "fieldtype": "Code",
    "label": "Behaviors",
-   "options": "JSON",
-   "description": "Enterprise behavior configuration"
+   "options": "JSON"
   },
   {
+   "description": "Custom trigger code for advanced relationships",
    "fieldname": "trigger_code",
    "fieldtype": "Code",
    "label": "Trigger Code",
-   "options": "Python",
-   "description": "Custom trigger code for advanced relationships"
+   "options": "Python"
   },
   {
    "fieldname": "ui_config",
@@ -252,11 +256,11 @@
   }
  ],
  "links": [],
- "modified": "2025-08-05 14:26:55.159248",
+ "modified": "2025-08-19 13:49:47.319468",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Relationship",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {

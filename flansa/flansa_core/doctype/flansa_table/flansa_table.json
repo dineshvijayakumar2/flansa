@@ -2,7 +2,7 @@
  "actions": [],
  "allow_rename": 1,
  "app": "flansa",
- "autoname": "FT-.####",
+ "autoname": "hash",
  "creation": "2025-08-05 14:44:30.595413",
  "default_view": "List",
  "doctype": "DocType",
@@ -155,11 +155,11 @@
   }
  ],
  "links": [],
- "modified": "2025-08-05 14:46:29.605304",
+ "modified": "2025-08-19 13:49:47.081924",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Table",
- "naming_rule": "By \"Naming Series\" field",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {
