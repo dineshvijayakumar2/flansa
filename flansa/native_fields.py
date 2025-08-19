@@ -722,6 +722,36 @@ def create_doctype_native(table_name, fields_data):
             "fields": []
         })
         
+        # Set naming rule based on Flansa Table configuration
+        naming_type = getattr(table_doc, 'naming_type', 'Naming Series')
+        
+        if naming_type == 'Naming Series':
+            # Use configured prefix and digits
+            prefix = getattr(table_doc, 'naming_prefix', 'REC')
+            digits = getattr(table_doc, 'naming_digits', 5)
+            doctype_doc.naming_rule = "By \"Naming Series\" field"
+            doctype_doc.autoname = f"{prefix}-.{'#' * digits}"
+        elif naming_type == 'Auto Increment':
+            # Just numbers without prefix
+            digits = getattr(table_doc, 'naming_digits', 5)
+            doctype_doc.naming_rule = "Autoincrement"
+            doctype_doc.autoname = f".{'#' * digits}"
+        elif naming_type == 'Field Based':
+            # Use a field value for naming
+            field_name = getattr(table_doc, 'naming_field', '')
+            if field_name:
+                doctype_doc.naming_rule = "By fieldname"
+                doctype_doc.autoname = f"field:{frappe.scrub(field_name)}"
+            else:
+                # Fallback to random if no field specified
+                doctype_doc.naming_rule = "Random"
+        elif naming_type == 'Prompt':
+            # User will be prompted to enter the ID
+            doctype_doc.naming_rule = "Set by user"
+            doctype_doc.autoname = "Prompt"
+        else:  # Random or default
+            doctype_doc.naming_rule = "Random"
+        
         # Add standard fields
         doctype_doc.append("fields", {
             "fieldname": "name", "label": "ID", "fieldtype": "Data", 

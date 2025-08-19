@@ -97,8 +97,12 @@ def create_flansa_table(table_data, app_name=None):
             "table_label": table_data.get("table_label"),
             "description": table_data.get("description", ""),
             "status": "Active",  # Auto-activate new tables
-            "naming_rule": table_data.get("naming_rule", "Autoincrement"),
-            "autoname_prefix": table_data.get("autoname_prefix", ""),
+            # New naming configuration fields
+            "naming_type": table_data.get("naming_type", "Naming Series"),
+            "naming_prefix": table_data.get("naming_prefix", "REC"),
+            "naming_digits": table_data.get("naming_digits", 5),
+            "naming_field": table_data.get("naming_field", ""),
+            "naming_start_from": table_data.get("naming_start_from", 1),
             "is_submittable": table_data.get("is_submittable", 0)
         })
         

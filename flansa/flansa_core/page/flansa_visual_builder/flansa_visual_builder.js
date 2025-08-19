@@ -5103,6 +5103,17 @@ class EnhancedVisualBuilder {
                         if (label) {
                             const tableName = this.generate_table_name(label);
                             dialog.set_value('table_name', tableName);
+                            
+                            // Auto-suggest prefix if naming_type is 'Naming Series' and prefix is empty
+                            const naming_type = dialog.get_value('naming_type');
+                            const current_prefix = dialog.get_value('naming_prefix');
+                            if (naming_type === 'Naming Series' && !current_prefix) {
+                                const suggestedPrefix = this.generate_prefix_from_label(label);
+                                dialog.set_value('naming_prefix', suggestedPrefix);
+                            }
+                            
+                            // Update preview
+                            this.update_naming_preview(dialog);
                         }
                     }
                 },
@@ -5116,6 +5127,53 @@ class EnhancedVisualBuilder {
                     reqd: 1,
                     description: 'Technical name (auto-generated, can be edited)',
                     placeholder: 'Auto-generated from label...'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: '🏷️ Record Naming Configuration'
+                },
+                {
+                    label: 'Naming Type',
+                    fieldname: 'naming_type',
+                    fieldtype: 'Select',
+                    options: 'Naming Series\nAuto Increment\nField Based\nRandom\nPrompt',
+                    default: 'Naming Series',
+                    description: 'How should records in this table be numbered?',
+                    change: () => {
+                        this.update_naming_preview(dialog);
+                    }
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Record Prefix',
+                    fieldname: 'naming_prefix',
+                    fieldtype: 'Data',
+                    description: 'e.g., CUS for Customers, ORD for Orders',
+                    placeholder: 'CUS, ORD, INV...',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    change: () => {
+                        this.update_naming_preview(dialog);
+                    }
+                },
+                {
+                    label: 'Number of Digits',
+                    fieldname: 'naming_digits',
+                    fieldtype: 'Int',
+                    default: 5,
+                    description: 'Number of digits in counter (5 = 00001)',
+                    depends_on: 'eval:doc.naming_type=="Naming Series" || doc.naming_type=="Auto Increment"',
+                    change: () => {
+                        this.update_naming_preview(dialog);
+                    }
+                },
+                {
+                    label: 'Preview',
+                    fieldname: 'naming_preview',
+                    fieldtype: 'Data',
+                    read_only: 1,
+                    description: 'Example of how record IDs will look'
                 },
                 {
                     fieldtype: 'Section Break',
@@ -5141,8 +5199,19 @@ class EnhancedVisualBuilder {
         
         dialog.show();
         
-        // Focus on the first field
+        // Set initial defaults and update preview
         setTimeout(() => {
+            // Set default prefix based on table label if available
+            const label = dialog.get_value('table_label') || '';
+            if (!dialog.get_value('naming_prefix') && label) {
+                const defaultPrefix = this.generate_prefix_from_label(label);
+                dialog.set_value('naming_prefix', defaultPrefix);
+            }
+            
+            // Update preview
+            this.update_naming_preview(dialog);
+            
+            // Focus on the first field
             dialog.fields_dict.table_label.set_focus();
         }, 500);
     }
@@ -5154,6 +5223,54 @@ class EnhancedVisualBuilder {
             .replace(/\s+/g, '_') // Replace spaces with underscores
             .toLowerCase() // Convert to lowercase
             .substring(0, 50); // Limit length
+    }
+    
+    generate_prefix_from_label(label) {
+        // Generate a 3-letter prefix from table label
+        const words = label.trim().split(/\s+/);
+        if (words.length === 1) {
+            // Single word: take first 3 letters
+            return words[0].substring(0, 3).toUpperCase();
+        } else if (words.length === 2) {
+            // Two words: first 2 letters of first word + first letter of second
+            return (words[0].substring(0, 2) + words[1].substring(0, 1)).toUpperCase();
+        } else {
+            // Multiple words: first letter of first 3 words
+            return words.slice(0, 3).map(word => word.substring(0, 1)).join('').toUpperCase();
+        }
+    }
+    
+    update_naming_preview(dialog) {
+        // Update the naming preview based on current settings
+        const naming_type = dialog.get_value('naming_type') || 'Naming Series';
+        const prefix = dialog.get_value('naming_prefix') || 'REC';
+        const digits = parseInt(dialog.get_value('naming_digits')) || 5;
+        
+        let preview = '';
+        
+        switch (naming_type) {
+            case 'Naming Series':
+                const sample_number = '1'.padStart(digits, '0');
+                preview = `${prefix}-${sample_number}, ${prefix}-${(parseInt(sample_number) + 1).toString().padStart(digits, '0')}...`;
+                break;
+            case 'Auto Increment':
+                const auto_number = '1'.padStart(digits, '0');
+                preview = `${auto_number}, ${(parseInt(auto_number) + 1).toString().padStart(digits, '0')}...`;
+                break;
+            case 'Field Based':
+                preview = 'Based on field value (e.g., john_doe, jane_smith...)';
+                break;
+            case 'Random':
+                preview = 'Random IDs (e.g., a1b2c3d4, x9y8z7w6...)';
+                break;
+            case 'Prompt':
+                preview = 'User enters ID manually (e.g., CUST-001, ORDER-042...)';
+                break;
+            default:
+                preview = 'Preview will appear here';
+        }
+        
+        dialog.set_value('naming_preview', preview);
     }
     
     create_table_and_start_editing(values, dialog) {

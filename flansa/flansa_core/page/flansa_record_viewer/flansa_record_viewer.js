@@ -625,6 +625,9 @@ class FlansaRecordViewer {
                         <button type="button" class="btn btn-sm btn-success save-record" style="display: flex; align-items: center; gap: 6px;">
                             <i class="fa fa-save"></i> Save
                         </button>
+                        <button type="button" class="btn btn-sm btn-outline-primary form-builder-btn" style="display: flex; align-items: center; gap: 6px;" onclick="window.open('/app/flansa-form-builder?table=${this.table_name}', '_blank')">
+                            <i class="fa fa-paint-brush"></i> Customize Form
+                        </button>
                         <button type="button" class="btn btn-sm btn-outline-secondary cancel-create" style="display: flex; align-items: center; gap: 6px;">
                             <i class="fa fa-times"></i> Cancel
                         </button>
