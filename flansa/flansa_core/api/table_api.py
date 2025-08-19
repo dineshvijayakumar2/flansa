@@ -1988,7 +1988,7 @@ def get_logic_field_for_field(table_name, field_name):
             "logic_field": {
                 "name": logic_field.name,
                 "field_name": logic_field.field_name,
-                "label": logic_field.label,
+                "label": logic_field.field_label,
                 "logic_expression": logic_field.logic_expression,
                 "result_type": logic_field.result_type,
                 "logic_type": logic_field.logic_type,
@@ -2018,7 +2018,7 @@ def get_logic_field_for_field(table_name, field_name):
             "logic_field": {
                 "name": logic_field.name,
                 "field_name": logic_field.field_name,
-                "label": logic_field.label,
+                "label": logic_field.field_label,
                 "logic_expression": logic_field.logic_expression,
                 "result_type": logic_field.result_type,
                 "logic_type": logic_field.logic_type,

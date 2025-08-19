@@ -2477,8 +2477,8 @@ class EnhancedVisualBuilder {
                         const logic_info = r.message.logic_field;
                         
                         // Update dialog with Logic Field info
-                        if (logic_info.expression) {
-                            dialog.set_value('formula', logic_info.expression);
+                        if (logic_info.logic_expression) {
+                            dialog.set_value('formula', logic_info.logic_expression);
                         }
                         
                         if (logic_info.result_type) {
@@ -2599,8 +2599,8 @@ class EnhancedVisualBuilder {
                         const logic_info = r.message.logic_field;
                         
                         // Update dialog with Logic Field info
-                        if (logic_info.expression) {
-                            dialog.set_value('formula', logic_info.expression);
+                        if (logic_info.logic_expression) {
+                            dialog.set_value('formula', logic_info.logic_expression);
                         }
                         
                         if (logic_info.result_type) {
@@ -3060,7 +3060,7 @@ class EnhancedVisualBuilder {
                 {
                     fieldtype: 'Section Break',
                     label: 'Formula Configuration',
-                    depends_on: `eval:${is_logic_field && logic_field_template !== 'formula' ? 'false' : 'true'} || doc.add_logic`
+                    depends_on: `eval:${is_logic_field ? 'true' : 'false'} || doc.add_logic`
                 },
                 {
                     label: 'Result Type',
@@ -3069,7 +3069,7 @@ class EnhancedVisualBuilder {
                     options: 'Data\nInt\nFloat\nCurrency\nDate\nDatetime\nCheck',
                     default: is_edit_mode && is_logic_field ? (field.result_type || 'Data') : 'Data',
                     description: 'Expected data type that the formula will return',
-                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'} && ${logic_field_template !== 'link' ? 'true' : 'false'}) || doc.add_logic`,
+                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'}) || doc.add_logic`,
                     change: () => {
                         const result_type = dialog.get_value('result_type');
                         const formula = dialog.get_value('formula');
@@ -3304,9 +3304,9 @@ class EnhancedVisualBuilder {
             const formula_field = dialog.get_field('formula');
             const read_only_field = dialog.get_field('read_only');
             
-            // For logic type fields (link, fetch, rollup) and regular Link fields, make formula field read-only
-            // But allow editing when add_logic is checked
-            if (formula_field && ((is_logic_field && ['link', 'fetch', 'rollup'].includes(logic_field_template)) || is_link_field)) {
+            // For regular Link fields (without logic), make formula field read-only
+            // But for existing logic fields or when add_logic is checked, make it editable
+            if (formula_field && is_link_field && !is_logic_field) {
                 // Check if add_logic is checked - if so, make formula editable
                 const add_logic_checked = dialog.get_value('add_logic');
                 if (!add_logic_checked) {
