@@ -105,6 +105,26 @@ def get_report_field_options(table_name):
         logic_fields = []
         link_fields_in_current = []
         
+        # First, process regular Link fields from the DocType
+        for field in meta.fields:
+            if field.fieldtype == "Link" and field.options:
+                # Try to map the DocType back to a Flansa Table
+                target_table = None
+                try:
+                    # Look for a Flansa Table that uses this DocType
+                    target_tables = frappe.get_all("Flansa Table", 
+                                                   filters={"doctype_name": field.options},
+                                                   fields=["name", "table_label"])
+                    if target_tables:
+                        target_table = target_tables[0].name
+                        link_fields_in_current.append({
+                            "field_name": field.fieldname,
+                            "target_table": target_table,
+                            "field_label": field.label or field.fieldname.replace('_', ' ').title()
+                        })
+                except Exception as e:
+                    frappe.log_error(f"Error mapping link field {field.fieldname} to Flansa Table: {str(e)}", "Report Builder Link Mapping")
+        
         # Get logic fields for this table
         try:
             logic_field_docs = frappe.get_all("Flansa Logic Field",
@@ -130,7 +150,7 @@ def get_report_field_options(table_name):
                 
                 # Store link fields for related field lookup
                 if logic_field.logic_type == "link":
-                    # For link fields, we need to extract target table from expression or field definition
+                    # For logic link fields, we need to extract target table from expression or field definition
                     target_table = None
                     if logic_field.logic_expression:
                         # Try to extract target table from expression if it contains table reference
@@ -407,6 +427,7 @@ def execute_report(report_config, view_options=None):
         query_fields = ["name", "creation", "modified"]
         field_map = {}
         parent_field_configs = []
+        related_field_configs = []
         
         for field_config in selected_fields:
             if field_config["category"] == "current":
@@ -421,6 +442,10 @@ def execute_report(report_config, view_options=None):
             elif field_config["category"] == "parent":
                 # Store parent field config for later processing
                 parent_field_configs.append(field_config)
+            elif field_config["category"] == "related":
+                # Store related field config for later processing
+                related_field_configs.append(field_config)
+                field_map[field_config["fieldname"]] = field_config
         
         # Build filters
         filters = {}
@@ -518,6 +543,19 @@ def execute_report(report_config, view_options=None):
                 except Exception as parent_error:
                     enhanced_record[field_config["fieldname"]] = None
                     frappe.log_error(f"Error getting parent field value: {str(parent_error)}", "Report Builder")
+            
+            # Add related field data via link field lookups
+            for field_config in related_field_configs:
+                try:
+                    related_value = get_related_field_value(
+                        doctype_name,
+                        record["name"],
+                        field_config
+                    )
+                    enhanced_record[field_config["fieldname"]] = related_value
+                except Exception as related_error:
+                    enhanced_record[field_config["fieldname"]] = None
+                    frappe.log_error(f"Error getting related field value: {str(related_error)}", "Report Builder")
             
             # Add computed/virtual field values and debug image fields
             for field_name, field_config in field_map.items():
@@ -620,6 +658,42 @@ def get_parent_field_value(child_doctype, record_name, field_config):
         
     except Exception as e:
         frappe.log_error(f"Error getting parent field value: {str(e)}", "Report Builder")
+        return None
+
+def get_related_field_value(child_doctype, record_name, field_config):
+    """Get value from related table via link field"""
+    try:
+        # Parse the related field configuration
+        # field_config["fieldname"] should be in format: "link_field_source_field"
+        # field_config should have: link_field, source_field, table
+        
+        link_field = field_config.get("link_field")
+        source_field = field_config.get("source_field")
+        related_table = field_config.get("table")
+        
+        if not link_field or not source_field or not related_table:
+            return None
+        
+        # Get the related table DocType
+        related_table_doc = frappe.get_doc("Flansa Table", related_table)
+        related_doctype = related_table_doc.doctype_name
+        
+        if not related_doctype or not frappe.db.exists("DocType", related_doctype):
+            return None
+        
+        # Get the linked record ID from the current record
+        linked_record_id = frappe.db.get_value(child_doctype, record_name, link_field)
+        
+        if not linked_record_id:
+            return None
+        
+        # Get the value from the related record
+        related_value = frappe.db.get_value(related_doctype, linked_record_id, source_field)
+        
+        return related_value
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting related field value: {str(e)}", "Report Builder")
         return None
 
 def get_gallery_field_info(doctype_name, selected_fields):

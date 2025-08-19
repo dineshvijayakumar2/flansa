@@ -903,7 +903,7 @@ class FlansaApplicationDashboard {
         
         $(document).on('click', '#quick-nav-reports', (e) => {
             e.preventDefault();
-            window.location.href = `/app/flansa-report-builder?app=${this.app_id}`;
+            window.location.href = `/app/flansa-saved-reports?app=${this.app_id}`;
         });
         
         $(document).on('click', '#quick-nav-relationships', (e) => {

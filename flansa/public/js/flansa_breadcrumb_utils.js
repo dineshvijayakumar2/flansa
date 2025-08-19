@@ -165,7 +165,7 @@ window.FlansaBreadcrumbUtils = {
         if (context.report) {
             this.addBreadcrumb(
                 "Reports",
-                context.table ? `/app/flansa-report-builder?table=${context.table.name}` : "/app/flansa-report-builder"
+                context.table ? `/app/flansa-saved-reports?table=${context.table.name}` : "/app/flansa-saved-reports"
             );
             
             // Truncate long report names

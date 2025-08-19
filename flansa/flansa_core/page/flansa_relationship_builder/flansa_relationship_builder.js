@@ -860,9 +860,9 @@ show_create_dialog() {
         $(document).on('click', '#quick-nav-reports', (e) => {
             e.preventDefault();
             if (this.app_id) {
-                window.location.href = `/app/flansa-report-builder?app=${this.app_id}`;
+                window.location.href = `/app/flansa-saved-reports?app=${this.app_id}`;
             } else {
-                window.location.href = '/app/flansa-report-builder';
+                window.location.href = '/app/flansa-saved-reports';
             }
         });
         

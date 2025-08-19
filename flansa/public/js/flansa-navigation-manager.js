@@ -51,6 +51,20 @@ window.FlansaNavigationManager = {
             icon: 'fa-chart-bar',
             roles: ['System Manager', 'Flansa Admin', 'Flansa Builder']
         },
+        'flansa-saved-reports': {
+            title: '📊 Reports',
+            description: 'View and manage saved reports',
+            category: 'user',
+            icon: 'fa-chart-line',
+            roles: ['System Manager', 'Flansa Admin', 'Flansa User', 'Flansa Builder']
+        },
+        'flansa-unified-report-builder': {
+            title: '🔧 New Report',
+            description: 'Create new reports',
+            category: 'admin',
+            icon: 'fa-plus-circle',
+            roles: ['System Manager', 'Flansa Admin', 'Flansa Builder']
+        },
         
         // End-User Pages
         'flansa-workspace': {

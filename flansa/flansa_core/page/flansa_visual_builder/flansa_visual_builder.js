@@ -5521,10 +5521,10 @@ class EnhancedVisualBuilder {
             return;
         }
         
-        // Open Report Builder page with current table pre-selected
+        // Open Saved Reports page with current table pre-selected
         // Use URL hash parameters for proper navigation
-        window.location.href = `/app/flansa-report-builder?table=${table_id}`;
-        frappe.show_alert(`Opening Report Builder for ${table_id}...`, 'blue');
+        window.location.href = `/app/flansa-saved-reports?table=${table_id}`;
+        frappe.show_alert(`Opening Reports for ${table_id}...`, 'blue');
     }
     
     open_form_builder() {

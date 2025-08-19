@@ -94,7 +94,7 @@ class FlansaReportViewer {
         
         // Back to reports button
         $('#back-to-reports-btn').on('click', () => {
-            window.location.href = '/app/flansa-report-builder';
+            window.location.href = '/app/flansa-saved-reports';
         });
         
         // Search functionality
@@ -606,13 +606,8 @@ class FlansaReportViewer {
                 // Transform selected_fields to expected format if they're strings
                 let selected_fields = report.config.selected_fields || [];
                 if (selected_fields.length > 0 && typeof selected_fields[0] === 'string') {
-                    // Convert string array to object array with proper labels
-                    selected_fields = selected_fields.map(fieldname => ({
-                        fieldname: fieldname,
-                        category: 'current',
-                        label: fieldname.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), // Convert snake_case to Title Case
-                        fieldtype: 'Data' // Default fieldtype
-                    }));
+                    // Convert string array to object array with proper categories and metadata
+                    selected_fields = await this.transform_legacy_field_names(selected_fields, report.base_table);
                 }
                 
                 response = await frappe.call({
@@ -658,6 +653,101 @@ class FlansaReportViewer {
         }
     }
     
+    async transform_legacy_field_names(field_names, table_name) {
+        try {
+            // Get field metadata from the report builder API
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.report_builder_api.get_report_field_options',
+                args: { table_name: table_name }
+            });
+            
+            if (!response.message || !response.message.success) {
+                // Fallback to simple transformation
+                return field_names.map(fieldname => {
+                    const label = fieldname.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    return {
+                        fieldname: fieldname,
+                        category: 'current',
+                        field_label: label,
+                        label: label, // Add both for compatibility
+                        fieldtype: 'Data'
+                    };
+                });
+            }
+            
+            const fields = response.message.fields;
+            const transformed_fields = [];
+            
+            // Create lookup maps for different field categories
+            const current_fields_map = {};
+            const system_fields_map = {};
+            const related_fields_map = {};
+            
+            // Build lookup maps
+            fields.current?.forEach(f => current_fields_map[f.fieldname] = f);
+            fields.system?.forEach(f => system_fields_map[f.fieldname] = f);
+            fields.related_groups?.forEach(group => {
+                group.fields?.forEach(f => related_fields_map[f.fieldname] = f);
+            });
+            
+            // Transform each field name
+            field_names.forEach(fieldname => {
+                let field_config = null;
+                
+                // Check in current fields first
+                if (current_fields_map[fieldname]) {
+                    field_config = {
+                        ...current_fields_map[fieldname],
+                        category: 'current'
+                    };
+                }
+                // Check in system fields
+                else if (system_fields_map[fieldname]) {
+                    field_config = {
+                        ...system_fields_map[fieldname],
+                        category: 'system'
+                    };
+                }
+                // Check in related fields
+                else if (related_fields_map[fieldname]) {
+                    field_config = {
+                        ...related_fields_map[fieldname],
+                        category: 'related'
+                    };
+                }
+                // Fallback for unknown fields
+                else {
+                    const label = fieldname.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    field_config = {
+                        fieldname: fieldname,
+                        category: 'current',
+                        field_label: label,
+                        label: label, // Add both for compatibility
+                        fieldtype: 'Data'
+                    };
+                }
+                
+                transformed_fields.push(field_config);
+            });
+            
+            return transformed_fields;
+            
+        } catch (error) {
+            console.error('Error transforming legacy field names:', error);
+            // Fallback to simple transformation
+            return field_names.map(fieldname => {
+                const label = fieldname.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                return {
+                    fieldname: fieldname,
+                    category: 'current',
+                    field_label: label,
+                    label: label, // Add both for compatibility
+                    fieldtype: 'Data'
+                };
+            });
+        }
+    }
+
     build_search_filters() {
         if (!this.search_term) return [];
         
@@ -740,7 +830,7 @@ class FlansaReportViewer {
         // Create header
         const header_row = $('<tr></tr>');
         this.current_report_config.selected_fields.forEach(field => {
-            const display_label = field.custom_label || field.label;
+            const display_label = field.custom_label || field.field_label || field.label;
             header_row.append(`<th>${display_label}</th>`);
         });
         
@@ -903,7 +993,7 @@ class FlansaReportViewer {
                     ${metadata_fields.map(field => {
                         const value = record[field.fieldname] || '';
                         const formatted_value = this.format_field_value(value, field.fieldtype);
-                        const display_label = field.custom_label || field.label;
+                        const display_label = field.custom_label || field.field_label || field.label;
                         return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
                     }).join('')}
                 </div>
@@ -915,7 +1005,7 @@ class FlansaReportViewer {
                     ${metadata_fields.map(field => {
                         const value = record[field.fieldname] || '';
                         const formatted_value = this.format_field_value(value, field.fieldtype);
-                        const display_label = field.custom_label || field.label;
+                        const display_label = field.custom_label || field.field_label || field.label;
                         return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
                     }).join('')}
                 </div>
@@ -1341,7 +1431,7 @@ class FlansaReportViewer {
     setup_initial_breadcrumbs() {
         frappe.breadcrumbs.clear();
         frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace");
-        frappe.breadcrumbs.add("Reports", "/app/flansa-report-builder");
+        frappe.breadcrumbs.add("Reports", "/app/flansa-saved-reports");
         frappe.breadcrumbs.add("Loading...");
         
         // Also setup initial custom breadcrumbs
@@ -1437,16 +1527,16 @@ class FlansaReportViewer {
                     // Add reports context with table filter
                     frappe.breadcrumbs.add(
                         "Reports",
-                        `/app/flansa-report-builder?table=${report.base_table}`
+                        `/app/flansa-saved-reports?table=${report.base_table}`
                     );
                 }
             } catch (error) {
                 // Fallback to general reports
-                frappe.breadcrumbs.add("Reports", "/app/flansa-report-builder");
+                frappe.breadcrumbs.add("Reports", "/app/flansa-saved-reports");
             }
         } else {
             // General reports
-            frappe.breadcrumbs.add("Reports", "/app/flansa-report-builder");
+            frappe.breadcrumbs.add("Reports", "/app/flansa-saved-reports");
         }
         
         // Add current report with breadcrumb overflow handling
@@ -1472,14 +1562,14 @@ class FlansaReportViewer {
         if (report && report.base_table) {
             // Add context based on the table
             breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-visual-builder/${report.base_table}` });
-            breadcrumbs.push({ text: "📊 Reports", url: `/app/flansa-report-builder?table=${report.base_table}` });
+            breadcrumbs.push({ text: "📊 Reports", url: `/app/flansa-saved-reports?table=${report.base_table}` });
             
             // Current report
             const report_title = report.title || "Report";
             const display_title = report_title.length > 20 ? report_title.substring(0, 17) + '...' : report_title;
             breadcrumbs.push({ text: `📋 ${display_title}` });
         } else {
-            breadcrumbs.push({ text: "📊 Reports", url: "/app/flansa-report-builder" });
+            breadcrumbs.push({ text: "📊 Reports", url: "/app/flansa-saved-reports" });
             breadcrumbs.push({ text: "📋 Report Viewer" });
         }
         
