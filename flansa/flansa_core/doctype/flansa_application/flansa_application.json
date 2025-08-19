@@ -2,8 +2,8 @@
  "actions": [],
  "allow_rename": 1,
  "app": "flansa",
- "autoname": "FA-.####",
- "creation": "2025-08-05 14:44:30.425759",
+ "autoname": "hash",
+ "creation": "2025-08-05 14:46:29.547891",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -209,11 +209,11 @@
   }
  ],
  "links": [],
- "modified": "2025-08-05 14:46:29.430628",
+ "modified": "2025-08-19 15:14:55.419821",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Application",
- "naming_rule": "By fieldname",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [
   {

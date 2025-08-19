@@ -1,8 +1,8 @@
 {
  "actions": [],
  "allow_rename": 1,
+ "autoname": "hash",
  "creation": "2025-08-04 22:42:41.993685",
- "disabled": 1,
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -57,20 +57,21 @@
   },
   {
    "default": "0",
+   "description": "Automatically add this field to the parent DocType",
    "fieldname": "auto_add",
    "fieldtype": "Check",
-   "label": "Auto Add",
-   "description": "Automatically add this field to the parent DocType"
+   "label": "Auto Add"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "istable": 1,
  "links": [],
- "modified": "2025-08-04 22:42:41.993685",
+ "modified": "2025-08-19 15:14:55.778012",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Computed Field",
+ "naming_rule": "Random",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",
