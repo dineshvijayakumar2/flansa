@@ -2907,12 +2907,26 @@ class EnhancedVisualBuilder {
                     depends_on: `eval:${is_edit_mode && !is_logic_field ? 'true' : 'false'}`,
                     change: () => {
                         const add_logic_checked = dialog.get_value('add_logic');
+                        const formula_field = dialog.get_field('formula');
+                        
                         if (add_logic_checked) {
                             frappe.msgprint({
                                 title: 'Add Logic to Field',
                                 message: 'This will add formula-based calculations to the field. The field will become read-only and calculated.',
                                 indicator: 'blue'
                             });
+                            
+                            // Make formula field editable when add_logic is checked
+                            if (formula_field) {
+                                formula_field.df.read_only = 0;
+                                formula_field.refresh();
+                            }
+                        } else {
+                            // Make formula field read-only when add_logic is unchecked (for Link fields)
+                            if (formula_field && is_link_field) {
+                                formula_field.df.read_only = 1;
+                                formula_field.refresh();
+                            }
                         }
                         dialog.refresh();
                     }
@@ -3291,8 +3305,15 @@ class EnhancedVisualBuilder {
             const read_only_field = dialog.get_field('read_only');
             
             // For logic type fields (link, fetch, rollup) and regular Link fields, make formula field read-only
+            // But allow editing when add_logic is checked
             if (formula_field && ((is_logic_field && ['link', 'fetch', 'rollup'].includes(logic_field_template)) || is_link_field)) {
-                formula_field.df.read_only = 1;
+                // Check if add_logic is checked - if so, make formula editable
+                const add_logic_checked = dialog.get_value('add_logic');
+                if (!add_logic_checked) {
+                    formula_field.df.read_only = 1;
+                } else {
+                    formula_field.df.read_only = 0;
+                }
                 formula_field.refresh();
                 
                 // Set formula value based on field type for display purposes
