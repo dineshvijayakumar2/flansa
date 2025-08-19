@@ -7542,27 +7542,65 @@ class EnhancedVisualBuilder {
         
         const dialog = new frappe.ui.Dialog({
             title: 'Naming Settings for ' + (this.single_table_label || this.single_table_id),
+            size: 'large',
             fields: [
                 {
                     fieldname: 'naming_type',
                     fieldtype: 'Select',
                     label: 'Naming Type',
                     options: ['Naming Series', 'Auto Increment', 'Field Based', 'Prompt', 'Random'],
-                    default: 'Naming Series'
+                    default: 'Naming Series',
+                    description: 'How should new records be named?'
                 },
                 {
                     fieldname: 'naming_prefix',
                     fieldtype: 'Data',
                     label: 'Prefix',
                     default: 'REC',
-                    depends_on: 'eval:doc.naming_type=="Naming Series"'
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    description: 'Text that appears before the number (e.g., EXP for expenses)'
                 },
                 {
                     fieldname: 'naming_digits',
                     fieldtype: 'Int',
                     label: 'Number of Digits',
                     default: 5,
-                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)'
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    description: 'How many digits for the sequential number (3-10)'
+                },
+                {
+                    fieldname: 'naming_start_from',
+                    fieldtype: 'Int',
+                    label: 'Start Counter From',
+                    default: 1,
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    description: 'Starting number for the sequence (default: 1)'
+                },
+                {
+                    fieldname: 'naming_field',
+                    fieldtype: 'Select',
+                    label: 'Field for Dynamic Prefix',
+                    depends_on: 'eval:doc.naming_type=="Field Based"',
+                    description: 'Field whose value will be used for naming'
+                },
+                {
+                    fieldname: 'naming_separator',
+                    fieldtype: 'Data',
+                    label: 'Separator',
+                    default: '-',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    description: 'Character between prefix and number (default: -)'
+                },
+                {
+                    fieldname: 'preview_section',
+                    fieldtype: 'Section Break',
+                    label: 'Preview'
+                },
+                {
+                    fieldname: 'preview_text',
+                    fieldtype: 'HTML',
+                    label: '',
+                    options: '<div id="naming-preview" style="padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff;"><strong>Record IDs will look like:</strong><br><span id="preview-examples" style="font-family: monospace; color: #495057;">Loading preview...</span></div>'
                 }
             ],
             primary_action_label: 'Save',
@@ -7590,8 +7628,17 @@ class EnhancedVisualBuilder {
                 dialog.set_values({
                     naming_type: table_data.naming_type || 'Naming Series',
                     naming_prefix: table_data.naming_prefix || 'REC',
-                    naming_digits: table_data.naming_digits || 5
+                    naming_digits: table_data.naming_digits || 5,
+                    naming_start_from: table_data.naming_start_from || 1,
+                    naming_field: table_data.naming_field || '',
+                    naming_separator: table_data.naming_separator || '-'
                 });
+                
+                // Load available fields for field-based naming
+                this.load_table_fields_for_naming(dialog);
+                
+                // Set up preview updates
+                this.setup_naming_preview(dialog);
             }
         } catch (error) {
             console.error('Error loading naming settings:', error);
@@ -7614,7 +7661,17 @@ class EnhancedVisualBuilder {
                     message: 'Naming settings saved successfully!',
                     indicator: 'green'
                 });
-                dialog.hide();
+                
+                // Ask if user wants to recreate DocType with new naming
+                frappe.confirm(
+                    'Do you want to recreate the DocType with the new naming configuration? This will affect how new records are named.',
+                    () => {
+                        this.recreate_doctype_with_naming(dialog);
+                    },
+                    () => {
+                        dialog.hide();
+                    }
+                );
             }
         } catch (error) {
             console.error('Error saving naming settings:', error);
@@ -7622,6 +7679,117 @@ class EnhancedVisualBuilder {
                 message: 'Error saving naming settings',
                 indicator: 'red'
             });
+        }
+    }
+    
+    // Load table fields for field-based naming
+    async load_table_fields_for_naming(dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.field_management.get_table_fields',
+                args: { table_name: this.single_table_id }
+            });
+            
+            if (result.message && result.message.success) {
+                const fields = result.message.fields || [];
+                const field_options = fields
+                    .filter(field => ['Data', 'Text', 'Small Text'].includes(field.field_type))
+                    .map(field => `${field.field_name}\n${field.field_label}`)
+                    .join('\n');
+                
+                dialog.fields_dict.naming_field.df.options = field_options;
+                dialog.fields_dict.naming_field.refresh();
+            }
+        } catch (error) {
+            console.error('Error loading fields for naming:', error);
+        }
+    }
+    
+    // Set up real-time preview updates
+    setup_naming_preview(dialog) {
+        const fields_to_watch = ['naming_type', 'naming_prefix', 'naming_digits', 'naming_start_from', 'naming_separator'];
+        
+        fields_to_watch.forEach(fieldname => {
+            if (dialog.fields_dict[fieldname]) {
+                dialog.fields_dict[fieldname].$input.on('change keyup', () => {
+                    this.update_naming_preview(dialog);
+                });
+            }
+        });
+        
+        // Initial preview
+        setTimeout(() => this.update_naming_preview(dialog), 500);
+    }
+    
+    // Update the naming preview
+    update_naming_preview(dialog) {
+        const values = dialog.get_values();
+        const naming_type = values.naming_type || 'Naming Series';
+        const prefix = values.naming_prefix || 'REC';
+        const digits = parseInt(values.naming_digits) || 5;
+        const start_from = parseInt(values.naming_start_from) || 1;
+        const separator = values.naming_separator || '-';
+        
+        let examples = [];
+        
+        switch (naming_type) {
+            case 'Naming Series':
+                const zeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
+                examples = [
+                    `${prefix}${separator}${zeros}${start_from}`,
+                    `${prefix}${separator}${zeros}${start_from + 1}`,
+                    `${prefix}${separator}${zeros}${start_from + 2}`
+                ];
+                break;
+            case 'Auto Increment':
+                const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
+                examples = [
+                    `${autoZeros}${start_from}`,
+                    `${autoZeros}${start_from + 1}`,
+                    `${autoZeros}${start_from + 2}`
+                ];
+                break;
+            case 'Field Based':
+                examples = ['Based on field value', 'e.g., "John Doe", "Project Alpha"'];
+                break;
+            case 'Prompt':
+                examples = ['User will be prompted', 'e.g., "CUSTOM-001"'];
+                break;
+            case 'Random':
+                examples = ['Random IDs', 'e.g., "ID123456", "ID789012"'];
+                break;
+        }
+        
+        const examples_html = examples.map(ex => `<code style="background: #e9ecef; padding: 2px 6px; border-radius: 3px; margin-right: 8px;">${ex}</code>`).join('');
+        $('#preview-examples').html(examples_html);
+    }
+    
+    // Recreate DocType with new naming configuration
+    async recreate_doctype_with_naming(dialog) {
+        try {
+            frappe.show_alert({
+                message: 'Recreating DocType with new naming...',
+                indicator: 'blue'
+            });
+            
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.field_management.recreate_doctype',
+                args: { table_name: this.single_table_id }
+            });
+            
+            if (result.message && result.message.success) {
+                frappe.show_alert({
+                    message: 'DocType recreated successfully! New records will use the updated naming.',
+                    indicator: 'green'
+                });
+                dialog.hide();
+            } else {
+                frappe.msgprint('Error recreating DocType: ' + (result.message?.message || 'Unknown error'));
+            }
+            
+        } catch (error) {
+            console.error('Error recreating DocType:', error);
+            frappe.msgprint('Error recreating DocType');
         }
     }
 
