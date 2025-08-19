@@ -2296,8 +2296,10 @@ class EnhancedVisualBuilder {
             
             const target_fieldname = target_field.fieldname;
             const expression = `FETCH(${source_fieldname}, ${target_fieldname})`;
-            dialog.set_value('fetch_expression', expression);
-            console.log(`✅ Updated FETCH expression: ${expression}`);
+            
+            // Update the formula field which gets saved to database as logic_expression
+            dialog.set_value('formula', expression);
+            console.log(`✅ Updated formula: ${expression}`);
         } catch (error) {
             console.error('Error updating FETCH expression:', error);
         }
@@ -2429,11 +2431,11 @@ class EnhancedVisualBuilder {
         // Third priority: Pattern detection
         if (field.field_name.includes('logic_link')) {
             return 'link';
-        } else if (field.field_name.includes('logic_fetch') || (field.expression && field.expression.includes('FETCH('))) {
+        } else if (field.field_name.includes('logic_fetch') || (field.logic_expression && field.logic_expression.includes('FETCH('))) {
             return 'fetch';
-        } else if (field.expression && field.expression.includes('ROLLUP(')) {
+        } else if (field.logic_expression && field.logic_expression.includes('ROLLUP(')) {
             return 'rollup';
-        } else if (field.expression && field.expression.trim()) {
+        } else if (field.logic_expression && field.logic_expression.trim()) {
             return 'formula';
         }
         
@@ -3026,7 +3028,7 @@ class EnhancedVisualBuilder {
                     label: 'Source Link Field',
                     fieldname: 'fetch_source_field',
                     fieldtype: 'Select',
-                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_source_field(field.expression) : '',
+                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_source_field(field.logic_expression) : '',
                     description: 'Link field to fetch data from',
                     depends_on: "eval:doc.logic_field_template == 'fetch'",
                     change: () => {
@@ -3040,22 +3042,13 @@ class EnhancedVisualBuilder {
                     label: 'Target Field',
                     fieldname: 'fetch_target_field', 
                     fieldtype: 'Select',
-                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_target_field(field.expression) : '',
+                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_target_field(field.logic_expression) : '',
                     description: 'Field to fetch from the linked record',
                     depends_on: "eval:doc.logic_field_template == 'fetch'",
                     change: () => {
                         // Update FETCH expression when target field changes
                         this.update_fetch_expression(dialog);
                     }
-                },
-                {
-                    label: 'FETCH Expression',
-                    fieldname: 'fetch_expression',
-                    fieldtype: 'Data',
-                    read_only: 1,
-                    default: logic_field_template === 'fetch' && field ? (field.expression || '') : '',
-                    description: 'Auto-generated FETCH expression based on selections above',
-                    depends_on: "eval:doc.logic_field_template == 'fetch'"
                 },
                 {
                     fieldtype: 'Section Break',
@@ -3522,7 +3515,7 @@ class EnhancedVisualBuilder {
                         });
                         
                         dialog.hide();
-                        this.load_table_data(table_id);
+                        this.load_table_fields(table_id);
                     } else {
                         frappe.show_alert({
                             message: `Conversion failed: ${r.message?.error || 'Unknown error'}`,
@@ -3591,7 +3584,7 @@ class EnhancedVisualBuilder {
                 field_label: values.field_label,
                 source_link_field: values.fetch_source_field,
                 target_field: values.fetch_target_field,
-                fetch_expression: values.fetch_expression,
+                formula: values.formula,
                 reqd: values.reqd || 0,
                 read_only: values.read_only || 1, // Fetch fields are usually read-only
                 description: values.description || ''
@@ -3615,7 +3608,7 @@ class EnhancedVisualBuilder {
                         if (dialog) {
                             dialog.hide();
                         }
-                        this.load_table_data(table_id);
+                        this.load_table_fields(table_id);
                     } else {
                         frappe.show_alert({
                             message: r.message?.error || 'Failed to create Fetch field',
@@ -3670,7 +3663,7 @@ class EnhancedVisualBuilder {
                         if (dialog) {
                             dialog.hide();
                         }
-                        this.load_table_data(table_id);
+                        this.load_table_fields(table_id);
                     } else {
                         frappe.show_alert({
                             message: r.message?.error || 'Failed to create Link field',
@@ -3719,7 +3712,7 @@ class EnhancedVisualBuilder {
                             if (dialog) {
                                 dialog.hide();
                             }
-                            this.load_table_data(table_id);
+                            this.load_table_fields(table_id);
                         } else {
                             frappe.show_alert({
                                 message: r.message?.error || 'Failed to update formula',
@@ -3757,7 +3750,7 @@ class EnhancedVisualBuilder {
                             if (dialog) {
                                 dialog.hide();
                             }
-                            this.load_table_data(table_id);
+                            this.load_table_fields(table_id);
                         } else {
                             frappe.show_alert({
                                 message: r.message?.error || 'Failed to update field properties',
@@ -3789,7 +3782,7 @@ class EnhancedVisualBuilder {
                         if (dialog) {
                             dialog.hide();
                         }
-                        this.load_table_data(table_id);
+                        this.load_table_fields(table_id);
                     } else {
                         frappe.show_alert({
                             message: r.message?.error || 'Failed to create field',
@@ -4042,7 +4035,7 @@ class EnhancedVisualBuilder {
                         message: `Lookup field "${values.field_label}" created successfully!`,
                         indicator: 'green'
                     });
-                    this.load_table_data(table_id);
+                    this.load_table_fields(table_id);
                 } else {
                     frappe.show_alert({
                         message: r.message?.error || 'Failed to create lookup field',
@@ -4338,7 +4331,7 @@ class EnhancedVisualBuilder {
                         message: `Summary field "${values.field_label}" created successfully!`,
                         indicator: 'green'
                     });
-                    this.load_table_data(table_id);
+                    this.load_table_fields(table_id);
                 } else {
                     frappe.show_alert({
                         message: r.message?.error || 'Failed to create summary field',
@@ -4695,7 +4688,7 @@ class EnhancedVisualBuilder {
                         
                         // Use longer delay to ensure database changes are fully committed
                         setTimeout(() => {
-                            this.load_table_data(table_id);
+                            this.load_table_fields(table_id);
                         }, 300);
                     } else if (r.message && r.message.requires_confirmation) {
                         // Has dependencies, show additional confirmation dialog
@@ -4773,7 +4766,7 @@ class EnhancedVisualBuilder {
                     
                     // Use longer delay to ensure database changes are fully committed
                     setTimeout(() => {
-                        this.load_table_data(table_id);
+                        this.load_table_fields(table_id);
                     }, 300);
                 } else {
                     frappe.msgprint({
@@ -6807,7 +6800,7 @@ class EnhancedVisualBuilder {
                     });
                     dialog.hide();
                     // Refresh the table to show updated field
-                    this.load_table_data();
+                    this.load_table_fields();
                 } else {
                     frappe.msgprint({
                         title: 'Error',
@@ -7150,30 +7143,46 @@ class EnhancedVisualBuilder {
             expression: expression
         });
         
-        // Update the Logic Field document
+        // Update the formula using edit_field_formula for proper recalculation
         frappe.call({
-            method: 'flansa.flansa_core.api.table_api.update_logic_field',
+            method: 'flansa.native_fields.edit_field_formula',
             args: {
                 table_name: table_id,
                 field_name: existing_field.field_name,
-                field_label: values.field_label,
-                calculation_method: expression,
-                template_type: 'fetch'
+                new_formula: expression
             },
             callback: (r) => {
                 if (r.message && r.message.success) {
-                    frappe.show_alert({
-                        message: `Fetch field "${values.field_label}" updated successfully!`,
-                        indicator: 'green'
-                    });
+                    // If field label changed, update it separately
+                    if (values.field_label !== existing_field.field_label) {
+                        frappe.call({
+                            method: 'flansa.flansa_core.api.table_api.update_logic_field',
+                            args: {
+                                table_name: table_id,
+                                field_name: existing_field.field_name,
+                                field_label: values.field_label
+                            },
+                            callback: () => {
+                                frappe.show_alert({
+                                    message: `Fetch field "${values.field_label}" updated successfully!`,
+                                    indicator: 'green'
+                                });
+                            }
+                        });
+                    } else {
+                        frappe.show_alert({
+                            message: `Fetch field formula updated successfully!`,
+                            indicator: 'green'
+                        });
+                    }
                     dialog.hide();
                     // Refresh the table to show updated field
-                    this.load_table_data();
+                    this.load_table_fields(table_id);
                 } else {
                     frappe.msgprint({
                         title: 'Error',
                         indicator: 'red',
-                        message: r.message?.message || 'Failed to update fetch field'
+                        message: r.message?.error || 'Failed to update fetch field'
                     });
                 }
             }

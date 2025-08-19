@@ -202,7 +202,18 @@ def set_tenant_on_doc(doc) -> None:
     """Set tenant_id on document before save"""
     
     if hasattr(doc, 'tenant_id') and not doc.tenant_id:
-        tenant_id = TenantContext.get_current_tenant_id() 
+        tenant_id = None
+        
+        # For Flansa Table, inherit tenant_id from parent application
+        if doc.doctype == "Flansa Table" and doc.application:
+            app_tenant_id = frappe.db.get_value("Flansa Application", doc.application, "tenant_id")
+            if app_tenant_id:
+                tenant_id = app_tenant_id
+        
+        # If no inherited tenant_id, use current tenant context
+        if not tenant_id:
+            tenant_id = TenantContext.get_current_tenant_id()
+        
         doc.tenant_id = tenant_id
 
 

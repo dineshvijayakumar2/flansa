@@ -8,15 +8,24 @@ import frappe
 @frappe.whitelist()
 def get_user_applications():
     """Get applications accessible to current user with dynamic table counts"""
+    # Get base filters and apply tenant filter
+    filters = {"status": "Active"}
+    tenant_filter = get_tenant_filter()
+    if tenant_filter:
+        filters.update(tenant_filter)
+    
     apps = frappe.get_all("Flansa Application", 
                          fields=["name", "app_name", "app_title", "description", "theme_color", "icon", 
                                 "status", "creation"],
-                         filters={"status": "Active"},
+                         filters=filters,
                          order_by="creation desc")
     
-    # Add calculated table count for each application
+    # Add calculated table count for each application (with tenant filtering)
     for app in apps:
-        app['table_count'] = frappe.db.count("Flansa Table", {"application": app['name']})
+        table_filters = {"application": app['name']}
+        if tenant_filter:
+            table_filters.update(tenant_filter)
+        app['table_count'] = frappe.db.count("Flansa Table", table_filters)
     
     return apps
 

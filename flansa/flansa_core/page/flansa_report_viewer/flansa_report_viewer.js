@@ -299,11 +299,12 @@ class FlansaReportViewer {
                 }));
                 
                 const defaultReport = {
-                    title: `${metadata.tableName} Records (Default View)`,
-                    base_table: metadata.tableName,
-                    doctype_name: metadata.doctype,
+                    title: `${metadata.tableName || metadata.tableLabel || this.table_id} Records (Default View)`,
+                    base_table: this.table_id,
+                    table_label: metadata.tableName || metadata.tableLabel,
+                    doctype_name: metadata.doctype_name,
                     config: {
-                        base_table: metadata.tableName,
+                        base_table: this.table_id,
                         selected_fields: selectedFields,
                         filters: [],
                         sort: [{ field: 'modified', order: 'desc' }]
@@ -459,11 +460,23 @@ class FlansaReportViewer {
         
         // Add primary action buttons using correct Frappe page methods
         if (this.page && this.page.add_action_button) {
+            // Add "View Saved Reports" button for all views
+            this.page.add_action_button('📋 Saved Reports', () => {
+                const params = new URLSearchParams({
+                    table: this.table_id,
+                    source: 'report_viewer'
+                });
+                frappe.set_route('flansa-saved-reports?' + params.toString());
+            });
+            
             if (isTemporaryView) {
                 this.page.add_action_button('📊 Create Report', () => {
-                    // Open report builder to create a proper report
-                    const url = `/app/flansa-report-builder?base_table=${this.table_name}&configure=true&new_report=true`;
-                    window.location.href = url;
+                    // Open unified report builder to create a proper report
+                    const params = new URLSearchParams({
+                        table: this.table_id,
+                        source: 'report_viewer'
+                    });
+                    frappe.set_route('flansa-unified-report-builder?' + params.toString());
                 });
             }
             

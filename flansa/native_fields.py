@@ -165,8 +165,14 @@ def add_basic_field_native(table_name, field_config):
                 logic_field.logic_expression = formula  # Use the formula, not the target DocType
                 logic_field.result_type = "Link"
             else:
-                # For other calculated fields
-                logic_field.logic_type = "formula"
+                # Detect the type of calculated field based on formula
+                if formula and formula.strip().upper().startswith("FETCH("):
+                    logic_field.logic_type = "fetch"
+                elif formula and formula.strip().upper().startswith("ROLLUP("):
+                    logic_field.logic_type = "rollup"
+                else:
+                    logic_field.logic_type = "formula"
+                
                 logic_field.logic_expression = formula
                 logic_field.result_type = field_config["field_type"]
             
@@ -252,13 +258,43 @@ def edit_field_formula(table_name, field_name, new_formula):
         except Exception as e:
             frappe.log_error(f"Error recalculating field values: {str(e)}", "Native Fields")
         
+        # Find and recalculate dependent fields (fields that reference this field in their formulas)
+        dependent_fields_recalculated = 0
+        try:
+            from flansa.flansa_core.api.table_api import _find_dependent_fields
+            dependents = _find_dependent_fields(table_name, field_name)
+            
+            for dependent in dependents:
+                try:
+                    # Get the dependent Logic Field
+                    dependent_logic_field = frappe.get_doc("Flansa Logic Field", dependent['logic_field_name'])
+                    # Recalculate the dependent field
+                    populate_existing_records_for_cached_field(table_doc.doctype_name, dependent_logic_field)
+                    dependent_fields_recalculated += 1
+                    print(f"✅ Recalculated dependent field: {dependent['field_name']}", flush=True)
+                except Exception as dep_error:
+                    print(f"⚠️  Error recalculating dependent field {dependent['field_name']}: {str(dep_error)}", flush=True)
+                    frappe.log_error(f"Error recalculating dependent field {dependent['field_name']}: {str(dep_error)}", "Native Fields")
+            
+            if dependent_fields_recalculated > 0:
+                print(f"✅ Recalculated {dependent_fields_recalculated} dependent fields", flush=True)
+                
+        except Exception as e:
+            print(f"⚠️  Error finding/recalculating dependent fields: {str(e)}", flush=True)
+            frappe.log_error(f"Error recalculating dependent fields: {str(e)}", "Native Fields")
+        
         frappe.db.commit()
+        
+        message = f"Formula updated for field '{field_name}'"
+        if dependent_fields_recalculated > 0:
+            message += f" and {dependent_fields_recalculated} dependent field(s) recalculated"
         
         return {
             "success": True,
-            "message": f"Formula updated for field '{field_name}'",
+            "message": message,
             "new_formula": new_formula,
-            "logic_field_name": logic_field_name
+            "logic_field_name": logic_field_name,
+            "dependent_fields_recalculated": dependent_fields_recalculated
         }
         
     except Exception as e:

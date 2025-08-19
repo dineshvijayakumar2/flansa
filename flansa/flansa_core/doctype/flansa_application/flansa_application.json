@@ -37,7 +37,8 @@
   "workspace_count",
   "table_count",
   "record_count",
-  "user_count"
+  "user_count",
+  "tenant_id"
  ],
  "fields": [
   {
@@ -205,6 +206,13 @@
    "fieldname": "user_count",
    "fieldtype": "Int",
    "label": "Active Users",
+   "read_only": 1
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "label": "Tenant ID",
    "read_only": 1
   }
  ],

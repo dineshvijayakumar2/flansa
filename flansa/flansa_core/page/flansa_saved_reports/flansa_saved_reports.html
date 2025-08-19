@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Saved Reports</title>
+</head>
+<body>
+    <div class="layout-wrapper">
+        <div class="page-wrapper">
+            <div class="container-fluid">
+                <!-- Header Section -->
+                <div class="page-header-reports">
+                    <div class="header-content">
+                        <h2 class="page-title-reports">
+                            <i class="fa fa-chart-line" style="color: #007bff;"></i>
+                            <span id="page-title-text">Saved Reports</span>
+                        </h2>
+                        <p class="page-subtitle-reports" id="page-subtitle-text">Manage and view your saved reports</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary btn-sm" id="back-to-table-btn" style="display: none;">
+                            <i class="fa fa-arrow-left"></i> Back to Table
+                        </button>
+                        <button class="btn btn-primary btn-sm" id="create-new-report-btn">
+                            <i class="fa fa-plus"></i> Create New Report
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Filter Section -->
+                <div class="filter-section" id="filter-section">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Filter by Table</label>
+                                <select class="form-control" id="table-filter">
+                                    <option value="">All Tables</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Report Type</label>
+                                <select class="form-control" id="type-filter">
+                                    <option value="">All Types</option>
+                                    <option value="Table">Table Reports</option>
+                                    <option value="Chart">Chart Reports</option>
+                                    <option value="Summary">Summary Reports</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Search</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control" id="search-input" placeholder="Search reports...">
+                                    <div class="input-group-append">
+                                        <button class="btn btn-outline-secondary" id="search-btn">
+                                            <i class="fa fa-search"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Reports Grid -->
+                <div class="reports-container">
+                    <div class="reports-grid" id="reports-grid">
+                        <!-- Reports will be loaded here -->
+                        <div class="loading-state">
+                            <div class="text-center">
+                                <i class="fa fa-spinner fa-spin fa-2x"></i>
+                                <p class="mt-2">Loading reports...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Empty State -->
+                    <div class="empty-state" id="empty-state" style="display: none;">
+                        <div class="text-center">
+                            <i class="fa fa-chart-bar fa-3x text-muted"></i>
+                            <h4 class="mt-3">No Reports Found</h4>
+                            <p class="text-muted">Create your first report to get started</p>
+                            <button class="btn btn-primary" id="create-first-report-btn">
+                                <i class="fa fa-plus"></i> Create Report
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pagination -->
+                <div class="pagination-container" id="pagination-container" style="display: none;">
+                    <nav aria-label="Reports pagination">
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <!-- Pagination will be generated here -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Report Card Template -->
+    <template id="report-card-template">
+        <div class="report-card" data-report-id="">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <h6 class="report-title"></h6>
+                        <span class="report-type-badge"></span>
+                    </div>
+                    <div class="card-actions">
+                        <div class="dropdown">
+                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">
+                                <i class="fa fa-ellipsis-v"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-right">
+                                <a class="dropdown-item view-report" href="#">
+                                    <i class="fa fa-eye"></i> View Report
+                                </a>
+                                <a class="dropdown-item edit-report" href="#">
+                                    <i class="fa fa-edit"></i> Edit Report
+                                </a>
+                                <a class="dropdown-item duplicate-report" href="#">
+                                    <i class="fa fa-copy"></i> Duplicate
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <a class="dropdown-item text-danger delete-report" href="#">
+                                    <i class="fa fa-trash"></i> Delete
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <p class="report-description"></p>
+                    <div class="report-meta">
+                        <small class="text-muted">
+                            <i class="fa fa-table"></i> <span class="table-name"></span>
+                        </small>
+                        <small class="text-muted">
+                            <i class="fa fa-user"></i> <span class="created-by"></span>
+                        </small>
+                        <small class="text-muted">
+                            <i class="fa fa-calendar"></i> <span class="created-date"></span>
+                        </small>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <div class="btn-group btn-group-sm w-100">
+                        <button class="btn btn-primary view-report-btn">
+                            <i class="fa fa-eye"></i> View
+                        </button>
+                        <button class="btn btn-outline-primary edit-report-btn">
+                            <i class="fa fa-edit"></i> Edit
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Custom Styles -->
+    <style>
+        .page-header-reports {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+
+        .header-content h2.page-title-reports {
+            margin: 0;
+            font-size: 1.8rem;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .page-subtitle-reports {
+            margin: 5px 0 0 0;
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .filter-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid #eee;
+        }
+
+        .reports-container {
+            min-height: 400px;
+        }
+
+        .reports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 20px;
+            padding: 20px 0;
+        }
+
+        .report-card {
+            height: 100%;
+        }
+
+        .report-card .card {
+            height: 100%;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .report-card .card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-color: #007bff;
+        }
+
+        .card-header {
+            background: #f8f9fa;
+            border-bottom: 1px solid #e0e0e0;
+            padding: 15px;
+        }
+
+        .card-title {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0;
+        }
+
+        .report-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+            flex: 1;
+        }
+
+        .report-type-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            margin-left: 10px;
+        }
+
+        .report-type-badge.table {
+            background: #e7f3ff;
+            color: #0066cc;
+        }
+
+        .report-type-badge.chart {
+            background: #fff3e0;
+            color: #f57c00;
+        }
+
+        .report-type-badge.summary {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .card-actions {
+            margin-left: auto;
+        }
+
+        .card-body {
+            padding: 15px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .report-description {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        .report-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .report-meta small {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .card-footer {
+            background: white;
+            border-top: 1px solid #e0e0e0;
+            padding: 10px 15px;
+        }
+
+        .empty-state {
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .loading-state {
+            padding: 60px 20px;
+            text-align: center;
+        }
+
+        .pagination-container {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .page-header-reports {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .header-actions {
+                margin-top: 15px;
+                width: 100%;
+            }
+
+            .header-actions .btn {
+                margin-right: 10px;
+            }
+
+            .reports-grid {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+
+            .filter-section .row {
+                margin: 0;
+            }
+
+            .filter-section .col-md-4 {
+                padding: 0;
+                margin-bottom: 15px;
+            }
+        }
+
+        /* Table-specific styling */
+        .table-specific .page-title-reports {
+            color: #28a745;
+        }
+
+        .table-specific .filter-section {
+            background: #f8fff9;
+            border-color: #d4edda;
+        }
+
+        /* Action button states */
+        .btn-group-sm .btn {
+            font-size: 0.8rem;
+            padding: 5px 10px;
+        }
+
+        .dropdown-menu {
+            font-size: 0.9rem;
+        }
+
+        .dropdown-item {
+            padding: 8px 15px;
+        }
+
+        .dropdown-item i {
+            width: 16px;
+            margin-right: 8px;
+        }
+    </style>
+</body>
+</html>

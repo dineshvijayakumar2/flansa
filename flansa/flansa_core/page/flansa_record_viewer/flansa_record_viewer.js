@@ -35,6 +35,7 @@ class FlansaRecordViewer {
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
+        this.application = null;
         this.form_config = {};
         this.form_sections = [];
         
@@ -49,6 +50,36 @@ class FlansaRecordViewer {
             this.setup_html();
             this.bind_events();
             this.load_data();
+        }
+    }
+    
+    get_dashboard_link() {
+        // If we have an application context, link to that app's dashboard
+        if (this.application) {
+            return `/app/flansa-app-dashboard?app=${encodeURIComponent(this.application)}`;
+        }
+        // Fallback to general dashboard
+        return '/app/flansa-app-dashboard';
+    }
+    
+    update_dashboard_link() {
+        // Update the dashboard link after application context is loaded
+        const dashboardLink = document.getElementById('dashboard-link');
+        if (dashboardLink) {
+            const newHref = this.get_dashboard_link();
+            dashboardLink.href = newHref;
+            
+            // Remove the onclick="return false;" and add proper click handler
+            dashboardLink.onclick = null;
+            dashboardLink.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('🔗 Dashboard link clicked, navigating to:', newHref);
+                // Use window.location.href for proper URL navigation with query parameters
+                window.location.href = newHref;
+            });
+            
+            console.log('🔗 Updated dashboard link to:', newHref);
+            console.log('🔗 Application context:', this.application);
         }
     }
     
@@ -199,7 +230,7 @@ class FlansaRecordViewer {
                 <!-- Navigation Breadcrumbs -->
                 <div class="flansa-breadcrumbs" style="padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #f0f3f7;">
                     <nav style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6c757d;">
-                        <a href="/app/flansa-dashboard" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                        <a id="dashboard-link" href="#" onclick="return false;" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 4px;">
                             <i class="fa fa-home"></i> Dashboard
                         </a>
                         <span style="color: #dee2e6;">→</span>
@@ -532,7 +563,7 @@ class FlansaRecordViewer {
         }
         
         // First load form configuration, then load data
-        this.load_form_configuration().then((hasFormConfig) => {
+        this.load_form_configuration().then(() => {
             if (this.mode === 'new') {
                 this.load_table_structure();
             } else {
@@ -555,10 +586,13 @@ class FlansaRecordViewer {
             if (metaResponse.success) {
                 this.table_fields = metaResponse.fields || [];
                 this.doctype_name = metaResponse.doctype_name;
+                this.application = metaResponse.application;
                 console.log('📋 Loaded table structure:', { 
                     fields_count: this.table_fields.length, 
-                    doctype: this.doctype_name 
+                    doctype: this.doctype_name,
+                    application: this.application
                 });
+                this.update_dashboard_link();
                 this.render_new_record_form();
             } else {
                 this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
@@ -579,6 +613,8 @@ class FlansaRecordViewer {
                 this.record_data = recordResponse.record || {};
                 this.table_fields = recordResponse.fields || [];
                 this.doctype_name = recordResponse.doctype_name;
+                this.application = recordResponse.application;
+                this.update_dashboard_link();
                 this.render_record();
             } else {
                 this.show_error('Record not found: ' + (recordResponse.error || 'Unknown error'));
@@ -603,6 +639,19 @@ class FlansaRecordViewer {
                         <button type="button" class="btn btn-sm btn-primary edit-record" style="display: flex; align-items: center; gap: 6px;">
                             <i class="fa fa-edit"></i> Edit Record
                         </button>
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle" data-toggle="dropdown" style="display: flex; align-items: center; gap: 6px;">
+                                <i class="fa fa-chart-bar"></i> Reports
+                            </button>
+                            <div class="dropdown-menu">
+                                <a class="dropdown-item view-reports-btn" href="#" style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa fa-list"></i> View Saved Reports
+                                </a>
+                                <a class="dropdown-item create-report-btn" href="#" style="display: flex; align-items: center; gap: 8px;">
+                                    <i class="fa fa-plus"></i> Create New Report
+                                </a>
+                            </div>
+                        </div>
                         <button type="button" class="btn btn-sm btn-outline-primary form-builder-btn" style="display: flex; align-items: center; gap: 6px;" onclick="window.open('/app/flansa-form-builder?table=${this.table_name}', '_blank')">
                             <i class="fa fa-paint-brush"></i> Customize Form
                         </button>
@@ -774,6 +823,7 @@ class FlansaRecordViewer {
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
+        this.application = null;
         this.form_config = {};
         
         // Clear any form input values that might be cached
@@ -1155,6 +1205,33 @@ class FlansaRecordViewer {
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('mode', 'edit');
                     window.location.href = currentUrl.toString();
+                });
+            }
+            
+            // Report buttons
+            const viewReportsBtn = actionsContainer.querySelector('.view-reports-btn');
+            if (viewReportsBtn) {
+                viewReportsBtn.addEventListener('click', (e) => {
+                    console.log('View Reports button clicked!');
+                    e.preventDefault();
+                    const params = new URLSearchParams({
+                        table: this.table_name,
+                        source: 'record_viewer'
+                    });
+                    frappe.set_route('flansa-saved-reports?' + params.toString());
+                });
+            }
+            
+            const createReportBtn = actionsContainer.querySelector('.create-report-btn');
+            if (createReportBtn) {
+                createReportBtn.addEventListener('click', (e) => {
+                    console.log('Create Report button clicked!');
+                    e.preventDefault();
+                    const params = new URLSearchParams({
+                        table: this.table_name,
+                        source: 'record_viewer'
+                    });
+                    frappe.set_route('flansa-unified-report-builder?' + params.toString());
                 });
             }
             
@@ -1993,8 +2070,6 @@ class FlansaRecordViewer {
     }
     
     add_basic_link_autocomplete(input) {
-        const linkDoctype = input.dataset.linkDoctype;
-        
         // Add basic search functionality
         let searchTimeout;
         input.addEventListener('input', (e) => {

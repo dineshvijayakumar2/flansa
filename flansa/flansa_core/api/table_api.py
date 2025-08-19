@@ -520,7 +520,8 @@ def get_record(table_name, record_id):
             "success": True,
             "record": record,
             "fields": fields,
-            "doctype_name": table_doc.doctype_name
+            "doctype_name": table_doc.doctype_name,
+            "application": table_doc.application if hasattr(table_doc, 'application') and table_doc.application else None
         }
         
     except Exception as e:
@@ -588,6 +589,8 @@ def get_table_metadata(table_name):
         return {
             "success": True,
             "doctype_name": table_doc.doctype_name,
+            "tableName": table_doc.table_label or table_doc.table_name,
+            "tableLabel": table_doc.table_label,
             "fields": fields,
             "permissions": permissions,
             "settings": settings
@@ -667,6 +670,7 @@ def get_table_meta(table_name):
         return {
             "success": True,
             "doctype_name": table_doc.doctype_name,
+            "application": table_doc.application if hasattr(table_doc, 'application') and table_doc.application else None,
             "fields": fields
         }
         

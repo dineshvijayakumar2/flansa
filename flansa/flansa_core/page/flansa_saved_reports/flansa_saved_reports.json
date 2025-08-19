@@ -1,0 +1,26 @@
+{
+ "content": null,
+ "creation": "2024-01-20 10:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2024-01-20 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "flansa-saved-reports",
+ "owner": "Administrator",
+ "page_name": "Saved Reports",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Flansa User"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 0,
+ "title": "Saved Reports"
+}
