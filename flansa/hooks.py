@@ -34,6 +34,7 @@ app_include_css = [
 app_include_js = [
     "/assets/flansa/js/flansa-browser-cache-manager.js",  # Load first for comprehensive browser cache management
     "/assets/flansa/js/flansa-global-logo.js",  # Global Flansa logo replacement with central config - MAIN LOGO SYSTEM
+    "/assets/flansa/js/flansa-logo-redirect.js",  # Handle logo redirect and duplicate removal
     
     # Foundation Services - Load these first for other components to use
     "/assets/flansa/js/flansa-state-manager.js",  # Centralized state management
@@ -51,7 +52,6 @@ app_include_js = [
     "/assets/flansa/js/flansa_home_redirect.js",
     
     # Legacy - to be refactored
-    # "/assets/flansa/js/flansa-logo-redirect.js",  # Handle logo redirect and duplicate removal - DISABLED (redundant)
     # "/assets/flansa/js/flansa-navigation-manager.js",  # Role-based navigation system - DISABLED TEMP
     # "/assets/flansa/js/cache-buster.js"  # DISABLED (redundant with browser cache manager)
     ]
