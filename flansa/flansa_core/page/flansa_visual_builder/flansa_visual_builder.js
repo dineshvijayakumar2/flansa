@@ -7685,8 +7685,35 @@ $(document).ready(function() {
     if (window.page_instance && window.page_instance.apply_theme) {
         window.page_instance.apply_theme();
     }
-
-    // ========================================
+${start_from}`;
+                    break;
+                case 'Auto Increment':
+                    const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
+                    sample_id = `${autoZeros}${start_from}`;
+                    break;
+                case 'Field Based':
+                    sample_id = 'FieldValue_123';
+                    break;
+                case 'Prompt':
+                    sample_id = 'USER_PROMPT';
+                    break;
+                default:
+                    sample_id = 'RANDOM_ID123';
+                    break;
+            }
+            
+            frappe.show_alert({
+                message: `Sample record ID: <strong>${sample_id}</strong>`,
+                indicator: 'blue'
+            });
+            
+        } catch (error) {
+            console.error('Error testing naming pattern:', error);
+            frappe.show_alert({
+                message: 'Error testing naming pattern',
+                indicator: 'red'
+            });
+// ========================================
     // NAMING SETTINGS FUNCTIONS
     // ========================================
     
@@ -7991,33 +8018,6 @@ $(document).ready(function() {
             switch (naming_type) {
                 case 'Naming Series':
                     const zeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                    sample_id = `${prefix}-${zeros}${start_from}`;
-                    break;
-                case 'Auto Increment':
-                    const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                    sample_id = `${autoZeros}${start_from}`;
-                    break;
-                case 'Field Based':
-                    sample_id = 'FieldValue_123';
-                    break;
-                case 'Prompt':
-                    sample_id = 'USER_PROMPT';
-                    break;
-                default:
-                    sample_id = 'RANDOM_ID123';
-                    break;
-            }
-            
-            frappe.show_alert({
-                message: `Sample record ID: <strong>${sample_id}</strong>`,
-                indicator: 'blue'
-            });
-            
-        } catch (error) {
-            console.error('Error testing naming pattern:', error);
-            frappe.show_alert({
-                message: 'Error testing naming pattern',
-                indicator: 'red'
-            });
+                    sample_id = `${prefix}-${zeros}
         }
     });
