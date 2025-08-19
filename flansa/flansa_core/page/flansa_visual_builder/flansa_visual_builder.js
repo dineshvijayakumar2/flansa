@@ -7685,11 +7685,11 @@ $(document).ready(function() {
     if (window.page_instance && window.page_instance.apply_theme) {
         window.page_instance.apply_theme();
     }
-${start_from}`;
+
                     break;
                 case 'Auto Increment':
                     const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                    sample_id = `${autoZeros}${start_from}`;
+                    sample_id = `${autoZeros}
                     break;
                 case 'Field Based':
                     sample_id = 'FieldValue_123';
