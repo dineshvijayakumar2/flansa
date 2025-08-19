@@ -137,3 +137,14 @@ def get_tenant_limits():
         "table_limits": [5, 10, 25, 50, 100, 200],
         "storage_limits": [1, 5, 10, 25, 50, 100]  # GB
     }
+
+@frappe.whitelist()
+def get_available_tenants():
+    """Get list of available tenants for display"""
+    
+    tenants = frappe.get_all("Flansa Tenant Registry",
+                           filters={"status": "Active"},
+                           fields=["tenant_id", "tenant_name", "primary_domain", "status"],
+                           order_by="tenant_name")
+    
+    return tenants
