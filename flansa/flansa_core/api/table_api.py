@@ -1194,9 +1194,33 @@ def add_logic_field_entry_with_migration(table_name, field_config):
                     # Don't fail the entire migration for individual record errors
                     continue
         
+        # Step 5: Update DocType field to make it read-only (since it's now calculated)
+        try:
+            doctype_doc = frappe.get_doc("DocType", target_doctype)
+            field_updated = False
+            
+            # Find and update the field in DocType
+            for field in doctype_doc.fields:
+                if field.fieldname == field_name:
+                    field.read_only = 1
+                    field.description = f"Calculated field: {expression}"
+                    field_updated = True
+                    break
+            
+            if field_updated:
+                doctype_doc.save()
+                frappe.clear_cache(doctype=target_doctype)
+                print(f"✅ Updated DocType field '{field_name}' to read-only", flush=True)
+            else:
+                print(f"⚠️  Field '{field_name}' not found in DocType {target_doctype}", flush=True)
+                
+        except Exception as update_error:
+            print(f"⚠️  Could not update DocType field to read-only: {str(update_error)}", flush=True)
+            # Don't fail the whole operation for this
+        
         frappe.db.commit()
         
-        # Step 5: Return comprehensive results
+        # Step 6: Return comprehensive results
         return {
             "success": True,
             "message": f"Logic Field entry created and data migrated for '{field_name}'",

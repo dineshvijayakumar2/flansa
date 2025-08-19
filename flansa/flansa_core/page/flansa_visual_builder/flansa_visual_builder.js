@@ -3082,10 +3082,10 @@ class EnhancedVisualBuilder {
                     label: 'Formula',
                     fieldname: 'formula',
                     fieldtype: 'Code',
-                    default: is_edit_mode && is_logic_field && logic_field_template === 'formula' ? field.expression : '',
+                    default: is_edit_mode && is_logic_field ? (field.expression || field.logic_expression || '') : '',
                     description: 'Add formula to make this a calculated field (e.g., price * quantity, today(), field1 + field2)',
                     language: 'javascript',
-                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'} && ${logic_field_template !== 'link' ? 'true' : 'false'}) || doc.add_logic`,
+                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'}) || doc.add_logic`,
                     change: () => {
                         const formula = dialog.get_value('formula');
                         const result_type = dialog.get_value('result_type') || 'Data';
