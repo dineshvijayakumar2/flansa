@@ -24,119 +24,7 @@ class EnhancedVisualBuilder {
     }
     
     
-    
-    // ========================================
-    // UTILITY FUNCTIONS - Button Factory
-    // ========================================
-    
-    /**
-     * Create standardized buttons with consistent styling
-     * @param {Object} config - Button configuration
-     * @param {string} config.text - Button text
-     * @param {string} config.icon - FA icon class (optional)
-     * @param {string} config.style - Button style (primary, secondary, default, etc.)
-     * @param {string} config.size - Button size (sm, md, lg)
-     * @param {string} config.onclick - Click handler function name or code
-     * @param {string} config.id - Button ID (optional)
-     * @param {string} config.title - Button tooltip (optional)
-     * @param {boolean} config.disabled - Whether button is disabled
-     * @returns {string} HTML string for the button
-     */
-    createButton(config) {
-        const {
-            text = '',
-            icon = '',
-            style = 'default',
-            size = 'sm',
-            onclick = '',
-            id = '',
-            title = '',
-            disabled = false,
-            extraClasses = ''
-        } = config;
-        
-        // Map styles to CSS classes
-        const styleMap = {
-            'primary': 'btn-primary',
-            'secondary': 'btn-secondary', 
-            'flansa-primary': 'btn-flansa-primary',
-            'flansa-secondary': 'btn-flansa-secondary',
-            'default': 'btn-default',
-            'success': 'btn-success',
-            'warning': 'btn-warning',
-            'danger': 'btn-danger'
-        };
-        
-        const sizeMap = {
-            'xs': 'btn-xs',
-            'sm': 'btn-sm', 
-            'md': '',
-            'lg': 'btn-lg'
-        };
-        
-        const btnClass = `btn ${styleMap[style] || 'btn-default'} ${sizeMap[size] || ''} ${extraClasses}`.trim();
-        const idAttr = id ? `id="${id}"` : '';
-        const titleAttr = title ? `title="${title}"` : '';
-        const onclickAttr = onclick ? `onclick="${onclick}"` : '';
-        const disabledAttr = disabled ? 'disabled' : '';
-        
-        const iconHtml = icon ? `<i class="${icon}"></i> ` : '';
-        
-        return `<button class="${btnClass}" ${idAttr} ${titleAttr} ${onclickAttr} ${disabledAttr}>
-            ${iconHtml}${text}
-        </button>`;
-    }
-    
-    /**
-     * Create navigation button with consistent styling
-     */
-    createNavButton(text, onclick, icon = '', title = '') {
-        return this.createButton({
-            text,
-            icon,
-            style: 'default',
-            size: 'sm',
-            onclick,
-            title: title || text
-        });
-    }
-    
-    /**
-     * Create action button with consistent styling
-     */
-    createActionButton(text, onclick, style = 'primary', icon = '') {
-        return this.createButton({
-            text,
-            icon,
-            style,
-            size: 'sm',
-            onclick
-        });
-    }
-
-
-    // ========================================  
-    // NAMING SETTINGS FUNCTIONS
-    // ========================================
-    
-    /**
-     * Toggle naming settings section visibility
-     */
-    toggle_naming_settings() {
-        const section = $('#naming-settings-section');
-        const button = $('#naming-settings-btn');
-        
-        if (section.is(':visible')) {
-            section.hide();
-            button.html('<i class="fa fa-tag"></i> Naming Settings').removeClass('btn-primary').addClass('btn-default');
-        } else {
-            section.show();
-            button.html('<i class="fa fa-times"></i> Hide Naming').removeClass('btn-default').addClass('btn-primary');
-            this.load_naming_configuration();
-        }
-    }
-    
-        async init() {
+    async init() {
         this.mode = await this.determine_mode();
         this.setup_page();
         this.setup_context_menu();
@@ -329,46 +217,6 @@ class EnhancedVisualBuilder {
                         <small style="color: var(--flansa-text-secondary, var(--flansa-gray-600));" id="field-count-display">Loading...</small>
                     </div>
                     
-                    <!-- Naming Settings Section -->
-                    <div class="naming-settings-section" style="margin-bottom: 25px; display: none;" id="naming-settings-section">
-                        <div class="section-header" style="border-bottom: 1px solid var(--flansa-border, var(--flansa-gray-200)); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                            <h4 style="margin: 0; font-weight: normal;">🏷️ Record Naming Configuration</h4>
-                            <button class="btn btn-sm btn-default" onclick="window.visual_builder.toggle_naming_settings()">
-                                <i class="fa fa-times"></i> Hide
-                            </button>
-                        </div>
-                        
-                        <div class="naming-config-container" style="background: var(--flansa-surface, var(--flansa-white)); border-radius: var(--flansa-radius-lg); padding: var(--flansa-spacing-lg); box-shadow: var(--flansa-shadow-sm); border: var(--flansa-border-width-sm) solid var(--flansa-border, transparent);">
-                            <div id="naming-config-form">
-                                <div class="loading-state" style="text-align: center; padding: 20px; color: #6c757d;">
-                                    <p><i class="fa fa-spinner fa-spin"></i> Loading naming configuration...</p>
-                                </div>
-                            </div>
-                            
-                            <div id="naming-preview-section" style="display: none; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff;">
-                                <h5>Preview</h5>
-                                <div class="preview-box" style="margin-top: 10px;">
-                                    <strong>Record IDs will look like:</strong>
-                                    <div class="id-examples" id="id-examples" style="margin-top: 8px; font-family: monospace;">
-                                        <!-- Examples will be populated here -->
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="naming-actions" id="naming-actions" style="display: none; margin-top: 25px; padding-top: 15px; border-top: 1px solid #e9ecef;">
-                                <button class="btn btn-primary" onclick="window.visual_builder.save_naming_configuration()" style="margin-right: 10px;">
-                                    <i class="fa fa-save"></i> Save Configuration
-                                </button>
-                                <button class="btn btn-warning" onclick="window.visual_builder.reset_naming_configuration()" style="margin-right: 10px;">
-                                    <i class="fa fa-undo"></i> Reset to Default
-                                </button>
-                                <button class="btn btn-info" onclick="window.visual_builder.test_naming_pattern()">
-                                    <i class="fa fa-play"></i> Test Pattern
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
                     <!-- Search and Filters Toolbar -->
                     <div class="builder-toolbar" style="display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--flansa-spacing-lg); margin-bottom: var(--flansa-spacing-xl); padding: var(--flansa-spacing-md); background: var(--flansa-surface, var(--flansa-white)); border-radius: var(--flansa-radius-lg); box-shadow: var(--flansa-shadow-sm); border: var(--flansa-border-width-sm) solid var(--flansa-border, transparent);">
                         <div class="toolbar-left" style="display: flex; gap: var(--flansa-spacing-sm);">
@@ -378,7 +226,7 @@ class EnhancedVisualBuilder {
                             <button class="btn btn-flansa-secondary" id="add-gallery-btn">
                                 <i class="fa fa-images"></i> Add Gallery
                             </button>
-                            <button class="btn btn-default" id="naming-settings-btn" onclick="window.visual_builder.toggle_naming_settings()" title="Configure how new records are named">
+                            <button class="btn btn-default" id="naming-settings-btn" title="Configure how new records are named">
                                 <i class="fa fa-tag"></i> Naming Settings
                             </button>
                         </div>
@@ -1325,6 +1173,11 @@ class EnhancedVisualBuilder {
         // Bind add gallery button
         $('#add-gallery-btn').off('click').on('click', function() {
             self.add_attachment_field(self.single_table_id);
+        });
+        
+        // Bind naming settings button
+        $('#naming-settings-btn').off('click').on('click', function() {
+            self.show_naming_settings();
         });
     }
     
@@ -7678,58 +7531,52 @@ class EnhancedVisualBuilder {
             wide: true
         });
     }
-}
 
-// Apply theme on page load
-$(document).ready(function() {
-    if (window.page_instance && window.page_instance.apply_theme) {
-        window.page_instance.apply_theme();
-    }
-
-                    break;
-                case 'Auto Increment':
-                    const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                    sample_id = `${autoZeros}
-                    break;
-                case 'Field Based':
-                    sample_id = 'FieldValue_123';
-                    break;
-                case 'Prompt':
-                    sample_id = 'USER_PROMPT';
-                    break;
-                default:
-                    sample_id = 'RANDOM_ID123';
-                    break;
-            }
-            
-            frappe.show_alert({
-                message: `Sample record ID: <strong>${sample_id}</strong>`,
-                indicator: 'blue'
-            });
-            
-        } catch (error) {
-            console.error('Error testing naming pattern:', error);
-            frappe.show_alert({
-                message: 'Error testing naming pattern',
-                indicator: 'red'
-            });
-// ========================================
-    // NAMING SETTINGS FUNCTIONS
-    // ========================================
     
-    /**
-     * Load and display naming configuration for the current table
-     */
-    async load_naming_configuration() {
-        try {
-            if (!this.single_table_id) {
-                $('#naming-config-form').html('<p class="text-muted">Select a table to configure naming settings</p>');
-                return;
+    // Naming Settings Functions
+    show_naming_settings() {
+        if (!this.single_table_id) {
+            frappe.msgprint('Please select a table first');
+            return;
+        }
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Naming Settings for ' + (this.single_table_label || this.single_table_id),
+            fields: [
+                {
+                    fieldname: 'naming_type',
+                    fieldtype: 'Select',
+                    label: 'Naming Type',
+                    options: ['Naming Series', 'Auto Increment', 'Field Based', 'Prompt', 'Random'],
+                    default: 'Naming Series'
+                },
+                {
+                    fieldname: 'naming_prefix',
+                    fieldtype: 'Data',
+                    label: 'Prefix',
+                    default: 'REC',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"'
+                },
+                {
+                    fieldname: 'naming_digits',
+                    fieldtype: 'Int',
+                    label: 'Number of Digits',
+                    default: 5,
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)'
+                }
+            ],
+            primary_action_label: 'Save',
+            primary_action: (values) => {
+                this.save_naming_settings(values, dialog);
             }
-            
-            console.log('Loading naming configuration for table:', this.single_table_id);
-            
-            // Get current table configuration
+        });
+        
+        dialog.show();
+        this.load_current_naming_settings(dialog);
+    }
+    
+    async load_current_naming_settings(dialog) {
+        try {
             const result = await frappe.call({
                 method: 'frappe.client.get',
                 args: {
@@ -7739,285 +7586,50 @@ $(document).ready(function() {
             });
             
             if (result.message) {
-                this.display_naming_form(result.message);
-            } else {
-                $('#naming-config-form').html('<p class="text-danger">Could not load table configuration</p>');
-            }
-            
-        } catch (error) {
-            console.error('Error loading naming configuration:', error);
-            $('#naming-config-form').html('<p class="text-danger">Error loading configuration</p>');
-        }
-    }
-    
-    /**
-     * Display the naming configuration form
-     */
-    display_naming_form(table_data) {
-        const current_naming_type = table_data.naming_type || 'Naming Series';
-        const current_prefix = table_data.naming_prefix || 'REC';
-        const current_digits = table_data.naming_digits || 5;
-        const current_field = table_data.naming_field || '';
-        const current_start_from = table_data.naming_start_from || 1;
-        
-        const form_html = `
-            <div class="form-group">
-                <label>Naming Type</label>
-                <select class="form-control" id="naming_type_select" onchange="window.visual_builder.on_naming_type_change()">
-                    <option value="Naming Series" ${current_naming_type === 'Naming Series' ? 'selected' : ''}>Naming Series (Prefix + Numbers)</option>
-                    <option value="Auto Increment" ${current_naming_type === 'Auto Increment' ? 'selected' : ''}>Auto Increment (Numbers Only)</option>
-                    <option value="Field Based" ${current_naming_type === 'Field Based' ? 'selected' : ''}>Field Based Naming</option>
-                    <option value="Prompt" ${current_naming_type === 'Prompt' ? 'selected' : ''}>User Prompt</option>
-                    <option value="Random" ${current_naming_type === 'Random' ? 'selected' : ''}>Random ID</option>
-                </select>
-            </div>
-            
-            <div class="form-group" id="prefix_group" style="display: ${current_naming_type === 'Naming Series' ? 'block' : 'none'};">
-                <label>Record Prefix</label>
-                <input type="text" class="form-control" id="naming_prefix_input" value="${current_prefix}" 
-                       placeholder="e.g., EXP, INV, CUS" maxlength="10" onkeyup="window.visual_builder.update_naming_preview()">
-                <small class="form-text text-muted">Short prefix for record IDs (2-4 characters recommended)</small>
-            </div>
-            
-            <div class="form-group" id="digits_group" style="display: ${['Naming Series', 'Auto Increment'].includes(current_naming_type) ? 'block' : 'none'};">
-                <label>Number of Digits</label>
-                <input type="number" class="form-control" id="naming_digits_input" value="${current_digits}" 
-                       min="3" max="10" onchange="window.visual_builder.update_naming_preview()">
-                <small class="form-text text-muted">How many digits for the sequential number (3-10)</small>
-            </div>
-            
-            <div class="form-group" id="field_group" style="display: ${current_naming_type === 'Field Based' ? 'block' : 'none'};">
-                <label>Naming Field</label>
-                <select class="form-control" id="naming_field_select">
-                    <option value="">Select a field...</option>
-                    <!-- Will be populated dynamically -->
-                </select>
-                <small class="form-text text-muted">Records will be named based on the value of this field</small>
-            </div>
-            
-            <div class="form-group" id="start_from_group" style="display: ${['Naming Series', 'Auto Increment'].includes(current_naming_type) ? 'block' : 'none'};">
-                <label>Start From</label>
-                <input type="number" class="form-control" id="naming_start_from_input" value="${current_start_from}" 
-                       min="1" onchange="window.visual_builder.update_naming_preview()">
-                <small class="form-text text-muted">Starting number for the sequence</small>
-            </div>
-        `;
-        
-        $('#naming-config-form').html(form_html);
-        $('#naming-preview-section').show();
-        $('#naming-actions').show();
-        
-        // Load available fields for field-based naming
-        this.load_table_fields_for_naming();
-        
-        // Update preview
-        this.update_naming_preview();
-    }
-    
-    /**
-     * Handle naming type change
-     */
-    on_naming_type_change() {
-        const naming_type = $('#naming_type_select').val();
-        
-        // Show/hide relevant form groups
-        $('#prefix_group').toggle(naming_type === 'Naming Series');
-        $('#digits_group').toggle(['Naming Series', 'Auto Increment'].includes(naming_type));
-        $('#field_group').toggle(naming_type === 'Field Based');
-        $('#start_from_group').toggle(['Naming Series', 'Auto Increment'].includes(naming_type));
-        
-        this.update_naming_preview();
-    }
-    
-    /**
-     * Update the naming preview
-     */
-    update_naming_preview() {
-        const naming_type = $('#naming_type_select').val();
-        const prefix = $('#naming_prefix_input').val() || 'REC';
-        const digits = parseInt($('#naming_digits_input').val()) || 5;
-        const start_from = parseInt($('#naming_start_from_input').val()) || 1;
-        
-        let examples = [];
-        
-        switch (naming_type) {
-            case 'Naming Series':
-                const zeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                examples = [
-                    `${prefix}-${zeros}${start_from}`,
-                    `${prefix}-${zeros}${start_from + 1}`,
-                    `${prefix}-${zeros}${start_from + 2}`
-                ];
-                break;
-            case 'Auto Increment':
-                const autoZeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                examples = [
-                    `${autoZeros}${start_from}`,
-                    `${autoZeros}${start_from + 1}`,
-                    `${autoZeros}${start_from + 2}`
-                ];
-                break;
-            case 'Field Based':
-                examples = ['Based on field value', 'e.g., "John Doe", "Project Alpha"'];
-                break;
-            case 'Prompt':
-                examples = ['User will be prompted', 'e.g., "CUSTOM-001"'];
-                break;
-            case 'Random':
-                examples = ['Random IDs', 'e.g., "ID123456", "ID789012"'];
-                break;
-        }
-        
-        const examples_html = examples.map(ex => `<code>${ex}</code>`).join(', ');
-        $('#id-examples').html(examples_html);
-    }
-    
-    /**
-     * Load table fields for field-based naming
-     */
-    async load_table_fields_for_naming() {
-        try {
-            if (!this.single_table_id) return;
-            
-            const result = await frappe.call({
-                method: 'flansa.flansa_core.api.field_management.get_table_fields',
-                args: { table_name: this.single_table_id }
-            });
-            
-            if (result.message && result.message.success) {
-                const fields = result.message.fields || [];
-                const select = $('#naming_field_select');
-                
-                // Clear existing options except first
-                select.find('option:not(:first)').remove();
-                
-                // Add field options (only text/data fields suitable for naming)
-                fields.forEach(field => {
-                    if (['Data', 'Text', 'Small Text'].includes(field.field_type)) {
-                        select.append(`<option value="${field.field_name}">${field.field_label}</option>`);
-                    }
+                const table_data = result.message;
+                dialog.set_values({
+                    naming_type: table_data.naming_type || 'Naming Series',
+                    naming_prefix: table_data.naming_prefix || 'REC',
+                    naming_digits: table_data.naming_digits || 5
                 });
             }
-            
         } catch (error) {
-            console.error('Error loading fields for naming:', error);
+            console.error('Error loading naming settings:', error);
         }
     }
     
-    /**
-     * Save naming configuration
-     */
-    async save_naming_configuration() {
+    async save_naming_settings(values, dialog) {
         try {
-            if (!this.single_table_id) {
-                frappe.msgprint('No table selected');
-                return;
-            }
-            
-            const config_data = {
-                naming_type: $('#naming_type_select').val(),
-                naming_prefix: $('#naming_prefix_input').val(),
-                naming_digits: parseInt($('#naming_digits_input').val()) || 5,
-                naming_field: $('#naming_field_select').val(),
-                naming_start_from: parseInt($('#naming_start_from_input').val()) || 1
-            };
-            
-            console.log('Saving naming configuration:', config_data);
-            
-            // Update the Flansa Table record
             const result = await frappe.call({
                 method: 'frappe.client.set_value',
                 args: {
                     doctype: 'Flansa Table',
                     name: this.single_table_id,
-                    fieldname: config_data
+                    fieldname: values
                 }
             });
             
             if (result.message) {
                 frappe.show_alert({
-                    message: 'Naming configuration saved successfully!',
+                    message: 'Naming settings saved successfully!',
                     indicator: 'green'
                 });
-                
-                // Ask if user wants to recreate DocType with new naming
-                frappe.confirm(
-                    'Do you want to recreate the DocType with the new naming configuration? This will affect how new records are named.',
-                    () => {
-                        this.recreate_doctype_with_naming();
-                    }
-                );
+                dialog.hide();
             }
-            
         } catch (error) {
-            console.error('Error saving naming configuration:', error);
-            frappe.msgprint('Error saving configuration');
-        }
-    }
-    
-    /**
-     * Recreate DocType with new naming configuration
-     */
-    async recreate_doctype_with_naming() {
-        try {
+            console.error('Error saving naming settings:', error);
             frappe.show_alert({
-                message: 'Recreating DocType with new naming...',
-                indicator: 'blue'
+                message: 'Error saving naming settings',
+                indicator: 'red'
             });
-            
-            const result = await frappe.call({
-                method: 'flansa.flansa_core.api.field_management.recreate_doctype',
-                args: { table_name: this.single_table_id }
-            });
-            
-            if (result.message && result.message.success) {
-                frappe.show_alert({
-                    message: 'DocType recreated successfully! New records will use the updated naming.',
-                    indicator: 'green'
-                });
-            } else {
-                frappe.msgprint('Error recreating DocType: ' + (result.message?.message || 'Unknown error'));
-            }
-            
-        } catch (error) {
-            console.error('Error recreating DocType:', error);
-            frappe.msgprint('Error recreating DocType');
         }
     }
-    
-    /**
-     * Reset naming configuration to default
-     */
-    reset_naming_configuration() {
-        frappe.confirm(
-            'Are you sure you want to reset the naming configuration to default values?',
-            () => {
-                $('#naming_type_select').val('Naming Series');
-                $('#naming_prefix_input').val('REC');
-                $('#naming_digits_input').val('5');
-                $('#naming_start_from_input').val('1');
-                this.on_naming_type_change();
-                this.update_naming_preview();
-            }
-        );
-    }
+
 }
-    
-    /**
-     * Test the naming pattern by creating a sample record name
-     */
-    async test_naming_pattern() {
-        try {
-            const naming_type = $('#naming_type_select').val();
-            const prefix = $('#naming_prefix_input').val() || 'TEST';
-            const digits = parseInt($('#naming_digits_input').val()) || 5;
-            const start_from = parseInt($('#naming_start_from_input').val()) || 1;
-            
-            let sample_id = '';
-            
-            switch (naming_type) {
-                case 'Naming Series':
-                    const zeros = '0'.repeat(Math.max(0, digits - start_from.toString().length));
-                    sample_id = `${prefix}-${zeros}
-        }
-    });
+
+// Apply theme on page load
+$(document).ready(function() {
+    if (window.page_instance && window.page_instance.apply_theme) {
+        window.page_instance.apply_theme();
+    }
+});
