@@ -1200,6 +1200,33 @@ def apply_naming_to_doctype(table_name):
             
             doctype_doc.naming_rule = "By \"Naming Series\" field"
             
+            # Set the starting counter for the naming series
+            start_from = getattr(table_doc, 'naming_start_from', 1)
+            if start_from and start_from > 1:
+                # Update or create the naming series counter
+                series_name = f"{prefix}-"
+                
+                # Check if series exists in database (using direct SQL to avoid 'modified' column error)
+                existing_series_result = frappe.db.sql("SELECT current FROM `tabSeries` WHERE name = %s", series_name)
+                existing_series = existing_series_result[0][0] if existing_series_result else None
+                
+                if existing_series is None:
+                    # Create new series entry
+                    frappe.db.sql("""
+                        INSERT INTO `tabSeries` (name, current) 
+                        VALUES (%s, %s)
+                        ON DUPLICATE KEY UPDATE current = %s
+                    """, (series_name, start_from - 1, start_from - 1))
+                elif existing_series < (start_from - 1):
+                    # Only update if the new start is higher than current
+                    frappe.db.sql("""
+                        UPDATE `tabSeries` 
+                        SET current = %s 
+                        WHERE name = %s
+                    """, (start_from - 1, series_name))
+                
+                frappe.db.commit()
+            
         elif naming_type == "Auto Increment":
             # Pure auto increment: .#####
             digits = getattr(table_doc, 'naming_digits', 5)
@@ -1237,9 +1264,16 @@ def apply_naming_to_doctype(table_name):
         doctype_doc.save()
         frappe.db.commit()
         
+        # Prepare success message with details
+        success_message = f"Applied naming configuration: {naming_type}"
+        if naming_type == "Naming Series":
+            start_from = getattr(table_doc, 'naming_start_from', 1)
+            if start_from and start_from > 1:
+                success_message += f" (starting from {start_from})"
+        
         return {
             "success": True, 
-            "message": f"Applied naming configuration: {naming_type}",
+            "message": success_message,
             "autoname": new_autoname,
             "naming_rule": doctype_doc.naming_rule
         }
