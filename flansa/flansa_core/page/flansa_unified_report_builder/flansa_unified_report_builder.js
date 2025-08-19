@@ -54,42 +54,333 @@ class UnifiedReportBuilder {
     }
     
     setup_ui() {
-        // Clear existing content and add our custom HTML
+        // Clear existing content and add our custom HTML directly
         this.$container.empty();
         
-        // Load our custom HTML
-        fetch('/assets/flansa/flansa/flansa_core/page/flansa_unified_report_builder/flansa_unified_report_builder.html')
-            .then(response => response.text())
-            .then(html => {
-                // Extract just the body content
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const content = doc.querySelector('.layout-wrapper').innerHTML;
-                this.$container.html(content);
-                
-                // Initialize UI components after HTML is loaded
-                this.initialize_components();
-            })
-            .catch(error => {
-                console.error('Error loading HTML:', error);
-                this.setup_fallback_ui();
-            });
+        // Use inline HTML for better reliability
+        this.setup_inline_html();
+        this.initialize_components();
     }
     
-    setup_fallback_ui() {
-        // Fallback UI if HTML loading fails
+    setup_inline_html() {
+        // Inline HTML for unified report builder
         this.$container.html(`
-            <div class="unified-builder-fallback">
-                <div class="alert alert-info">
-                    <h4>Unified Report Builder</h4>
-                    <p>Creating a streamlined interface for building reports...</p>
+            <div class="page-header-unified">
+                <div class="header-content">
+                    <h2 class="page-title-unified">
+                        <i class="fa fa-chart-bar" style="color: #007bff;"></i>
+                        <span>Report Builder</span>
+                    </h2>
+                    <p class="page-subtitle-unified">Create, edit and preview reports</p>
                 </div>
-                <div id="builder-content">
-                    <!-- Content will be loaded here -->
+                <div class="header-actions">
+                    <button class="btn btn-secondary btn-sm" id="back-btn">
+                        <i class="fa fa-arrow-left"></i> Back
+                    </button>
+                    <button class="btn btn-success btn-sm" id="save-report-btn" style="display: none;">
+                        <i class="fa fa-save"></i> Save Report
+                    </button>
                 </div>
             </div>
+
+            <div class="unified-builder-content">
+                <div class="step-navigation">
+                    <div class="step active" data-step="1">
+                        <div class="step-number">1</div>
+                        <div class="step-label">Table Selection</div>
+                    </div>
+                    <div class="step" data-step="2">
+                        <div class="step-number">2</div>
+                        <div class="step-label">Field Selection</div>
+                    </div>
+                    <div class="step" data-step="3">
+                        <div class="step-number">3</div>
+                        <div class="step-label">Filters & Sorting</div>
+                    </div>
+                    <div class="step" data-step="4">
+                        <div class="step-number">4</div>
+                        <div class="step-label">Preview & Save</div>
+                    </div>
+                </div>
+
+                <div class="step-content">
+                    <div class="step-panel active" data-step="1">
+                        <div class="step-title">Select Table</div>
+                        <div class="table-selector">
+                            <div class="form-group">
+                                <label>Choose a table for your report:</label>
+                                <select class="form-control" id="table-select">
+                                    <option value="">Loading tables...</option>
+                                </select>
+                            </div>
+                            <div class="table-info" id="table-info" style="display: none;">
+                                <h6>Table Information</h6>
+                                <div id="table-details"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-panel" data-step="2">
+                        <div class="step-title">Select Fields</div>
+                        <div class="field-selector">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Available Fields</h6>
+                                    <div class="available-fields-list" id="available-fields">
+                                        <p class="text-muted">Select a table first</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Selected Fields</h6>
+                                    <div class="selected-fields-list" id="selected-fields">
+                                        <p class="text-muted">No fields selected</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-panel" data-step="3">
+                        <div class="step-title">Configure Filters & Sorting</div>
+                        <div class="filters-sorting">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Filters</h6>
+                                    <div id="filters-container">
+                                        <button class="btn btn-sm btn-outline-primary" id="add-filter-btn">
+                                            <i class="fa fa-plus"></i> Add Filter
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Sorting</h6>
+                                    <div id="sorting-container">
+                                        <button class="btn btn-sm btn-outline-primary" id="add-sort-btn">
+                                            <i class="fa fa-plus"></i> Add Sort
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step-panel" data-step="4">
+                        <div class="step-title">Preview & Save Report</div>
+                        <div class="preview-save">
+                            <div class="report-settings mb-4">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Report Title</label>
+                                            <input type="text" class="form-control" id="report-title" placeholder="Enter report title">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Description</label>
+                                            <input type="text" class="form-control" id="report-description" placeholder="Brief description">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="checkbox-inline">
+                                        <input type="checkbox" id="make-public"> Make this report public
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div class="preview-area">
+                                <div class="preview-header">
+                                    <h6>Report Preview</h6>
+                                    <button class="btn btn-sm btn-outline-secondary" id="refresh-preview">
+                                        <i class="fa fa-refresh"></i> Refresh
+                                    </button>
+                                </div>
+                                <div class="preview-content" id="preview-content">
+                                    <p class="text-muted">Configure your report and click refresh to see preview</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="step-navigation-buttons">
+                    <button class="btn btn-secondary" id="prev-step" style="display: none;">
+                        <i class="fa fa-arrow-left"></i> Previous
+                    </button>
+                    <button class="btn btn-primary" id="next-step">
+                        Next <i class="fa fa-arrow-right"></i>
+                    </button>
+                    <button class="btn btn-success" id="save-final-report" style="display: none;">
+                        <i class="fa fa-save"></i> Save Report
+                    </button>
+                </div>
+            </div>
+            
+            <style>
+                .page-header-unified {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 20px 0;
+                    border-bottom: 1px solid #eee;
+                    margin-bottom: 30px;
+                }
+                .header-content h2.page-title-unified {
+                    margin: 0;
+                    font-size: 1.8rem;
+                    font-weight: 600;
+                    color: #333;
+                }
+                .page-subtitle-unified {
+                    margin: 5px 0 0 0;
+                    color: #666;
+                    font-size: 0.9rem;
+                }
+                .step-navigation {
+                    display: flex;
+                    justify-content: center;
+                    margin-bottom: 30px;
+                    position: relative;
+                }
+                .step-navigation::before {
+                    content: '';
+                    position: absolute;
+                    top: 20px;
+                    left: 25%;
+                    right: 25%;
+                    height: 2px;
+                    background: #eee;
+                    z-index: 1;
+                }
+                .step {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    position: relative;
+                    z-index: 2;
+                    cursor: pointer;
+                    margin: 0 20px;
+                }
+                .step-number {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 50%;
+                    background: #eee;
+                    color: #999;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-weight: bold;
+                    margin-bottom: 8px;
+                    transition: all 0.3s ease;
+                }
+                .step.active .step-number {
+                    background: #007bff;
+                    color: white;
+                }
+                .step.completed .step-number {
+                    background: #28a745;
+                    color: white;
+                }
+                .step-label {
+                    font-size: 0.85rem;
+                    color: #666;
+                    text-align: center;
+                }
+                .step.active .step-label {
+                    color: #007bff;
+                    font-weight: 600;
+                }
+                .step-content {
+                    min-height: 400px;
+                    margin-bottom: 30px;
+                }
+                .step-panel {
+                    display: none;
+                }
+                .step-panel.active {
+                    display: block;
+                }
+                .step-title {
+                    font-size: 1.4rem;
+                    font-weight: 600;
+                    margin-bottom: 20px;
+                    color: #333;
+                }
+                .table-selector, .field-selector, .filters-sorting, .preview-save {
+                    background: #f8f9fa;
+                    padding: 20px;
+                    border-radius: 8px;
+                    border: 1px solid #eee;
+                }
+                .available-fields-list, .selected-fields-list {
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    min-height: 300px;
+                    padding: 10px;
+                    background: white;
+                }
+                .field-item {
+                    padding: 8px 12px;
+                    margin: 4px 0;
+                    background: #f8f9fa;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                }
+                .field-item:hover {
+                    background: #e9ecef;
+                    border-color: #007bff;
+                }
+                .field-item.selected {
+                    background: #e7f3ff;
+                    border-color: #007bff;
+                    color: #007bff;
+                }
+                .preview-area {
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    background: white;
+                }
+                .preview-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 15px;
+                    border-bottom: 1px solid #eee;
+                    background: #f8f9fa;
+                }
+                .preview-content {
+                    padding: 15px;
+                    min-height: 200px;
+                }
+                .step-navigation-buttons {
+                    display: flex;
+                    justify-content: space-between;
+                    padding: 20px 0;
+                    border-top: 1px solid #eee;
+                }
+                .table-info {
+                    background: white;
+                    padding: 15px;
+                    border-radius: 4px;
+                    border: 1px solid #ddd;
+                    margin-top: 15px;
+                }
+                .filter-item, .sort-item {
+                    background: white;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    padding: 15px;
+                    margin-bottom: 10px;
+                }
+                .filter-item .row, .sort-item .row {
+                    align-items: center;
+                }
+            </style>
         `);
-        this.initialize_components();
     }
     
     initialize_components() {
