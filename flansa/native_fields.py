@@ -148,9 +148,9 @@ def add_basic_field_native(table_name, field_config):
             "description": create_flansa_field_description("basic" if not is_calculated else "calculated", field_config)
         }
         
-        # Create Logic Field record for calculated fields OR Link fields
+        # Create Logic Field record for calculated fields only (fields with formulas)
         logic_field_name = None
-        if is_calculated or is_link_field:
+        if is_calculated:
             formula = field_config.get("formula") or field_config.get("expression")
             
             # Create Logic Field document for editing capability
@@ -160,12 +160,12 @@ def add_basic_field_native(table_name, field_config):
             logic_field.field_label = field_config["field_label"]
             
             if is_link_field:
-                # For Link fields, set appropriate logic_type and expression
+                # For Link fields with formulas (calculated Link fields)
                 logic_field.logic_type = "link"
-                logic_field.logic_expression = field_config.get("options", "")  # Link target DocType
+                logic_field.logic_expression = formula  # Use the formula, not the target DocType
                 logic_field.result_type = "Link"
             else:
-                # For calculated fields
+                # For other calculated fields
                 logic_field.logic_type = "formula"
                 logic_field.logic_expression = formula
                 logic_field.result_type = field_config["field_type"]
