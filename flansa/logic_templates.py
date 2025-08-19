@@ -884,18 +884,17 @@ def create_field_from_template(table_name, template_id, template_data):
             "description": f"Generated from {template['name']} template"
         }
         
-        # Handle Link fields differently - use direct DocType field creation
+        # Generate formula for calculated fields (non-Link templates)
         formula = None
-        if template_id == "link":
-            # For Link fields, use direct DocType field addition instead of Custom Fields
-            return create_link_field_direct(table_name, field_config, template_data)
-        else:
-            # Generate formula for calculated fields
+        if template_id != "link":
             formula = generate_formula_from_template(template, template_data)
             field_config.update({
                 "formula": formula,
                 "read_only": 1  # Template fields are calculated
             })
+        else:
+            # For Link fields, add target DocType to options
+            field_config["options"] = template_data.get("target_doctype", "")
         
         # Use the unified field creation system
         from flansa.native_fields import add_basic_field_native
@@ -977,95 +976,3 @@ def is_float(value):
     except ValueError:
         return False
 
-def create_link_field_direct(table_name, field_config, template_data):
-    """Create Link field using direct DocType field addition (consistent with existing approach)"""
-    try:
-        # Get the Flansa Table document
-        flansa_table = frappe.get_doc("Flansa Table", table_name)
-        if not flansa_table.doctype_name:
-            return {
-                "success": False,
-                "error": "DocType not generated for this table"
-            }
-        
-        # Validate target DocType exists
-        target_doctype = template_data.get("target_doctype")
-        if not target_doctype:
-            return {
-                "success": False,
-                "error": "Target DocType is required for Link field"
-            }
-        
-        # Check if target DocType is valid
-        try:
-            frappe.get_meta(target_doctype)
-        except Exception as e:
-            return {
-                "success": False,
-                "error": f"Target DocType '{target_doctype}' is not valid. Please select a valid DocType to link to."
-            }
-        
-        # Get the DocType document and add field properly to the definition
-        doctype_doc = frappe.get_doc("DocType", flansa_table.doctype_name)
-        
-        # Check if field already exists
-        existing_field = None
-        for field in doctype_doc.fields:
-            if field.fieldname == field_config["field_name"]:
-                existing_field = field
-                break
-        
-        if existing_field:
-            return {
-                "success": False,
-                "error": f"Field '{field_config['field_name']}' already exists in DocType"
-            }
-        
-        # Prepare field definition for DocType
-        field_definition = {
-            "fieldname": field_config["field_name"],
-            "label": field_config["field_label"], 
-            "fieldtype": "Link",
-            "options": target_doctype,
-            "reqd": field_config.get("reqd", 0),
-            "read_only": field_config.get("read_only", 0),
-            "description": field_config.get("description", ""),
-            "hidden": 0,
-            "in_list_view": 0,
-            "bold": 0,
-            "unique": 0,
-            "no_copy": 0,
-            "allow_in_quick_entry": 0,
-            "ignore_user_permissions": 0,
-            "allow_on_submit": 0,
-            "translatable": 0,
-            "print_hide": 0,
-            "print_hide_if_no_value": 0,
-            "report_hide": 0,
-            "permlevel": 0,
-            "idx": len(doctype_doc.fields) + 1
-        }
-        
-        # Add field to DocType definition
-        doctype_doc.append("fields", field_definition)
-        
-        # Save the DocType (this will update both definition and database schema)
-        doctype_doc.save()
-        frappe.db.commit()
-        
-        # Note: Logic Field entry is created separately by the JavaScript caller
-        # via add_logic_field_entry_for_link method to avoid duplication
-        
-        return {
-            "success": True,
-            "message": f"Link field '{field_config['field_label']}' created successfully",
-            "field_name": field_config["field_name"],
-            "approach": "direct_doctype"
-        }
-        
-    except Exception as e:
-        frappe.log_error(f"Error creating direct Link field: {str(e)}", "Logic Templates")
-        return {
-            "success": False,
-            "error": str(e)
-        }
