@@ -1,6 +1,7 @@
 import frappe
 from flansa.flansa_core.doctype_hooks import calculate_logic_fields
 from frappe import _
+from flansa.flansa_core.tenant_service import apply_tenant_filter, get_tenant_filter
 
 @frappe.whitelist()
 def get_tables_list(app_name=None):
@@ -14,7 +15,7 @@ def get_tables_list(app_name=None):
             
         tables = frappe.get_all("Flansa Table", 
             fields=["name", "table_name", "table_label", "description", "status", "application"],
-            filters=filters,
+            filters=apply_tenant_filter(filters),
             order_by="table_label asc"
         )
         

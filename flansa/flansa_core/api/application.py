@@ -3,6 +3,7 @@ import frappe
 import yaml
 import json
 from frappe import _
+from flansa.flansa_core.tenant_service import apply_tenant_filter, get_tenant_filter
 
 
 def normalize_app_name(name):
@@ -84,7 +85,7 @@ def export_application_schema(app_name, format_type="yaml"):
 	
 	# Get workspaces
 	workspaces = frappe.get_all("Flansa Workspace", 
-		filters={"application": app_name},
+		filters=apply_tenant_filter({"application": app_name}),
 		fields=["name", "workspace_name", "description", "theme_color", "icon"]
 	)
 	
@@ -99,7 +100,7 @@ def export_application_schema(app_name, format_type="yaml"):
 	
 	# Get tables
 	tables = frappe.get_all("Flansa Table", 
-		filters={"application": app_name},
+		filters=apply_tenant_filter({"application": app_name}),
 		fields=["name", "table_name", "table_label", "workspace", "doctype_name", 
 				"is_submittable", "naming_rule", "autoname_prefix"]
 	)
@@ -145,7 +146,7 @@ def export_application_schema(app_name, format_type="yaml"):
 	
 	# Get relationships
 	relationships = frappe.get_all("Flansa Relationship",
-		filters={"application": app_name},
+		filters=apply_tenant_filter({"application": app_name}),
 		fields=["name", "relationship_name", "relationship_type", "from_table", 
 				"to_table", "from_field", "to_field"]
 	)

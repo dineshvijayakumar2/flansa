@@ -194,12 +194,36 @@ user_data_fields = [
 # ---------------
 # Hook on document methods and events
 
-# Document Events for Logic Field calculations and validation
+# Document Events for Logic Field calculations, validation, and tenant context
 doc_events = {
     "*": {
         "validate": "flansa.flansa_core.doctype_hooks.validate_logic_fields",
         "before_save": "flansa.flansa_core.doctype_hooks.calculate_logic_fields",
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
+    },
+    "Flansa Application": {
+        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
+        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+    },
+    "Flansa Table": {
+        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
+        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+    },
+    "Flansa Relationship": {
+        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
+        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+    },
+    "Flansa Saved Report": {
+        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
+        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+    },
+    "Flansa Form Config": {
+        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
+        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+    },
+    "Flansa Computed Field": {
+        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
+        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
     }
 }
 
