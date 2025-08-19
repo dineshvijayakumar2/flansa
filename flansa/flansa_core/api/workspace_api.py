@@ -103,6 +103,7 @@ def create_flansa_table(table_data, app_name=None):
             "naming_digits": table_data.get("naming_digits", 5),
             "naming_field": table_data.get("naming_field", ""),
             "naming_start_from": table_data.get("naming_start_from", 1),
+            "naming_separator": table_data.get("naming_separator", "-"),
             "is_submittable": table_data.get("is_submittable", 0)
         })
         

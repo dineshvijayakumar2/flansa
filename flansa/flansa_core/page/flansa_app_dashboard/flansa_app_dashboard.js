@@ -530,6 +530,37 @@ class FlansaApplicationDashboard {
                     }
                 },
                 {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Start Counter From',
+                    fieldname: 'naming_start_from',
+                    fieldtype: 'Int',
+                    default: 1,
+                    description: 'Starting number for the counter (e.g., 100 will create CUS-00100)',
+                    depends_on: 'eval:doc.naming_type=="Naming Series" || doc.naming_type=="Auto Increment"',
+                    change: () => {
+                        this.update_naming_preview(dialog);
+                    }
+                },
+                {
+                    label: 'Field for Dynamic Prefix',
+                    fieldname: 'naming_field',
+                    fieldtype: 'Data',
+                    description: 'Field name to use as prefix (for Field Based naming)',
+                    depends_on: 'eval:doc.naming_type=="Field Based"',
+                    placeholder: 'customer_name, category, etc.'
+                },
+                {
+                    label: 'Separator',
+                    fieldname: 'naming_separator',
+                    fieldtype: 'Data',
+                    default: '-',
+                    description: 'Character between prefix and number',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    placeholder: '-'
+                },
+                {
                     label: 'Preview',
                     fieldname: 'naming_preview',
                     fieldtype: 'Data',
@@ -606,20 +637,25 @@ class FlansaApplicationDashboard {
         const naming_type = dialog.get_value('naming_type') || 'Naming Series';
         const prefix = dialog.get_value('naming_prefix') || 'REC';
         const digits = parseInt(dialog.get_value('naming_digits')) || 5;
+        const start_from = parseInt(dialog.get_value('naming_start_from')) || 1;
+        const separator = dialog.get_value('naming_separator') || '-';
         
         let preview = '';
         
         switch (naming_type) {
             case 'Naming Series':
-                const sample_number = '1'.padStart(digits, '0');
-                preview = `${prefix}-${sample_number}, ${prefix}-${(parseInt(sample_number) + 1).toString().padStart(digits, '0')}...`;
+                const first_number = start_from.toString().padStart(digits, '0');
+                const second_number = (start_from + 1).toString().padStart(digits, '0');
+                preview = `${prefix}${separator}${first_number}, ${prefix}${separator}${second_number}...`;
                 break;
             case 'Auto Increment':
-                const auto_number = '1'.padStart(digits, '0');
-                preview = `${auto_number}, ${(parseInt(auto_number) + 1).toString().padStart(digits, '0')}...`;
+                const auto_first = start_from.toString().padStart(digits, '0');
+                const auto_second = (start_from + 1).toString().padStart(digits, '0');
+                preview = `${auto_first}, ${auto_second}...`;
                 break;
             case 'Field Based':
-                preview = 'Based on field value (e.g., john_doe, jane_smith...)';
+                const field_name = dialog.get_value('naming_field') || 'field_value';
+                preview = `Based on '${field_name}' (e.g., john_doe, jane_smith...)`;
                 break;
             case 'Random':
                 preview = 'Random IDs (e.g., a1b2c3d4, x9y8z7w6...)';
@@ -648,7 +684,14 @@ class FlansaApplicationDashboard {
                     table_name: values.table_name,
                     table_label: values.table_label,
                     description: values.description || '',
-                    status: 'Draft'
+                    status: 'Draft',
+                    // Include naming configuration from dialog
+                    naming_type: values.naming_type || 'Naming Series',
+                    naming_prefix: values.naming_prefix || '',
+                    naming_digits: values.naming_digits || 5,
+                    naming_start_from: values.naming_start_from || 1,
+                    naming_field: values.naming_field || '',
+                    naming_separator: values.naming_separator || '-'
                 }
             },
             callback: (r) => {
