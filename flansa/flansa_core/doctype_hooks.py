@@ -17,7 +17,7 @@ def calculate_logic_fields(doc, method=None):
                                      filters={
                                          "is_active": 1
                                      },
-                                     fields=["name", "field_name", "expression", "table_name"])
+                                     fields=["name", "field_name", "logic_expression", "table_name"])
         
         # Filter Logic Fields for this DocType
         doctype_logic_fields = []

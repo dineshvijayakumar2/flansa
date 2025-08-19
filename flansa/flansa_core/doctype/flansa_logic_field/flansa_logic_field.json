@@ -1,13 +1,8 @@
 {
  "actions": [],
- "allow_copy": 0,
- "allow_events_in_timeline": 0,
- "allow_guest_to_view": 0,
- "allow_import": 0,
  "allow_rename": 1,
  "autoname": "format:FL-{#####}",
- "beta": 0,
- "creation": "2025-08-19 16:00:00.000000",
+ "creation": "2025-08-19 16:00:00",
  "default_view": "List",
  "doctype": "DocType",
  "editable_grid": 1,
@@ -34,7 +29,9 @@
   "column_break_15",
   "last_calculated",
   "calculation_time_ms",
-  "error_details"
+  "error_details",
+  "logic_type",
+  "result_type"
  ],
  "fields": [
   {
@@ -165,19 +162,26 @@
    "fieldtype": "Text",
    "label": "Error Details",
    "read_only": 1
+  },
+  {
+   "default": "formula",
+   "description": "Type of logic field for UI handling",
+   "fieldname": "logic_type",
+   "fieldtype": "Select",
+   "label": "Logic Type",
+   "options": "formula\nlink\nfetch\nlookup\nrollup\nconditional\ncustom"
+  },
+  {
+   "default": "Data",
+   "description": "Data type of the field result",
+   "fieldname": "result_type",
+   "fieldtype": "Select",
+   "label": "Result Type",
+   "options": "Data\nInt\nFloat\nCurrency\nPercent\nCheck\nDate\nDatetime\nText\nLong Text\nLink\nSelect"
   }
  ],
- "has_web_view": 0,
- "hide_heading": 0,
- "hide_toolbar": 0,
- "idx": 0,
- "image_view": 0,
- "in_create": 0,
- "is_submittable": 0,
- "issingle": 0,
- "istable": 0,
- "max_attachments": 0,
- "modified": "2025-08-19 16:00:00.000000",
+ "links": [],
+ "modified": "2025-08-20 01:51:29.106047",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Logic Field",
@@ -197,14 +201,10 @@
    "write": 1
   }
  ],
- "quick_entry": 0,
- "read_only": 0,
- "read_only_onload": 0,
- "show_name_in_global_search": 0,
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
+ "states": [],
  "title_field": "field_label",
- "track_changes": 1,
- "track_seen": 0,
- "track_views": 0
+ "track_changes": 1
 }

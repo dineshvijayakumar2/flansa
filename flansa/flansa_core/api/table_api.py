@@ -804,7 +804,7 @@ def get_logic_fields_for_table(table_name):
     try:
         logic_fields = frappe.get_all("Flansa Logic Field",
             filters={"table_name": table_name, "is_active": 1},
-            fields=["name", "field_name", "label", "expression", "result_type"]
+            fields=["name", "field_name", "field_label", "logic_expression", "result_type"]
         )
         
         return {
@@ -827,7 +827,7 @@ def calculate_record_logic(table_name, record_name):
         # Get Logic Fields for this table
         logic_fields = frappe.get_all("Flansa Logic Field",
             filters={"table_name": table_name, "is_active": 1},
-            fields=["field_name", "expression", "result_type"]
+            fields=["field_name", "logic_expression", "result_type"]
         )
         
         if not logic_fields:
@@ -1613,8 +1613,8 @@ def list_logic_fields(table_name=None):
         
         logic_fields = frappe.get_all("Flansa Logic Field",
                                     filters=filters,
-                                    fields=["name", "table_name", "field_name", "label", "expression", 
-                                           "calculation_type", "storage_strategy", "is_active"])
+                                    fields=["name", "table_name", "field_name", "field_label", "logic_expression", 
+                                           "logic_type", "result_type", "is_active"])
         
         # Add DocType information
         for lf in logic_fields:
@@ -1765,7 +1765,7 @@ def smart_delete_field(table_name, field_name, force_cascade=False):
                     {
                         "field_name": dep["field_name"],
                         "logic_type": dep["logic_type"],
-                        "expression": dep["expression"]
+                        "expression": dep["logic_expression"]
                     } for dep in dependents
                 ],
                 "field_type": field_info['type']
@@ -1824,7 +1824,7 @@ def _detect_field_type(table_name, field_name):
     # Check if Logic Field exists
     logic_field = frappe.get_value("Flansa Logic Field", 
                                   {"table_name": table_name, "field_name": field_name},
-                                  ["name", "logic_type", "expression"])
+                                  ["name", "logic_type", "logic_expression"])
     
     # Check if Custom Field exists
     custom_field = frappe.get_value("Custom Field", 
