@@ -21,7 +21,7 @@ class UnifiedReportBuilder {
         this.preselected_table = null;
         
         this.parse_url_parameters();
-        this.setup_improved_layout();
+        this.setup_single_step_layout();
         this.initialize_components();
     }
     
@@ -30,260 +30,274 @@ class UnifiedReportBuilder {
         this.edit_report_id = urlParams.get('edit');
         this.source_context = urlParams.get('source');
         this.preselected_table = urlParams.get('table');
-        
-        // If no preselected table, try to get from route
-        if (!this.preselected_table) {
-            const route = frappe.get_route();
-            if (route.length > 1 && route[1] !== 'new') {
-                this.preselected_table = route[1];
-            }
-        }
     }
     
-    setup_improved_layout() {
+    setup_single_step_layout() {
         this.$container.html(`
-            <div class="improved-report-builder">
-                <!-- Header with Title/Description -->
+            <div class="single-step-builder">
+                <!-- Header -->
                 <div class="builder-header">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h3><i class="fa fa-chart-bar text-primary"></i> Report Builder</h3>
-                        </div>
-                        <div class="col-md-6 text-right">
-                            <button class="btn btn-secondary" id="back-btn">
-                                <i class="fa fa-arrow-left"></i> Back
-                            </button>
-                        </div>
+                    <div class="header-content">
+                        <h2><i class="fa fa-chart-bar text-primary"></i> Report Builder</h2>
+                        <p class="text-muted">Configure your report settings and preview results</p>
+                    </div>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="back-btn">
+                            <i class="fa fa-arrow-left"></i> Back
+                        </button>
                     </div>
                 </div>
 
-                <!-- Report Info Section -->
-                <div class="report-info-card">
+                <!-- Report Title & Description -->
+                <div class="report-info-section">
                     <div class="row">
                         <div class="col-md-4">
                             <div class="form-group">
-                                <label><strong>Report Title</strong></label>
+                                <label>Report Title</label>
                                 <input type="text" class="form-control" id="report-title" placeholder="Enter report title">
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label><strong>Description</strong></label>
-                                <input type="text" class="form-control" id="report-description" placeholder="Brief description of this report">
+                                <label>Description</label>
+                                <input type="text" class="form-control" id="report-description" placeholder="Brief description">
                             </div>
                         </div>
                         <div class="col-md-2">
                             <div class="form-group">
-                                <label><strong>Visibility</strong></label>
+                                <label>&nbsp;</label>
                                 <div class="form-check">
                                     <input class="form-check-input" type="checkbox" id="make-public">
-                                    <label class="form-check-label" for="make-public">Public Report</label>
+                                    <label class="form-check-label" for="make-public">Public</label>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Field Selection Section -->
-                <div class="section-card">
-                    <h5><i class="fa fa-columns text-success"></i> Select Fields</h5>
-                    <div class="row">
-                        <div class="col-md-4">
-                            <h6>Available Fields</h6>
-                            <div class="fields-container" id="available-fields">
-                                <p class="text-muted">Loading fields...</p>
+                <!-- Configuration Content -->
+                <div class="builder-content">
+                    <!-- Field Selection Section -->
+                    <div class="config-section">
+                        <h5><i class="fa fa-columns text-success"></i> Select Fields</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Available Fields</h6>
+                                        <div class="fields-container" id="available-fields">
+                                            <p class="text-muted">Select a table first</p>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Selected Fields <span class="badge badge-primary" id="field-count">0</span></h6>
+                                        <div class="fields-container" id="selected-fields">
+                                            <p class="text-muted">No fields selected</p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-8">
-                            <h6>Selected Fields <span class="badge badge-primary" id="field-count">0</span></h6>
-                            <div class="fields-container" id="selected-fields">
-                                <p class="text-muted">No fields selected. Click on available fields to add them.</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Filters & Sorting Section -->
-                <div class="section-card">
-                    <h5><i class="fa fa-filter text-warning"></i> Filters & Sorting</h5>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6>Filters</h6>
-                            <div id="filters-container">
-                                <button class="btn btn-sm btn-outline-primary" id="add-filter">
-                                    <i class="fa fa-plus"></i> Add Filter
-                                </button>
+                            <!-- Filters & Sorting -->
+                            <div class="config-section">
+                                <h5><i class="fa fa-filter text-warning"></i> 3. Filters & Sorting</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <h6>Filters</h6>
+                                        <div id="filters-container">
+                                            <button class="btn btn-sm btn-outline-primary" id="add-filter">
+                                                <i class="fa fa-plus"></i> Add Filter
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <h6>Sorting</h6>
+                                        <div id="sorting-container">
+                                            <button class="btn btn-sm btn-outline-primary" id="add-sort">
+                                                <i class="fa fa-plus"></i> Add Sort
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6>Sorting</h6>
-                            <div id="sorting-container">
-                                <button class="btn btn-sm btn-outline-primary" id="add-sort">
-                                    <i class="fa fa-plus"></i> Add Sort
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
-                <!-- Actions Section -->
-                <div class="actions-card">
-                    <div class="text-center">
-                        <button class="btn btn-info btn-lg" id="preview-dialog">
-                            <i class="fa fa-eye"></i> Preview Report
-                        </button>
-                        <button class="btn btn-success btn-lg" id="save-report">
-                            <i class="fa fa-save"></i> Save Report
-                        </button>
-                        <button class="btn btn-danger" id="delete-report" style="display: none;">
-                            <i class="fa fa-trash"></i> Delete Report
-                        </button>
+                            <!-- Report Settings -->
+                            <div class="config-section">
+                                <h5><i class="fa fa-cog text-info"></i> 4. Report Settings</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Report Title</label>
+                                            <input type="text" class="form-control" id="report-title" placeholder="Enter title">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group">
+                                            <label>Description</label>
+                                            <input type="text" class="form-control" id="report-description" placeholder="Description">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="make-public">
+                                    <label class="form-check-label" for="make-public">Make this report public</label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right Column: Live Preview -->
+                        <div class="col-md-6">
+                            <div class="preview-section">
+                                <div class="preview-header">
+                                    <h5><i class="fa fa-eye text-info"></i> Live Preview</h5>
+                                    <div class="preview-actions">
+                                        <button class="btn btn-sm btn-outline-secondary" id="refresh-preview">
+                                            <i class="fa fa-refresh"></i> Refresh
+                                        </button>
+                                        <button class="btn btn-sm btn-info" id="preview-dialog">
+                                            <i class="fa fa-expand"></i> Full Preview
+                                        </button>
+                                        <button class="btn btn-sm btn-success" id="save-report">
+                                            <i class="fa fa-save"></i> Save
+                                        </button>
+                                        <button class="btn btn-sm btn-danger" id="delete-report" style="display: none;">
+                                            <i class="fa fa-trash"></i> Delete
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="preview-content" id="preview-content">
+                                    <div class="preview-placeholder">
+                                        <i class="fa fa-chart-bar fa-3x text-muted"></i>
+                                        <p class="text-muted mt-2">Configure your report to see live preview</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <style>
-                .improved-report-builder {
+                .single-step-builder {
                     padding: 20px;
-                    max-width: 1200px;
-                    margin: 0 auto;
                 }
                 
                 .builder-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
                     margin-bottom: 30px;
                     padding-bottom: 20px;
                     border-bottom: 2px solid #e9ecef;
                 }
                 
-                .builder-header h3 {
+                .builder-header h2 {
                     margin: 0;
                     font-weight: 600;
                 }
                 
-                .report-info-card {
+                .config-section {
                     background: #f8f9fa;
                     border: 1px solid #e9ecef;
                     border-radius: 8px;
                     padding: 20px;
-                    margin-bottom: 25px;
+                    margin-bottom: 20px;
                 }
                 
-                .section-card {
-                    background: white;
-                    border: 1px solid #e9ecef;
-                    border-radius: 8px;
-                    padding: 20px;
-                    margin-bottom: 20px;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                }
-                
-                .section-card h5 {
-                    margin-bottom: 20px;
+                .config-section h5 {
+                    margin-bottom: 15px;
                     font-weight: 600;
-                    color: #495057;
                 }
                 
                 .fields-container {
-                    max-height: 300px;
+                    max-height: 200px;
                     overflow-y: auto;
                     border: 1px solid #dee2e6;
                     border-radius: 4px;
-                    padding: 15px;
-                    background: #fafafa;
+                    padding: 10px;
+                    background: white;
+                }
+                
+                .preview-section {
+                    background: #fff;
+                    border: 1px solid #e9ecef;
+                    border-radius: 8px;
+                    height: calc(100vh - 200px);
+                    position: sticky;
+                    top: 20px;
+                }
+                
+                .preview-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 20px;
+                    border-bottom: 1px solid #e9ecef;
+                }
+                
+                .preview-header h5 {
+                    margin: 0;
+                    font-weight: 600;
+                }
+                
+                .preview-content {
+                    padding: 20px;
+                    height: calc(100% - 80px);
+                    overflow-y: auto;
+                }
+                
+                .preview-placeholder {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    height: 200px;
                 }
                 
                 .field-item {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 10px;
-                    margin: 5px 0;
+                    padding: 8px;
+                    margin: 4px 0;
                     background: white;
                     border: 1px solid #dee2e6;
                     border-radius: 4px;
                     cursor: pointer;
-                    transition: all 0.2s ease;
                 }
                 
                 .field-item:hover {
                     background: #e3f2fd;
-                    border-color: #2196f3;
-                    transform: translateY(-1px);
                 }
                 
                 .field-item.selected {
                     background: #bbdefb;
                     border-color: #2196f3;
-                    font-weight: 500;
-                }
-                
-                .field-item-selected {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 10px;
-                    margin: 5px 0;
-                    background: #e8f5e8;
-                    border: 1px solid #4caf50;
-                    border-radius: 4px;
-                }
-                
-                .field-label-editable {
-                    background: transparent;
-                    border: none;
-                    font-weight: 500;
-                    color: #2e7d32;
-                    cursor: pointer;
-                }
-                
-                .field-label-editable:focus {
-                    background: white;
-                    border: 1px solid #4caf50;
-                    border-radius: 3px;
-                    padding: 2px 5px;
                 }
                 
                 .field-category-header {
                     font-weight: 600;
                     color: #666;
                     font-size: 0.9rem;
-                    margin: 15px 0 8px 0;
+                    margin: 10px 0 5px 0;
                     text-transform: uppercase;
-                    letter-spacing: 0.5px;
                 }
                 
                 .filter-item, .sort-item {
                     display: flex;
                     align-items: center;
                     gap: 10px;
-                    padding: 12px;
-                    background: #f8f9fa;
+                    padding: 10px;
+                    background: white;
                     border: 1px solid #dee2e6;
-                    border-radius: 6px;
+                    border-radius: 4px;
                     margin-bottom: 10px;
                 }
                 
-                .actions-card {
-                    background: #f8f9fa;
-                    border: 1px solid #e9ecef;
-                    border-radius: 8px;
-                    padding: 30px;
-                    text-align: center;
-                }
-                
-                .btn-lg {
-                    padding: 12px 30px;
-                    margin: 0 10px;
-                    font-size: 1.1rem;
+                .btn-sm {
+                    font-size: 0.875rem;
                 }
                 
                 .badge {
-                    font-size: 0.8rem;
-                }
-                
-                .form-group label {
-                    font-weight: 500;
-                    color: #495057;
+                    font-size: 0.75rem;
                 }
             </style>
         `);
@@ -292,23 +306,11 @@ class UnifiedReportBuilder {
     initialize_components() {
         this.setup_navigation();
         this.setup_event_handlers();
-        this.auto_select_table();
+        this.load_tables();
         
         // Load existing report if editing
         if (this.edit_report_id) {
             this.load_existing_report();
-        }
-    }
-    
-    auto_select_table() {
-        // If we have a preselected table, use it directly
-        if (this.preselected_table) {
-            this.selected_table = this.preselected_table;
-            console.log('Auto-selected table:', this.selected_table);
-            this.load_field_options();
-        } else {
-            // Try to get table from URL or context
-            console.warn('No table context provided');
         }
     }
     
@@ -328,27 +330,82 @@ class UnifiedReportBuilder {
     }
     
     setup_event_handlers() {
+        // Table selection
+        $(document).on('change', '#table-select', () => this.on_table_select());
+        
         // Add filter/sort buttons
         $(document).on('click', '#add-filter', () => this.add_filter());
         $(document).on('click', '#add-sort', () => this.add_sort());
         
         // Preview and save
+        $(document).on('click', '#refresh-preview', () => this.refresh_preview());
         $(document).on('click', '#preview-dialog', () => this.show_preview_dialog());
         $(document).on('click', '#save-report', () => this.save_report());
         $(document).on('click', '#delete-report', () => this.delete_report());
         
-        // Field label editing
-        $(document).on('blur', '.field-label-editable', (e) => this.save_field_label(e));
-        $(document).on('keypress', '.field-label-editable', (e) => {
-            if (e.which === 13) { // Enter key
-                $(e.target).blur();
+        // Auto-refresh preview when configuration changes
+        $(document).on('change', '#report-title, #report-description', () => {
+            if (this.selected_fields.length > 0) {
+                this.refresh_preview();
             }
         });
     }
     
+    async load_tables() {
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.get_tables'
+            });
+            
+            console.log('Tables API response:', response);
+            
+            if (response.message && response.message.success) {
+                const select = document.getElementById('table-select');
+                select.innerHTML = '<option value="">Choose a table...</option>';
+                
+                console.log('Loading', response.message.tables.length, 'tables');
+                
+                response.message.tables.forEach(table => {
+                    const option = document.createElement('option');
+                    option.value = table.value || table.name;
+                    option.textContent = `${table.label || table.table_label} (${table.value || table.name})`;
+                    select.appendChild(option);
+                });
+                
+                console.log('Table select populated with', select.options.length - 1, 'tables');
+                
+                // Pre-select table if specified
+                if (this.preselected_table) {
+                    console.log('Pre-selecting table:', this.preselected_table);
+                    select.value = this.preselected_table;
+                    this.on_table_select();
+                }
+            } else {
+                console.error('Tables API error:', response.message);
+            }
+        } catch (error) {
+            console.error('Error loading tables:', error);
+        }
+    }
+    
+    async on_table_select() {
+        const select = document.getElementById('table-select');
+        this.selected_table = select.value;
+        
+        console.log('Table selected:', this.selected_table);
+        
+        if (!this.selected_table) {
+            console.log('No table selected, clearing fields');
+            this.clear_fields();
+            return;
+        }
+        
+        console.log('Loading field options for table:', this.selected_table);
+        await this.load_field_options();
+    }
+    
     async load_field_options() {
         try {
-            console.log('Loading field options for table:', this.selected_table);
             const response = await frappe.call({
                 method: 'flansa.flansa_core.api.report_builder_api.get_report_field_options',
                 args: { table_name: this.selected_table }
@@ -357,8 +414,6 @@ class UnifiedReportBuilder {
             if (response.message && response.message.success) {
                 this.available_fields = response.message.fields;
                 this.display_available_fields();
-            } else {
-                console.error('Failed to load field options:', response.message);
             }
         } catch (error) {
             console.error('Error loading field options:', error);
@@ -455,32 +510,31 @@ class UnifiedReportBuilder {
         }
         
         this.update_field_display();
+        this.auto_refresh_preview();
     }
     
     update_field_display() {
+        // Update selected fields display
         const container = document.getElementById('selected-fields');
         const countBadge = document.getElementById('field-count');
         
         countBadge.textContent = this.selected_fields.length;
         
         if (this.selected_fields.length === 0) {
-            container.innerHTML = '<p class="text-muted">No fields selected. Click on available fields to add them.</p>';
+            container.innerHTML = '<p class="text-muted">No fields selected</p>';
             return;
         }
         
         container.innerHTML = '';
         this.selected_fields.forEach((field) => {
             const item = document.createElement('div');
-            item.className = 'field-item-selected';
+            item.className = 'field-item selected';
             item.innerHTML = `
                 <span>
                     <i class="fa fa-${this.get_field_icon(field.fieldtype)}"></i>
-                    <input type="text" class="field-label-editable" 
-                           value="${field.custom_label}" 
-                           data-fieldname="${field.fieldname}"
-                           title="Click to edit label">
+                    ${field.custom_label}
                 </span>
-                <button class="btn btn-sm btn-outline-danger" onclick="window.flansa_unified_report_builder.remove_field('${field.fieldname}')">
+                <button class="btn btn-sm btn-outline-danger" onclick="flansa_unified_report_builder.remove_field('${field.fieldname}')">
                     <i class="fa fa-times"></i>
                 </button>
             `;
@@ -495,22 +549,16 @@ class UnifiedReportBuilder {
         });
     }
     
-    save_field_label(event) {
-        const input = event.target;
-        const fieldname = input.dataset.fieldname;
-        const newLabel = input.value.trim();
-        
-        if (newLabel) {
-            const field = this.selected_fields.find(f => f.fieldname === fieldname);
-            if (field) {
-                field.custom_label = newLabel;
-            }
-        }
-    }
-    
     remove_field(fieldname) {
         this.selected_fields = this.selected_fields.filter(f => f.fieldname !== fieldname);
         this.update_field_display();
+        this.auto_refresh_preview();
+    }
+    
+    auto_refresh_preview() {
+        if (this.selected_fields.length > 0) {
+            setTimeout(() => this.refresh_preview(), 500);
+        }
     }
     
     add_filter() {
@@ -523,39 +571,22 @@ class UnifiedReportBuilder {
         const filterDiv = document.createElement('div');
         filterDiv.className = 'filter-item';
         filterDiv.innerHTML = `
-            <select class="form-control form-control-sm field-select">
+            <select class="form-control form-control-sm">
                 ${this.selected_fields.map(f => `<option value="${f.fieldname}">${f.custom_label}</option>`).join('')}
             </select>
-            <select class="form-control form-control-sm operator-select">
+            <select class="form-control form-control-sm">
                 <option value="=">Equals</option>
                 <option value="!=">Not Equals</option>
                 <option value="like">Contains</option>
-                <option value="not like">Does Not Contain</option>
                 <option value=">">Greater Than</option>
                 <option value="<">Less Than</option>
-                <option value=">=">Greater or Equal</option>
-                <option value="<=">Less or Equal</option>
-                <option value="is">Is Empty</option>
-                <option value="is not">Is Not Empty</option>
             </select>
-            <input type="text" class="form-control form-control-sm filter-value" placeholder="Value">
+            <input type="text" class="form-control form-control-sm" placeholder="Value">
             <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
                 <i class="fa fa-times"></i>
             </button>
         `;
         container.appendChild(filterDiv);
-        
-        // Handle empty value operators
-        const operatorSelect = filterDiv.querySelector('.operator-select');
-        const valueInput = filterDiv.querySelector('.filter-value');
-        
-        operatorSelect.addEventListener('change', () => {
-            const isEmptyCheck = ['is', 'is not'].includes(operatorSelect.value);
-            valueInput.style.display = isEmptyCheck ? 'none' : 'block';
-            if (isEmptyCheck) {
-                valueInput.value = '';
-            }
-        });
     }
     
     add_sort() {
@@ -582,30 +613,57 @@ class UnifiedReportBuilder {
         container.appendChild(sortDiv);
     }
     
+    async refresh_preview() {
+        if (!this.selected_table || !this.selected_fields.length) {
+            document.getElementById('preview-content').innerHTML = `
+                <div class="preview-placeholder">
+                    <i class="fa fa-chart-bar fa-3x text-muted"></i>
+                    <p class="text-muted mt-2">Select table and fields to see preview</p>
+                </div>
+            `;
+            return;
+        }
+        
+        try {
+            document.getElementById('preview-content').innerHTML = '<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading preview...</div>';
+            
+            const config = this.build_report_config();
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.report_builder_api.execute_report',
+                args: {
+                    report_config: config,
+                    view_options: { page_size: 10 }
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                this.display_preview(response.message);
+            } else {
+                throw new Error(response.message?.error || 'Failed to execute report');
+            }
+        } catch (error) {
+            console.error('Error refreshing preview:', error);
+            document.getElementById('preview-content').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fa fa-exclamation-triangle"></i>
+                    Error: ${error.message}
+                </div>
+            `;
+        }
+    }
+    
     build_report_config() {
         // Build filters
         const filters = [];
         document.querySelectorAll('.filter-item').forEach(item => {
-            const fieldSelect = item.querySelector('.field-select');
-            const operatorSelect = item.querySelector('.operator-select');
-            const valueInput = item.querySelector('.filter-value');
-            
-            if (fieldSelect && fieldSelect.value) {
-                const operator = operatorSelect.value;
-                let value = valueInput.value;
-                
-                // Handle empty value checks
-                if (['is', 'is not'].includes(operator)) {
-                    value = ''; // Empty value for these operators
-                }
-                
-                if (operator && (value || ['is', 'is not'].includes(operator))) {
-                    filters.push({
-                        field: fieldSelect.value,
-                        operator: operator,
-                        value: value
-                    });
-                }
+            const selects = item.querySelectorAll('select');
+            const input = item.querySelector('input');
+            if (selects[0].value && input.value) {
+                filters.push({
+                    field: selects[0].value,
+                    operator: selects[1].value,
+                    value: input.value
+                });
             }
         });
         
@@ -613,12 +671,10 @@ class UnifiedReportBuilder {
         const sort = [];
         document.querySelectorAll('.sort-item').forEach(item => {
             const selects = item.querySelectorAll('select');
-            if (selects[0].value) {
-                sort.push({
-                    field: selects[0].value,
-                    direction: selects[1].value
-                });
-            }
+            sort.push({
+                field: selects[0].value,
+                direction: selects[1].value
+            });
         });
         
         return {
@@ -629,9 +685,53 @@ class UnifiedReportBuilder {
         };
     }
     
+    display_preview(data) {
+        if (!data.data || data.data.length === 0) {
+            document.getElementById('preview-content').innerHTML = `
+                <div class="alert alert-info">
+                    <i class="fa fa-info-circle"></i>
+                    No data found with current configuration
+                </div>
+            `;
+            return;
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            ${this.selected_fields.map(field => `<th>${field.custom_label}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.data.slice(0, 5).forEach(record => {
+            html += '<tr>';
+            this.selected_fields.forEach(field => {
+                const value = record[field.fieldname] || '';
+                html += `<td>${value}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted mt-2">
+                <i class="fa fa-info-circle"></i>
+                Showing first 5 of ${data.total} records
+            </p>
+        `;
+        
+        document.getElementById('preview-content').innerHTML = html;
+    }
+    
     async show_preview_dialog() {
         if (!this.selected_table || !this.selected_fields.length) {
-            frappe.msgprint('Please select fields first');
+            frappe.msgprint('Please select table and fields first');
             return;
         }
         
@@ -641,7 +741,7 @@ class UnifiedReportBuilder {
                 method: 'flansa.flansa_core.api.report_builder_api.execute_report',
                 args: {
                     report_config: config,
-                    view_options: { page_size: 100 }
+                    view_options: { page_size: 50 }
                 }
             });
             
@@ -651,7 +751,7 @@ class UnifiedReportBuilder {
                 throw new Error(response.message?.error || 'Failed to execute report');
             }
         } catch (error) {
-            console.error('Error loading preview:', error);
+            console.error('Error loading full preview:', error);
             frappe.msgprint('Error loading preview: ' + error.message);
         }
     }
@@ -727,7 +827,7 @@ class UnifiedReportBuilder {
         }
         
         if (!this.selected_table || !this.selected_fields.length) {
-            frappe.msgprint('Please select fields');
+            frappe.msgprint('Please select table and fields');
             return;
         }
         
@@ -738,16 +838,18 @@ class UnifiedReportBuilder {
                 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.save_report';
             
             const args = {
-                report_title: title,
+                title: title,
                 description: description,
                 base_table: this.selected_table,
-                report_type: 'Table',
-                report_config: config,
+                config: config,
                 is_public: isPublic ? 1 : 0
             };
             
             if (this.edit_report_id) {
                 args.report_id = this.edit_report_id;
+                args.report_title = title;
+                args.report_type = 'custom';
+                args.report_config = config;
             }
             
             const response = await frappe.call({ method, args });
@@ -819,6 +921,7 @@ class UnifiedReportBuilder {
                 document.getElementById('make-public').checked = report.is_public || false;
                 
                 // Set table
+                document.getElementById('table-select').value = report.base_table;
                 this.selected_table = report.base_table;
                 
                 // Load fields and populate selection
@@ -848,10 +951,21 @@ class UnifiedReportBuilder {
                 
                 // Show delete button
                 document.getElementById('delete-report').style.display = 'inline-block';
+                
+                // Refresh preview
+                this.refresh_preview();
             }
         } catch (error) {
             console.error('Error loading existing report:', error);
         }
+    }
+    
+    clear_fields() {
+        document.getElementById('available-fields').innerHTML = '<p class="text-muted">Select a table first</p>';
+        document.getElementById('selected-fields').innerHTML = '<p class="text-muted">No fields selected</p>';
+        document.getElementById('field-count').textContent = '0';
+        this.selected_fields = [];
+        this.available_fields = {};
     }
 }
 
