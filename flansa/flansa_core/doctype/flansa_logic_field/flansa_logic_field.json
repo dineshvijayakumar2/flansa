@@ -1,0 +1,210 @@
+{
+ "actions": [],
+ "allow_copy": 0,
+ "allow_events_in_timeline": 0,
+ "allow_guest_to_view": 0,
+ "allow_import": 0,
+ "allow_rename": 1,
+ "autoname": "format:FL-{#####}",
+ "beta": 0,
+ "creation": "2025-08-19 16:00:00.000000",
+ "default_view": "List",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "basic_details_section",
+  "field_name",
+  "field_label",
+  "table_name",
+  "column_break_4",
+  "field_type",
+  "is_active",
+  "tenant_id",
+  "logic_configuration_section",
+  "logic_expression",
+  "field_dependencies",
+  "column_break_9",
+  "calculation_type",
+  "update_frequency",
+  "cache_result",
+  "testing_section",
+  "test_data",
+  "test_result",
+  "column_break_15",
+  "last_calculated",
+  "calculation_time_ms",
+  "error_details"
+ ],
+ "fields": [
+  {
+   "fieldname": "basic_details_section",
+   "fieldtype": "Section Break",
+   "label": "Basic Details"
+  },
+  {
+   "fieldname": "field_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Field Name",
+   "reqd": 1
+  },
+  {
+   "fieldname": "field_label",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Field Label",
+   "reqd": 1
+  },
+  {
+   "fieldname": "table_name",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Table",
+   "options": "Flansa Table",
+   "reqd": 1
+  },
+  {
+   "fieldname": "column_break_4",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Data",
+   "fieldname": "field_type",
+   "fieldtype": "Select",
+   "label": "Field Type",
+   "options": "Data\nInt\nFloat\nCurrency\nPercent\nCheck\nDate\nDatetime\nText\nLong Text"
+  },
+  {
+   "default": "1",
+   "fieldname": "is_active",
+   "fieldtype": "Check",
+   "in_list_view": 1,
+   "label": "Is Active"
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "label": "Tenant ID",
+   "read_only": 1
+  },
+  {
+   "fieldname": "logic_configuration_section",
+   "fieldtype": "Section Break",
+   "label": "Logic Configuration"
+  },
+  {
+   "fieldname": "logic_expression",
+   "fieldtype": "Code",
+   "label": "Logic Expression",
+   "reqd": 1
+  },
+  {
+   "fieldname": "field_dependencies",
+   "fieldtype": "Small Text",
+   "label": "Field Dependencies"
+  },
+  {
+   "fieldname": "column_break_9",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "Formula",
+   "fieldname": "calculation_type",
+   "fieldtype": "Select",
+   "label": "Calculation Type",
+   "options": "Formula\nSummary\nLookup\nConditional\nCustom"
+  },
+  {
+   "default": "On Change",
+   "fieldname": "update_frequency",
+   "fieldtype": "Select",
+   "label": "Update Frequency",
+   "options": "On Change\nReal Time\nScheduled\nManual"
+  },
+  {
+   "default": "1",
+   "fieldname": "cache_result",
+   "fieldtype": "Check",
+   "label": "Cache Result"
+  },
+  {
+   "fieldname": "testing_section",
+   "fieldtype": "Section Break",
+   "label": "Testing & Monitoring"
+  },
+  {
+   "fieldname": "test_data",
+   "fieldtype": "Code",
+   "label": "Test Data (JSON)"
+  },
+  {
+   "fieldname": "test_result",
+   "fieldtype": "Data",
+   "label": "Test Result",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_15",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "last_calculated",
+   "fieldtype": "Datetime",
+   "label": "Last Calculated",
+   "read_only": 1
+  },
+  {
+   "fieldname": "calculation_time_ms",
+   "fieldtype": "Int",
+   "label": "Calculation Time (ms)",
+   "read_only": 1
+  },
+  {
+   "fieldname": "error_details",
+   "fieldtype": "Text",
+   "label": "Error Details",
+   "read_only": 1
+  }
+ ],
+ "has_web_view": 0,
+ "hide_heading": 0,
+ "hide_toolbar": 0,
+ "idx": 0,
+ "image_view": 0,
+ "in_create": 0,
+ "is_submittable": 0,
+ "issingle": 0,
+ "istable": 0,
+ "max_attachments": 0,
+ "modified": "2025-08-19 16:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "Flansa Logic Field",
+ "naming_rule": "Expression",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "quick_entry": 0,
+ "read_only": 0,
+ "read_only_onload": 0,
+ "show_name_in_global_search": 0,
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "title_field": "field_label",
+ "track_changes": 1,
+ "track_seen": 0,
+ "track_views": 0
+}

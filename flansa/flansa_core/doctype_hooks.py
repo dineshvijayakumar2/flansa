@@ -8,6 +8,10 @@ def calculate_logic_fields(doc, method=None):
     """Calculate Logic Fields for any DocType on save/load"""
     
     try:
+        # Check if Flansa Logic Field DocType exists
+        if not frappe.db.exists("DocType", "Flansa Logic Field"):
+            return
+            
         # Get Logic Fields for this DocType
         logic_fields = frappe.get_all("Flansa Logic Field", 
                                      filters={
@@ -61,6 +65,10 @@ def validate_logic_fields(doc, method=None):
     """Prevent manual editing of Logic Fields"""
     
     try:
+        # Check if Flansa Logic Field DocType exists
+        if not frappe.db.exists("DocType", "Flansa Logic Field"):
+            return
+            
         # Get Logic Fields for this DocType
         logic_fields = frappe.get_all("Flansa Logic Field", 
                                      filters={
