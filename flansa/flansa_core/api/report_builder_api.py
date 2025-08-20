@@ -8,6 +8,25 @@ filtering, sorting, and multiple view modes including gallery view.
 
 import frappe
 import json
+
+def get_period_expression(field, period):
+    """
+    Generate SQL expression for time period grouping
+    """
+    field_expr = f"`{field}`"
+    
+    if period == 'year':
+        return f"YEAR({field_expr})"
+    elif period == 'month':
+        return f"DATE_FORMAT({field_expr}, '%Y-%m')"
+    elif period == 'week':
+        return f"YEARWEEK({field_expr}, 1)"  # Week starting Monday
+    elif period == 'day':
+        return f"DATE({field_expr})"
+    elif period == 'hour':
+        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H:00:00')"
+    else:
+        return field_expr  # Fallback to exact value
 import re
 from frappe import _
 from frappe.utils import now
@@ -321,6 +340,336 @@ def get_filter_operators():
         }
     }
 
+def execute_grouped_query(doctype_name, query_fields, filters, grouping_config, order_by, start, page_size, field_map):
+    """
+    Execute a grouped query with aggregation
+    """
+    try:
+        # Build SQL query with GROUP BY
+        group_fields = []
+        select_parts = []
+        has_aggregation = False
+        
+        # First, process all grouping fields
+        for group in grouping_config:
+            field = group['field']
+            aggregate = group.get('aggregate', 'group')
+            period = group.get('period', 'exact')  # Default to exact value
+            
+            # Handle time period grouping for Date/Datetime fields
+            field_config = field_map.get(field, {})
+            field_type = field_config.get('fieldtype', '')
+            
+            # Fallback: check DocType meta for field type if not in field_map
+            if not field_type:
+                try:
+                    meta = frappe.get_meta(doctype_name)
+                    if meta.has_field(field):
+                        field_type = meta.get_field(field).fieldtype
+                except Exception:
+                    pass
+            
+            frappe.logger().debug(f"Group field {field}: period={period}, fieldtype={field_type}")
+            
+            if period != 'exact' and field_type in ['Date', 'Datetime']:
+                # Generate period-based SQL expression
+                period_expression = get_period_expression(field, period)
+                group_alias = f"{field}_period"
+                
+                frappe.logger().debug(f"Using period expression: {period_expression}")
+                
+                if f"`{group_alias}`" not in group_fields:
+                    group_fields.append(f"`{group_alias}`")
+                    select_parts.append(f"{period_expression} as `{group_alias}`")
+            else:
+                # Always add the grouping field as-is for exact matching
+                if f"`{field}`" not in group_fields:
+                    group_fields.append(f"`{field}`")
+                    select_parts.append(f"`{field}`")
+            
+            # Handle different aggregation types
+            if aggregate == 'count':
+                # Add count column
+                select_parts.append(f"COUNT(*) as `_count`")
+                has_aggregation = True
+            elif aggregate in ['sum', 'avg', 'min', 'max']:
+                # Find numeric fields to aggregate
+                numeric_fields_found = False
+                for qfield in query_fields:
+                    if qfield != field and field_map.get(qfield, {}).get('fieldtype') in ['Int', 'Float', 'Currency', 'Percent']:
+                        select_parts.append(f"{aggregate.upper()}(`{qfield}`) as `{qfield}_{aggregate}`")
+                        numeric_fields_found = True
+                        has_aggregation = True
+                
+                # If no numeric fields found but aggregation requested, at least count
+                if not numeric_fields_found and aggregate != 'group':
+                    select_parts.append(f"COUNT(*) as `_count`")
+                    has_aggregation = True
+        
+        # If we have aggregation, we can only include grouped fields and aggregated values
+        # If no aggregation (group only), we need to include all grouped fields in SELECT
+        if has_aggregation:
+            # For aggregated queries, only grouped fields and aggregates are allowed
+            # We already have them in select_parts
+            pass
+        else:
+            # For GROUP BY without aggregation, add other non-grouped fields 
+            # But this might cause SQL errors if not all fields are in GROUP BY
+            # So we'll add them to group_fields too
+            for field in query_fields:
+                if f"`{field}`" not in select_parts:
+                    select_parts.append(f"`{field}`")
+                    if f"`{field}`" not in group_fields:
+                        group_fields.append(f"`{field}`")
+        
+        # Build WHERE clause from filters
+        where_conditions = []
+        for field, condition in filters.items():
+            if isinstance(condition, list) and len(condition) == 2:
+                operator, value = condition
+                if operator == "like":
+                    where_conditions.append(f"`{field}` LIKE %s")
+                elif operator == "not like":
+                    where_conditions.append(f"`{field}` NOT LIKE %s")
+                elif operator == "in":
+                    placeholders = ', '.join(['%s'] * len(value))
+                    where_conditions.append(f"`{field}` IN ({placeholders})")
+                elif operator == "not in":
+                    placeholders = ', '.join(['%s'] * len(value))
+                    where_conditions.append(f"`{field}` NOT IN ({placeholders})")
+                elif operator == "between" and isinstance(value, list) and len(value) == 2:
+                    where_conditions.append(f"`{field}` BETWEEN %s AND %s")
+                else:
+                    where_conditions.append(f"`{field}` {operator} %s")
+            else:
+                where_conditions.append(f"`{field}` = %s")
+        
+        # Build the complete SQL query
+        table_name = f"`tab{doctype_name}`"
+        select_clause = "SELECT " + ", ".join(select_parts)
+        from_clause = f" FROM {table_name}"
+        where_clause = " WHERE " + " AND ".join(where_conditions) if where_conditions else ""
+        group_clause = " GROUP BY " + ", ".join(group_fields) if group_fields else ""
+        order_clause = f" ORDER BY {order_by}" if order_by else ""
+        limit_clause = f" LIMIT {page_size} OFFSET {start}"
+        
+        sql = select_clause + from_clause + where_clause + group_clause + order_clause + limit_clause
+        
+        # Prepare values for parameterized query
+        values = []
+        for field, condition in filters.items():
+            if isinstance(condition, list) and len(condition) == 2:
+                operator, value = condition
+                if operator in ["in", "not in"]:
+                    values.extend(value)
+                elif operator == "between" and isinstance(value, list):
+                    values.extend(value)
+                else:
+                    values.append(value)
+            else:
+                values.append(condition)
+        
+        # Log the query for debugging
+        frappe.logger().info(f"Grouped Query SQL: {sql}")
+        frappe.logger().info(f"Grouped Query Values: {values}")
+        
+        # Execute the query
+        result = frappe.db.sql(sql, values, as_dict=True)
+        
+        frappe.logger().info(f"Grouped Query Result: {len(result)} rows")
+        if result:
+            frappe.logger().info(f"First row keys: {list(result[0].keys())}")
+        
+        return result
+        
+    except Exception as e:
+        frappe.log_error(f"Error executing grouped query: {str(e)} | SQL: {sql} | Values: {values}", "Report Builder Grouping")
+        frappe.logger().error(f"Grouping query failed: {str(e)}")
+        frappe.logger().error(f"Failed SQL: {sql}")
+        frappe.logger().error(f"Failed Values: {values}")
+        
+        # Fallback to regular query
+        return frappe.get_all(doctype_name,
+            fields=query_fields,
+            filters=filters,
+            limit_start=start,
+            limit_page_length=page_size,
+            order_by=order_by
+        )
+
+def execute_grouped_report(doctype_name, query_fields, filters, grouping_config, order_by, start, page_size, field_map, selected_fields):
+    """
+    Execute a grouped report and return data structured for modern grouped UI
+    """
+    try:
+        # For grouped reports, we need to execute two queries:
+        # 1. Aggregated query for group summaries
+        # 2. Detail query for individual records in each group
+        
+        main_group = grouping_config[0]  # Use first grouping for now
+        group_field = main_group['field']
+        aggregate_type = main_group.get('aggregate', 'count')
+        period = main_group.get('period', 'exact')
+        
+        # Determine the actual field/expression to group by
+        field_config = field_map.get(group_field, {})
+        field_type = field_config.get('fieldtype', '')
+        
+        # Check selected_fields first
+        if not field_type and selected_fields:
+            field_info = next((f for f in selected_fields if f['fieldname'] == group_field), None)
+            if field_info:
+                field_type = field_info.get('fieldtype', '')
+        
+        # Fallback: check DocType meta for field type
+        if not field_type:
+            try:
+                meta = frappe.get_meta(doctype_name)
+                if meta.has_field(group_field):
+                    field_type = meta.get_field(group_field).fieldtype
+            except Exception:
+                pass
+                
+        frappe.logger().debug(f"Field type detection: {group_field} -> {field_type} (period: {period})")
+        
+        # Use period expression if applicable
+        if period != 'exact' and field_type in ['Date', 'Datetime']:
+            group_expression = get_period_expression(group_field, period)
+            group_alias = f"{group_field}_period"
+        else:
+            group_expression = f"`{group_field}`"
+            group_alias = group_field
+            
+        frappe.logger().debug(f"Grouped report using expression: {group_expression}")
+        
+        # Query 1: Get group summaries
+        if aggregate_type == 'count':
+            summary_sql = f"""
+                SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count
+                FROM `tab{doctype_name}`
+                WHERE 1=1
+            """
+        elif aggregate_type in ['sum', 'avg', 'min', 'max']:
+            # Find numeric fields to aggregate
+            numeric_fields = [f for f in query_fields if field_map.get(f, {}).get('fieldtype') in ['Int', 'Float', 'Currency']]
+            if numeric_fields:
+                agg_field = numeric_fields[0]  # Use first numeric field
+                summary_sql = f"""
+                    SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count, {aggregate_type.upper()}(`{agg_field}`) as group_aggregate
+                    FROM `tab{doctype_name}`
+                    WHERE 1=1
+                """
+            else:
+                summary_sql = f"""
+                    SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count
+                    FROM `tab{doctype_name}`
+                    WHERE 1=1
+                """
+        else:
+            summary_sql = f"""
+                SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count
+                FROM `tab{doctype_name}`
+                WHERE 1=1
+            """
+        
+        # Add filters to summary query
+        filter_conditions = []
+        filter_values = []
+        for field, condition in filters.items():
+            if isinstance(condition, list) and len(condition) == 2:
+                operator, value = condition
+                if operator == "like":
+                    filter_conditions.append(f"`{field}` LIKE %s")
+                    filter_values.append(value)
+                elif operator in ["=", "!=", ">", "<", ">=", "<="]:
+                    filter_conditions.append(f"`{field}` {operator} %s")
+                    filter_values.append(value)
+        
+        if filter_conditions:
+            summary_sql += " AND " + " AND ".join(filter_conditions)
+        
+        summary_sql += f" GROUP BY {group_expression} ORDER BY {group_expression}"
+        
+        # Execute summary query
+        group_summaries = frappe.db.sql(summary_sql, filter_values, as_dict=True)
+        
+        # Query 2: Get detail records for each group (limited for performance)
+        groups_data = []
+        for summary in group_summaries[:20]:  # Limit to first 20 groups for performance
+            group_value = summary[group_alias]
+            
+            # For period-based grouping, we need to filter using the same period expression
+            detail_filters = dict(filters)
+            if period != 'exact' and field_type in ['Date', 'Datetime']:
+                # Get all records and filter by period expression in SQL
+                # Use a custom WHERE clause with the period expression
+                detail_where = f"{group_expression} = %s"
+                detail_sql = f"""
+                    SELECT {', '.join([f'`{f}`' for f in query_fields])}
+                    FROM `tab{doctype_name}`
+                    WHERE {detail_where}
+                """
+                # Add existing filters
+                detail_filter_values = [group_value]
+                if filter_conditions:
+                    detail_sql += " AND " + " AND ".join(filter_conditions)
+                    detail_filter_values.extend(filter_values)
+                
+                detail_sql += f" ORDER BY {order_by or 'creation desc'} LIMIT 10"
+                detail_records = frappe.db.sql(detail_sql, detail_filter_values, as_dict=True)
+            else:
+                # Exact value matching
+                detail_filters[group_field] = group_value
+                detail_records = frappe.get_all(doctype_name,
+                    fields=query_fields,
+                    filters=detail_filters,
+                    limit_page_length=10,  # Limit detail records per group
+                    order_by=order_by or "creation desc"
+                )
+            
+            # Format group data with correct label from alias
+            group_data = {
+                'group_field': group_field,
+                'group_value': group_value,
+                'group_label': group_value or '(Empty)',  # Use the actual aliased value
+                'count': summary.get('group_count', 0),
+                'aggregate': summary.get('group_aggregate') if 'group_aggregate' in summary else None,
+                'aggregate_type': aggregate_type if aggregate_type != 'count' else None,
+                'records': detail_records,
+                'has_more': len(detail_records) >= 10  # Indicate if there are more records
+            }
+            groups_data.append(group_data)
+        
+        # Calculate totals
+        total_records = sum(g['count'] for g in groups_data)
+        
+        return {
+            "success": True,
+            "is_grouped": True,
+            "grouping": {
+                'field': group_field,
+                'field_label': next((f.get('custom_label', f.get('field_label', f['fieldname'])) for f in selected_fields if f['fieldname'] == group_field), group_field),
+                'aggregate': aggregate_type
+            },
+            "groups": groups_data,
+            "total": total_records,
+            "total_groups": len(groups_data),
+            "fields": selected_fields  # Include field metadata for UI
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error executing grouped report: {str(e)}", "Grouped Report")
+        
+        # Fallback to regular grouping
+        records = execute_grouped_query(doctype_name, query_fields, filters, grouping_config, order_by, start, page_size, field_map)
+        
+        return {
+            "success": True,
+            "is_grouped": False,  # Fallback to flat view
+            "data": records,
+            "total": len(records)
+        }
+
 def process_image_field_value(image_value):
     """Process image field value to ensure it's in the correct format for frontend"""
     try:
@@ -383,6 +732,48 @@ def process_image_field_value(image_value):
     except Exception as e:
         frappe.logger().error(f"Error processing image field value {image_value}: {str(e)}")
         return None
+
+@frappe.whitelist()
+def test_period_grouping():
+    """Test method for period-based grouping"""
+    try:
+        # Find a table to test with
+        tables = frappe.get_all("Flansa Table", limit=1)
+        if not tables:
+            return {"success": False, "error": "No tables available"}
+            
+        table_doc = frappe.get_doc("Flansa Table", tables[0].name)
+        doctype_name = table_doc.doctype_name
+        
+        # Check if doctype has data
+        record_count = frappe.db.count(doctype_name)
+        if record_count == 0:
+            return {"success": False, "error": "No records to test with"}
+            
+        # Test period grouping
+        query_fields = ["name", "creation"]
+        filters = {}
+        grouping_config = [{"field": "creation", "aggregate": "count", "period": "day"}]
+        selected_fields = [
+            {"fieldname": "name", "fieldtype": "Data", "field_label": "Name"},
+            {"fieldname": "creation", "fieldtype": "Datetime", "field_label": "Created"}
+        ]
+        
+        result = execute_grouped_report(
+            doctype_name, query_fields, filters, grouping_config,
+            "creation desc", 0, 50, {}, selected_fields
+        )
+        
+        return {
+            "success": True,
+            "doctype_tested": doctype_name,
+            "record_count": record_count,
+            "grouping_result": result
+        }
+        
+    except Exception as e:
+        import traceback
+        return {"success": False, "error": str(e), "traceback": traceback.format_exc()}
 
 @frappe.whitelist()
 def execute_report(report_config, view_options=None):
@@ -514,14 +905,34 @@ def execute_report(report_config, view_options=None):
                 order_parts.append(f"`{sort_item['field']}` {direction}")
             order_by = ", ".join(order_parts)
         
-        # Execute main query
-        records = frappe.get_all(doctype_name,
-            fields=query_fields,
-            filters=filters,
-            limit_start=start,
-            limit_page_length=page_size,
-            order_by=order_by
-        )
+        # Check if grouping is requested
+        grouping_config = report_config.get("grouping", [])
+        
+        frappe.logger().info(f"Grouping config: {grouping_config}")
+        
+        if grouping_config:
+            frappe.logger().info("Executing grouped query")
+            # Execute grouped query and return grouped structure
+            return execute_grouped_report(
+                doctype_name, 
+                query_fields, 
+                filters, 
+                grouping_config,
+                order_by,
+                start,
+                page_size,
+                field_map,
+                selected_fields
+            )
+        else:
+            # Execute main query
+            records = frappe.get_all(doctype_name,
+                fields=query_fields,
+                filters=filters,
+                limit_start=start,
+                limit_page_length=page_size,
+                order_by=order_by
+            )
         
         # Get total count for pagination
         total_count = frappe.db.count(doctype_name, filters)

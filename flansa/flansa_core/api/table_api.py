@@ -44,6 +44,11 @@ def get_tables_list(app_name=None):
         }
 
 @frappe.whitelist()
+def get_tables(app_name=None):
+    """Get list of Flansa tables - alias for get_tables_list for compatibility"""
+    return get_tables_list(app_name)
+
+@frappe.whitelist()
 def get_table_info(table_name):
     """Get detailed information about a specific table"""
     

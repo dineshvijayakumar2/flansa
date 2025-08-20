@@ -1,3 +1,15 @@
+// Load shared FlansaReportRenderer if not already available
+if (!window.FlansaReportRenderer) {
+    console.log('Loading FlansaReportRenderer in report viewer...');
+    // Use synchronous loading to ensure availability
+    try {
+        frappe.require('/assets/flansa/js/flansa_report_renderer.js');
+        console.log('FlansaReportRenderer loaded in report viewer successfully');
+    } catch (error) {
+        console.warn('Could not load FlansaReportRenderer in report viewer:', error);
+    }
+}
+
 class FlansaReportViewer {
     constructor(page = null) {
         this.page = page;
@@ -617,6 +629,7 @@ class FlansaReportViewer {
                             base_table: report.base_table,
                             selected_fields: selected_fields,
                             filters: report.config.filters || [],
+                            grouping: report.config.grouping || [], // Include grouping configuration
                             sort: report.config.sort || []
                         },
                         view_options: {
@@ -800,17 +813,28 @@ class FlansaReportViewer {
         // Update banner subtitle to include record count (use total unfiltered)
         this.update_banner_record_count();
         
-        if (!this.current_report_data.data || this.current_report_data.data.length === 0) {
+        // Check for data availability - handle both regular and grouped reports
+        const hasData = this.current_report_data.is_grouped ? 
+            (this.current_report_data.groups && this.current_report_data.groups.length > 0) :
+            (this.current_report_data.data && this.current_report_data.data.length > 0);
+            
+        if (!hasData) {
             this.show_no_results();
             return;
         }
         
         $('#report-content').show();
         
-        if (this.current_view === 'table') {
-            this.display_table_view();
-        } else if (this.current_view === 'tile') {
-            this.display_tile_view();
+        // Always use shared FlansaReportRenderer for consistent display (including grouped reports)
+        if (window.FlansaReportRenderer) {
+            this.display_with_shared_renderer();
+        } else {
+            // Fallback to legacy display methods
+            if (this.current_view === 'table') {
+                this.display_table_view();
+            } else if (this.current_view === 'tile') {
+                this.display_tile_view();
+            }
         }
     }
     
@@ -841,8 +865,19 @@ class FlansaReportViewer {
         
         thead.append(header_row);
         
+        // Check for data - handle both regular and grouped reports
+        const dataToDisplay = this.current_report_data.is_grouped ? 
+            (this.current_report_data.groups && this.current_report_data.groups.length > 0 ? 
+                this.current_report_data.groups.flatMap(group => group.records || []) : []) :
+            (this.current_report_data.data || []);
+            
+        if (dataToDisplay.length === 0) {
+            tbody.append('<tr><td colspan="100%" class="text-center text-muted">No data available</td></tr>');
+            return;
+        }
+        
         // Create rows  
-        this.current_report_data.data.forEach((record, recordIndex) => {
+        dataToDisplay.forEach((record) => {
             const row = $('<tr></tr>');
             this.current_report_config.selected_fields.forEach(field => {
                 const value = record[field.fieldname] || '';
@@ -1181,6 +1216,71 @@ class FlansaReportViewer {
         // Apply settings if in tile view
         if (this.current_view === 'tile') {
             this.apply_tile_settings();
+        }
+    }
+    
+    /**
+     * Display results using shared FlansaReportRenderer for consistency
+     */
+    display_with_shared_renderer() {
+        // Check if shared renderer is available
+        if (!window.FlansaReportRenderer || typeof window.FlansaReportRenderer.render !== 'function') {
+            console.warn('FlansaReportRenderer not available in report viewer, using fallback');
+            
+            // Use fallback display methods
+            if (this.current_view === 'table') {
+                this.display_table_view();
+            } else if (this.current_view === 'tile') {
+                this.display_tile_view();
+            }
+            return;
+        }
+        
+        // Prepare configuration for renderer
+        const config = {
+            showActions: this.should_show_action_buttons(),
+            tableClass: this.current_view === 'table' ? 'table table-striped table-hover' : 'table table-sm',
+            fields: this.current_report_config.selected_fields || [],
+            onRecordClick: this.current_view === 'table' ? null : (recordId) => {
+                this.view_record(recordId);
+            }
+        };
+        
+        try {
+            console.log('Report data for rendering:', this.current_report_data);
+            console.log('Is grouped?', this.current_report_data.is_grouped);
+            
+            // Generate HTML using shared renderer
+            const html = window.FlansaReportRenderer.render(this.current_report_data, config);
+            
+            // For grouped reports or regular table view, display in table container
+            if (this.current_view === 'table' || this.current_report_data.is_grouped) {
+                const tableContainer = $('#table-view');
+                tableContainer.empty().html(html);
+                tableContainer.show();
+                $('#tile-view').hide();
+                
+                // Set up action button handlers if function is available
+                if (typeof window.FlansaReportRenderer.setupActionHandlers === 'function') {
+                    window.FlansaReportRenderer.setupActionHandlers(
+                        tableContainer[0],
+                        (recordId) => this.view_record(recordId),
+                        (recordId) => this.edit_record(recordId)
+                    );
+                }
+            } else if (this.current_view === 'tile') {
+                // For tile view, fall back to existing implementation since renderer focuses on table/grouped views
+                this.display_tile_view();
+            }
+        } catch (error) {
+            console.error('Error using shared renderer:', error);
+            console.error('Report data:', this.current_report_data);
+            // Fall back to legacy methods
+            if (this.current_view === 'table') {
+                this.display_table_view();
+            } else if (this.current_view === 'tile') {
+                this.display_tile_view();
+            }
         }
     }
     

@@ -1,3 +1,15 @@
+// Load shared FlansaReportRenderer if not already available
+if (!window.FlansaReportRenderer) {
+    console.log('Loading FlansaReportRenderer in report builder...');
+    // Use synchronous loading to ensure availability
+    try {
+        frappe.require('/assets/flansa/js/flansa_report_renderer.js');
+        console.log('FlansaReportRenderer loaded successfully');
+    } catch (error) {
+        console.warn('Could not load FlansaReportRenderer:', error);
+    }
+}
+
 frappe.pages['flansa-unified-report-builder'].on_page_load = function(wrapper) {
     frappe.unified_report_builder = new UnifiedReportBuilder(wrapper);
 };
@@ -15,6 +27,7 @@ class UnifiedReportBuilder {
         this.available_fields = {};
         this.selected_fields = [];
         this.filters = [];
+        this.grouping = [];
         this.sorting = [];
         this.edit_report_id = null;
         this.source_context = null;
@@ -105,9 +118,9 @@ class UnifiedReportBuilder {
 
                 <!-- Filters & Sorting Section -->
                 <div class="section-card">
-                    <h5><i class="fa fa-filter text-warning"></i> Filters & Sorting</h5>
+                    <h5><i class="fa fa-filter text-warning"></i> Filters, Grouping & Sorting</h5>
                     <div class="row">
-                        <div class="col-md-6">
+                        <div class="col-md-4">
                             <h6>Filters</h6>
                             <div id="filters-container">
                                 <button class="btn btn-sm btn-outline-primary" id="add-filter">
@@ -115,8 +128,16 @@ class UnifiedReportBuilder {
                                 </button>
                             </div>
                         </div>
-                        <div class="col-md-6">
-                            <h6>Sorting</h6>
+                        <div class="col-md-4">
+                            <h6>Group By</h6>
+                            <div id="grouping-container">
+                                <button class="btn btn-sm btn-outline-primary" id="add-group">
+                                    <i class="fa fa-plus"></i> Add Grouping
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <h6>Sort By</h6>
                             <div id="sorting-container">
                                 <button class="btn btn-sm btn-outline-primary" id="add-sort">
                                     <i class="fa fa-plus"></i> Add Sort
@@ -252,7 +273,7 @@ class UnifiedReportBuilder {
                     letter-spacing: 0.5px;
                 }
                 
-                .filter-item, .sort-item {
+                .filter-item, .group-item, .sort-item {
                     display: flex;
                     align-items: center;
                     gap: 10px;
@@ -261,6 +282,16 @@ class UnifiedReportBuilder {
                     border: 1px solid #dee2e6;
                     border-radius: 6px;
                     margin-bottom: 10px;
+                }
+                
+                .filter-value-container {
+                    position: relative;
+                    min-width: 150px;
+                }
+                
+                .filter-value-container .filter-value,
+                .filter-value-container .filter-dropdown {
+                    width: 100%;
                 }
                 
                 .actions-card {
@@ -328,8 +359,9 @@ class UnifiedReportBuilder {
     }
     
     setup_event_handlers() {
-        // Add filter/sort buttons
+        // Add filter/group/sort buttons
         $(document).on('click', '#add-filter', () => this.add_filter());
+        $(document).on('click', '#add-group', () => this.add_group());
         $(document).on('click', '#add-sort', () => this.add_sort());
         
         // Preview and save
@@ -513,7 +545,44 @@ class UnifiedReportBuilder {
         this.update_field_display();
     }
     
-    add_filter() {
+    async get_field_options(field) {
+        /**
+         * Get dropdown options for Select and Link fields
+         */
+        try {
+            if (field.fieldtype === 'Select' && field.options) {
+                // Parse Select field options
+                const options = field.options.split('\n').filter(opt => opt.trim()).map(opt => ({
+                    value: opt.trim(),
+                    label: opt.trim()
+                }));
+                return options;
+            } else if (field.fieldtype === 'Link' && field.options) {
+                // Fetch Link field options from the linked DocType
+                const response = await frappe.call({
+                    method: 'frappe.desk.search.search_link',
+                    args: {
+                        doctype: field.options,
+                        txt: '',
+                        page_length: 20
+                    }
+                });
+                
+                if (response.message && response.message.length > 0) {
+                    return response.message.map(item => ({
+                        value: item.value,
+                        label: item.label || item.value
+                    }));
+                }
+            }
+            return [];
+        } catch (error) {
+            console.error('Error fetching field options:', error);
+            return [];
+        }
+    }
+    
+    add_filter(existingFilter = null) {
         if (!this.selected_fields.length) {
             frappe.msgprint('Please select fields first');
             return;
@@ -524,41 +593,167 @@ class UnifiedReportBuilder {
         filterDiv.className = 'filter-item';
         filterDiv.innerHTML = `
             <select class="form-control form-control-sm field-select">
-                ${this.selected_fields.map(f => `<option value="${f.fieldname}">${f.custom_label}</option>`).join('')}
+                ${this.selected_fields.map(f => `<option value="${f.fieldname}" ${existingFilter && existingFilter.field === f.fieldname ? 'selected' : ''}>${f.custom_label}</option>`).join('')}
             </select>
             <select class="form-control form-control-sm operator-select">
-                <option value="=">Equals</option>
-                <option value="!=">Not Equals</option>
-                <option value="like">Contains</option>
-                <option value="not like">Does Not Contain</option>
-                <option value=">">Greater Than</option>
-                <option value="<">Less Than</option>
-                <option value=">=">Greater or Equal</option>
-                <option value="<=">Less or Equal</option>
-                <option value="is">Is Empty</option>
-                <option value="is not">Is Not Empty</option>
+                <option value="=" ${existingFilter && existingFilter.operator === '=' ? 'selected' : ''}>Equals</option>
+                <option value="!=" ${existingFilter && existingFilter.operator === '!=' ? 'selected' : ''}>Not Equals</option>
+                <option value="like" ${existingFilter && existingFilter.operator === 'like' ? 'selected' : ''}>Contains</option>
+                <option value="not like" ${existingFilter && existingFilter.operator === 'not like' ? 'selected' : ''}>Does Not Contain</option>
+                <option value=">" ${existingFilter && existingFilter.operator === '>' ? 'selected' : ''}>Greater Than</option>
+                <option value="<" ${existingFilter && existingFilter.operator === '<' ? 'selected' : ''}>Less Than</option>
+                <option value=">=" ${existingFilter && existingFilter.operator === '>=' ? 'selected' : ''}>Greater or Equal</option>
+                <option value="<=" ${existingFilter && existingFilter.operator === '<=' ? 'selected' : ''}>Less or Equal</option>
+                <option value="is" ${existingFilter && existingFilter.operator === 'is' ? 'selected' : ''}>Is Empty</option>
+                <option value="is not" ${existingFilter && existingFilter.operator === 'is not' ? 'selected' : ''}>Is Not Empty</option>
             </select>
-            <input type="text" class="form-control form-control-sm filter-value" placeholder="Value">
+            <div class="filter-value-container">
+                <input type="text" class="form-control form-control-sm filter-value" placeholder="Value" value="${existingFilter ? existingFilter.value || '' : ''}">
+                <select class="form-control form-control-sm filter-dropdown" style="display: none;"></select>
+            </div>
             <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
                 <i class="fa fa-times"></i>
             </button>
         `;
         container.appendChild(filterDiv);
         
-        // Handle empty value operators
+        // Get references to elements
+        const fieldSelect = filterDiv.querySelector('.field-select');
         const operatorSelect = filterDiv.querySelector('.operator-select');
         const valueInput = filterDiv.querySelector('.filter-value');
+        const valueDropdown = filterDiv.querySelector('.filter-dropdown');
         
-        operatorSelect.addEventListener('change', () => {
+        // Handle field change to load dropdown options
+        const handleFieldChange = async () => {
+            const selectedFieldname = fieldSelect.value;
+            const selectedField = this.selected_fields.find(f => f.fieldname === selectedFieldname);
+            
+            if (selectedField && ['Select', 'Link'].includes(selectedField.fieldtype)) {
+                try {
+                    const options = await this.get_field_options(selectedField);
+                    if (options && options.length > 0) {
+                        // Build dropdown options with explicit empty value option
+                        let dropdownHTML = '<option value="__choose__">Choose...</option>';
+                        dropdownHTML += '<option value="" style="font-style: italic; color: #666;">(Empty/Blank)</option>';
+                        dropdownHTML += options.map(opt => `<option value="${opt.value}">${opt.label}</option>`).join('');
+                        
+                        valueDropdown.innerHTML = dropdownHTML;
+                        valueDropdown.style.display = 'block';
+                        valueInput.style.display = 'none';
+                        
+                        // Set existing value if provided
+                        if (existingFilter) {
+                            if (existingFilter.value === '') {
+                                // Explicitly select the empty option
+                                valueDropdown.value = '';
+                            } else if (existingFilter.value) {
+                                valueDropdown.value = existingFilter.value;
+                            } else {
+                                valueDropdown.value = '__choose__';
+                            }
+                        } else {
+                            valueDropdown.value = '__choose__';
+                        }
+                    } else {
+                        valueDropdown.style.display = 'none';
+                        valueInput.style.display = 'block';
+                    }
+                } catch (error) {
+                    console.error('Error loading field options:', error);
+                    valueDropdown.style.display = 'none';
+                    valueInput.style.display = 'block';
+                }
+            } else {
+                valueDropdown.style.display = 'none';
+                valueInput.style.display = 'block';
+            }
+        };
+        
+        // Handle operator change for empty value checks
+        const handleOperatorChange = () => {
             const isEmptyCheck = ['is', 'is not'].includes(operatorSelect.value);
-            valueInput.style.display = isEmptyCheck ? 'none' : 'block';
+            const valueContainer = filterDiv.querySelector('.filter-value-container');
+            valueContainer.style.display = isEmptyCheck ? 'none' : 'block';
             if (isEmptyCheck) {
                 valueInput.value = '';
+                valueDropdown.value = '';
             }
-        });
+        };
+        
+        // Add event listeners
+        fieldSelect.addEventListener('change', handleFieldChange);
+        operatorSelect.addEventListener('change', handleOperatorChange);
+        
+        // Initial setup
+        handleFieldChange();
+        handleOperatorChange();
     }
     
-    add_sort() {
+    add_group(existingGroup = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        const container = document.getElementById('grouping-container');
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'group-item';
+        
+        // Determine which fields can be grouped (usually non-numeric fields are good for grouping)
+        const groupableFields = this.selected_fields.filter(f => 
+            ['Data', 'Select', 'Link', 'Date', 'Datetime'].includes(f.fieldtype)
+        );
+        
+        if (groupableFields.length === 0) {
+            frappe.msgprint('No suitable fields for grouping. Select text, select, link or date fields.');
+            return;
+        }
+        
+        groupDiv.innerHTML = `
+            <select class="form-control form-control-sm group-field-select">
+                ${groupableFields.map(f => `<option value="${f.fieldname}" ${existingGroup && existingGroup.field === f.fieldname ? 'selected' : ''}>${f.custom_label}</option>`).join('')}
+            </select>
+            <select class="form-control form-control-sm group-period-select" style="display: none;">
+                <option value="exact" ${existingGroup && existingGroup.period === 'exact' ? 'selected' : ''}>Exact Value</option>
+                <option value="year" ${existingGroup && existingGroup.period === 'year' ? 'selected' : ''}>By Year</option>
+                <option value="month" ${existingGroup && existingGroup.period === 'month' ? 'selected' : ''}>By Month</option>
+                <option value="week" ${existingGroup && existingGroup.period === 'week' ? 'selected' : ''}>By Week</option>
+                <option value="day" ${existingGroup && existingGroup.period === 'day' ? 'selected' : ''}>By Day</option>
+                <option value="hour" ${existingGroup && existingGroup.period === 'hour' ? 'selected' : ''}>By Hour</option>
+            </select>
+            <select class="form-control form-control-sm group-aggregate-select">
+                <option value="group" ${existingGroup && existingGroup.aggregate === 'group' ? 'selected' : ''}>Group Only</option>
+                <option value="count" ${existingGroup && existingGroup.aggregate === 'count' ? 'selected' : ''}>Count Records</option>
+                <option value="sum" ${existingGroup && existingGroup.aggregate === 'sum' ? 'selected' : ''}>Sum Values</option>
+                <option value="avg" ${existingGroup && existingGroup.aggregate === 'avg' ? 'selected' : ''}>Average Values</option>
+                <option value="min" ${existingGroup && existingGroup.aggregate === 'min' ? 'selected' : ''}>Minimum Value</option>
+                <option value="max" ${existingGroup && existingGroup.aggregate === 'max' ? 'selected' : ''}>Maximum Value</option>
+            </select>
+            <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
+                <i class="fa fa-times"></i>
+            </button>
+        `;
+        
+        // Add event handler to show/hide time period options
+        const fieldSelect = groupDiv.querySelector('.group-field-select');
+        const periodSelect = groupDiv.querySelector('.group-period-select');
+        
+        const updatePeriodVisibility = () => {
+            const selectedField = groupableFields.find(f => f.fieldname === fieldSelect.value);
+            if (selectedField && ['Date', 'Datetime'].includes(selectedField.fieldtype)) {
+                periodSelect.style.display = 'block';
+            } else {
+                periodSelect.style.display = 'none';
+                periodSelect.value = 'exact'; // Reset to default
+            }
+        };
+        
+        fieldSelect.addEventListener('change', updatePeriodVisibility);
+        updatePeriodVisibility(); // Initialize on creation
+        container.appendChild(groupDiv);
+    }
+    
+    add_sort(existingSort = null) {
         if (!this.selected_fields.length) {
             frappe.msgprint('Please select fields first');
             return;
@@ -568,12 +763,12 @@ class UnifiedReportBuilder {
         const sortDiv = document.createElement('div');
         sortDiv.className = 'sort-item';
         sortDiv.innerHTML = `
-            <select class="form-control form-control-sm">
-                ${this.selected_fields.map(f => `<option value="${f.fieldname}">${f.custom_label}</option>`).join('')}
+            <select class="form-control form-control-sm sort-field-select">
+                ${this.selected_fields.map(f => `<option value="${f.fieldname}" ${existingSort && existingSort.field === f.fieldname ? 'selected' : ''}>${f.custom_label}</option>`).join('')}
             </select>
-            <select class="form-control form-control-sm">
-                <option value="asc">Ascending</option>
-                <option value="desc">Descending</option>
+            <select class="form-control form-control-sm sort-direction-select">
+                <option value="asc" ${existingSort && existingSort.direction === 'asc' ? 'selected' : ''}>Ascending</option>
+                <option value="desc" ${existingSort && existingSort.direction === 'desc' ? 'selected' : ''}>Descending</option>
             </select>
             <button class="btn btn-sm btn-outline-danger" onclick="this.parentElement.remove()">
                 <i class="fa fa-times"></i>
@@ -589,17 +784,31 @@ class UnifiedReportBuilder {
             const fieldSelect = item.querySelector('.field-select');
             const operatorSelect = item.querySelector('.operator-select');
             const valueInput = item.querySelector('.filter-value');
+            const valueDropdown = item.querySelector('.filter-dropdown');
             
             if (fieldSelect && fieldSelect.value) {
                 const operator = operatorSelect.value;
-                let value = valueInput.value;
+                let value = '';
+                
+                // Get value from dropdown or input
+                if (valueDropdown && valueDropdown.style.display !== 'none') {
+                    // Check if dropdown is visible and get its value
+                    if (valueDropdown.value === '__choose__') {
+                        // User hasn't selected anything, skip this filter
+                        return;
+                    }
+                    value = valueDropdown.value || '';  // Allow empty value
+                } else if (valueInput && valueInput.style.display !== 'none') {
+                    value = valueInput.value || '';  // Allow empty value
+                }
                 
                 // Handle empty value checks
                 if (['is', 'is not'].includes(operator)) {
                     value = ''; // Empty value for these operators
                 }
                 
-                if (operator && (value || ['is', 'is not'].includes(operator))) {
+                // Always add filter if operator is selected (even with empty value for '=' or '!=' operators)
+                if (operator) {
                     filters.push({
                         field: fieldSelect.value,
                         operator: operator,
@@ -612,12 +821,35 @@ class UnifiedReportBuilder {
         // Build sorting
         const sort = [];
         document.querySelectorAll('.sort-item').forEach(item => {
-            const selects = item.querySelectorAll('select');
-            if (selects[0].value) {
+            const fieldSelect = item.querySelector('.sort-field-select');
+            const directionSelect = item.querySelector('.sort-direction-select');
+            if (fieldSelect && fieldSelect.value) {
                 sort.push({
-                    field: selects[0].value,
-                    direction: selects[1].value
+                    field: fieldSelect.value,
+                    direction: directionSelect.value
                 });
+            }
+        });
+        
+        // Build grouping
+        const grouping = [];
+        document.querySelectorAll('.group-item').forEach(item => {
+            const fieldSelect = item.querySelector('.group-field-select');
+            const aggregateSelect = item.querySelector('.group-aggregate-select');
+            const periodSelect = item.querySelector('.group-period-select');
+            
+            if (fieldSelect && fieldSelect.value) {
+                const groupConfig = {
+                    field: fieldSelect.value,
+                    aggregate: aggregateSelect ? aggregateSelect.value : 'group'
+                };
+                
+                // Include period if it's visible (for Date/Datetime fields)
+                if (periodSelect && periodSelect.style.display !== 'none') {
+                    groupConfig.period = periodSelect.value;
+                }
+                
+                grouping.push(groupConfig);
             }
         });
         
@@ -625,6 +857,7 @@ class UnifiedReportBuilder {
             base_table: this.selected_table,
             selected_fields: this.selected_fields,
             filters: filters,
+            grouping: grouping,
             sort: sort
         };
     }
@@ -659,47 +892,25 @@ class UnifiedReportBuilder {
     display_full_preview_dialog(data) {
         const title = document.getElementById('report-title').value || 'Report Preview';
         
-        let tableHtml = `
-            <div class="table-responsive">
-                <table class="table table-striped table-hover">
-                    <thead class="thead-dark">
-                        <tr>
-                            ${this.selected_fields.map(field => `<th>${field.custom_label}</th>`).join('')}
-                        </tr>
-                    </thead>
-                    <tbody>
-        `;
+        let contentHtml;
         
-        if (data.data && data.data.length > 0) {
-            data.data.forEach(record => {
-                tableHtml += '<tr>';
-                this.selected_fields.forEach(field => {
-                    const value = record[field.fieldname] || '';
-                    tableHtml += `<td>${value}</td>`;
-                });
-                tableHtml += '</tr>';
+        // Use shared renderer for consistency if available
+        if (window.FlansaReportRenderer && typeof window.FlansaReportRenderer.render === 'function') {
+            contentHtml = window.FlansaReportRenderer.render(data, {
+                showActions: false,
+                fields: this.selected_fields,
+                tableClass: 'table table-striped table-hover'
             });
         } else {
-            tableHtml += `
-                <tr>
-                    <td colspan="${this.selected_fields.length}" class="text-center text-muted">
-                        No data found with current configuration
-                    </td>
-                </tr>
-            `;
+            // Fallback to legacy display methods
+            console.warn('FlansaReportRenderer not available, using fallback display');
+            
+            if (data.is_grouped && data.groups) {
+                contentHtml = this.build_grouped_view(data);
+            } else {
+                contentHtml = this.build_table_view(data);
+            }
         }
-        
-        tableHtml += `
-                    </tbody>
-                </table>
-            </div>
-            <div class="mt-3">
-                <p class="text-muted">
-                    <i class="fa fa-info-circle"></i>
-                    Showing ${data.data ? data.data.length : 0} of ${data.total || 0} records
-                </p>
-            </div>
-        `;
         
         const dialog = new frappe.ui.Dialog({
             title: title,
@@ -708,13 +919,113 @@ class UnifiedReportBuilder {
                 {
                     fieldtype: 'HTML',
                     fieldname: 'preview_content',
-                    options: tableHtml
+                    options: contentHtml
                 }
             ]
         });
         
         dialog.show();
     }
+    
+    /**
+     * Fallback method for grouped view when shared renderer not available
+     */
+    build_grouped_view(data) {
+        if (!data.groups || !Array.isArray(data.groups)) {
+            return '<p>No grouped data available</p>';
+        }
+        
+        let html = '<div class="grouped-report-fallback">';
+        
+        data.groups.forEach((group) => {
+            const groupLabel = group.group_label || '(Empty)';
+            const count = group.count || 0;
+            const aggregate = group.aggregate ? ` • ${group.aggregate_type}: ${parseFloat(group.aggregate).toFixed(2)}` : '';
+            
+            html += `
+                <div class="group-section" style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div class="group-header" style="background: #f8f9fa; padding: 15px; border-radius: 8px 8px 0 0;">
+                        <strong>${groupLabel}</strong> 
+                        <span style="color: #666;">(${count} records${aggregate})</span>
+                    </div>
+                    <div class="group-content" style="padding: 10px;">
+                        ${this.build_table_view({ data: group.records || [], fields: this.selected_fields })}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        return html;
+    }
+    
+    /**
+     * Fallback method for table view when shared renderer not available
+     */
+    build_table_view(data) {
+        if (!data.data || !Array.isArray(data.data)) {
+            return '<p>No data available</p>';
+        }
+        
+        const fields = data.fields || this.selected_fields || [];
+        
+        if (fields.length === 0) {
+            return '<p>No fields configured</p>';
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            ${fields.map(field => {
+                                const label = field.custom_label || field.field_label || field.label || field.fieldname;
+                                return `<th>${label}</th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.data.forEach(record => {
+            html += '<tr>';
+            fields.forEach(field => {
+                const value = record[field.fieldname] || '';
+                const formattedValue = this.format_fallback_value(value, field.fieldtype);
+                html += `<td>${formattedValue}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    /**
+     * Simple value formatting for fallback display
+     */
+    format_fallback_value(value, fieldtype) {
+        if (!value && value !== 0) return '';
+        
+        switch (fieldtype) {
+            case 'Currency':
+                return parseFloat(value).toFixed(2);
+            case 'Date':
+                return new Date(value).toLocaleDateString();
+            case 'Datetime':
+                return new Date(value).toLocaleString();
+            case 'Check':
+                return value ? '✓' : '✗';
+            default:
+                return String(value).length > 50 ? String(value).substring(0, 47) + '...' : String(value);
+        }
+    }
+    
     
     async save_report() {
         const title = document.getElementById('report-title').value;
@@ -844,6 +1155,27 @@ class UnifiedReportBuilder {
                     });
                     
                     this.update_field_display();
+                }
+                
+                // Restore filters if they exist
+                if (report.config && report.config.filters) {
+                    report.config.filters.forEach(filter => {
+                        this.add_filter(filter);
+                    });
+                }
+                
+                // Restore grouping if it exists
+                if (report.config && report.config.grouping) {
+                    report.config.grouping.forEach(group => {
+                        this.add_group(group);
+                    });
+                }
+                
+                // Restore sorting if it exists
+                if (report.config && report.config.sort) {
+                    report.config.sort.forEach(sort => {
+                        this.add_sort(sort);
+                    });
                 }
                 
                 // Show delete button

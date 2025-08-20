@@ -44,6 +44,7 @@ app_include_js = [
     # UI Components
     "/assets/flansa/js/flansa-header-manager.js",  # Modern header component system
     "/assets/flansa/js/flansa-unified-data-view.js",  # Unified data view system for tables and reports
+    "/assets/flansa/js/flansa_report_renderer.js",  # Shared report display component for consistency
     "/assets/flansa/js/flansa-theme-manager.js",
     "/assets/flansa/js/theme-migration.js",  # Temporary migration script
     "/assets/flansa/js/flansa-theme.js",
