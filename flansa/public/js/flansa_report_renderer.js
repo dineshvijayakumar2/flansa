@@ -150,10 +150,10 @@ window.FlansaReportRenderer = {
                 html += `
                     <td>
                         <div class="btn-group btn-group-sm">
-                            <button class="btn btn-outline-primary btn-sm view-record-btn" data-record-id="${recordId}" title="View">
+                            <button class="btn btn-outline-primary btn-sm view-record-btn" data-record-name="${recordId}" data-record-id="${recordId}" title="View">
                                 <i class="fa fa-eye"></i>
                             </button>
-                            <button class="btn btn-outline-secondary btn-sm edit-record-btn" data-record-id="${recordId}" title="Edit">
+                            <button class="btn btn-outline-secondary btn-sm edit-record-btn" data-record-name="${recordId}" data-record-id="${recordId}" title="Edit">
                                 <i class="fa fa-edit"></i>
                             </button>
                         </div>
@@ -255,10 +255,10 @@ window.FlansaReportRenderer = {
                     html += `
                         <td>
                             <div class="btn-group btn-group-sm">
-                                <button class="btn btn-outline-primary btn-sm view-record-btn" data-record-id="${recordId}" title="View">
+                                <button class="btn btn-outline-primary btn-sm view-record-btn" data-record-name="${recordId}" data-record-id="${recordId}" title="View">
                                     <i class="fa fa-eye"></i>
                                 </button>
-                                <button class="btn btn-outline-secondary btn-sm edit-record-btn" data-record-id="${recordId}" title="Edit">
+                                <button class="btn btn-outline-secondary btn-sm edit-record-btn" data-record-name="${recordId}" data-record-id="${recordId}" title="Edit">
                                     <i class="fa fa-edit"></i>
                                 </button>
                             </div>
@@ -374,10 +374,10 @@ window.FlansaReportRenderer = {
             if (!target) return;
             
             if (target.classList.contains('view-record-btn') && this.viewRecordHandler) {
-                const recordId = target.dataset.recordId;
+                const recordId = target.dataset.recordName || target.dataset.recordId;
                 this.viewRecordHandler(recordId);
             } else if (target.classList.contains('edit-record-btn') && this.editRecordHandler) {
-                const recordId = target.dataset.recordId;
+                const recordId = target.dataset.recordName || target.dataset.recordId;
                 this.editRecordHandler(recordId);
             }
         };

@@ -20,13 +20,34 @@ def get_period_expression(field, period):
     elif period == 'month':
         return f"DATE_FORMAT({field_expr}, '%Y-%m')"
     elif period == 'week':
-        return f"YEARWEEK({field_expr}, 1)"  # Week starting Monday
+        # Return the Monday of the week as a more intuitive grouping
+        return f"DATE_FORMAT(DATE_SUB({field_expr}, INTERVAL WEEKDAY({field_expr}) DAY), '%Y-%m-%d')"
     elif period == 'day':
         return f"DATE({field_expr})"
     elif period == 'hour':
         return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H:00:00')"
     else:
         return field_expr  # Fallback to exact value
+
+def get_period_where_condition(field, period, group_value):
+    """
+    Generate WHERE condition to match records for a specific period group
+    """
+    field_expr = f"`{field}`"
+    
+    if period == 'year':
+        return f"YEAR({field_expr}) = %s"
+    elif period == 'month':
+        return f"DATE_FORMAT({field_expr}, '%Y-%m') = %s"
+    elif period == 'week':
+        # Match all records in the same week (where Monday of week matches)
+        return f"DATE_FORMAT(DATE_SUB({field_expr}, INTERVAL WEEKDAY({field_expr}) DAY), '%Y-%m-%d') = %s"
+    elif period == 'day':
+        return f"DATE({field_expr}) = %s"
+    elif period == 'hour':
+        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H:00:00') = %s"
+    else:
+        return f"{field_expr} = %s"
 import re
 from frappe import _
 from frappe.utils import now
@@ -540,7 +561,8 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             group_expression = f"`{group_field}`"
             group_alias = group_field
             
-        frappe.logger().debug(f"Grouped report using expression: {group_expression}")
+        frappe.logger().info(f"🔍 Grouping Debug: field={group_field}, type={field_type}, period={period}")
+        frappe.logger().info(f"🔍 Group expression: {group_expression}, alias: {group_alias}")
         
         # Query 1: Get group summaries
         if aggregate_type == 'count':
@@ -591,7 +613,12 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
         summary_sql += f" GROUP BY {group_expression} ORDER BY {group_expression}"
         
         # Execute summary query
+        frappe.logger().info(f"🔍 Executing summary SQL: {summary_sql}")
+        frappe.logger().info(f"🔍 With values: {filter_values}")
         group_summaries = frappe.db.sql(summary_sql, filter_values, as_dict=True)
+        frappe.logger().info(f"🔍 Summary results: {len(group_summaries)} groups found")
+        if group_summaries:
+            frappe.logger().info(f"🔍 First summary: {group_summaries[0]}")
         
         # Query 2: Get detail records for each group (limited for performance)
         groups_data = []
@@ -601,9 +628,8 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             # For period-based grouping, we need to filter using the same period expression
             detail_filters = dict(filters)
             if period != 'exact' and field_type in ['Date', 'Datetime']:
-                # Get all records and filter by period expression in SQL
-                # Use a custom WHERE clause with the period expression
-                detail_where = f"{group_expression} = %s"
+                # Use the proper WHERE condition for period matching
+                detail_where = get_period_where_condition(group_field, period, group_value)
                 detail_sql = f"""
                     SELECT {', '.join([f'`{f}`' for f in query_fields])}
                     FROM `tab{doctype_name}`
@@ -616,6 +642,8 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
                     detail_filter_values.extend(filter_values)
                 
                 detail_sql += f" ORDER BY {order_by or 'creation desc'} LIMIT 10"
+                frappe.logger().info(f"🔍 Detail SQL: {detail_sql}")
+                frappe.logger().info(f"🔍 Detail values: {detail_filter_values}")
                 detail_records = frappe.db.sql(detail_sql, detail_filter_values, as_dict=True)
             else:
                 # Exact value matching
@@ -628,10 +656,24 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
                 )
             
             # Format group data with correct label from alias
+            # Make period labels more user-friendly
+            formatted_label = group_value or '(Empty)'
+            if period != 'exact' and group_value:
+                if period == 'week':
+                    formatted_label = f"Week of {group_value}"
+                elif period == 'month':
+                    formatted_label = f"Month {group_value}"
+                elif period == 'year':
+                    formatted_label = f"Year {group_value}"
+                elif period == 'hour':
+                    formatted_label = f"Hour {group_value}"
+                elif period == 'day':
+                    formatted_label = f"Day {group_value}"
+            
             group_data = {
                 'group_field': group_field,
                 'group_value': group_value,
-                'group_label': group_value or '(Empty)',  # Use the actual aliased value
+                'group_label': formatted_label,
                 'count': summary.get('group_count', 0),
                 'aggregate': summary.get('group_aggregate') if 'group_aggregate' in summary else None,
                 'aggregate_type': aggregate_type if aggregate_type != 'count' else None,
@@ -734,8 +776,8 @@ def process_image_field_value(image_value):
         return None
 
 @frappe.whitelist()
-def test_period_grouping():
-    """Test method for period-based grouping"""
+def test_grouping_debug():
+    """Debug grouping data structure"""
     try:
         # Find a table to test with
         tables = frappe.get_all("Flansa Table", limit=1)
@@ -745,30 +787,40 @@ def test_period_grouping():
         table_doc = frappe.get_doc("Flansa Table", tables[0].name)
         doctype_name = table_doc.doctype_name
         
-        # Check if doctype has data
+        # Check record count
         record_count = frappe.db.count(doctype_name)
         if record_count == 0:
             return {"success": False, "error": "No records to test with"}
             
-        # Test period grouping
-        query_fields = ["name", "creation"]
-        filters = {}
-        grouping_config = [{"field": "creation", "aggregate": "count", "period": "day"}]
-        selected_fields = [
-            {"fieldname": "name", "fieldtype": "Data", "field_label": "Name"},
-            {"fieldname": "creation", "fieldtype": "Datetime", "field_label": "Created"}
-        ]
+        # Test regular query first
+        regular_data = frappe.get_all(doctype_name, fields=["name", "creation"], limit=2)
         
-        result = execute_grouped_report(
-            doctype_name, query_fields, filters, grouping_config,
-            "creation desc", 0, 50, {}, selected_fields
-        )
+        # Test grouping config
+        test_config = {
+            "base_table": tables[0].name,
+            "selected_fields": [
+                {"fieldname": "name", "fieldtype": "Data", "field_label": "Name"},
+                {"fieldname": "creation", "fieldtype": "Datetime", "field_label": "Creation Date"}
+            ],
+            "filters": [],
+            "grouping": [{
+                "field": "creation",
+                "aggregate": "count", 
+                "period": "day"
+            }],
+            "sort": []
+        }
+        
+        # Test the execute_report API
+        result = execute_report(test_config)
         
         return {
             "success": True,
             "doctype_tested": doctype_name,
             "record_count": record_count,
-            "grouping_result": result
+            "regular_data_sample": regular_data,
+            "test_config": test_config,
+            "execute_report_result": result
         }
         
     except Exception as e:
