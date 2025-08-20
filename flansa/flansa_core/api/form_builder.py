@@ -4,6 +4,7 @@ Creates custom form layouts with gallery fields and drag-drop functionality
 """
 
 import frappe
+from flansa.flansa_core.tenant_security import apply_tenant_filter, get_current_tenant
 import json
 from frappe import _
 

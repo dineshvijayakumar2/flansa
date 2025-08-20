@@ -4,6 +4,7 @@ Handles table activation, deactivation, and DocType creation
 """
 
 import frappe
+from flansa.flansa_core.tenant_security import apply_tenant_filter, get_current_tenant
 from frappe import _
 import json
 

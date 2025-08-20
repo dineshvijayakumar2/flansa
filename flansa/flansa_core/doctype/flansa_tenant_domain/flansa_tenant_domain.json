@@ -1,12 +1,6 @@
 {
  "actions": [],
- "allow_copy": 0,
- "allow_events_in_timeline": 0,
- "allow_guest_to_view": 0,
- "allow_import": 0,
- "allow_rename": 0,
- "beta": 0,
- "creation": "2025-08-19 16:00:00.000000",
+ "creation": "2025-08-19 16:00:00",
  "doctype": "DocType",
  "editable_grid": 1,
  "engine": "InnoDB",
@@ -20,7 +14,8 @@
   "verified_date",
   "column_break_8",
   "ssl_enabled",
-  "last_checked"
+  "last_checked",
+  "tenant_id"
  ],
  "fields": [
   {
@@ -81,31 +76,27 @@
    "fieldtype": "Datetime",
    "label": "Last Checked",
    "read_only": 1
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "hidden": 1,
+   "ignore_user_permissions": 1,
+   "in_standard_filter": 1,
+   "label": "Tenant ID",
+   "read_only": 1
   }
  ],
- "has_web_view": 0,
- "hide_heading": 0,
- "hide_toolbar": 0,
- "idx": 0,
- "image_view": 0,
- "in_create": 0,
- "is_submittable": 0,
- "issingle": 0,
  "istable": 1,
- "max_attachments": 0,
- "modified": "2025-08-19 16:00:00.000000",
+ "links": [],
+ "modified": "2025-08-20 19:10:23.982394",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Tenant Domain",
  "owner": "Administrator",
  "permissions": [],
- "quick_entry": 0,
- "read_only": 0,
- "read_only_onload": 0,
- "show_name_in_global_search": 0,
+ "row_format": "Dynamic",
  "sort_field": "modified",
  "sort_order": "DESC",
- "track_changes": 0,
- "track_seen": 0,
- "track_views": 0
+ "states": []
 }
