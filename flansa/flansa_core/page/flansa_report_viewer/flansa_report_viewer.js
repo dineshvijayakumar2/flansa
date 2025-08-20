@@ -838,106 +838,6 @@ class FlansaReportViewer {
         }
     }
     
-    display_table_view() {
-        const table = $('#report-table');
-        const thead = table.find('thead');
-        const tbody = table.find('tbody');
-        
-        thead.empty();
-        tbody.empty();
-        
-        if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
-            tbody.append('<tr><td colspan="100%" class="text-center text-muted">No fields configured for this report</td></tr>');
-            return;
-        }
-        
-        // Create header
-        const header_row = $('<tr></tr>');
-        this.current_report_config.selected_fields.forEach(field => {
-            const display_label = field.custom_label || field.field_label || field.label;
-            header_row.append(`<th>${display_label}</th>`);
-        });
-        
-        // Add actions column if enabled (default true for table direct mode, configurable for reports)
-        if (this.should_show_action_buttons()) {
-            header_row.append('<th style="width: 120px;">Actions</th>');
-        }
-        
-        thead.append(header_row);
-        
-        // Check for data - handle both regular and grouped reports
-        const dataToDisplay = this.current_report_data.is_grouped ? 
-            (this.current_report_data.groups && this.current_report_data.groups.length > 0 ? 
-                this.current_report_data.groups.flatMap(group => group.records || []) : []) :
-            (this.current_report_data.data || []);
-            
-        if (dataToDisplay.length === 0) {
-            tbody.append('<tr><td colspan="100%" class="text-center text-muted">No data available</td></tr>');
-            return;
-        }
-        
-        // Create rows  
-        dataToDisplay.forEach((record) => {
-            const row = $('<tr></tr>');
-            this.current_report_config.selected_fields.forEach(field => {
-                const value = record[field.fieldname] || '';
-                let formatted_value = this.format_field_value(value, field.fieldtype);
-                
-                // Add image rendering for image fields in table view
-                if (['Attach Image', 'Attach'].includes(field.fieldtype) || 
-                    (field.fieldname && field.fieldname.toLowerCase().includes('image'))) {
-                    const images = this.extract_all_image_urls(value);
-                    if (images.length > 0) {
-                        formatted_value = `
-                            <div class="table-image-cell">
-                                <img src="${images[0]}" alt="Image" class="table-thumbnail" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">
-                                ${images.length > 1 ? `<span class="badge badge-info">${images.length}</span>` : ''}
-                            </div>
-                        `;
-                    }
-                }
-                
-                const cell = $('<td>');
-                if (['Attach Image', 'Attach'].includes(field.fieldtype) || (field.fieldname && field.fieldname.toLowerCase().includes('image'))) {
-                    cell.html(formatted_value);
-                } else {
-                    cell.text(formatted_value);
-                }
-                row.append(cell);
-            });
-            
-            // Add action buttons if enabled
-            if (this.should_show_action_buttons()) {
-                const actionCell = $('<td>');
-                const recordName = record.name;
-                console.log('🔧 Adding action buttons for record:', recordName);
-                
-                const actionButtons = `
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button type="button" class="btn btn-sm btn-outline-primary view-record-btn" 
-                                data-record-name="${recordName}" title="View Record">
-                            <i class="fa fa-eye"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary edit-record-btn" 
-                                data-record-name="${recordName}" title="Edit Record">
-                            <i class="fa fa-edit"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-danger delete-record-btn" 
-                                data-record-name="${recordName}" title="Delete Record">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                `;
-                actionCell.html(actionButtons);
-                row.append(actionCell);
-            }
-            
-            tbody.append(row);
-        });
-        
-        $('#table-view').show();
-        $('#tile-view').hide();
-    }
     
     display_tile_view() {
         const tileContainer = $('#tile-container');
@@ -1000,7 +900,7 @@ class FlansaReportViewer {
         const hasImage = image_urls.length > 0;
         
         const tileCardHtml = hasImage ? `
-            <div class="gallery-card" data-record-name="${record.name}" data-current-image="0">
+            <div class="gallery-card clickable-tile" data-record-name="${record.name}" data-current-image="0" title="Click to view record">
                 ${image_urls.length > 1 ? `
                     <div class="gallery-image-indicator">
                         <span class="current-image">1</span> / <span class="total-images">${image_urls.length}</span>
@@ -1025,29 +925,47 @@ class FlansaReportViewer {
                 </div>
                 <div class="gallery-card-content">
                     <h6 class="gallery-card-title">${title}</h6>
-                    ${metadata_fields.map(field => {
-                        const value = record[field.fieldname] || '';
-                        const formatted_value = this.format_field_value(value, field.fieldtype);
-                        const display_label = field.custom_label || field.field_label || field.label;
-                        return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
-                    }).join('')}
+                    <div class="gallery-meta-list">
+                        ${metadata_fields.map(field => {
+                            const value = record[field.fieldname] || '';
+                            const formatted_value = this.format_field_value(value, field.fieldtype);
+                            const display_label = field.custom_label || field.field_label || field.label;
+                            return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
+                        }).join('')}
+                    </div>
                 </div>
             </div>
         ` : `
-            <div class="gallery-card no-image" data-record-name="${record.name}">
+            <div class="gallery-card no-image clickable-tile" data-record-name="${record.name}" title="Click to view record">
                 <div class="gallery-card-content">
                     <h6 class="gallery-card-title">${title}</h6>
-                    ${metadata_fields.map(field => {
-                        const value = record[field.fieldname] || '';
-                        const formatted_value = this.format_field_value(value, field.fieldtype);
-                        const display_label = field.custom_label || field.field_label || field.label;
-                        return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
-                    }).join('')}
+                    <div class="gallery-meta-list">
+                        ${metadata_fields.map(field => {
+                            const value = record[field.fieldname] || '';
+                            const formatted_value = this.format_field_value(value, field.fieldtype);
+                            const display_label = field.custom_label || field.field_label || field.label;
+                            return `<div class="gallery-meta-item"><strong>${display_label}:</strong> ${formatted_value}</div>`;
+                        }).join('')}
+                    </div>
                 </div>
             </div>
         `;
         
         const tile_card = $(tileCardHtml);
+        
+        // Add click-to-view functionality
+        tile_card.on('click', (e) => {
+            // Don't trigger if clicking on navigation buttons
+            if ($(e.target).closest('.gallery-nav-btn').length > 0) {
+                return;
+            }
+            
+            const recordName = tile_card.data('record-name');
+            if (recordName) {
+                console.log('🔍 Tile clicked, viewing record:', recordName);
+                this.view_record(recordName);
+            }
+        });
         
         // Store image data for navigation if images exist
         if (image_urls.length > 0) {
@@ -1227,9 +1145,9 @@ class FlansaReportViewer {
         if (!window.FlansaReportRenderer || typeof window.FlansaReportRenderer.render !== 'function') {
             console.warn('FlansaReportRenderer not available in report viewer, using fallback');
             
-            // Use fallback display methods
+            // Use fallback display methods - only tile view has fallback
             if (this.current_view === 'table') {
-                this.display_table_view();
+                this.show_error('Table view unavailable - shared renderer required');
             } else if (this.current_view === 'tile') {
                 this.display_tile_view();
             }
@@ -1247,8 +1165,10 @@ class FlansaReportViewer {
         };
         
         try {
+            console.log('🔧 USING SHARED RENDERER FOR DISPLAY');
             console.log('Report data for rendering:', this.current_report_data);
             console.log('Is grouped?', this.current_report_data.is_grouped);
+            console.log('showActions config:', config.showActions);
             
             // Generate HTML using shared renderer
             const html = window.FlansaReportRenderer.render(this.current_report_data, config);
@@ -1273,13 +1193,17 @@ class FlansaReportViewer {
                 this.display_tile_view();
             }
         } catch (error) {
+            console.error('❌ SHARED RENDERER FAILED - Table view requires shared renderer');
             console.error('Error using shared renderer:', error);
             console.error('Report data:', this.current_report_data);
-            // Fall back to legacy methods
-            if (this.current_view === 'table') {
-                this.display_table_view();
-            } else if (this.current_view === 'tile') {
+            
+            // Only tile view has fallback, table view requires shared renderer
+            if (this.current_view === 'tile') {
+                console.log('🔧 FALLBACK: Using tile view');
                 this.display_tile_view();
+            } else {
+                // Show error for table view since it requires shared renderer
+                this.show_error('Table view unavailable - shared renderer failed to load');
             }
         }
     }

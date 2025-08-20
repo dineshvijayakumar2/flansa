@@ -142,7 +142,8 @@ window.FlansaReportRenderer = {
             
             fields.forEach(field => {
                 const value = record[field.fieldname] || '';
-                const formatted = this.formatFieldValue(value, field.fieldtype);
+                console.log(`🔍 GROUPED VIEW - Processing field: ${field.fieldname}`, field);
+                const formatted = this.formatFieldValue(value, field.fieldtype, field.fieldname);
                 html += `<td>${formatted}</td>`;
             });
             
@@ -244,7 +245,10 @@ window.FlansaReportRenderer = {
                         // Find field type for proper formatting
                         const field = fields.find(f => f.fieldname === col.key);
                         if (field) {
-                            value = this.formatFieldValue(value, field.fieldtype);
+                            console.log(`🔍 TABLE VIEW - Processing field: ${col.key}`, field);
+                            value = this.formatFieldValue(value, field.fieldtype, field.fieldname);
+                        } else {
+                            console.log(`🔍 TABLE VIEW - No field info found for: ${col.key}`);
                         }
                     }
                     
@@ -299,8 +303,18 @@ window.FlansaReportRenderer = {
     /**
      * Format field value based on field type
      */
-    formatFieldValue(value, fieldtype) {
+    formatFieldValue(value, fieldtype, fieldname = '') {
         if (!value && value !== 0) return '';
+        
+        // Debug gallery field detection
+        if (fieldtype === 'Long Text' && fieldname) {
+            console.log(`🔍 Gallery Debug - Field: ${fieldname}, Type: ${fieldtype}`);
+            console.log(`🔍 Value length: ${value ? value.length : 0}`);
+            console.log(`🔍 Is gallery field: ${this.isGalleryField(value, fieldname)}`);
+            if (value && value.length > 0) {
+                console.log(`🔍 Value preview: ${value.substring(0, 100)}...`);
+            }
+        }
         
         switch (fieldtype) {
             case 'Currency':
@@ -314,12 +328,111 @@ window.FlansaReportRenderer = {
             case 'Attach Image':
             case 'Attach':
                 if (value && (value.startsWith('http') || value.startsWith('/files'))) {
-                    return `<img src="${value}" class="field-image" style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px;">`;
+                    return `<img src="${value}" class="field-image clickable-image" 
+                                 style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" 
+                                 data-image-url="${value}" 
+                                 title="Click to view full size">`;
                 }
                 return value;
+            case 'Long Text':
+            case 'Text':
+                // Check if this is a gallery field (contains image URLs)
+                if (this.isGalleryField(value, fieldname)) {
+                    return this.renderGalleryField(value);
+                }
+                return this.formatValue(value);
             default:
                 return this.formatValue(value);
         }
+    },
+    
+    /**
+     * Check if a field contains gallery data (image URLs)
+     */
+    isGalleryField(value, fieldname = '') {
+        if (!value || typeof value !== 'string') return false;
+        
+        // Check if fieldname suggests it's a gallery
+        const galleryPatterns = ['gallery', 'images', 'photos', 'pictures'];
+        const isGalleryNamed = galleryPatterns.some(pattern => 
+            fieldname.toLowerCase().includes(pattern)
+        );
+        
+        // Check if value contains image URLs or JSON with image data
+        const hasImageUrls = value.includes('/files/') || 
+                           value.includes('http') || 
+                           (value.includes('{') && value.includes('file_url'));
+        
+        return isGalleryNamed && hasImageUrls;
+    },
+    
+    /**
+     * Render gallery field as clickable thumbnail
+     */
+    renderGalleryField(value) {
+        try {
+            const images = this.extractImageUrls(value);
+            if (images.length === 0) return this.formatValue(value);
+            
+            // Show first image as thumbnail with count indicator
+            const firstImage = images[0];
+            const countBadge = images.length > 1 ? 
+                `<span class="image-count-badge">${images.length}</span>` : '';
+            
+            return `
+                <div class="gallery-thumbnail-container" style="position: relative; display: inline-block;">
+                    <img src="${firstImage}" class="field-image clickable-image" 
+                         style="width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer;" 
+                         data-image-url="${firstImage}" 
+                         data-gallery-images="${images.join(',')}" 
+                         title="Click to view gallery (${images.length} image${images.length > 1 ? 's' : ''})">
+                    ${countBadge}
+                </div>
+            `;
+        } catch (e) {
+            console.warn('Error parsing gallery field:', e);
+            return this.formatValue(value);
+        }
+    },
+    
+    /**
+     * Extract image URLs from gallery field value
+     */
+    extractImageUrls(value) {
+        if (!value) return [];
+        
+        const urls = [];
+        
+        try {
+            // Try parsing as JSON array first
+            if (value.startsWith('[')) {
+                const parsed = JSON.parse(value);
+                parsed.forEach(item => {
+                    if (typeof item === 'string' && (item.startsWith('/files/') || item.startsWith('http'))) {
+                        urls.push(item);
+                    } else if (item.file_url) {
+                        urls.push(item.file_url);
+                    }
+                });
+            }
+            // Try parsing as JSON object with images array
+            else if (value.startsWith('{')) {
+                const parsed = JSON.parse(value);
+                if (parsed.images && Array.isArray(parsed.images)) {
+                    parsed.images.forEach(img => {
+                        if (img.file_url) urls.push(img.file_url);
+                    });
+                }
+            }
+        } catch (e) {
+            // If JSON parsing fails, look for URLs in the text
+            const urlMatches = value.match(/(\/files\/[^\s"',]+|https?:\/\/[^\s"',]+\.(jpg|jpeg|png|gif|webp))/gi);
+            if (urlMatches) {
+                urls.push(...urlMatches);
+            }
+        }
+        
+        return urls.filter(url => url && url.trim());
     },
 
     /**
@@ -352,7 +465,7 @@ window.FlansaReportRenderer = {
     },
     
     /**
-     * Set up event handlers for action buttons
+     * Set up event handlers for action buttons and image lightbox
      */
     setupActionHandlers(container, viewHandler, editHandler) {
         if (!container || typeof container === 'string') {
@@ -368,9 +481,9 @@ window.FlansaReportRenderer = {
         this.viewRecordHandler = viewHandler;
         this.editRecordHandler = editHandler;
         
-        // Add event delegation for action buttons
+        // Add event delegation for action buttons and images
         this.actionClickHandler = (e) => {
-            const target = e.target.closest('button');
+            const target = e.target.closest('button, .clickable-image');
             if (!target) return;
             
             if (target.classList.contains('view-record-btn') && this.viewRecordHandler) {
@@ -379,10 +492,174 @@ window.FlansaReportRenderer = {
             } else if (target.classList.contains('edit-record-btn') && this.editRecordHandler) {
                 const recordId = target.dataset.recordName || target.dataset.recordId;
                 this.editRecordHandler(recordId);
+            } else if (target.classList.contains('clickable-image')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const imageUrl = target.dataset.imageUrl;
+                const galleryImages = target.dataset.galleryImages;
+                console.log('🔍 Image clicked:', { imageUrl, galleryImages });
+                this.openImageLightbox(imageUrl, galleryImages);
             }
         };
         
         container.addEventListener('click', this.actionClickHandler);
+    },
+
+    /**
+     * Open image lightbox with gallery support
+     */
+    openImageLightbox(imageUrl, galleryImages = null) {
+        // Parse gallery images if provided
+        const images = galleryImages ? galleryImages.split(',') : [imageUrl];
+        const startIndex = images.indexOf(imageUrl) >= 0 ? images.indexOf(imageUrl) : 0;
+        
+        // Use existing Frappe dialog for consistency with existing gallery viewer
+        if (typeof frappe !== 'undefined' && frappe.ui && frappe.ui.Dialog) {
+            this.openFrappeImageDialog(images, startIndex);
+        } else {
+            // Fallback to simple lightbox if Frappe UI is not available
+            this.openSimpleLightbox(images, startIndex);
+        }
+    },
+    
+    /**
+     * Open image dialog using Frappe UI
+     */
+    openFrappeImageDialog(images, startIndex = 0) {
+        let currentIndex = startIndex;
+        
+        const updateImage = () => {
+            try {
+                const img = dialog.fields_dict.image.$wrapper.find('img');
+                img.attr('src', images[currentIndex]);
+                
+                const counter = dialog.fields_dict.counter.$wrapper;
+                counter.html(`<div style="text-align: center; color: #6c757d; font-size: 14px;">
+                    Image ${currentIndex + 1} of ${images.length}
+                </div>`);
+                
+                // Update navigation button states
+                if (images.length > 1) {
+                    const prevBtn = dialog.$wrapper.find('.img-nav-prev');
+                    const nextBtn = dialog.$wrapper.find('.img-nav-next');
+                    prevBtn.prop('disabled', false);
+                    nextBtn.prop('disabled', false);
+                }
+                
+                console.log(`🖼️ Image updated: ${currentIndex + 1}/${images.length}`);
+            } catch (e) {
+                console.error('Error updating image:', e);
+            }
+        };
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Image Viewer',
+            size: 'large',
+            fields: [
+                {
+                    fieldname: 'counter',
+                    fieldtype: 'HTML',
+                    options: ''
+                },
+                {
+                    fieldname: 'image',
+                    fieldtype: 'HTML',
+                    options: `
+                        <div style="text-align: center; position: relative;">
+                            <img src="${images[currentIndex]}" 
+                                 style="max-width: 100%; max-height: 60vh; border-radius: 4px;"
+                                 loading="lazy">
+                        </div>
+                    `
+                },
+                ...(images.length > 1 ? [{
+                    fieldname: 'navigation',
+                    fieldtype: 'HTML',
+                    options: `
+                        <div style="text-align: center; margin-top: 15px;">
+                            <button class="btn btn-sm btn-default img-nav-prev" style="margin-right: 10px;">
+                                <i class="fa fa-chevron-left"></i> Previous
+                            </button>
+                            <button class="btn btn-sm btn-default img-nav-next">
+                                Next <i class="fa fa-chevron-right"></i>
+                            </button>
+                        </div>
+                    `
+                }] : [])
+            ]
+        });
+        
+        dialog.show();
+        updateImage();
+        
+        // Add navigation handlers
+        if (images.length > 1) {
+            dialog.$wrapper.find('.img-nav-prev').on('click', () => {
+                currentIndex = currentIndex > 0 ? currentIndex - 1 : images.length - 1;
+                updateImage();
+            });
+            
+            dialog.$wrapper.find('.img-nav-next').on('click', () => {
+                currentIndex = currentIndex < images.length - 1 ? currentIndex + 1 : 0;
+                updateImage();
+            });
+            
+            // Keyboard navigation
+            $(document).on('keydown.image-viewer', (e) => {
+                if (e.key === 'ArrowLeft') {
+                    currentIndex = currentIndex > 0 ? currentIndex - 1 : images.length - 1;
+                    updateImage();
+                } else if (e.key === 'ArrowRight') {
+                    currentIndex = currentIndex < images.length - 1 ? currentIndex + 1 : 0;
+                    updateImage();
+                } else if (e.key === 'Escape') {
+                    dialog.hide();
+                }
+            });
+            
+            // Clean up keyboard handler when dialog is closed
+            dialog.onhide = () => {
+                $(document).off('keydown.image-viewer');
+            };
+        }
+    },
+    
+    /**
+     * Simple lightbox fallback
+     */
+    openSimpleLightbox(images, startIndex = 0) {
+        // Create a simple overlay lightbox
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; 
+            background: rgba(0,0,0,0.9); z-index: 9999; 
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer;
+        `;
+        
+        const img = document.createElement('img');
+        img.src = images[startIndex];
+        img.style.cssText = `
+            max-width: 90%; max-height: 90%; 
+            border-radius: 4px; cursor: pointer;
+        `;
+        
+        overlay.appendChild(img);
+        document.body.appendChild(overlay);
+        
+        // Close on click
+        overlay.addEventListener('click', () => {
+            document.body.removeChild(overlay);
+        });
+        
+        // Close on escape
+        const escHandler = (e) => {
+            if (e.key === 'Escape') {
+                document.body.removeChild(overlay);
+                document.removeEventListener('keydown', escHandler);
+            }
+        };
+        document.addEventListener('keydown', escHandler);
     },
 
     /**
@@ -574,6 +851,33 @@ window.FlansaReportRenderer = {
                 .btn-group-sm .btn {
                     padding: 0.25rem 0.5rem;
                     font-size: 0.75rem;
+                }
+                
+                /* Gallery thumbnail styles */
+                .gallery-thumbnail-container {
+                    position: relative;
+                    display: inline-block;
+                }
+                
+                .image-count-badge {
+                    position: absolute;
+                    top: -5px;
+                    right: -5px;
+                    background: #007bff;
+                    color: white;
+                    border-radius: 10px;
+                    padding: 2px 6px;
+                    font-size: 10px;
+                    font-weight: bold;
+                    line-height: 1;
+                    min-width: 18px;
+                    text-align: center;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                }
+                
+                .clickable-image:hover {
+                    opacity: 0.8;
+                    transition: opacity 0.2s ease;
                 }
             </style>
         `;

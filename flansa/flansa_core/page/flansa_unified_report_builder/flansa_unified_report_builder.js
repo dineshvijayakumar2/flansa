@@ -892,10 +892,17 @@ class UnifiedReportBuilder {
     display_full_preview_dialog(data) {
         const title = document.getElementById('report-title').value || 'Report Preview';
         
+        // Debug: Check what data we received
+        console.log('🔍 PREVIEW DATA:', data);
+        console.log('🔍 IS_GROUPED:', data.is_grouped);
+        console.log('🔍 HAS_GROUPS:', !!data.groups);
+        console.log('🔍 GROUPS_COUNT:', data.groups ? data.groups.length : 0);
+        
         let contentHtml;
         
         // Use shared renderer for consistency if available
         if (window.FlansaReportRenderer && typeof window.FlansaReportRenderer.render === 'function') {
+            console.log('🔍 USING SHARED RENDERER');
             contentHtml = window.FlansaReportRenderer.render(data, {
                 showActions: false,
                 fields: this.selected_fields,

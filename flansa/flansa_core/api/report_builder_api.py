@@ -13,41 +13,46 @@ def get_period_expression(field, period):
     """
     Generate SQL expression for time period grouping
     """
-    field_expr = f"`{field}`"
+    field_expr = "`{}`".format(field)
     
     if period == 'year':
-        return f"YEAR({field_expr})"
+        return "YEAR({})".format(field_expr)
     elif period == 'month':
-        return f"DATE_FORMAT({field_expr}, '%Y-%m')"
+        # Use CONCAT to avoid % in format string
+        return "CONCAT(YEAR({}), '-', LPAD(MONTH({}), 2, '0'))".format(field_expr, field_expr)
     elif period == 'week':
-        # Use simple DATE_FORMAT for week
-        return f"DATE_FORMAT({field_expr}, '%Y-%u')"
+        # Use YEARWEEK which doesn't have % characters
+        return "YEARWEEK({}, 1)".format(field_expr)
     elif period == 'day':
-        return f"DATE({field_expr})"
+        return "DATE({})".format(field_expr)
     elif period == 'hour':
-        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H')"
+        # Use CONCAT to avoid % in format string  
+        return "CONCAT(DATE({}), ' ', LPAD(HOUR({}), 2, '0'))".format(field_expr, field_expr)
     else:
         return field_expr  # Fallback to exact value
 
 def get_period_where_condition(field, period):
     """
     Generate WHERE condition to match records for a specific period group
+    Uses CONCAT to avoid % format string conflicts
     """
-    field_expr = f"`{field}`"
+    field_expr = "`{}`".format(field)
     
     if period == 'year':
-        return f"YEAR({field_expr}) = %s"
+        return "YEAR({}) = %s".format(field_expr)
     elif period == 'month':
-        return f"DATE_FORMAT({field_expr}, '%Y-%m') = %s"
+        # Use CONCAT instead of DATE_FORMAT to avoid % characters
+        return "CONCAT(YEAR({}), '-', LPAD(MONTH({}), 2, '0')) = %s".format(field_expr, field_expr)
     elif period == 'week':
-        # Match records in the same week using DATE_FORMAT
-        return f"DATE_FORMAT({field_expr}, '%Y-%u') = %s"
+        # Use YEARWEEK which doesn't have % characters
+        return "YEARWEEK({}, 1) = %s".format(field_expr)
     elif period == 'day':
-        return f"DATE({field_expr}) = %s"
+        return "DATE({}) = %s".format(field_expr)
     elif period == 'hour':
-        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H') = %s"
+        # Use CONCAT instead of DATE_FORMAT to avoid % characters
+        return "CONCAT(DATE({}), ' ', LPAD(HOUR({}), 2, '0')) = %s".format(field_expr, field_expr)
     else:
-        return f"{field_expr} = %s"
+        return "{} = %s".format(field_expr)
 import re
 from frappe import _
 from frappe.utils import now
@@ -551,9 +556,9 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             except Exception:
                 pass
                 
-        print(f"🔍 FIELD DEBUG: {group_field} -> {field_type} (period: {period})")
-        print(f"🔍 SELECTED FIELDS: {selected_fields}")
-        print(f"🔍 FIELD MAP: {field_map}")
+        print("🔍 FIELD DEBUG: " + group_field + " -> " + str(field_type) + " (period: " + str(period) + ")")
+        print("🔍 SELECTED FIELDS: " + str(selected_fields))
+        print("🔍 FIELD MAP: " + str(field_map))
         
         # Use period expression if applicable
         if period != 'exact' and field_type in ['Date', 'Datetime']:
@@ -567,34 +572,34 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
         frappe.logger().info(f"🔍 Group expression: {group_expression}, alias: {group_alias}")
         
         # Query 1: Get group summaries
-        if aggregate_type == 'count':
-            summary_sql = f"""
-                SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count
-                FROM `tab{doctype_name}`
+        if aggregate_type in ['count', 'group']:  # Handle 'group' as 'count'
+            summary_sql = """
+                SELECT {} as `{}`, COUNT(*) as group_count
+                FROM `tab{}`
                 WHERE 1=1
-            """
+            """.format(group_expression, group_alias, doctype_name)
         elif aggregate_type in ['sum', 'avg', 'min', 'max']:
             # Find numeric fields to aggregate
             numeric_fields = [f for f in query_fields if field_map.get(f, {}).get('fieldtype') in ['Int', 'Float', 'Currency']]
             if numeric_fields:
                 agg_field = numeric_fields[0]  # Use first numeric field
-                summary_sql = f"""
-                    SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count, {aggregate_type.upper()}(`{agg_field}`) as group_aggregate
-                    FROM `tab{doctype_name}`
+                summary_sql = """
+                    SELECT {} as `{}`, COUNT(*) as group_count, {}(`{}`) as group_aggregate
+                    FROM `tab{}`
                     WHERE 1=1
-                """
+                """.format(group_expression, group_alias, aggregate_type.upper(), agg_field, doctype_name)
             else:
-                summary_sql = f"""
-                    SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count
-                    FROM `tab{doctype_name}`
+                summary_sql = """
+                    SELECT {} as `{}`, COUNT(*) as group_count
+                    FROM `tab{}`
                     WHERE 1=1
-                """
+                """.format(group_expression, group_alias, doctype_name)
         else:
-            summary_sql = f"""
-                SELECT {group_expression} as `{group_alias}`, COUNT(*) as group_count
-                FROM `tab{doctype_name}`
+            summary_sql = """
+                SELECT {} as `{}`, COUNT(*) as group_count
+                FROM `tab{}`
                 WHERE 1=1
-            """
+            """.format(group_expression, group_alias, doctype_name)
         
         # Add filters to summary query
         filter_conditions = []
@@ -612,15 +617,27 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
         if filter_conditions:
             summary_sql += " AND " + " AND ".join(filter_conditions)
         
-        summary_sql += f" GROUP BY {group_expression} ORDER BY {group_expression}"
+        summary_sql += " GROUP BY {} ORDER BY {}".format(group_expression, group_expression)
         
         # Execute summary query
-        frappe.logger().info(f"🔍 Executing summary SQL: {summary_sql}")
-        frappe.logger().info(f"🔍 With values: {filter_values}")
-        group_summaries = frappe.db.sql(summary_sql, filter_values, as_dict=True)
-        frappe.logger().info(f"🔍 Summary results: {len(group_summaries)} groups found")
+        print("🔍 EXECUTING SUMMARY SQL: " + summary_sql)
+        print("🔍 WITH VALUES: " + str(filter_values))
+        
+        try:
+            group_summaries = frappe.db.sql(summary_sql, filter_values, as_dict=True)
+            print("🔍 SQL EXECUTED SUCCESSFULLY")
+        except Exception as sql_error:
+            print("🔍 SQL EXECUTION FAILED: " + str(sql_error))
+            raise sql_error
+        print("🔍 SUMMARY RESULTS: Found " + str(len(group_summaries)) + " groups")
         if group_summaries:
-            frappe.logger().info(f"🔍 First summary: {group_summaries[0]}")
+            print("🔍 FIRST GROUP: " + str(group_summaries[0]))
+            print("🔍 ALL GROUPS: " + str(group_summaries))
+        else:
+            print("🔍 NO GROUPS RETURNED - checking if table has data...")
+            test_sql = "SELECT COUNT(*) as cnt FROM `tab{}`".format(doctype_name)
+            test_count = frappe.db.sql(test_sql)[0][0]
+            print("🔍 TOTAL RECORDS IN TABLE: " + str(test_count))
         
         # Query 2: Get detail records for each group (limited for performance)
         groups_data = []
@@ -632,20 +649,21 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             if period != 'exact' and field_type in ['Date', 'Datetime']:
                 # Use the proper WHERE condition for period matching
                 detail_where = get_period_where_condition(group_field, period)
-                detail_sql = f"""
-                    SELECT {', '.join([f'`{f}`' for f in query_fields])}
-                    FROM `tab{doctype_name}`
-                    WHERE {detail_where}
-                """
+                field_list = ', '.join(["`{}`".format(f) for f in query_fields])
+                detail_sql = """
+                    SELECT {}
+                    FROM `tab{}`
+                    WHERE {}
+                """.format(field_list, doctype_name, detail_where)
                 # Add existing filters
                 detail_filter_values = [group_value]
                 if filter_conditions:
                     detail_sql += " AND " + " AND ".join(filter_conditions)
                     detail_filter_values.extend(filter_values)
                 
-                detail_sql += f" ORDER BY {order_by or 'creation desc'} LIMIT 10"
-                frappe.logger().info(f"🔍 Detail SQL: {detail_sql}")
-                frappe.logger().info(f"🔍 Detail values: {detail_filter_values}")
+                detail_sql += " ORDER BY {} LIMIT 10".format(order_by or 'creation desc')
+                print("🔍 EXECUTING DETAIL SQL: " + detail_sql)
+                print("🔍 WITH VALUES: " + str(detail_filter_values))
                 detail_records = frappe.db.sql(detail_sql, detail_filter_values, as_dict=True)
             else:
                 # Exact value matching
@@ -679,7 +697,7 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
                 'group_label': formatted_label,
                 'count': summary.get('group_count', 0),
                 'aggregate': summary.get('group_aggregate') if 'group_aggregate' in summary else None,
-                'aggregate_type': aggregate_type if aggregate_type != 'count' else None,
+                'aggregate_type': aggregate_type if aggregate_type not in ['count', 'group'] else None,
                 'records': detail_records,
                 'has_more': len(detail_records) >= 10  # Indicate if there are more records
             }
@@ -688,7 +706,7 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
         # Calculate totals
         total_records = sum(g['count'] for g in groups_data)
         
-        return {
+        result = {
             "success": True,
             "is_grouped": True,
             "grouping": {
@@ -701,6 +719,9 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             "total_groups": len(groups_data),
             "fields": selected_fields  # Include field metadata for UI
         }
+        
+        print("🔍 RETURNING GROUPED RESULT: is_grouped=" + str(result['is_grouped']) + ", total_groups=" + str(result['total_groups']))
+        return result
         
     except Exception as e:
         frappe.log_error(f"Error executing grouped report: {str(e)}", "Grouped Report")
@@ -993,9 +1014,9 @@ def execute_report(report_config, view_options=None):
         grouping_config = report_config.get("grouping", [])
         
         # IMPORTANT: Use print statements that will show in console
-        print(f"🔍 GROUPING DEBUG: Report Config Keys = {list(report_config.keys())}")
-        print(f"🔍 GROUPING DEBUG: Grouping config = {grouping_config}")
-        print(f"🔍 GROUPING DEBUG: Has grouping = {bool(grouping_config)}")
+        print("🔍 GROUPING DEBUG: Report Config Keys = " + str(list(report_config.keys())))
+        print("🔍 GROUPING DEBUG: Grouping config = " + str(grouping_config))
+        print("🔍 GROUPING DEBUG: Has grouping = " + str(bool(grouping_config)))
         
         if grouping_config:
             frappe.logger().info("Executing grouped query")

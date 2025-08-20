@@ -454,8 +454,42 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
+        justify-content: flex-start;
         padding: 15px;
+        overflow: hidden;
+        min-height: 0;
+    }
+    
+    /* Fix text overflow in horizontal layout */
+    .tile-grid.layout-horizontal .gallery-meta-list {
+        overflow-y: auto;
+        flex: 1;
+        min-height: 0;
+        padding-right: 5px;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-card-title {
+        margin-bottom: 10px;
+        flex-shrink: 0;
+    }
+    
+    /* Add scrollbar styling for horizontal layout meta list */
+    .tile-grid.layout-horizontal .gallery-meta-list::-webkit-scrollbar {
+        width: 4px;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-meta-list::-webkit-scrollbar-track {
+        background: rgba(0,0,0,0.1);
+        border-radius: 2px;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-meta-list::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.3);
+        border-radius: 2px;
+    }
+    
+    .tile-grid.layout-horizontal .gallery-meta-list::-webkit-scrollbar-thumb:hover {
+        background: rgba(0,0,0,0.5);
     }
     
     .tile-grid.layout-horizontal .gallery-card-image {
@@ -495,6 +529,22 @@
         display: flex;
         flex-direction: column;
         justify-content: center;
+    }
+    
+    /* Clickable tile styling */
+    .clickable-tile {
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .clickable-tile:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    
+    .clickable-tile:active {
+        transform: translateY(-1px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     }
     
     /* Gallery Navigation Controls */
