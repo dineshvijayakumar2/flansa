@@ -207,11 +207,46 @@ class FlansaTable(Document):
                 message += " (ready for you to add custom fields as needed)"
             
             frappe.msgprint(message, indicator="green")
+                        
+            # Create default form config entry
+            self.create_default_form_config(doctype_name)
+            
             return {"success": True, "doctype_name": doctype_name, "message": message}
             
         except Exception as e:
             frappe.log_error(f"Error force generating DocType: {str(e)}")
             return {"success": False, "message": f"Error creating DocType: {str(e)}"}
+
+    def create_default_form_config(self, doctype_name):
+        """Create default form configuration entry for the table"""
+        try:
+            # Check if form config already exists
+            if frappe.db.exists("Flansa Form Config", self.name):
+                print(f"✅ Form config already exists for {self.name}", flush=True)
+                return
+            
+            # Create basic form config
+            form_config = frappe.get_doc({
+                "doctype": "Flansa Form Config",
+                "table_name": self.name,
+                "form_title": self.table_label or self.table_name,
+                "form_description": self.description or f"Form for {self.table_label or self.table_name}",
+                "layout_type": "standard",
+                "sections": "[]",  # Empty sections array - will be populated by visual builder
+                "field_overrides": "{}",  # Empty field overrides
+                "created_by": frappe.session.user,
+                "modified_by": frappe.session.user
+            })
+            
+            form_config.insert(ignore_permissions=True)
+            frappe.db.commit()
+            
+            print(f"✅ Created form config for table: {self.name}", flush=True)
+            frappe.msgprint(f"Created default form configuration for {self.table_label or self.table_name}", indicator="green")
+            
+        except Exception as e:
+            print(f"⚠️ Could not create form config: {str(e)}", flush=True)
+            frappe.log_error(f"Error creating form config for {self.name}: {str(e)}", "Form Config Creation")
 
     def add_flansa_metadata_fields(self, doctype_doc):
         """Add minimal essential metadata fields following low-code best practices"""

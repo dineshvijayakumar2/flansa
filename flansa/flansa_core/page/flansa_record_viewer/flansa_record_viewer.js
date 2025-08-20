@@ -702,9 +702,17 @@ class FlansaRecordViewer {
                             <h4 style="margin: 0; color: #2c3e50;">${this.mode === 'new' ? 'Create New' : this.mode === 'edit' ? 'Edit' : 'View'} Record</h4>
                             <p style="margin: 4px 0 0 0; font-size: 13px; color: #6c757d;">${this.mode === 'new' ? 'New record creation' : `Record ID: ${this.record_id}`}</p>
                         </div>
-                        <div class="record-meta" style="text-align: right; font-size: 12px; color: #6c757d;">
-                            ${this.record_data.creation ? `<div>Created: ${new Date(this.record_data.creation).toLocaleDateString()}</div>` : ''}
-                            ${this.record_data.modified ? `<div>Modified: ${new Date(this.record_data.modified).toLocaleDateString()}</div>` : ''}
+                        <div class="record-meta" style="text-align: right; font-size: 12px; color: #6c757d; min-width: 200px;">
+                            ${this.record_data.creation ? `
+                                <div style="margin-bottom: 3px;">
+                                    <strong>Created:</strong> ${this.formatDateTime(this.record_data.creation)}
+                                    ${this.record_data.owner ? `<br><span style="color: #8e8e8e; font-size: 11px;">by ${this.formatUser(this.record_data.owner)}</span>` : ''}
+                                </div>` : ''}
+                            ${this.record_data.modified ? `
+                                <div>
+                                    <strong>Modified:</strong> ${this.formatDateTime(this.record_data.modified)}
+                                    ${this.record_data.modified_by ? `<br><span style="color: #8e8e8e; font-size: 11px;">by ${this.formatUser(this.record_data.modified_by)}</span>` : ''}
+                                </div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -2201,6 +2209,46 @@ class FlansaRecordViewer {
                 </div>
             `;
         }
+    }
+    
+    /**
+     * Format datetime with date and time
+     */
+    formatDateTime(dateString) {
+        if (!dateString) return '';
+        
+        const date = new Date(dateString);
+        const dateStr = date.toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+        const timeStr = date.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true
+        });
+        
+        return `${dateStr} at ${timeStr}`;
+    }
+    
+    /**
+     * Format user name for display
+     */
+    formatUser(user) {
+        if (!user) return '';
+        
+        // If it's Administrator, show as Admin
+        if (user === 'Administrator') {
+            return 'Admin';
+        }
+        
+        // If it's an email, extract the username part
+        if (user.includes('@')) {
+            return user.split('@')[0];
+        }
+        
+        return user;
     }
     
     escapeHtml(unsafe) {
