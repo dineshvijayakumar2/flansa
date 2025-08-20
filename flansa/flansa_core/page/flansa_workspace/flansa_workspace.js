@@ -349,6 +349,9 @@ class FlansaApplicationsWorkspace {
                         <button class="btn btn-sm btn-flansa-secondary edit-app-btn" data-app="${app.name}">
                             <i class="fa fa-cog"></i> Settings
                         </button>
+                        <button class="btn btn-sm btn-danger delete-app-btn" data-app="${app.name}" title="Delete Application">
+                            <i class="fa fa-trash"></i>
+                        </button>
                     </div>
                 </div>
             `;
@@ -374,6 +377,13 @@ class FlansaApplicationsWorkspace {
             const app_name = $(this).data('app');
             // Navigate to app dashboard which has settings and management options
             window.location.href = `/app/flansa-app-dashboard?app=${app_name}`;
+        });
+        
+        // Delete application
+        $('.delete-app-btn').on('click', function(e) {
+            e.stopPropagation(); // Prevent opening the app
+            const app_name = $(this).data('app');
+            self.delete_application(app_name);
         });
         
         
@@ -544,32 +554,60 @@ class FlansaApplicationsWorkspace {
     }
     
     delete_application(app_name) {
-        frappe.confirm(
-            `Are you sure you want to delete this application? This will also delete all associated tables, fields, and relationships.`,
-            () => {
-                frappe.call({
-                    method: 'frappe.client.delete',
-                    args: {
-                        doctype: 'Flansa Application',
-                        name: app_name
-                    },
-                    callback: (r) => {
-                        frappe.show_alert({
-                            message: 'Application deleted successfully',
-                            indicator: 'green'
-                        });
-                        this.load_applications();
-                    },
-                    error: (r) => {
-                        frappe.msgprint({
-                            title: 'Error',
-                            indicator: 'red',
-                            message: 'Failed to delete application'
-                        });
-                    }
-                });
+        // First show preview of what will be deleted
+        frappe.call({
+            method: 'flansa.flansa_core.api.clean_delete.get_deletion_preview',
+            args: {
+                resource_type: 'app',
+                resource_name: app_name
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const preview = r.message.preview;
+                    const items = preview.items_to_delete.join('<br>• ');
+                    
+                    frappe.confirm(
+                        `<div style="max-width: 600px;">
+                        <h4>⚠️ Clean Delete Application</h4>
+                        <p>This will <strong>permanently delete</strong>:</p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 12px 0; font-family: monospace; font-size: 13px; border-left: 4px solid #dc3545;">
+                        • ${items}
+                        </div>
+                        <p><strong style="color: #d73527;">⚠️ This action cannot be undone and will remove ALL data, tables, forms, reports, and relationships!</strong></p>
+                        <p>Are you sure you want to proceed?</p>
+                        </div>`,
+                        () => {
+                            // Show loading message
+                            frappe.show_alert('🗑️ Deleting application and all connected resources...', 'blue');
+                            
+                            frappe.call({
+                                method: 'flansa.flansa_core.api.clean_delete.clean_delete_app',
+                                args: { app_name: app_name },
+                                callback: (delete_r) => {
+                                    if (delete_r.message && delete_r.message.success) {
+                                        frappe.show_alert('✅ ' + delete_r.message.message, 'green');
+                                        console.log('🗑️ App deletion summary:', delete_r.message.summary);
+                                        console.log('🗑️ Deletion log:', delete_r.message.deletion_log);
+                                        
+                                        // Refresh the applications list
+                                        setTimeout(() => {
+                                            this.load_applications();
+                                        }, 2000);
+                                    } else {
+                                        frappe.show_alert('❌ Failed to delete application: ' + (delete_r.message?.error || 'Unknown error'), 'red');
+                                    }
+                                }
+                            });
+                        },
+                        null, // No callback for cancel
+                        'Delete Application' // Dialog title
+                    );
+                } else {
+                    frappe.show_alert('Failed to get deletion preview', 'red');
+                    console.error('Preview error:', r.message?.error);
+                }
             }
-        );
+        });
     }
     
     update_stats() {

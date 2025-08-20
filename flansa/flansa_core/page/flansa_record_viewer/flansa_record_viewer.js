@@ -35,7 +35,6 @@ class FlansaRecordViewer {
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
-        this.application = null;
         this.form_config = {};
         this.form_sections = [];
         
@@ -50,36 +49,6 @@ class FlansaRecordViewer {
             this.setup_html();
             this.bind_events();
             this.load_data();
-        }
-    }
-    
-    get_dashboard_link() {
-        // If we have an application context, link to that app's dashboard
-        if (this.application) {
-            return `/app/flansa-app-dashboard?app=${encodeURIComponent(this.application)}`;
-        }
-        // Fallback to general dashboard
-        return '/app/flansa-app-dashboard';
-    }
-    
-    update_dashboard_link() {
-        // Update the dashboard link after application context is loaded
-        const dashboardLink = document.getElementById('dashboard-link');
-        if (dashboardLink) {
-            const newHref = this.get_dashboard_link();
-            dashboardLink.href = newHref;
-            
-            // Remove the onclick="return false;" and add proper click handler
-            dashboardLink.onclick = null;
-            dashboardLink.addEventListener('click', (e) => {
-                e.preventDefault();
-                console.log('🔗 Dashboard link clicked, navigating to:', newHref);
-                // Use window.location.href for proper URL navigation with query parameters
-                window.location.href = newHref;
-            });
-            
-            console.log('🔗 Updated dashboard link to:', newHref);
-            console.log('🔗 Application context:', this.application);
         }
     }
     
@@ -230,7 +199,7 @@ class FlansaRecordViewer {
                 <!-- Navigation Breadcrumbs -->
                 <div class="flansa-breadcrumbs" style="padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #f0f3f7;">
                     <nav style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6c757d;">
-                        <a id="dashboard-link" href="#" onclick="return false;" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 4px;">
+                        <a href="/app/flansa-dashboard" id="dashboard-link" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 4px;">
                             <i class="fa fa-home"></i> Dashboard
                         </a>
                         <span style="color: #dee2e6;">→</span>
@@ -563,7 +532,7 @@ class FlansaRecordViewer {
         }
         
         // First load form configuration, then load data
-        this.load_form_configuration().then(() => {
+        this.load_form_configuration().then((hasFormConfig) => {
             if (this.mode === 'new') {
                 this.load_table_structure();
             } else {
@@ -639,19 +608,6 @@ class FlansaRecordViewer {
                         <button type="button" class="btn btn-sm btn-primary edit-record" style="display: flex; align-items: center; gap: 6px;">
                             <i class="fa fa-edit"></i> Edit Record
                         </button>
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-outline-info dropdown-toggle" data-toggle="dropdown" style="display: flex; align-items: center; gap: 6px;">
-                                <i class="fa fa-chart-bar"></i> Reports
-                            </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-item view-reports-btn" href="#" style="display: flex; align-items: center; gap: 8px;">
-                                    <i class="fa fa-list"></i> View Saved Reports
-                                </a>
-                                <a class="dropdown-item create-report-btn" href="#" style="display: flex; align-items: center; gap: 8px;">
-                                    <i class="fa fa-plus"></i> Create New Report
-                                </a>
-                            </div>
-                        </div>
                         <button type="button" class="btn btn-sm btn-outline-primary form-builder-btn" style="display: flex; align-items: center; gap: 6px;" onclick="window.open('/app/flansa-form-builder?table=${this.table_name}', '_blank')">
                             <i class="fa fa-paint-brush"></i> Customize Form
                         </button>
@@ -702,17 +658,9 @@ class FlansaRecordViewer {
                             <h4 style="margin: 0; color: #2c3e50;">${this.mode === 'new' ? 'Create New' : this.mode === 'edit' ? 'Edit' : 'View'} Record</h4>
                             <p style="margin: 4px 0 0 0; font-size: 13px; color: #6c757d;">${this.mode === 'new' ? 'New record creation' : `Record ID: ${this.record_id}`}</p>
                         </div>
-                        <div class="record-meta" style="text-align: right; font-size: 12px; color: #6c757d; min-width: 200px;">
-                            ${this.record_data.creation ? `
-                                <div style="margin-bottom: 3px;">
-                                    <strong>Created:</strong> ${this.formatDateTime(this.record_data.creation)}
-                                    ${this.record_data.owner ? `<br><span style="color: #8e8e8e; font-size: 11px;">by ${this.formatUser(this.record_data.owner)}</span>` : ''}
-                                </div>` : ''}
-                            ${this.record_data.modified ? `
-                                <div>
-                                    <strong>Modified:</strong> ${this.formatDateTime(this.record_data.modified)}
-                                    ${this.record_data.modified_by ? `<br><span style="color: #8e8e8e; font-size: 11px;">by ${this.formatUser(this.record_data.modified_by)}</span>` : ''}
-                                </div>` : ''}
+                        <div class="record-meta" style="text-align: right; font-size: 12px; color: #6c757d;">
+                            ${this.record_data.creation ? `<div>Created: ${this.formatDateTime(this.record_data.creation)} ${this.record_data.owner ? 'by ' + this.formatUser(this.record_data.owner) : ''}</div>` : ''}
+                            ${this.record_data.modified ? `<div>Modified: ${this.formatDateTime(this.record_data.modified)} ${this.record_data.modified_by ? 'by ' + this.formatUser(this.record_data.modified_by) : ''}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -831,7 +779,6 @@ class FlansaRecordViewer {
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
-        this.application = null;
         this.form_config = {};
         
         // Clear any form input values that might be cached
@@ -1213,29 +1160,6 @@ class FlansaRecordViewer {
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('mode', 'edit');
                     window.location.href = currentUrl.toString();
-                });
-            }
-            
-            // Report buttons
-            const viewReportsBtn = actionsContainer.querySelector('.view-reports-btn');
-            if (viewReportsBtn) {
-                viewReportsBtn.addEventListener('click', (e) => {
-                    console.log('View Reports button clicked!');
-                    e.preventDefault();
-                    // Use direct URL navigation to preserve query parameters
-                    const url = `/app/flansa-saved-reports?table=${encodeURIComponent(this.table_name)}&source=record_viewer`;
-                    window.location.href = url;
-                });
-            }
-            
-            const createReportBtn = actionsContainer.querySelector('.create-report-btn');
-            if (createReportBtn) {
-                createReportBtn.addEventListener('click', (e) => {
-                    console.log('Create Report button clicked!');
-                    e.preventDefault();
-                    // Use direct URL navigation to preserve query parameters
-                    const url = `/app/flansa-unified-report-builder?table=${encodeURIComponent(this.table_name)}&source=record_viewer`;
-                    window.location.href = url;
                 });
             }
             
@@ -2074,6 +1998,8 @@ class FlansaRecordViewer {
     }
     
     add_basic_link_autocomplete(input) {
+        const linkDoctype = input.dataset.linkDoctype;
+        
         // Add basic search functionality
         let searchTimeout;
         input.addEventListener('input', (e) => {
@@ -2211,44 +2137,55 @@ class FlansaRecordViewer {
         }
     }
     
-    /**
-     * Format datetime with date and time
-     */
+    update_dashboard_link() {
+        // Update dashboard link to point to app-specific dashboard if we have application context
+        console.log('🔍 update_dashboard_link called with application:', this.application);
+        if (this.application) {
+            const dashboardLink = document.getElementById('dashboard-link');
+            console.log('🔍 dashboard-link element found:', !!dashboardLink);
+            if (dashboardLink) {
+                const newUrl = `/app/flansa-app-dashboard?app=${encodeURIComponent(this.application)}`;
+                dashboardLink.href = newUrl;
+                
+                // Remove any existing click handlers and add our own to ensure query params are preserved
+                dashboardLink.onclick = null;
+                dashboardLink.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log('🔗 Dashboard link clicked, navigating to:', newUrl);
+                    window.location.href = newUrl;
+                });
+                
+                console.log('🔗 Updated dashboard link with custom handler:', newUrl);
+                console.log('🔍 Link href now:', dashboardLink.href);
+            } else {
+                console.warn('❌ dashboard-link element not found in DOM');
+            }
+        } else {
+            console.warn('❌ No application context available');
+        }
+    }
+    
     formatDateTime(dateString) {
         if (!dateString) return '';
-        
         const date = new Date(dateString);
         const dateStr = date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
+            year: 'numeric', 
+            month: 'short', 
             day: 'numeric'
         });
         const timeStr = date.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: '2-digit',
+            hour: 'numeric', 
+            minute: '2-digit', 
             hour12: true
         });
-        
         return `${dateStr} at ${timeStr}`;
     }
     
-    /**
-     * Format user name for display
-     */
-    formatUser(user) {
-        if (!user) return '';
-        
-        // If it's Administrator, show as Admin
-        if (user === 'Administrator') {
-            return 'Admin';
-        }
-        
-        // If it's an email, extract the username part
-        if (user.includes('@')) {
-            return user.split('@')[0];
-        }
-        
-        return user;
+    formatUser(userString) {
+        if (!userString) return '';
+        // Remove @domain if it's an email, otherwise return as-is
+        return userString.includes('@') ? userString.split('@')[0] : userString;
     }
     
     escapeHtml(unsafe) {

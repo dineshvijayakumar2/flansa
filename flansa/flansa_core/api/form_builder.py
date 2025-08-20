@@ -13,10 +13,22 @@ def get_form_layout(table_name):
     try:
         table_doc = frappe.get_doc("Flansa Table", table_name)
         
-        if not table_doc.fields_json:
-            return {"success": False, "error": "No fields defined"}
+        if not table_doc.doctype_name or not frappe.db.exists("DocType", table_doc.doctype_name):
+            return {"success": False, "error": "No DocType found for this table"}
         
-        fields = json.loads(table_doc.fields_json)
+        # Get fields from DocType
+        doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
+        fields = []
+        for field in doctype_doc.fields:
+            if field.fieldname not in ['name', 'owner', 'creation', 'modified', 'modified_by', 'docstatus', 'idx']:
+                fields.append({
+                    'field_name': field.fieldname,
+                    'field_label': field.label or field.fieldname,
+                    'field_type': field.fieldtype,
+                    'options': field.options or '',
+                    'is_required': field.reqd or 0,
+                    'is_readonly': field.read_only or 0
+                })
         
         # Build modern form layout
         form_layout = {
@@ -251,111 +263,44 @@ def get_table_form_config(table_name, force_refresh=False):
         # Get table document
         table_doc = frappe.get_doc('Flansa Table', table_name)
         
-        # Use native fields instead of Flansa Field doctype
-        from flansa.native_fields import get_table_fields_native
-        
         # Clear any caching if force refresh requested
         if force_refresh:
-            frappe.clear_cache(doctype=table_doc.doctype_name)
-            # Also clear document cache
-            frappe.clear_document_cache(table_doc.doctype_name, table_name)
-        
-        native_result = get_table_fields_native(table_name)
-        if not native_result.get('success'):
-            return native_result
-        
-        # Debug logging for field sync issues
-        if force_refresh:
-            raw_fields = native_result.get('fields', [])
-            flansa_fields = [f for f in raw_fields if f.get('created_by_flansa')]
-            
-            # Also get fields directly from DocType for comparison
-            direct_fields = []
             if table_doc.doctype_name:
-                try:
-                    doctype_meta = frappe.get_meta(table_doc.doctype_name)
-                    direct_fields = [f.fieldname for f in doctype_meta.fields if not f.fieldname.startswith('_')]
-                except:
-                    pass
-            
-            frappe.logger().info(f"Form Builder Sync Debug for {table_name}:")
-            frappe.logger().info(f"Raw fields from native function: {[f.get('fieldname') for f in raw_fields]}")
-            frappe.logger().info(f"Flansa fields only: {[f.get('fieldname') for f in flansa_fields]}")
-            frappe.logger().info(f"Direct DocType fields: {direct_fields}")
+                frappe.clear_cache(doctype=table_doc.doctype_name)
+                frappe.clear_document_cache(table_doc.doctype_name, table_name)
         
-        # Format fields for form builder
+        # Get fields directly from DocType
+        fields_data = []
+        
+        if table_doc.doctype_name and frappe.db.exists("DocType", table_doc.doctype_name):
+            doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
+            for field in doctype_doc.fields:
+                # Include ALL fields (including system fields) for form builder
+                fields_data.append({
+                    'fieldname': field.fieldname,
+                    'label': field.label or field.fieldname,
+                    'fieldtype': field.fieldtype,
+                    'options': field.options or '',
+                    'reqd': field.reqd or 0,
+                    'read_only': field.read_only or 0,
+                    'description': field.description or ''
+                })
+        
+        native_result = {'success': True, 'fields': fields_data}
+        
+        # Format fields for form builder - simplified
         formatted_fields = []
         
-        # Define important standard fields that should be available in form builder
-        important_standard_fields = {
-            'title': 'Data',
-            'subject': 'Data', 
-            'description': 'Text Editor',
-            'status': 'Select',
-            'email_id': 'Data',
-            'phone': 'Data',
-            'mobile_no': 'Data',
-            'company': 'Link',
-            'department': 'Link',
-            'enabled': 'Check',
-            'disabled': 'Check',
-            'is_active': 'Check'
-        }
-        
         for field in native_result.get('fields', []):
-            # Include all fields for maximum flexibility
-            # Users can choose which fields to display in their forms
-            # This includes Logic Fields, Custom Fields, and standard DocType fields
-            
-            # Skip only truly internal fields, but include important system fields
-            # Important system fields like name, owner, creation, etc. should be available in forms
-            skip_field = (
-                field.get('fieldname', '').startswith('_') or
-                field.get('fieldname') in ['idx'] or  # Keep idx hidden but allow name, docstatus, etc.
-                field.get('fieldtype') in ['Section Break', 'Column Break', 'Tab Break']
-            )
-            
-            if not skip_field:
-                # Determine field source for UI categorization
-                fieldname = field.get('fieldname', '')
-                
-                # Use centralized system fields manager
-                from flansa.flansa_core.api.system_fields_manager import FRAPPE_SYSTEM_FIELDS
-                
-                field_source = "system"
-                is_system_field = fieldname in FRAPPE_SYSTEM_FIELDS
-                
-                if field.get('created_by_flansa'):
-                    field_source = "flansa"
-                elif frappe.db.exists("Custom Field", {"dt": table_doc.doctype_name, "fieldname": fieldname}):
-                    field_source = "custom"
-                elif is_system_field:
-                    field_source = "system"
-                
-                # Check if it's a Logic Field
-                is_logic_field = frappe.db.exists("Flansa Logic Field", {"table_name": table_name, "field_name": fieldname})
-                
-                formatted_fields.append({
-                    'field_name': field['fieldname'],
-                    'field_label': field['label'],
-                    'field_type': field['fieldtype'],
-                    'options': field.get('options', ''),
-                    'is_required': field.get('reqd', 0),
-                    'is_readonly': field.get('read_only', 0) or is_system_field,  # System fields are always read-only
-                    'description': field.get('description', ''),
-                    'default_value': field.get('default', ''),
-                    'hidden': field.get('hidden', 0),
-                    'in_list_view': field.get('in_list_view', 0),
-                    'bold': field.get('bold', 0),
-                    'collapsible': field.get('collapsible', 0),
-                    'depends_on': field.get('depends_on', ''),
-                    'width': field.get('width', ''),
-                    'field_order': field.get('idx', 0),
-                    'field_source': field_source,
-                    'is_logic_field': is_logic_field,
-                    'is_virtual': field.get('is_virtual', 0),
-                    'is_system_field': is_system_field  # Add system field indicator
-                })
+            formatted_fields.append({
+                'field_name': field['fieldname'],
+                'field_label': field['label'],
+                'field_type': field['fieldtype'],
+                'options': field.get('options', ''),
+                'is_required': field.get('reqd', 0),
+                'is_readonly': field.get('read_only', 0),
+                'description': field.get('description', '')
+            })
         
         # Check if form configuration already exists
         form_config = {}

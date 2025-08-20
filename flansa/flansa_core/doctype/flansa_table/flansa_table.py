@@ -166,15 +166,14 @@ class FlansaTable(Document):
                                 "default_value": field.get("default", "")
                             }))
             
-            # Create DocType structure with naming configuration
-            naming_config = self.get_naming_configuration()
+            # Create DocType structure
             doctype_doc = {
                 "doctype": "DocType",
                 "name": doctype_name,
                 "module": "Flansa Generated",
                 "custom": 1,
-                "naming_rule": naming_config["naming_rule"],
-                "autoname": naming_config["autoname"],
+                "naming_rule": "Autoincrement",
+                "autoname": self.get_unique_naming_series(),
                 "description": f"Generated from Flansa Table: {self.table_label or self.table_name}",
                 "sort_field": "creation",
                 "sort_order": "DESC",
@@ -207,46 +206,11 @@ class FlansaTable(Document):
                 message += " (ready for you to add custom fields as needed)"
             
             frappe.msgprint(message, indicator="green")
-                        
-            # Create default form config entry
-            self.create_default_form_config(doctype_name)
-            
             return {"success": True, "doctype_name": doctype_name, "message": message}
             
         except Exception as e:
             frappe.log_error(f"Error force generating DocType: {str(e)}")
             return {"success": False, "message": f"Error creating DocType: {str(e)}"}
-
-    def create_default_form_config(self, doctype_name):
-        """Create default form configuration entry for the table"""
-        try:
-            # Check if form config already exists
-            if frappe.db.exists("Flansa Form Config", self.name):
-                print(f"✅ Form config already exists for {self.name}", flush=True)
-                return
-            
-            # Create basic form config
-            form_config = frappe.get_doc({
-                "doctype": "Flansa Form Config",
-                "table_name": self.name,
-                "form_title": self.table_label or self.table_name,
-                "form_description": self.description or f"Form for {self.table_label or self.table_name}",
-                "layout_type": "standard",
-                "sections": "[]",  # Empty sections array - will be populated by visual builder
-                "field_overrides": "{}",  # Empty field overrides
-                "created_by": frappe.session.user,
-                "modified_by": frappe.session.user
-            })
-            
-            form_config.insert(ignore_permissions=True)
-            frappe.db.commit()
-            
-            print(f"✅ Created form config for table: {self.name}", flush=True)
-            frappe.msgprint(f"Created default form configuration for {self.table_label or self.table_name}", indicator="green")
-            
-        except Exception as e:
-            print(f"⚠️ Could not create form config: {str(e)}", flush=True)
-            frappe.log_error(f"Error creating form config for {self.name}: {str(e)}", "Form Config Creation")
 
     def add_flansa_metadata_fields(self, doctype_doc):
         """Add minimal essential metadata fields following low-code best practices"""
@@ -321,70 +285,6 @@ class FlansaTable(Document):
         ]
         
         doctype_doc["permissions"] = permissions
-
-    def get_naming_configuration(self):
-        """Get naming configuration from Flansa Table settings"""
-        naming_type = getattr(self, 'naming_type', 'Naming Series')
-        
-        if naming_type == "Naming Series":
-            prefix = getattr(self, 'naming_prefix', 'REC')
-            digits = getattr(self, 'naming_digits', 5) 
-            autoname = f"{prefix}-.{'#' * digits}"
-            naming_rule = "By \"Naming Series\" field"
-            
-            # Set starting counter
-            start_from = getattr(self, 'naming_start_from', 1)
-            if start_from and start_from > 1:
-                self.apply_starting_counter(f"{prefix}-", start_from)
-            
-        elif naming_type == "Auto Increment":
-            digits = getattr(self, 'naming_digits', 5)
-            autoname = f".{'#' * digits}"
-            naming_rule = "Autoincrement"
-            
-        elif naming_type == "Field Based":
-            field_name = getattr(self, 'naming_field', '')
-            autoname = f"field:{field_name}"
-            naming_rule = "By fieldname"
-                
-        elif naming_type == "Prompt":
-            autoname = "Prompt"
-            naming_rule = "Set by user"
-            
-        elif naming_type == "Random":
-            autoname = None
-            naming_rule = "Random"
-        
-        return {
-            "autoname": autoname,
-            "naming_rule": naming_rule
-        }
-    
-    def apply_starting_counter(self, series_name, start_from):
-        """Apply starting counter to naming series (direct SQL for reliability)"""
-        try:
-            # Check if series exists in database (using direct SQL to avoid 'modified' column error)
-            existing_series_result = frappe.db.sql("SELECT current FROM `tabSeries` WHERE name = %s", series_name)
-            existing_series = existing_series_result[0][0] if existing_series_result else None
-            
-            if existing_series is None:
-                # Create new series entry
-                frappe.db.sql("""
-                    INSERT INTO `tabSeries` (name, current) 
-                    VALUES (%s, %s)
-                """, (series_name, start_from - 1))
-            elif existing_series < (start_from - 1):
-                # Only update if the new start is higher than current
-                frappe.db.sql("""
-                    UPDATE `tabSeries` 
-                    SET current = %s 
-                    WHERE name = %s
-                """, (start_from - 1, series_name))
-            
-            frappe.db.commit()
-            
-        except Exception as e:
-            frappe.log_error(f"Error applying starting counter: {str(e)}", "Flansa Starting Counter")
 
     def get_unique_naming_series(self):
         """Generate clean, simple naming series following low-code best practices"""

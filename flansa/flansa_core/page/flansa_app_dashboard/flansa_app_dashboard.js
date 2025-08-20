@@ -327,6 +327,9 @@ class FlansaApplicationDashboard {
                             <i class="fa fa-eye"></i> View Data
                         </button>
                     `}
+                    <button class="btn btn-sm btn-danger" onclick="window.app_dashboard.delete_table('${table.name}')" title="Delete Table">
+                        <i class="fa fa-trash"></i>
+                    </button>
                 </div>
             </div>
         `;
@@ -792,31 +795,60 @@ class FlansaApplicationDashboard {
     }
     
     delete_table(table_name) {
-        frappe.confirm(
-            'Are you sure you want to delete this table? This action cannot be undone.',
-            () => {
-                frappe.call({
-                    method: 'frappe.client.delete',
-                    args: {
-                        doctype: 'Flansa Table',
-                        name: table_name
-                    },
-                    callback: (r) => {
-                        if (r && !r.exc) {
-                            frappe.show_alert('Table deleted successfully', 'green');
-                            // Reload the application dashboard to reflect changes
-                            this.load_application_data();
-                            // Also refresh the page to ensure clean state
-                            setTimeout(() => {
-                                frappe.set_route('flansa-app-dashboard', this.app_name);
-                            }, 1000);
-                        } else {
-                            frappe.show_alert('Failed to delete table', 'red');
-                        }
-                    }
-                });
+        // First show preview of what will be deleted
+        frappe.call({
+            method: 'flansa.flansa_core.api.clean_delete.get_deletion_preview',
+            args: {
+                resource_type: 'table',
+                resource_name: table_name
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const preview = r.message.preview;
+                    const items = preview.items_to_delete.join('<br>• ');
+                    
+                    frappe.confirm(
+                        `<div style="max-width: 500px;">
+                        <h4>⚠️ Clean Delete Table</h4>
+                        <p>This will <strong>permanently delete</strong>:</p>
+                        <div style="background: #f8f9fa; padding: 12px; border-radius: 6px; margin: 10px 0; font-family: monospace; font-size: 13px;">
+                        • ${items}
+                        </div>
+                        <p><strong style="color: #d73527;">This action cannot be undone.</strong></p>
+                        <p>Are you sure you want to proceed?</p>
+                        </div>`,
+                        () => {
+                            // Show loading message
+                            frappe.show_alert('🗑️ Deleting table and connected resources...', 'blue');
+                            
+                            frappe.call({
+                                method: 'flansa.flansa_core.api.clean_delete.clean_delete_table',
+                                args: { table_name: table_name },
+                                callback: (delete_r) => {
+                                    if (delete_r.message && delete_r.message.success) {
+                                        frappe.show_alert('✅ ' + delete_r.message.message, 'green');
+                                        console.log('🗑️ Table deletion summary:', delete_r.message.summary);
+                                        
+                                        // Refresh the dashboard
+                                        this.load_application_data();
+                                        setTimeout(() => {
+                                            frappe.set_route('flansa-app-dashboard', this.app_name);
+                                        }, 1500);
+                                    } else {
+                                        frappe.show_alert('❌ Failed to delete table: ' + (delete_r.message?.error || 'Unknown error'), 'red');
+                                    }
+                                }
+                            });
+                        },
+                        null, // No callback for cancel
+                        'Delete Table' // Dialog title
+                    );
+                } else {
+                    frappe.show_alert('Failed to get deletion preview', 'red');
+                    console.error('Preview error:', r.message?.error);
+                }
             }
-        );
+        });
     }
     
     switch_view(mode) {
