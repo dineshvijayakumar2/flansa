@@ -20,16 +20,16 @@ def get_period_expression(field, period):
     elif period == 'month':
         return f"DATE_FORMAT({field_expr}, '%Y-%m')"
     elif period == 'week':
-        # Return the Monday of the week as a more intuitive grouping
-        return f"DATE_FORMAT(DATE_SUB({field_expr}, INTERVAL WEEKDAY({field_expr}) DAY), '%Y-%m-%d')"
+        # Use simple DATE_FORMAT for week
+        return f"DATE_FORMAT({field_expr}, '%Y-%u')"
     elif period == 'day':
         return f"DATE({field_expr})"
     elif period == 'hour':
-        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H:00:00')"
+        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H')"
     else:
         return field_expr  # Fallback to exact value
 
-def get_period_where_condition(field, period, group_value):
+def get_period_where_condition(field, period):
     """
     Generate WHERE condition to match records for a specific period group
     """
@@ -40,12 +40,12 @@ def get_period_where_condition(field, period, group_value):
     elif period == 'month':
         return f"DATE_FORMAT({field_expr}, '%Y-%m') = %s"
     elif period == 'week':
-        # Match all records in the same week (where Monday of week matches)
-        return f"DATE_FORMAT(DATE_SUB({field_expr}, INTERVAL WEEKDAY({field_expr}) DAY), '%Y-%m-%d') = %s"
+        # Match records in the same week using DATE_FORMAT
+        return f"DATE_FORMAT({field_expr}, '%Y-%u') = %s"
     elif period == 'day':
         return f"DATE({field_expr}) = %s"
     elif period == 'hour':
-        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H:00:00') = %s"
+        return f"DATE_FORMAT({field_expr}, '%Y-%m-%d %H') = %s"
     else:
         return f"{field_expr} = %s"
 import re
@@ -551,7 +551,9 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             except Exception:
                 pass
                 
-        frappe.logger().debug(f"Field type detection: {group_field} -> {field_type} (period: {period})")
+        print(f"🔍 FIELD DEBUG: {group_field} -> {field_type} (period: {period})")
+        print(f"🔍 SELECTED FIELDS: {selected_fields}")
+        print(f"🔍 FIELD MAP: {field_map}")
         
         # Use period expression if applicable
         if period != 'exact' and field_type in ['Date', 'Datetime']:
@@ -629,7 +631,7 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             detail_filters = dict(filters)
             if period != 'exact' and field_type in ['Date', 'Datetime']:
                 # Use the proper WHERE condition for period matching
-                detail_where = get_period_where_condition(group_field, period, group_value)
+                detail_where = get_period_where_condition(group_field, period)
                 detail_sql = f"""
                     SELECT {', '.join([f'`{f}`' for f in query_fields])}
                     FROM `tab{doctype_name}`
@@ -660,13 +662,14 @@ def execute_grouped_report(doctype_name, query_fields, filters, grouping_config,
             formatted_label = group_value or '(Empty)'
             if period != 'exact' and group_value:
                 if period == 'week':
-                    formatted_label = f"Week of {group_value}"
+                    # Convert YEARWEEK number to readable format
+                    formatted_label = f"Week {group_value}"
                 elif period == 'month':
                     formatted_label = f"Month {group_value}"
                 elif period == 'year':
                     formatted_label = f"Year {group_value}"
                 elif period == 'hour':
-                    formatted_label = f"Hour {group_value}"
+                    formatted_label = f"Hour {group_value}:00"
                 elif period == 'day':
                     formatted_label = f"Day {group_value}"
             
@@ -774,6 +777,35 @@ def process_image_field_value(image_value):
     except Exception as e:
         frappe.logger().error(f"Error processing image field value {image_value}: {str(e)}")
         return None
+
+@frappe.whitelist()
+def test_sql_expressions():
+    """Test SQL expressions for period grouping"""
+    try:
+        # Test with a known table
+        test_sql = """
+            SELECT 
+                YEAR(creation) as year_group,
+                DATE_FORMAT(creation, '%Y-%m') as month_group,
+                YEARWEEK(creation, 1) as week_group,
+                DATE(creation) as day_group,
+                DATE_FORMAT(creation, '%Y-%m-%d %H') as hour_group,
+                COUNT(*) as cnt
+            FROM `tabFlansa Table`
+            GROUP BY year_group, month_group, week_group, day_group, hour_group
+            LIMIT 5
+        """
+        
+        results = frappe.db.sql(test_sql, as_dict=True)
+        
+        return {
+            "success": True,
+            "sql": test_sql,
+            "results": results
+        }
+        
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 @frappe.whitelist()
 def test_grouping_debug():
@@ -960,7 +992,10 @@ def execute_report(report_config, view_options=None):
         # Check if grouping is requested
         grouping_config = report_config.get("grouping", [])
         
-        frappe.logger().info(f"Grouping config: {grouping_config}")
+        # IMPORTANT: Use print statements that will show in console
+        print(f"🔍 GROUPING DEBUG: Report Config Keys = {list(report_config.keys())}")
+        print(f"🔍 GROUPING DEBUG: Grouping config = {grouping_config}")
+        print(f"🔍 GROUPING DEBUG: Has grouping = {bool(grouping_config)}")
         
         if grouping_config:
             frappe.logger().info("Executing grouped query")
