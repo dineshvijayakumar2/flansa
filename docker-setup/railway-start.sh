@@ -148,13 +148,17 @@ echo "🔧 Creating site with Railway PostgreSQL database..."
 bench new-site $SITE_NAME \
     --db-type postgres \
     --db-name $DB_NAME \
+    --db-host $DB_HOST \
+    --db-port $DB_PORT \
+    --db-root-username $DB_USER \
     --db-root-password $DB_PASS \
     --admin-password ${ADMIN_PASSWORD:-admin123} \
     --force
 
-# Update site config to use Railway PostgreSQL credentials
-echo "🔧 Updating site config for Railway PostgreSQL..."
+# Immediately force correct PostgreSQL credentials in site config
+echo "🔧 Force correcting site config for PostgreSQL..."
 
+# First set via bench commands
 bench --site $SITE_NAME set-config db_type postgres
 bench --site $SITE_NAME set-config db_name $DB_NAME
 bench --site $SITE_NAME set-config db_host $DB_HOST  
@@ -162,36 +166,36 @@ bench --site $SITE_NAME set-config db_port $DB_PORT
 bench --site $SITE_NAME set-config db_user $DB_USER
 bench --site $SITE_NAME set-config db_password $DB_PASS
 
-# Force update the site config file directly to ensure correct values
-echo "🔧 Force updating site config file..."
+# Then force update the file directly to be absolutely sure
+echo "🔧 Double-checking site config file..."
 python3 -c "
 import json
 import os
 
 site_config_path = 'sites/$SITE_NAME/site_config.json'
-with open(site_config_path, 'r') as f:
-    config = json.load(f)
-
-# Force correct PostgreSQL settings
-config['db_type'] = 'postgres'
-config['db_name'] = '$DB_NAME'
-config['db_host'] = '$DB_HOST'
-config['db_port'] = $DB_PORT
-config['db_user'] = '$DB_USER'
-config['db_password'] = '$DB_PASS'
-
-with open(site_config_path, 'w') as f:
-    json.dump(config, f, indent=2)
-
-print('✅ Site config file updated with correct PostgreSQL credentials')
-print(f'   User: {config[\"db_user\"]}')
-print(f'   Host: {config[\"db_host\"]}')
-print(f'   Database: {config[\"db_name\"]}')
+if os.path.exists(site_config_path):
+    with open(site_config_path, 'r') as f:
+        config = json.load(f)
+    
+    # Force correct PostgreSQL settings
+    config['db_type'] = 'postgres'
+    config['db_name'] = '$DB_NAME'
+    config['db_host'] = '$DB_HOST'
+    config['db_port'] = $DB_PORT
+    config['db_user'] = '$DB_USER'
+    config['db_password'] = '$DB_PASS'
+    
+    with open(site_config_path, 'w') as f:
+        json.dump(config, f, indent=2)
+    
+    print('✅ Site config file verified and corrected')
+    print(f'   User: {config[\"db_user\"]}')
+    print(f'   Host: {config[\"db_host\"]}')
+    print(f'   Port: {config[\"db_port\"]}')
+    print(f'   Database: {config[\"db_name\"]}')
+else:
+    print('❌ Site config file not found yet')
 "
-
-# Add PostgreSQL connection parameters
-echo "🔧 Adding PostgreSQL compatibility parameters..."
-bench --site $SITE_NAME set-config db_socket ""
 
 # Install Flansa app separately
 echo "📱 Installing Flansa app..."
