@@ -141,9 +141,12 @@ if [ -n "$DATABASE_URL" ]; then
     unset POSTGRES_DB 2>/dev/null
     
     # Force unset any variables that might contain 'railway'
-    env | grep -i railway | cut -d= -f1 | while read var; do
-        unset "$var" 2>/dev/null
-    done
+    railway_vars=$(env | grep -i railway | cut -d= -f1 2>/dev/null || true)
+    if [ -n "$railway_vars" ]; then
+        echo "$railway_vars" | while read var; do
+            unset "$var" 2>/dev/null || true
+        done
+    fi
     
     # Verify environment variables are set correctly
     echo "🔍 Verifying environment variables:"
