@@ -87,27 +87,25 @@ echo "⚙️ Configuring bench..."
 if [ -n "$DATABASE_URL" ]; then
     echo "🔧 Parsing PostgreSQL URL: $DATABASE_URL"
     
-    # Parse postgresql://user:pass@host:port/dbname format
-    # Handle both postgres:// and postgresql:// schemes
-    URL_WITHOUT_PROTOCOL=$(echo $DATABASE_URL | sed 's/postgres\(ql\)\?:\/\///')
+    # Parse postgresql://user:pass@host:port/dbname format using sed
+    # Extract username - everything between :// and first :
+    DB_USER=$(echo $DATABASE_URL | sed -n 's|.*://\([^:]*\):.*|\1|p')
     
-    # Extract user:pass@host:port/dbname
-    USER_PASS_HOST=$(echo $URL_WITHOUT_PROTOCOL | cut -d'/' -f1)
-    USER_PASS=$(echo $USER_PASS_HOST | cut -d'@' -f1)
-    DB_USER=$(echo $USER_PASS | cut -d':' -f1)
-    DB_PASS=$(echo $USER_PASS | cut -d':' -f2)
+    # Extract password - everything between first : after username and @
+    DB_PASS=$(echo $DATABASE_URL | sed -n 's|.*://[^:]*:\([^@]*\)@.*|\1|p')
     
-    # Extract host:port/dbname  
-    HOST_PORT_DB=$(echo $USER_PASS_HOST | cut -d'@' -f2)
-    DB_HOST=$(echo $HOST_PORT_DB | cut -d':' -f1)
-    PORT_AND_DB=$(echo $HOST_PORT_DB | cut -d':' -f2)
-    DB_PORT=$(echo $PORT_AND_DB | cut -d'/' -f1)
-    DB_NAME=$(echo $PORT_AND_DB | cut -d'/' -f2)
+    # Extract host - everything between @ and first :
+    DB_HOST=$(echo $DATABASE_URL | sed -n 's|.*@\([^:]*\):.*|\1|p')
+    
+    # Extract port - everything between last : and /
+    DB_PORT=$(echo $DATABASE_URL | sed -n 's|.*:\([0-9]*\)/.*|\1|p')
+    
+    # Extract database name - everything after last /
+    DB_NAME=$(echo $DATABASE_URL | sed -n 's|.*/\([^/?]*\).*|\1|p')
     
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     echo "🔍 Debug - Password length: ${#DB_PASS}"
-    echo "🔍 Debug - USER_PASS_HOST: $USER_PASS_HOST"
-    echo "🔍 Debug - USER_PASS: $USER_PASS"
+    echo "🔍 Debug - Expected: User=postgres, Host=postgres.railway.internal, Port=5432, DB=railway"
     
     # Test PostgreSQL connection
     echo "🔧 Testing PostgreSQL connection..."
