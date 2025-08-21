@@ -2,7 +2,7 @@ app_name = "flansa"
 app_title = "Flansa"
 app_publisher = "Flansa Team"
 app_description = "No-code platform for citizen developers"
-app_email = "info@flansa.io"
+app_email = "dinesh.vijayakumar@flansa.io"
 app_license = "MIT"
 
 # App Logo
@@ -77,7 +77,10 @@ doctype_js = {
 # ----------
 
 # application home page (will override Website Settings)
-# home_page = "login"
+home_page = "app/flansa"
+
+# Default desk page
+default_workspace = "Flansa"
 
 # website user home page (by Role)
 # role_home_page = {

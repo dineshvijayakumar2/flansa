@@ -1,0 +1,78 @@
+{
+ "charts": [],
+ "content": "[{\"id\":\"ZMhkQaOaKb\",\"type\":\"header\",\"data\":{\"text\":\"<span class=\\\"h4\\\">Flansa Platform</span>\",\"col\":12}},{\"id\":\"7HnJNLSJxh\",\"type\":\"paragraph\",\"data\":{\"text\":\"Build powerful no-code applications with Flansa's visual development platform\",\"col\":12}},{\"id\":\"quickActions\",\"type\":\"quick_list\",\"data\":{\"quick_list_name\":\"Quick Actions\",\"col\":4}},{\"id\":\"workspace_shortcuts\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Visual Builder\",\"col\":4}},{\"id\":\"reports_section\",\"type\":\"card\",\"data\":{\"card_name\":\"Reports & Analytics\",\"col\":4}}]",
+ "creation": "2024-08-21 10:00:00.000000",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "for_user": "",
+ "hide_custom": 0,
+ "icon": "build",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Flansa",
+ "links": [],
+ "modified": "2024-08-21 10:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "Flansa",
+ "number_cards": [],
+ "owner": "Administrator",
+ "parent_page": "",
+ "public": 1,
+ "quick_lists": [
+  {
+   "document_type": "Flansa Application",
+   "label": "Quick Actions",
+   "quick_list_name": "Quick Actions"
+  }
+ ],
+ "restrict_to_domain": "",
+ "roles": [],
+ "sequence_id": 1.0,
+ "shortcuts": [
+  {
+   "color": "Blue",
+   "doc_view": "List",
+   "label": "Visual Builder",
+   "link_to": "flansa-visual-builder",
+   "type": "Page"
+  },
+  {
+   "color": "Green", 
+   "doc_view": "List",
+   "label": "Applications",
+   "link_to": "Flansa Application",
+   "type": "DocType"
+  },
+  {
+   "color": "Orange",
+   "doc_view": "List",
+   "label": "Tables",
+   "link_to": "Flansa Table",
+   "type": "DocType"
+  },
+  {
+   "color": "Purple",
+   "doc_view": "List",
+   "label": "Report Builder",
+   "link_to": "flansa-unified-report-builder",
+   "type": "Page"
+  },
+  {
+   "color": "Red",
+   "doc_view": "List",
+   "label": "Database Viewer",
+   "link_to": "flansa-database-viewer",
+   "type": "Page"
+  },
+  {
+   "color": "Yellow",
+   "doc_view": "List",
+   "label": "Relationship Builder",
+   "link_to": "flansa-relationship-builder",
+   "type": "Page"
+  }
+ ],
+ "title": "Flansa"
+}
