@@ -217,13 +217,13 @@ else
     
     # Force correct database connection for installation
     echo "🔧 Setting up database connection for Flansa installation..."
-    cat > sites/$SITE_NAME/common_site_config.json << EOF
+    cat > sites/common_site_config.json << EOF
 {
   "db_type": "postgres",
   "db_host": "$DB_HOST",
   "db_port": $DB_PORT,
-  "db_user": "$DB_USER",
-  "db_password": "$DB_PASS"
+  "root_login": "$DB_USER",
+  "root_password": "$DB_PASS"
 }
 EOF
     
@@ -234,8 +234,14 @@ EOF
 fi
 
 echo "🏠 Setting homepage configuration"
-bench --site $SITE_NAME set-config home_page "app/flansa" || echo "   Homepage config skipped"
-bench --site $SITE_NAME set-config default_workspace "Flansa" || echo "   Workspace config skipped"
+# Only set Flansa homepage if app is installed
+if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
+    bench --site $SITE_NAME set-config home_page "app/flansa" || echo "   Homepage config skipped"
+    bench --site $SITE_NAME set-config default_workspace "Flansa" || echo "   Workspace config skipped"
+else
+    echo "⚠️ Flansa not installed, using default Frappe homepage"
+    bench --site $SITE_NAME set-config home_page "login" || echo "   Homepage config skipped"
+fi
 
 # Build assets
 echo "🔨 Building assets..."
