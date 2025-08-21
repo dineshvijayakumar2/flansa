@@ -7,9 +7,27 @@ trap 'echo "❌ Error occurred at line $LINENO. Exit code: $?" >&2' ERR
 echo "🚀 Starting Frappe + Flansa on Railway"
 echo "======================================"
 
-# Use PUBLIC URLs if available for better connectivity
-DATABASE_URL=${DATABASE_PUBLIC_URL:-$DATABASE_URL}
-REDIS_URL=${REDIS_PUBLIC_URL:-$REDIS_URL}
+# Force use of PUBLIC URLs to avoid Railway internal service discovery
+# Railway's postgres.railway.internal triggers automatic "railway" user mapping
+# Using public URLs (with egress costs) to avoid authentication issues
+if [ -n "$DATABASE_PUBLIC_URL" ]; then
+    DATABASE_URL="$DATABASE_PUBLIC_URL"
+    echo "🔧 FORCED: Using DATABASE_PUBLIC_URL to bypass Railway service discovery"
+    echo "   This avoids 'railway' user authentication issues"
+    echo "   Note: This may incur egress fees but ensures correct postgres user"
+else
+    echo "❌ DATABASE_PUBLIC_URL not available, using internal URL"
+    echo "   Warning: May encounter 'railway' user authentication issues"
+    DATABASE_URL="$DATABASE_URL"
+fi
+
+# Also force public Redis URL
+if [ -n "$REDIS_PUBLIC_URL" ]; then
+    REDIS_URL="$REDIS_PUBLIC_URL"
+    echo "🔧 Using REDIS_PUBLIC_URL for consistency"
+else
+    REDIS_URL="$REDIS_URL"
+fi
 
 echo "🔗 Variables: DATABASE_URL and REDIS_URL should be available"
 echo "🔍 Debug - DATABASE_URL length: ${#DATABASE_URL}"
