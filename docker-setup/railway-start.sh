@@ -199,13 +199,8 @@ EOF
     echo "   Database: $DB_NAME"
 fi
 
-# Clear all caches to force reload of configuration
-echo "🧹 Clearing all caches..."
-bench --site $SITE_NAME clear-cache || echo "   Cache clear skipped"
-
-# Double-check the configuration one more time
-echo "🔍 Final configuration check before app installation..."
-bench --site $SITE_NAME show-config | grep -E "db_user|db_host|db_type" || echo "   Config check skipped"
+# Skip cache clearing as it fails after config overwrite
+echo "✅ Configuration updated, proceeding to app installation..."
 
 # Set environment variables to force PostgreSQL connection
 export FRAPPE_DB_USER=$DB_USER
@@ -214,14 +209,24 @@ export FRAPPE_DB_HOST=$DB_HOST
 export FRAPPE_DB_PORT=$DB_PORT
 export FRAPPE_DB_NAME=$DB_NAME
 
-# Install Flansa app with forced PostgreSQL connection
-echo "📱 Installing Flansa app with forced PostgreSQL settings..."
-DB_USER=$DB_USER DB_PASSWORD=$DB_PASS DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME \
-bench --site $SITE_NAME install-app flansa
+# Check if Flansa app is already installed
+if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
+    echo "✅ Flansa app already installed"
+else
+    echo "📱 Installing Flansa app..."
+    bench --site $SITE_NAME install-app flansa || {
+        echo "❌ Flansa app installation failed"
+        echo "🔍 Retrying with fresh database connection..."
+        
+        # Try reconnecting to database and installing again
+        bench --site $SITE_NAME migrate || echo "   Migration skipped"
+        bench --site $SITE_NAME install-app flansa || echo "   Flansa installation failed"
+    }
+fi
 
 echo "🏠 Setting homepage configuration"
-bench --site $SITE_NAME set-config home_page "app/flansa"
-bench --site $SITE_NAME set-config default_workspace "Flansa"
+bench --site $SITE_NAME set-config home_page "app/flansa" || echo "   Homepage config skipped"
+bench --site $SITE_NAME set-config default_workspace "Flansa" || echo "   Workspace config skipped"
 
 # Build assets
 echo "🔨 Building assets..."
