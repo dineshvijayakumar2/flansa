@@ -85,22 +85,12 @@ if [ -n "$REDIS_URL" ]; then
     bench set-config -g redis_socketio $REDIS_URL
 fi
 
-# Check if site exists and is configured correctly
+# Always recreate site to ensure clean PostgreSQL configuration
 if [ -d "sites/$SITE_NAME" ]; then
-    echo "✅ Site already exists: $SITE_NAME"
-    
-    # Check if site config has correct PostgreSQL user
-    if grep -q '"db_user": "postgres"' sites/$SITE_NAME/site_config.json 2>/dev/null; then
-        echo "✅ Site has correct PostgreSQL configuration"
-        SKIP_SITE_CREATION=true
-    else
-        echo "⚠️ Site exists but has wrong configuration, recreating..."
-        rm -rf "sites/$SITE_NAME"
-        SKIP_SITE_CREATION=false
-    fi
-else
-    SKIP_SITE_CREATION=false
+    echo "🔄 Removing existing site to ensure clean PostgreSQL setup..."
+    rm -rf "sites/$SITE_NAME"
 fi
+SKIP_SITE_CREATION=false
 
 if [ "$SKIP_SITE_CREATION" = "false" ]; then
     # Create fresh site with correct Railway configuration
