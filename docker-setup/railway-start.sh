@@ -133,36 +133,37 @@ if [ -n "$REDIS_URL" ]; then
     bench set-config -g redis_socketio $REDIS_URL
 fi
 
-# Create site if it doesn't exist
-if [ ! -d "sites/$SITE_NAME" ]; then
-    echo "🏗️ Creating site: $SITE_NAME"
-    
-    # Create site with Railway database
-    echo "🔧 Creating site with Railway database..."
-    bench new-site $SITE_NAME \
-        --db-name $DB_NAME \
-        --db-root-password $DB_PASS \
-        --admin-password ${ADMIN_PASSWORD:-admin123}
-    
-    # Update site config to use Railway database credentials
-    echo "🔧 Updating site config for Railway database..."
-    bench --site $SITE_NAME set-config db_name $DB_NAME
-    bench --site $SITE_NAME set-config db_host $DB_HOST  
-    bench --site $SITE_NAME set-config db_port $DB_PORT
-    bench --site $SITE_NAME set-config db_user $DB_USER
-    bench --site $SITE_NAME set-config db_password $DB_PASS
-    
-    # Install Flansa app separately
-    echo "📱 Installing Flansa app..."
-    bench --site $SITE_NAME install-app flansa
-    
-    echo "🏠 Setting homepage configuration"
-    bench --site $SITE_NAME set-config home_page "app/flansa"
-    bench --site $SITE_NAME set-config default_workspace "Flansa"
-else
-    echo "✅ Site exists, running migrations..."
-    bench --site $SITE_NAME migrate
+# Remove existing site if it has wrong configuration
+if [ -d "sites/$SITE_NAME" ]; then
+    echo "🧹 Removing existing site with incorrect configuration..."
+    rm -rf "sites/$SITE_NAME"
 fi
+
+# Create fresh site with correct Railway configuration
+echo "🏗️ Creating fresh site: $SITE_NAME"
+
+# Create site with Railway database
+echo "🔧 Creating site with Railway database..."
+bench new-site $SITE_NAME \
+    --db-name $DB_NAME \
+    --db-root-password $DB_PASS \
+    --admin-password ${ADMIN_PASSWORD:-admin123}
+
+# Update site config to use Railway database credentials
+echo "🔧 Updating site config for Railway database..."
+bench --site $SITE_NAME set-config db_name $DB_NAME
+bench --site $SITE_NAME set-config db_host $DB_HOST  
+bench --site $SITE_NAME set-config db_port $DB_PORT
+bench --site $SITE_NAME set-config db_user $DB_USER
+bench --site $SITE_NAME set-config db_password $DB_PASS
+
+# Install Flansa app separately
+echo "📱 Installing Flansa app..."
+bench --site $SITE_NAME install-app flansa
+
+echo "🏠 Setting homepage configuration"
+bench --site $SITE_NAME set-config home_page "app/flansa"
+bench --site $SITE_NAME set-config default_workspace "Flansa"
 
 # Build assets
 echo "🔨 Building assets..."
