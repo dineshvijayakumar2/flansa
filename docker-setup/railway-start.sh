@@ -214,7 +214,7 @@ fi
 echo "🔧 Starting server with Railway configuration..."
 export FRAPPE_SITE_NAME_HEADER=$SITE_NAME
 
-# Start server - Railway requires binding to 0.0.0.0 for external access
+# Start server - Railway requires proper binding for external access
 echo "🚀 Starting Frappe server with Railway configuration"
 echo "🔧 Serving site: $SITE_NAME"
-bench serve --host 0.0.0.0 --port $PORT --site $SITE_NAME
+bench serve --port $PORT --site $SITE_NAME
