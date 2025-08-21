@@ -217,4 +217,9 @@ export FRAPPE_SITE_NAME_HEADER=$SITE_NAME
 # Start server - Railway requires proper binding for external access
 echo "🚀 Starting Frappe server with Railway configuration"
 echo "🔧 Serving site: $SITE_NAME"
-bench serve --port $PORT --site $SITE_NAME
+
+# Set the default site for this bench instance
+echo $SITE_NAME > sites/currentsite.txt
+
+# Start server
+bench serve --port $PORT
