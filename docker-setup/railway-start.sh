@@ -166,44 +166,38 @@ export FRAPPE_DB_NAME=$DB_NAME
 # Check if Flansa app is already installed
 if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
     echo "✅ Flansa app already installed"
+    FLANSA_INSTALLED=true
 else
-    echo "📱 Installing Flansa app..."
-    
-    # Force correct database connection for installation
-    echo "🔧 Setting up database connection for Flansa installation..."
-    cat > sites/common_site_config.json << EOF
-{
-  "db_type": "postgres",
-  "db_host": "$DB_HOST",
-  "db_port": $DB_PORT,
-  "root_login": "$DB_USER",
-  "root_password": "$DB_PASS"
-}
-EOF
-    
-    bench --site $SITE_NAME install-app flansa || {
-        echo "⚠️ Flansa app installation failed, but continuing..."
-        echo "   The app may already be partially installed"
-    }
+    echo "⚠️  Skipping automatic Flansa installation due to database user issues"
+    echo "📝 Flansa can be installed manually after login to the site"
+    FLANSA_INSTALLED=false
 fi
 
 echo "🏠 Setting homepage configuration"
 # Only set Flansa homepage if app is installed
-if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
+if [ "$FLANSA_INSTALLED" = "true" ]; then
     bench --site $SITE_NAME set-config home_page "app/flansa" || echo "   Homepage config skipped"
     bench --site $SITE_NAME set-config default_workspace "Flansa" || echo "   Workspace config skipped"
 else
-    echo "⚠️ Flansa not installed, using default Frappe homepage"
+    echo "🔧 Using default Frappe homepage"
     bench --site $SITE_NAME set-config home_page "login" || echo "   Homepage config skipped"
 fi
 
 # Build assets
 echo "🔨 Building assets..."
-bench build --app flansa
+if [ "$FLANSA_INSTALLED" = "true" ]; then
+    bench build --app flansa
+else
+    bench build
+fi
 
 # Start server
 echo "🌟 Starting Frappe server on port $PORT"
-echo "🔗 Access at: https://$SITE_NAME"
+echo "🔗 Access at: https://$SITE_NAME/login"
+echo "📝 Login: Administrator / admin123"
+if [ "$FLANSA_INSTALLED" = "false" ]; then
+    echo "📋 To install Flansa: Go to App Installer and install 'flansa' manually"
+fi
 
 # Ensure server binds to all interfaces for Railway
 echo "🔧 Starting server with Railway configuration..."
