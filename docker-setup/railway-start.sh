@@ -145,7 +145,6 @@ echo "🏗️ Creating fresh site: $SITE_NAME"
 
 # Create site with Railway PostgreSQL database  
 echo "🔧 Creating site with Railway PostgreSQL database..."
-# Use --no-setup-db to skip database user creation
 bench new-site $SITE_NAME \
     --db-type postgres \
     --db-name $DB_NAME \
@@ -153,52 +152,37 @@ bench new-site $SITE_NAME \
     --db-port $DB_PORT \
     --db-root-username $DB_USER \
     --db-root-password $DB_PASS \
-    --db-user $DB_USER \
-    --db-password $DB_PASS \
     --admin-password ${ADMIN_PASSWORD:-admin123} \
     --force
 
 # Immediately force correct PostgreSQL credentials in site config
 echo "🔧 Force correcting site config for PostgreSQL..."
 
-# First set via bench commands
-bench --site $SITE_NAME set-config db_type postgres
-bench --site $SITE_NAME set-config db_name $DB_NAME
-bench --site $SITE_NAME set-config db_host $DB_HOST  
-bench --site $SITE_NAME set-config db_port $DB_PORT
-bench --site $SITE_NAME set-config db_user $DB_USER
-bench --site $SITE_NAME set-config db_password $DB_PASS
+# Force create/update site_config.json with correct credentials
+echo "🔧 Creating correct site config file..."
+cat > sites/$SITE_NAME/site_config.json << EOF
+{
+  "db_type": "postgres",
+  "db_name": "$DB_NAME",
+  "db_host": "$DB_HOST",
+  "db_port": $DB_PORT,
+  "db_user": "$DB_USER",
+  "db_password": "$DB_PASS",
+  "developer_mode": 0,
+  "limits": {
+    "space_usage": {
+      "database_size": 50,
+      "backup_size": 50,
+      "files_size": 50
+    }
+  }
+}
+EOF
 
-# Then force update the file directly to be absolutely sure
-echo "🔧 Double-checking site config file..."
-python3 -c "
-import json
-import os
-
-site_config_path = 'sites/$SITE_NAME/site_config.json'
-if os.path.exists(site_config_path):
-    with open(site_config_path, 'r') as f:
-        config = json.load(f)
-    
-    # Force correct PostgreSQL settings
-    config['db_type'] = 'postgres'
-    config['db_name'] = '$DB_NAME'
-    config['db_host'] = '$DB_HOST'
-    config['db_port'] = $DB_PORT
-    config['db_user'] = '$DB_USER'
-    config['db_password'] = '$DB_PASS'
-    
-    with open(site_config_path, 'w') as f:
-        json.dump(config, f, indent=2)
-    
-    print('✅ Site config file verified and corrected')
-    print(f'   User: {config[\"db_user\"]}')
-    print(f'   Host: {config[\"db_host\"]}')
-    print(f'   Port: {config[\"db_port\"]}')
-    print(f'   Database: {config[\"db_name\"]}')
-else:
-    print('❌ Site config file not found yet')
-"
+echo "✅ Site config file created with correct PostgreSQL credentials"
+echo "   User: $DB_USER"
+echo "   Host: $DB_HOST"
+echo "   Database: $DB_NAME"
 
 # Clear all caches to force reload of configuration
 echo "🧹 Clearing all caches..."
