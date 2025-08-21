@@ -109,8 +109,9 @@ if [ -n "$MYSQL_URL" ]; then
     # Configure MySQL to work with Frappe (disable strict mode)
     echo "🔧 Configuring MySQL settings for Frappe compatibility..."
     mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASS -e "
-        SET GLOBAL sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
-        SET SESSION sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
+        SET GLOBAL sql_mode = '';
+        SET SESSION sql_mode = '';
+        SET GLOBAL innodb_strict_mode = 0;
     " 2>/dev/null || echo "   MySQL configuration may need manual adjustment"
     
     # Clean up all existing databases and users to start fresh
@@ -155,6 +156,12 @@ bench --site $SITE_NAME set-config db_host $DB_HOST
 bench --site $SITE_NAME set-config db_port $DB_PORT
 bench --site $SITE_NAME set-config db_user $DB_USER
 bench --site $SITE_NAME set-config db_password $DB_PASS
+
+# Add MySQL connection parameters for Frappe compatibility
+echo "🔧 Adding MySQL compatibility parameters..."
+bench --site $SITE_NAME set-config db_socket ""
+bench --site $SITE_NAME set-config db_charset "utf8mb4"
+bench --site $SITE_NAME set-config db_collation "utf8mb4_unicode_ci"
 
 # Install Flansa app separately
 echo "📱 Installing Flansa app..."
