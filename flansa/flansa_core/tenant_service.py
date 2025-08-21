@@ -46,7 +46,7 @@ class TenantContext:
                 "tenant_id": tenant_doc.tenant_id,
                 "tenant_name": tenant_doc.tenant_name,
                 "primary_domain": tenant_doc.primary_domain,
-                "status": tenant_doc.tenant_status,
+                "status": tenant_doc.status,
                 "type": tenant_doc.tenant_type,
                 "max_users": tenant_doc.max_users,
                 "max_apps": tenant_doc.max_apps
@@ -146,7 +146,7 @@ class TenantContext:
                 return default_tenant
                 
             # If no default, get the first active tenant
-            first_tenant = frappe.db.get_value("Flansa Tenant Registry", {"tenant_status": "Active"}, "name")
+            first_tenant = frappe.db.get_value("Flansa Tenant Registry", {"status": "Active"}, "name")
             if first_tenant:
                 return first_tenant
                 

@@ -3,9 +3,15 @@ set -e
 
 echo "🚀 Starting Frappe + Flansa on Railway"
 echo "======================================"
+
+# Use PUBLIC URLs if available for better connectivity
+DATABASE_URL=${DATABASE_PUBLIC_URL:-$DATABASE_URL}
+REDIS_URL=${REDIS_PUBLIC_URL:-$REDIS_URL}
+
 echo "🔗 Variables: DATABASE_URL and REDIS_URL should be available"
 echo "🔍 Debug - DATABASE_URL length: ${#DATABASE_URL}"
 echo "🔍 Debug - REDIS_URL length: ${#REDIS_URL}"
+echo "🔍 Using: ${DATABASE_PUBLIC_URL:+DATABASE_PUBLIC_URL} ${REDIS_PUBLIC_URL:+REDIS_PUBLIC_URL}"
 
 # Debug all Railway environment variables that might affect database connection
 echo "🔍 Debug - Railway environment variables:"

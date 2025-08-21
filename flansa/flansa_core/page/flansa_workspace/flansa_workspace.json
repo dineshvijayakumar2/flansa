@@ -1,0 +1,26 @@
+{
+ "creation": "2024-08-21 22:30:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "idx": 0,
+ "modified": "2024-08-21 22:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "flansa-workspace",
+ "owner": "Administrator",
+ "page_name": "flansa-workspace",
+ "roles": [
+  {
+   "role": "System Manager"
+  },
+  {
+   "role": "Flansa Admin"
+  },
+  {
+   "role": "Flansa Builder"
+  }
+ ],
+ "standard": "Yes",
+ "system_page": 0,
+ "title": "Flansa Workspace"
+}
