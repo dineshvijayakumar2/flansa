@@ -25,8 +25,8 @@ export FRAPPE_DB_TYPE=postgres
 # Use Railway's PORT or default to 8000
 PORT=${PORT:-8000}
 
-# Set site name from Railway domain
-SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-"flansa-production.up.railway.app"}
+# Set site name from Railway domain (Railway will provide the actual domain)
+SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-"mysite.railway.app"}
 
 echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"

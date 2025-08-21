@@ -36,18 +36,11 @@ COPY --chown=frappe:frappe railway-start.sh ./start.sh
 RUN chmod +x start.sh
 
 # Environment variables
-ENV FRAPPE_SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-mysite.railway.app}
 ENV ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
 ENV DEVELOPER_MODE=${DEVELOPER_MODE:-0}
 
-# Railway automatically provides these via DATABASE_URL and REDIS_URL
-ENV DB_HOST=${MYSQLHOST:-mysql}
-ENV DB_PORT=${MYSQLPORT:-3306}
-ENV DB_NAME=${MYSQLDATABASE:-frappe}
-ENV DB_USER=${MYSQLUSER:-root}
-ENV DB_PASSWORD=${MYSQLPASSWORD}
-ENV REDIS_HOST=${REDISHOST:-redis}
-ENV REDIS_PORT=${REDISPORT:-6379}
+# Railway automatically provides DATABASE_URL and REDIS_URL
+# No need for individual DB environment variables
 
 EXPOSE ${PORT:-8000}
 
