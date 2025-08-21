@@ -19,6 +19,10 @@ fi
 echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"
 
+# Give Railway services time to fully initialize
+echo "⏳ Waiting 10 seconds for Railway services to initialize..."
+sleep 10
+
 # Parse MySQL URL first if available
 if [ -n "$MYSQL_URL" ]; then
     echo "🔧 Parsing MySQL URL for connection check..."
