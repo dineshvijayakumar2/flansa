@@ -214,11 +214,6 @@ fi
 echo "🔧 Starting server with Railway configuration..."
 export FRAPPE_SITE_NAME_HEADER=$SITE_NAME
 
-# Try gunicorn for production, fallback to bench serve
-if command -v gunicorn >/dev/null 2>&1; then
-    echo "🚀 Using gunicorn for production deployment"
-    gunicorn -b 0.0.0.0:$PORT -w 4 --worker-class sync --timeout 120 --preload frappe.app:application --max-requests 5000 --max-requests-jitter 500
-else
-    echo "⚠️  gunicorn not found, using bench serve"
-    bench serve --port $PORT
-fi
+# Start server - Railway requires binding to 0.0.0.0 for external access
+echo "🚀 Starting Frappe server with Railway configuration"
+bench serve --host 0.0.0.0 --port $PORT
