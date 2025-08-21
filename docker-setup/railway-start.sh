@@ -17,11 +17,11 @@ echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"
 
 # Wait for database if URL provided
-if [ -n "$DATABASE_URL" ]; then
+if [ -n "$MYSQL_URL" ]; then
     echo "⏳ Waiting for database..."
-    # Extract host and port from DATABASE_URL
-    DB_HOST=$(echo $DATABASE_URL | cut -d'@' -f2 | cut -d':' -f1)
-    DB_PORT=$(echo $DATABASE_URL | cut -d':' -f4 | cut -d'/' -f1)
+    # Extract host and port from MYSQL_URL
+    DB_HOST=$(echo $MYSQL_URL | cut -d'@' -f2 | cut -d':' -f1)
+    DB_PORT=$(echo $MYSQL_URL | cut -d':' -f4 | cut -d'/' -f1)
     
     while ! nc -z $DB_HOST $DB_PORT 2>/dev/null; do
         echo "   Waiting for database at $DB_HOST:$DB_PORT..."
@@ -47,7 +47,7 @@ fi
 echo "⚙️ Configuring bench..."
 
 # Use Railway database URL if available
-if [ -n "$DATABASE_URL" ]; then
+if [ -n "$MYSQL_URL" ]; then
     bench set-config -g db_host $DB_HOST
     bench set-config -g db_port $DB_PORT
 else
