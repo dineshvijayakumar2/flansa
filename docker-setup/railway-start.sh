@@ -41,14 +41,10 @@ if [ -n "$MYSQL_URL" ]; then
         ATTEMPT=$((ATTEMPT + 1))
         echo "   Attempt $ATTEMPT/$MAX_ATTEMPTS - Still waiting for database..."
         
-        # Try to resolve hostname and test connectivity
+        # Try to resolve hostname only
         if [ $ATTEMPT -eq 5 ]; then
             echo "🔍 Testing hostname resolution..."
             nslookup $DB_HOST || echo "   DNS resolution failed"
-            echo "🔍 Testing ping connectivity..."
-            ping -c 1 -W 3 $DB_HOST || echo "   Ping failed"
-            echo "🔍 Testing with telnet-like approach..."
-            timeout 3 bash -c "</dev/tcp/$DB_HOST/$DB_PORT" || echo "   TCP connection failed"
         fi
         
         sleep 3
@@ -117,11 +113,13 @@ if [ -n "$MYSQL_URL" ]; then
         SET SESSION sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
     " 2>/dev/null || echo "   MySQL configuration may need manual adjustment"
     
-    # Clean up any existing generated databases to start fresh
-    echo "🧹 Cleaning up existing generated databases..."
+    # Clean up all existing databases and users to start fresh
+    echo "🧹 Cleaning up existing databases and users..."
     mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASS -e "
         DROP DATABASE IF EXISTS \`_5010b1d868f1b77b\`;
         DROP USER IF EXISTS '_5010b1d868f1b77b'@'%';
+        DROP DATABASE IF EXISTS \`railway\`;
+        CREATE DATABASE \`railway\`;
     " 2>/dev/null || echo "   Database cleanup completed"
 fi
 
@@ -147,7 +145,8 @@ echo "🔧 Creating site with Railway database..."
 bench new-site $SITE_NAME \
     --db-name $DB_NAME \
     --db-root-password $DB_PASS \
-    --admin-password ${ADMIN_PASSWORD:-admin123}
+    --admin-password ${ADMIN_PASSWORD:-admin123} \
+    --force
 
 # Update site config to use Railway database credentials
 echo "🔧 Updating site config for Railway database..."
