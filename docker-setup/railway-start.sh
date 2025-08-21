@@ -121,12 +121,23 @@ fi
 if [ "$SKIP_SITE_CREATION" = "false" ] || ! grep -q '"db_user": "postgres"' sites/$SITE_NAME/site_config.json 2>/dev/null; then
     echo "🔧 Force correcting site config for PostgreSQL..."
     
-    # Force create/update site_config.json with Railway DATABASE_URL directly
-    echo "🔧 Creating correct site config file with DATABASE_URL..."
+    # Force create/update site_config.json with correct credentials
+    echo "🔧 Creating correct site config file..."
+    
+    # Remove any existing configuration files that might have cached railway user
+    rm -f sites/$SITE_NAME/site_config.json 2>/dev/null
+    rm -f sites/.common_site_config.json 2>/dev/null
+    rm -f common_site_config.json 2>/dev/null
+    
+    # Create fresh site config with correct PostgreSQL credentials
     cat > sites/$SITE_NAME/site_config.json << EOF
 {
   "db_type": "postgres",
-  "database_url": "$DATABASE_URL",
+  "db_name": "$DB_NAME",
+  "db_host": "$DB_HOST",
+  "db_port": $DB_PORT,
+  "db_user": "$DB_USER",
+  "db_password": "$DB_PASS",
   "developer_mode": 0,
   "limits": {
     "space_usage": {
@@ -137,6 +148,9 @@ if [ "$SKIP_SITE_CREATION" = "false" ] || ! grep -q '"db_user": "postgres"' site
   }
 }
 EOF
+
+    # Ensure no common config overrides our settings
+    echo '{}' > common_site_config.json
 
     echo "✅ Site config file created with correct PostgreSQL credentials"
     echo "   User: $DB_USER"
