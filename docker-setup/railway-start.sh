@@ -7,6 +7,10 @@ echo "🔗 Variables: MYSQL_URL and REDIS_URL should be available"
 echo "🔍 Debug - MYSQL_URL length: ${#MYSQL_URL}"
 echo "🔍 Debug - REDIS_URL length: ${#REDIS_URL}"
 
+# Set environment variables to bypass Frappe version checks
+export FRAPPE_VERSION_CHECK_DISABLED=1
+export SKIP_VERSION_CHECK=1
+
 # Use Railway's PORT or default to 8000
 PORT=${PORT:-8000}
 
@@ -106,12 +110,16 @@ if [ -n "$MYSQL_URL" ]; then
     bench set-config -g root_login $DB_USER
     bench set-config -g root_password $DB_PASS
     
-    # Configure MySQL to work with Frappe (disable strict mode)
-    echo "🔧 Configuring MySQL settings for Frappe compatibility..."
+    # Check MariaDB version and configure for compatibility
+    echo "🔧 Checking MariaDB version and configuring for Frappe compatibility..."
     mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASS -e "
+        SELECT VERSION() as 'MariaDB Version';
         SET GLOBAL sql_mode = '';
         SET SESSION sql_mode = '';
         SET GLOBAL innodb_strict_mode = 0;
+        SET GLOBAL innodb_file_format = 'Barracuda';
+        SET GLOBAL innodb_large_prefix = 1;
+        SET GLOBAL innodb_file_per_table = 1;
     " 2>/dev/null || echo "   MySQL configuration may need manual adjustment"
     
     # Clean up all existing databases and users to start fresh
@@ -141,16 +149,20 @@ fi
 # Create fresh site with correct Railway configuration
 echo "🏗️ Creating fresh site: $SITE_NAME"
 
-# Create site with Railway database
+# Create site with Railway database (ignoring MariaDB version check)
 echo "🔧 Creating site with Railway database..."
-bench new-site $SITE_NAME \
+FRAPPE_VERSION_CHECK_DISABLED=1 bench new-site $SITE_NAME \
     --db-name $DB_NAME \
     --db-root-password $DB_PASS \
     --admin-password ${ADMIN_PASSWORD:-admin123} \
     --force
 
-# Update site config to use Railway database credentials
+# Update site config to use Railway database credentials with SQL mode bypass
 echo "🔧 Updating site config for Railway database..."
+
+# Create a modified MySQL URL with sql_mode parameter
+MYSQL_URL_WITH_PARAMS="${MYSQL_URL}?sql_mode="
+
 bench --site $SITE_NAME set-config db_name $DB_NAME
 bench --site $SITE_NAME set-config db_host $DB_HOST  
 bench --site $SITE_NAME set-config db_port $DB_PORT
@@ -162,6 +174,10 @@ echo "🔧 Adding MySQL compatibility parameters..."
 bench --site $SITE_NAME set-config db_socket ""
 bench --site $SITE_NAME set-config db_charset "utf8mb4"
 bench --site $SITE_NAME set-config db_collation "utf8mb4_unicode_ci"
+
+# Set MySQL connection URL with sql_mode parameter
+echo "🔧 Configuring MySQL URL with sql_mode bypass..."
+bench --site $SITE_NAME set-config db_url "$MYSQL_URL_WITH_PARAMS"
 
 # Install Flansa app separately
 echo "📱 Installing Flansa app..."
