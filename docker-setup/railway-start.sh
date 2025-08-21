@@ -249,7 +249,11 @@ bench build --app flansa
 
 # Start server
 echo "🌟 Starting Frappe server on port $PORT"
-echo "🔗 Access at: https://$SITE_NAME/app/flansa"
+echo "🔗 Access at: https://$SITE_NAME"
 
-# Use Railway's PORT
-bench serve --port $PORT
+# Ensure server binds to all interfaces for Railway
+echo "🔧 Starting server with Railway configuration..."
+export FRAPPE_SITE_NAME_HEADER=$SITE_NAME
+
+# Use gunicorn for production deployment on Railway
+gunicorn -b 0.0.0.0:$PORT -w 4 --worker-class sync --timeout 120 --preload frappe.app:application --max-requests 5000 --max-requests-jitter 500
