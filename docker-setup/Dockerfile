@@ -9,6 +9,8 @@ RUN apt-get update && apt-get install -y \
     curl \
     netcat-traditional \
     mariadb-client \
+    dnsutils \
+    iputils-ping \
     && rm -rf /var/lib/apt/lists/*
 
 USER frappe

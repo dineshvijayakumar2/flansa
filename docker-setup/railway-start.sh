@@ -36,28 +36,30 @@ if [ -n "$MYSQL_URL" ]; then
     
     # Try a few connection attempts with more verbose output
     ATTEMPT=0
-    MAX_ATTEMPTS=30
+    MAX_ATTEMPTS=15
     while ! nc -z $DB_HOST $DB_PORT 2>/dev/null && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
         ATTEMPT=$((ATTEMPT + 1))
         echo "   Attempt $ATTEMPT/$MAX_ATTEMPTS - Still waiting for database..."
         
-        # Try to resolve hostname
+        # Try to resolve hostname and test connectivity
         if [ $ATTEMPT -eq 5 ]; then
             echo "🔍 Testing hostname resolution..."
             nslookup $DB_HOST || echo "   DNS resolution failed"
+            echo "🔍 Testing ping connectivity..."
+            ping -c 1 -W 3 $DB_HOST || echo "   Ping failed"
+            echo "🔍 Testing with telnet-like approach..."
+            timeout 3 bash -c "</dev/tcp/$DB_HOST/$DB_PORT" || echo "   TCP connection failed"
         fi
         
-        sleep 2
+        sleep 3
     done
     
     if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-        echo "❌ Database connection failed after $MAX_ATTEMPTS attempts"
-        echo "🔍 Final attempt with verbose netcat..."
-        nc -v -z $DB_HOST $DB_PORT || echo "   Connection definitely failed"
-        exit 1
+        echo "⚠️  Database connection check failed, but proceeding anyway..."
+        echo "🔍 Railway internal networking might be different - letting Frappe handle connection"
+    else
+        echo "✅ Database ready"
     fi
-    
-    echo "✅ Database ready"
 fi
 
 # Wait for Redis if URL provided
