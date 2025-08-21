@@ -104,6 +104,11 @@ if [ -n "$DATABASE_URL" ]; then
     DB_NAME=$(echo $PORT_DB | cut -d'/' -f2)
     
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
+    echo "🔍 Debug - Password length: ${#DB_PASS}"
+    
+    # Test PostgreSQL connection
+    echo "🔧 Testing PostgreSQL connection..."
+    PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT version();" 2>/dev/null || echo "   PostgreSQL connection test failed - will let Frappe handle it"
     
     # Configure bench for PostgreSQL
     echo "🔧 Setting global PostgreSQL configuration..."

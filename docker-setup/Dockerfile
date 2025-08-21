@@ -8,7 +8,7 @@ RUN apt-get update && apt-get install -y \
     git \
     curl \
     netcat-traditional \
-    mariadb-client \
+    postgresql-client \
     dnsutils \
     iputils-ping \
     && rm -rf /var/lib/apt/lists/*
