@@ -162,6 +162,33 @@ bench --site $SITE_NAME set-config db_port $DB_PORT
 bench --site $SITE_NAME set-config db_user $DB_USER
 bench --site $SITE_NAME set-config db_password $DB_PASS
 
+# Force update the site config file directly to ensure correct values
+echo "🔧 Force updating site config file..."
+python3 -c "
+import json
+import os
+
+site_config_path = 'sites/$SITE_NAME/site_config.json'
+with open(site_config_path, 'r') as f:
+    config = json.load(f)
+
+# Force correct PostgreSQL settings
+config['db_type'] = 'postgres'
+config['db_name'] = '$DB_NAME'
+config['db_host'] = '$DB_HOST'
+config['db_port'] = $DB_PORT
+config['db_user'] = '$DB_USER'
+config['db_password'] = '$DB_PASS'
+
+with open(site_config_path, 'w') as f:
+    json.dump(config, f, indent=2)
+
+print('✅ Site config file updated with correct PostgreSQL credentials')
+print(f'   User: {config[\"db_user\"]}')
+print(f'   Host: {config[\"db_host\"]}')
+print(f'   Database: {config[\"db_name\"]}')
+"
+
 # Add PostgreSQL connection parameters
 echo "🔧 Adding PostgreSQL compatibility parameters..."
 bench --site $SITE_NAME set-config db_socket ""
