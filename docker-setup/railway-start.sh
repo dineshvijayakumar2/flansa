@@ -214,13 +214,22 @@ if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
     echo "✅ Flansa app already installed"
 else
     echo "📱 Installing Flansa app..."
+    
+    # Force correct database connection for installation
+    echo "🔧 Setting up database connection for Flansa installation..."
+    cat > sites/$SITE_NAME/common_site_config.json << EOF
+{
+  "db_type": "postgres",
+  "db_host": "$DB_HOST",
+  "db_port": $DB_PORT,
+  "db_user": "$DB_USER",
+  "db_password": "$DB_PASS"
+}
+EOF
+    
     bench --site $SITE_NAME install-app flansa || {
-        echo "❌ Flansa app installation failed"
-        echo "🔍 Retrying with fresh database connection..."
-        
-        # Try reconnecting to database and installing again
-        bench --site $SITE_NAME migrate || echo "   Migration skipped"
-        bench --site $SITE_NAME install-app flansa || echo "   Flansa installation failed"
+        echo "⚠️ Flansa app installation failed, but continuing..."
+        echo "   The app may already be partially installed"
     }
 fi
 
@@ -237,4 +246,4 @@ echo "🌟 Starting Frappe server on port $PORT"
 echo "🔗 Access at: https://$SITE_NAME/app/flansa"
 
 # Use Railway's PORT
-bench serve --host 0.0.0.0 --port $PORT
+bench serve --port $PORT
