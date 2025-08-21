@@ -103,11 +103,12 @@ if [ -n "$MYSQL_URL" ]; then
     
     echo "📊 Database config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     
+    # Configure bench with database settings
     bench set-config -g db_host $DB_HOST
     bench set-config -g db_port $DB_PORT
     bench set-config -g db_name $DB_NAME
-    bench set-config -g db_user $DB_USER
-    bench set-config -g db_password $DB_PASS
+    bench set-config -g root_login $DB_USER
+    bench set-config -g root_password $DB_PASS
 fi
 
 # Configure Redis
@@ -122,15 +123,15 @@ fi
 if [ ! -d "sites/$SITE_NAME" ]; then
     echo "🏗️ Creating site: $SITE_NAME"
     
+    # Create site with minimal parameters first
+    echo "🔧 Creating site with basic parameters..."
     bench new-site $SITE_NAME \
-        --db-host $DB_HOST \
-        --db-port $DB_PORT \
-        --db-name $DB_NAME \
-        --db-root-username $DB_USER \
         --db-root-password $DB_PASS \
-        --admin-password ${ADMIN_PASSWORD:-admin123} \
-        --mariadb-user-host-login-scope='%' \
-        --install-app flansa
+        --admin-password ${ADMIN_PASSWORD:-admin123}
+    
+    # Install Flansa app separately
+    echo "📱 Installing Flansa app..."
+    bench --site $SITE_NAME install-app flansa
     
     echo "🏠 Setting homepage configuration"
     bench --site $SITE_NAME set-config home_page "app/flansa"
