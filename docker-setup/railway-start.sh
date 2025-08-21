@@ -16,10 +16,7 @@ export FRAPPE_DB_TYPE=postgres
 PORT=${PORT:-8000}
 
 # Set site name from Railway domain
-SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-$FRAPPE_SITE_NAME}
-if [ -z "$SITE_NAME" ]; then
-    SITE_NAME="mysite.railway.app"
-fi
+SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-"flansa-production.up.railway.app"}
 
 echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"
