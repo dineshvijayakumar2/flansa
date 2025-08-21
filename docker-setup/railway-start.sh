@@ -16,15 +16,18 @@ fi
 echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"
 
-# Wait for database if URL provided
+# Parse MySQL URL first if available
 if [ -n "$MYSQL_URL" ]; then
-    echo "⏳ Waiting for database..."
-    # Extract host and port from MYSQL_URL
-    DB_HOST=$(echo $MYSQL_URL | cut -d'@' -f2 | cut -d':' -f1)
-    DB_PORT=$(echo $MYSQL_URL | cut -d':' -f4 | cut -d'/' -f1)
+    echo "🔧 Parsing MySQL URL for connection check..."
+    URL_WITHOUT_PROTOCOL=$(echo $MYSQL_URL | sed 's/mysql:\/\///')
+    HOST_PORT_DB=$(echo $URL_WITHOUT_PROTOCOL | cut -d'@' -f2)
+    DB_HOST=$(echo $HOST_PORT_DB | cut -d':' -f1)
+    PORT_DB=$(echo $HOST_PORT_DB | cut -d':' -f2)
+    DB_PORT=$(echo $PORT_DB | cut -d'/' -f1)
     
+    echo "⏳ Waiting for database at $DB_HOST:$DB_PORT..."
     while ! nc -z $DB_HOST $DB_PORT 2>/dev/null; do
-        echo "   Waiting for database at $DB_HOST:$DB_PORT..."
+        echo "   Still waiting for database..."
         sleep 2
     done
     echo "✅ Database ready"
@@ -48,11 +51,23 @@ echo "⚙️ Configuring bench..."
 
 # Extract database credentials from MYSQL_URL
 if [ -n "$MYSQL_URL" ]; then
-    echo "🔧 Parsing MySQL URL..."
-    # Extract database credentials and connection details
-    DB_USER=$(echo $MYSQL_URL | cut -d'/' -f3 | cut -d':' -f1)
-    DB_PASS=$(echo $MYSQL_URL | cut -d'/' -f3 | cut -d':' -f2 | cut -d'@' -f1)
-    DB_NAME=$(echo $MYSQL_URL | cut -d'/' -f4 | cut -d'?' -f1)
+    echo "🔧 Parsing MySQL URL: $MYSQL_URL"
+    
+    # Parse mysql://user:pass@host:port/dbname format
+    # Remove mysql:// prefix
+    URL_WITHOUT_PROTOCOL=$(echo $MYSQL_URL | sed 's/mysql:\/\///')
+    
+    # Extract user:pass@host:port/dbname
+    USER_PASS=$(echo $URL_WITHOUT_PROTOCOL | cut -d'@' -f1)
+    DB_USER=$(echo $USER_PASS | cut -d':' -f1)
+    DB_PASS=$(echo $USER_PASS | cut -d':' -f2)
+    
+    # Extract host:port/dbname  
+    HOST_PORT_DB=$(echo $URL_WITHOUT_PROTOCOL | cut -d'@' -f2)
+    DB_HOST=$(echo $HOST_PORT_DB | cut -d':' -f1)
+    PORT_DB=$(echo $HOST_PORT_DB | cut -d':' -f2)
+    DB_PORT=$(echo $PORT_DB | cut -d'/' -f1)
+    DB_NAME=$(echo $PORT_DB | cut -d'/' -f2)
     
     echo "📊 Database config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     
