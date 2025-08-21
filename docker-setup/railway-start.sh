@@ -63,9 +63,25 @@ if [ -n "$DATABASE_URL" ]; then
     
     # Extract database name - everything after last /
     DB_NAME=$(echo $DATABASE_URL | sed -n 's|.*/\([^/?]*\).*|\1|p')
-    # Ensure DB_NAME is never empty and never 'railway' to avoid user confusion
-    if [ -z "$DB_NAME" ] || [ "$DB_NAME" = "railway" ]; then
-        DB_NAME="flansa_db"
+    
+    # Debug parsed values before any modifications
+    echo "🔍 Raw parsed values:"
+    echo "   DB_USER='$DB_USER'"
+    echo "   DB_PASS length=${#DB_PASS}"
+    echo "   DB_HOST='$DB_HOST'"
+    echo "   DB_PORT='$DB_PORT'"
+    echo "   DB_NAME='$DB_NAME'"
+    
+    # Ensure DB_NAME is never empty - but keep original value if valid
+    if [ -z "$DB_NAME" ]; then
+        DB_NAME="railway"
+        echo "🔧 DB_NAME was empty, defaulting to 'railway'"
+    fi
+    
+    # Ensure DB_USER is never empty and is definitely 'postgres'
+    if [ -z "$DB_USER" ] || [ "$DB_USER" != "postgres" ]; then
+        echo "🔧 DB_USER was '$DB_USER', forcing to 'postgres'"
+        DB_USER="postgres"
     fi
     
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
@@ -95,22 +111,36 @@ if [ -n "$DATABASE_URL" ]; then
     echo "✅ PostgreSQL configuration complete - no strict mode issues!"
     
     # Set all PostgreSQL environment variables immediately after parsing URL
-    export DB_USER=$DB_USER  
-    export DB_PASSWORD=$DB_PASS
-    export PGUSER=$DB_USER
-    export PGPASSWORD=$DB_PASS
-    export PGHOST=$DB_HOST
-    export PGPORT=$DB_PORT
-    export PGDATABASE=$DB_NAME
-    export FRAPPE_DB_USER=$DB_USER
-    export FRAPPE_DB_PASSWORD=$DB_PASS
-    export FRAPPE_DB_HOST=$DB_HOST
-    export FRAPPE_DB_PORT=$DB_PORT
-    export FRAPPE_DB_NAME=$DB_NAME
+    echo "🔧 Setting environment variables with parsed values:"
+    echo "   Setting PGUSER=$DB_USER"
+    echo "   Setting PGDATABASE=$DB_NAME" 
+    echo "   Setting PGHOST=$DB_HOST"
+    echo "   Setting PGPORT=$DB_PORT"
+    
+    export PGUSER="$DB_USER"
+    export PGPASSWORD="$DB_PASS"
+    export PGHOST="$DB_HOST"
+    export PGPORT="$DB_PORT"
+    export PGDATABASE="$DB_NAME"
+    export FRAPPE_DB_USER="$DB_USER"
+    export FRAPPE_DB_PASSWORD="$DB_PASS"
+    export FRAPPE_DB_HOST="$DB_HOST"
+    export FRAPPE_DB_PORT="$DB_PORT"
+    export FRAPPE_DB_NAME="$DB_NAME"
+    
+    # Additional safety exports
+    export DB_USER="$DB_USER"
+    export DB_PASSWORD="$DB_PASS"
     
     # Ensure Railway variables don't interfere
     unset RAILWAY_USER 2>/dev/null
     unset MYSQL_USER 2>/dev/null
+    
+    # Verify environment variables are set correctly
+    echo "🔍 Verifying environment variables:"
+    echo "   PGUSER=$PGUSER"
+    echo "   PGDATABASE=$PGDATABASE"
+    echo "   FRAPPE_DB_USER=$FRAPPE_DB_USER"
 fi
 
 # Configure Redis
