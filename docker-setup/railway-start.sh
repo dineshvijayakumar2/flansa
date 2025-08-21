@@ -1,6 +1,9 @@
 #!/bin/bash
 set -e
 
+# Add error handling to prevent unexpected exits
+trap 'echo "❌ Error occurred at line $LINENO. Exit code: $?" >&2' ERR
+
 echo "🚀 Starting Frappe + Flansa on Railway"
 echo "======================================"
 
@@ -261,11 +264,11 @@ if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
     FLANSA_INSTALLED=true
 else
     echo "🔧 Installing Flansa app on site..."
-    if bench --site $SITE_NAME install-app flansa; then
+    if timeout 300 bench --site $SITE_NAME install-app flansa; then
         echo "✅ Flansa app installed successfully"
         FLANSA_INSTALLED=true
     else
-        echo "⚠️  Flansa installation failed - will be available for manual install"
+        echo "⚠️  Flansa installation failed or timed out - will be available for manual install"
         echo "📝 Flansa can be installed manually after login to the site"
         FLANSA_INSTALLED=false
     fi
@@ -349,5 +352,16 @@ echo "🔧 Serving site: $SITE_NAME"
 echo "🔧 Setting $SITE_NAME as default site..."
 bench use $SITE_NAME
 
-# Start server
-bench serve --port $PORT
+# Start server with Railway-compatible configuration
+echo "🔧 Starting server on 0.0.0.0:$PORT for Railway networking..."
+
+# Try gunicorn first (production server), fall back to bench serve
+if command -v gunicorn >/dev/null 2>&1; then
+    echo "🚀 Using gunicorn production server..."
+    gunicorn -b 0.0.0.0:$PORT --timeout 120 --workers 1 --max-requests 1000 \
+        --access-logfile - --error-logfile - \
+        frappe.app:application
+else
+    echo "🚀 Using bench serve development server..."
+    bench serve --port $PORT --host 0.0.0.0
+fi
