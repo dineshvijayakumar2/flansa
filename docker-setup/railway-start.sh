@@ -92,19 +92,22 @@ if [ -n "$DATABASE_URL" ]; then
     URL_WITHOUT_PROTOCOL=$(echo $DATABASE_URL | sed 's/postgres\(ql\)\?:\/\///')
     
     # Extract user:pass@host:port/dbname
-    USER_PASS=$(echo $URL_WITHOUT_PROTOCOL | cut -d'@' -f1)
+    USER_PASS_HOST=$(echo $URL_WITHOUT_PROTOCOL | cut -d'/' -f1)
+    USER_PASS=$(echo $USER_PASS_HOST | cut -d'@' -f1)
     DB_USER=$(echo $USER_PASS | cut -d':' -f1)
     DB_PASS=$(echo $USER_PASS | cut -d':' -f2)
     
     # Extract host:port/dbname  
-    HOST_PORT_DB=$(echo $URL_WITHOUT_PROTOCOL | cut -d'@' -f2)
+    HOST_PORT_DB=$(echo $USER_PASS_HOST | cut -d'@' -f2)
     DB_HOST=$(echo $HOST_PORT_DB | cut -d':' -f1)
-    PORT_DB=$(echo $HOST_PORT_DB | cut -d':' -f2)
-    DB_PORT=$(echo $PORT_DB | cut -d'/' -f1)
-    DB_NAME=$(echo $PORT_DB | cut -d'/' -f2)
+    PORT_AND_DB=$(echo $HOST_PORT_DB | cut -d':' -f2)
+    DB_PORT=$(echo $PORT_AND_DB | cut -d'/' -f1)
+    DB_NAME=$(echo $PORT_AND_DB | cut -d'/' -f2)
     
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     echo "🔍 Debug - Password length: ${#DB_PASS}"
+    echo "🔍 Debug - USER_PASS_HOST: $USER_PASS_HOST"
+    echo "🔍 Debug - USER_PASS: $USER_PASS"
     
     # Test PostgreSQL connection
     echo "🔧 Testing PostgreSQL connection..."
