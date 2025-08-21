@@ -46,23 +46,29 @@ fi
 # Configure bench for Railway
 echo "⚙️ Configuring bench..."
 
-# Use Railway database URL if available
+# Extract database credentials from MYSQL_URL
 if [ -n "$MYSQL_URL" ]; then
+    echo "🔧 Parsing MySQL URL..."
+    # Extract database credentials and connection details
+    DB_USER=$(echo $MYSQL_URL | cut -d'/' -f3 | cut -d':' -f1)
+    DB_PASS=$(echo $MYSQL_URL | cut -d'/' -f3 | cut -d':' -f2 | cut -d'@' -f1)
+    DB_NAME=$(echo $MYSQL_URL | cut -d'/' -f4 | cut -d'?' -f1)
+    
+    echo "📊 Database config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
+    
     bench set-config -g db_host $DB_HOST
     bench set-config -g db_port $DB_PORT
-else
-    bench set-config -g db_host ${DB_HOST:-mysql}
+    bench set-config -g db_name $DB_NAME
+    bench set-config -g db_user $DB_USER
+    bench set-config -g db_password $DB_PASS
 fi
 
-# Use Railway Redis URL if available  
+# Configure Redis
 if [ -n "$REDIS_URL" ]; then
+    echo "🔧 Configuring Redis..."
     bench set-config -g redis_cache $REDIS_URL
-    bench set-config -g redis_queue $REDIS_URL
+    bench set-config -g redis_queue $REDIS_URL  
     bench set-config -g redis_socketio $REDIS_URL
-else
-    bench set-config -g redis_cache redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
-    bench set-config -g redis_queue redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
-    bench set-config -g redis_socketio redis://${REDIS_HOST:-redis}:${REDIS_PORT:-6379}
 fi
 
 # Create site if it doesn't exist
@@ -70,7 +76,11 @@ if [ ! -d "sites/$SITE_NAME" ]; then
     echo "🏗️ Creating site: $SITE_NAME"
     
     bench new-site $SITE_NAME \
-        --mariadb-root-password ${DB_PASSWORD:-admin123} \
+        --db-host $DB_HOST \
+        --db-port $DB_PORT \
+        --db-name $DB_NAME \
+        --db-user $DB_USER \
+        --db-password $DB_PASS \
         --admin-password ${ADMIN_PASSWORD:-admin123} \
         --no-mariadb-socket \
         --install-app flansa
