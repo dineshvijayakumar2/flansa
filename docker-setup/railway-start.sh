@@ -136,6 +136,14 @@ if [ ! -d "sites/$SITE_NAME" ]; then
         --db-root-password $DB_PASS \
         --admin-password ${ADMIN_PASSWORD:-admin123}
     
+    # Update site config to use Railway database credentials
+    echo "🔧 Updating site config for Railway database..."
+    bench --site $SITE_NAME set-config db_name $DB_NAME
+    bench --site $SITE_NAME set-config db_host $DB_HOST  
+    bench --site $SITE_NAME set-config db_port $DB_PORT
+    bench --site $SITE_NAME set-config db_user $DB_USER
+    bench --site $SITE_NAME set-config db_password $DB_PASS
+    
     # Install Flansa app separately
     echo "📱 Installing Flansa app..."
     bench --site $SITE_NAME install-app flansa
