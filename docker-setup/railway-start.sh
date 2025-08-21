@@ -7,6 +7,10 @@ echo "🔗 Variables: DATABASE_URL and REDIS_URL should be available"
 echo "🔍 Debug - DATABASE_URL length: ${#DATABASE_URL}"
 echo "🔍 Debug - REDIS_URL length: ${#REDIS_URL}"
 
+# Debug all Railway environment variables that might affect database connection
+echo "🔍 Debug - Railway environment variables:"
+env | grep -E "(RAILWAY|DB_|MYSQL|POSTGRES|PG)" | grep -v PASSWORD || echo "   No Railway DB vars found"
+
 # Set environment variables for PostgreSQL usage
 export FRAPPE_VERSION_CHECK_DISABLED=1
 export SKIP_VERSION_CHECK=1
@@ -70,6 +74,10 @@ if [ -n "$DATABASE_URL" ]; then
     bench set-config -g db_name $DB_NAME
     bench set-config -g root_login $DB_USER
     bench set-config -g root_password $DB_PASS
+    
+    # Debug: Show current configuration
+    echo "🔍 Debug - Current bench configuration:"
+    cat common_site_config.json | grep -E "db_|root_" || echo "   No database config found"
     
     # Force PostgreSQL driver usage
     export FRAPPE_DB_TYPE=postgres
