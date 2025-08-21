@@ -63,6 +63,10 @@ if [ -n "$DATABASE_URL" ]; then
     
     # Extract database name - everything after last /
     DB_NAME=$(echo $DATABASE_URL | sed -n 's|.*/\([^/?]*\).*|\1|p')
+    # If database name is empty, default to 'railway' 
+    if [ -z "$DB_NAME" ]; then
+        DB_NAME="railway"
+    fi
     
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     echo "🔍 Debug - Password length: ${#DB_PASS}"
@@ -75,11 +79,11 @@ if [ -n "$DATABASE_URL" ]; then
     # Configure bench for PostgreSQL
     echo "🔧 Setting global PostgreSQL configuration..."
     bench set-config -g db_type postgres
-    bench set-config -g db_host $DB_HOST
-    bench set-config -g db_port $DB_PORT
-    bench set-config -g db_name $DB_NAME
-    bench set-config -g root_login $DB_USER
-    bench set-config -g root_password $DB_PASS
+    if [ -n "$DB_HOST" ]; then bench set-config -g db_host "$DB_HOST"; fi
+    if [ -n "$DB_PORT" ]; then bench set-config -g db_port "$DB_PORT"; fi
+    if [ -n "$DB_NAME" ]; then bench set-config -g db_name "$DB_NAME"; fi
+    if [ -n "$DB_USER" ]; then bench set-config -g root_login "$DB_USER"; fi
+    if [ -n "$DB_PASS" ]; then bench set-config -g root_password "$DB_PASS"; fi
     
     # Debug: Show current configuration
     echo "🔍 Debug - Current bench configuration:"
