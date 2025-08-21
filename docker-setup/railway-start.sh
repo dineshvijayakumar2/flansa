@@ -134,33 +134,47 @@ if [ -n "$REDIS_URL" ]; then
     bench set-config -g redis_socketio $REDIS_URL
 fi
 
-# Remove existing site if it has wrong configuration
+# Check if site exists and is configured correctly
 if [ -d "sites/$SITE_NAME" ]; then
-    echo "🧹 Removing existing site with incorrect configuration..."
-    rm -rf "sites/$SITE_NAME"
+    echo "✅ Site already exists: $SITE_NAME"
+    
+    # Check if site config has correct PostgreSQL user
+    if grep -q '"db_user": "postgres"' sites/$SITE_NAME/site_config.json 2>/dev/null; then
+        echo "✅ Site has correct PostgreSQL configuration"
+        SKIP_SITE_CREATION=true
+    else
+        echo "⚠️ Site exists but has wrong configuration, recreating..."
+        rm -rf "sites/$SITE_NAME"
+        SKIP_SITE_CREATION=false
+    fi
+else
+    SKIP_SITE_CREATION=false
 fi
 
-# Create fresh site with correct Railway configuration
-echo "🏗️ Creating fresh site: $SITE_NAME"
+if [ "$SKIP_SITE_CREATION" = "false" ]; then
+    # Create fresh site with correct Railway configuration
+    echo "🏗️ Creating fresh site: $SITE_NAME"
+    
+    # Create site with Railway PostgreSQL database  
+    echo "🔧 Creating site with Railway PostgreSQL database..."
+    bench new-site $SITE_NAME \
+        --db-type postgres \
+        --db-name $DB_NAME \
+        --db-host $DB_HOST \
+        --db-port $DB_PORT \
+        --db-root-username $DB_USER \
+        --db-root-password $DB_PASS \
+        --admin-password ${ADMIN_PASSWORD:-admin123} \
+        --force
+fi
 
-# Create site with Railway PostgreSQL database  
-echo "🔧 Creating site with Railway PostgreSQL database..."
-bench new-site $SITE_NAME \
-    --db-type postgres \
-    --db-name $DB_NAME \
-    --db-host $DB_HOST \
-    --db-port $DB_PORT \
-    --db-root-username $DB_USER \
-    --db-root-password $DB_PASS \
-    --admin-password ${ADMIN_PASSWORD:-admin123} \
-    --force
-
-# Immediately force correct PostgreSQL credentials in site config
-echo "🔧 Force correcting site config for PostgreSQL..."
-
-# Force create/update site_config.json with correct credentials
-echo "🔧 Creating correct site config file..."
-cat > sites/$SITE_NAME/site_config.json << EOF
+# Force correct PostgreSQL credentials in site config only if needed
+if [ "$SKIP_SITE_CREATION" = "false" ] || ! grep -q '"db_user": "postgres"' sites/$SITE_NAME/site_config.json 2>/dev/null; then
+    echo "🔧 Force correcting site config for PostgreSQL..."
+    
+    # Force create/update site_config.json with correct credentials
+    echo "🔧 Creating correct site config file..."
+    cat > sites/$SITE_NAME/site_config.json << EOF
 {
   "db_type": "postgres",
   "db_name": "$DB_NAME",
@@ -179,19 +193,15 @@ cat > sites/$SITE_NAME/site_config.json << EOF
 }
 EOF
 
-echo "✅ Site config file created with correct PostgreSQL credentials"
-echo "   User: $DB_USER"
-echo "   Host: $DB_HOST"
-echo "   Database: $DB_NAME"
+    echo "✅ Site config file created with correct PostgreSQL credentials"
+    echo "   User: $DB_USER"
+    echo "   Host: $DB_HOST"
+    echo "   Database: $DB_NAME"
+fi
 
 # Clear all caches to force reload of configuration
 echo "🧹 Clearing all caches..."
-bench clear-cache
-redis-cli -h $REDIS_HOST -p 6379 FLUSHALL 2>/dev/null || echo "   Redis flush skipped"
-
-# Restart bench to force reload configuration
-echo "🔄 Reloading configuration..."
-bench --site $SITE_NAME reload-doc
+bench --site $SITE_NAME clear-cache || echo "   Cache clear skipped"
 
 # Double-check the configuration one more time
 echo "🔍 Final configuration check before app installation..."
