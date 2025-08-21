@@ -20,6 +20,9 @@ WORKDIR /home/frappe
 RUN bench init --skip-redis-config-generation --frappe-branch version-15 frappe-bench
 WORKDIR /home/frappe/frappe-bench
 
+# Install gunicorn for production server
+RUN pip install gunicorn
+
 # Get Flansa app
 RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
 

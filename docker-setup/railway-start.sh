@@ -28,57 +28,11 @@ echo "📍 Port: $PORT"
 echo "⏳ Waiting 10 seconds for Railway services to initialize..."
 sleep 10
 
-# Parse DATABASE_URL (PostgreSQL) first if available
-if [ -n "$DATABASE_URL" ]; then
-    echo "🔧 Parsing PostgreSQL URL for connection check..."
-    # Handle both postgres:// and postgresql:// schemes
-    URL_WITHOUT_PROTOCOL=$(echo $DATABASE_URL | sed 's/postgres\(ql\)\?:\/\///')
-    HOST_PORT_DB=$(echo $URL_WITHOUT_PROTOCOL | cut -d'@' -f2)
-    DB_HOST=$(echo $HOST_PORT_DB | cut -d':' -f1)
-    PORT_DB=$(echo $HOST_PORT_DB | cut -d':' -f2)
-    DB_PORT=$(echo $PORT_DB | cut -d'/' -f1)
-    
-    echo "⏳ Waiting for PostgreSQL at $DB_HOST:$DB_PORT..."
-    
-    # Try a few connection attempts
-    ATTEMPT=0
-    MAX_ATTEMPTS=10
-    while ! nc -6 -z $DB_HOST $DB_PORT 2>/dev/null && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
-        ATTEMPT=$((ATTEMPT + 1))
-        echo "   Attempt $ATTEMPT/$MAX_ATTEMPTS - Still waiting for PostgreSQL..."
-        
-        # Try to resolve hostname only
-        if [ $ATTEMPT -eq 5 ]; then
-            echo "🔍 Testing hostname resolution..."
-            nslookup $DB_HOST || echo "   DNS resolution failed"
-        fi
-        
-        sleep 3
-    done
-    
-    if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
-        echo "⚠️  Database connection check failed, but proceeding anyway..."
-        echo "🔍 Railway internal networking might be different - letting Frappe handle connection"
-    else
-        echo "✅ PostgreSQL ready"
-    fi
-fi
+# Skip connection check - let Frappe handle database connectivity
+echo "🔧 PostgreSQL will be configured during site setup"
 
-# Wait for Redis if URL provided
-if [ -n "$REDIS_URL" ]; then
-    echo "⏳ Waiting for Redis..."
-    echo "🔧 Parsing Redis URL: $REDIS_URL"
-    
-    # Parse redis://default:password@host:port format
-    REDIS_URL_WITHOUT_PROTOCOL=$(echo $REDIS_URL | sed 's/redis:\/\///')
-    REDIS_HOST=$(echo $REDIS_URL_WITHOUT_PROTOCOL | cut -d'@' -f2 | cut -d':' -f1)
-    REDIS_PORT=$(echo $REDIS_URL_WITHOUT_PROTOCOL | cut -d'@' -f2 | cut -d':' -f2)
-    
-    echo "🔍 Redis connection details - Host: $REDIS_HOST, Port: $REDIS_PORT"
-    
-    # Skip Redis connection check for now - let Frappe handle it
-    echo "⚠️  Skipping Redis connection check - letting Frappe handle connection"
-fi
+# Redis configuration will be handled during site setup
+echo "🔧 Redis will be configured from REDIS_URL"
 
 # Configure bench for Railway
 echo "⚙️ Configuring bench..."
@@ -255,5 +209,11 @@ echo "🔗 Access at: https://$SITE_NAME"
 echo "🔧 Starting server with Railway configuration..."
 export FRAPPE_SITE_NAME_HEADER=$SITE_NAME
 
-# Use gunicorn for production deployment on Railway
-gunicorn -b 0.0.0.0:$PORT -w 4 --worker-class sync --timeout 120 --preload frappe.app:application --max-requests 5000 --max-requests-jitter 500
+# Try gunicorn for production, fallback to bench serve
+if command -v gunicorn >/dev/null 2>&1; then
+    echo "🚀 Using gunicorn for production deployment"
+    gunicorn -b 0.0.0.0:$PORT -w 4 --worker-class sync --timeout 120 --preload frappe.app:application --max-requests 5000 --max-requests-jitter 500
+else
+    echo "⚠️  gunicorn not found, using bench serve"
+    bench serve --port $PORT
+fi
