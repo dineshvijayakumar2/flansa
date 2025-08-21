@@ -126,8 +126,8 @@ if [ ! -d "sites/$SITE_NAME" ]; then
         --db-host $DB_HOST \
         --db-port $DB_PORT \
         --db-name $DB_NAME \
-        --db-user $DB_USER \
-        --db-password $DB_PASS \
+        --db-root-username $DB_USER \
+        --db-root-password $DB_PASS \
         --admin-password ${ADMIN_PASSWORD:-admin123} \
         --no-mariadb-socket \
         --install-app flansa
