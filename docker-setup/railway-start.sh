@@ -121,16 +121,12 @@ fi
 if [ "$SKIP_SITE_CREATION" = "false" ] || ! grep -q '"db_user": "postgres"' sites/$SITE_NAME/site_config.json 2>/dev/null; then
     echo "🔧 Force correcting site config for PostgreSQL..."
     
-    # Force create/update site_config.json with correct credentials
-    echo "🔧 Creating correct site config file..."
+    # Force create/update site_config.json with Railway DATABASE_URL directly
+    echo "🔧 Creating correct site config file with DATABASE_URL..."
     cat > sites/$SITE_NAME/site_config.json << EOF
 {
   "db_type": "postgres",
-  "db_name": "$DB_NAME",
-  "db_host": "$DB_HOST",
-  "db_port": $DB_PORT,
-  "db_user": "$DB_USER",
-  "db_password": "$DB_PASS",
+  "database_url": "$DATABASE_URL",
   "developer_mode": 0,
   "limits": {
     "space_usage": {
