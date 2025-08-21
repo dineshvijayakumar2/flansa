@@ -160,6 +160,15 @@ export FRAPPE_DB_HOST=$DB_HOST
 export FRAPPE_DB_PORT=$DB_PORT
 export FRAPPE_DB_NAME=$DB_NAME
 
+# Force environment variables to override any cached "railway" user
+export DB_USER=$DB_USER  
+export DB_PASSWORD=$DB_PASS
+export PGUSER=$DB_USER
+export PGPASSWORD=$DB_PASS
+export PGHOST=$DB_HOST
+export PGPORT=$DB_PORT
+export PGDATABASE=$DB_NAME
+
 # Check if Flansa app is already installed
 if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
     echo "✅ Flansa app already installed"
