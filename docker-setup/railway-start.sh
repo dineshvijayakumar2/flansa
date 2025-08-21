@@ -109,6 +109,13 @@ if [ -n "$MYSQL_URL" ]; then
     bench set-config -g db_name $DB_NAME
     bench set-config -g root_login $DB_USER
     bench set-config -g root_password $DB_PASS
+    
+    # Configure MySQL to work with Frappe (disable strict mode)
+    echo "🔧 Configuring MySQL settings for Frappe compatibility..."
+    mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASS -e "
+        SET GLOBAL sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
+        SET SESSION sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
+    " 2>/dev/null || echo "   MySQL configuration may need manual adjustment"
 fi
 
 # Configure Redis
