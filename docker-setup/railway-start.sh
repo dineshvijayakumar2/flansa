@@ -145,6 +145,7 @@ echo "🏗️ Creating fresh site: $SITE_NAME"
 
 # Create site with Railway PostgreSQL database  
 echo "🔧 Creating site with Railway PostgreSQL database..."
+# Use --no-setup-db to skip database user creation
 bench new-site $SITE_NAME \
     --db-type postgres \
     --db-name $DB_NAME \
@@ -152,6 +153,8 @@ bench new-site $SITE_NAME \
     --db-port $DB_PORT \
     --db-root-username $DB_USER \
     --db-root-password $DB_PASS \
+    --db-user $DB_USER \
+    --db-password $DB_PASS \
     --admin-password ${ADMIN_PASSWORD:-admin123} \
     --force
 
@@ -197,8 +200,29 @@ else:
     print('❌ Site config file not found yet')
 "
 
-# Install Flansa app separately
-echo "📱 Installing Flansa app..."
+# Clear all caches to force reload of configuration
+echo "🧹 Clearing all caches..."
+bench clear-cache
+redis-cli -h $REDIS_HOST -p 6379 FLUSHALL 2>/dev/null || echo "   Redis flush skipped"
+
+# Restart bench to force reload configuration
+echo "🔄 Reloading configuration..."
+bench --site $SITE_NAME reload-doc
+
+# Double-check the configuration one more time
+echo "🔍 Final configuration check before app installation..."
+bench --site $SITE_NAME show-config | grep -E "db_user|db_host|db_type" || echo "   Config check skipped"
+
+# Set environment variables to force PostgreSQL connection
+export FRAPPE_DB_USER=$DB_USER
+export FRAPPE_DB_PASSWORD=$DB_PASS
+export FRAPPE_DB_HOST=$DB_HOST
+export FRAPPE_DB_PORT=$DB_PORT
+export FRAPPE_DB_NAME=$DB_NAME
+
+# Install Flansa app with forced PostgreSQL connection
+echo "📱 Installing Flansa app with forced PostgreSQL settings..."
+DB_USER=$DB_USER DB_PASSWORD=$DB_PASS DB_HOST=$DB_HOST DB_PORT=$DB_PORT DB_NAME=$DB_NAME \
 bench --site $SITE_NAME install-app flansa
 
 echo "🏠 Setting homepage configuration"
