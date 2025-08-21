@@ -63,14 +63,14 @@ if [ -n "$DATABASE_URL" ]; then
     
     # Extract database name - everything after last /
     DB_NAME=$(echo $DATABASE_URL | sed -n 's|.*/\([^/?]*\).*|\1|p')
-    # If database name is empty, default to 'railway' 
-    if [ -z "$DB_NAME" ]; then
-        DB_NAME="railway"
+    # Ensure DB_NAME is never empty and never 'railway' to avoid user confusion
+    if [ -z "$DB_NAME" ] || [ "$DB_NAME" = "railway" ]; then
+        DB_NAME="flansa_db"
     fi
     
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     echo "🔍 Debug - Password length: ${#DB_PASS}"
-    echo "🔍 Debug - Expected: User=postgres, Host=postgres.railway.internal, Port=5432, DB=railway"
+    echo "🔍 Debug - Will use User=$DB_USER, Host=$DB_HOST, Port=$DB_PORT, DB=$DB_NAME"
     
     # Test PostgreSQL connection
     echo "🔧 Testing PostgreSQL connection..."
@@ -93,6 +93,24 @@ if [ -n "$DATABASE_URL" ]; then
     export FRAPPE_DB_TYPE=postgres
     
     echo "✅ PostgreSQL configuration complete - no strict mode issues!"
+    
+    # Set all PostgreSQL environment variables immediately after parsing URL
+    export DB_USER=$DB_USER  
+    export DB_PASSWORD=$DB_PASS
+    export PGUSER=$DB_USER
+    export PGPASSWORD=$DB_PASS
+    export PGHOST=$DB_HOST
+    export PGPORT=$DB_PORT
+    export PGDATABASE=$DB_NAME
+    export FRAPPE_DB_USER=$DB_USER
+    export FRAPPE_DB_PASSWORD=$DB_PASS
+    export FRAPPE_DB_HOST=$DB_HOST
+    export FRAPPE_DB_PORT=$DB_PORT
+    export FRAPPE_DB_NAME=$DB_NAME
+    
+    # Ensure Railway variables don't interfere
+    unset RAILWAY_USER 2>/dev/null
+    unset MYSQL_USER 2>/dev/null
 fi
 
 # Configure Redis
@@ -138,6 +156,12 @@ if [ "$SKIP_SITE_CREATION" = "false" ] || ! grep -q '"db_user": "postgres"' site
     rm -f sites/$SITE_NAME/site_config.json 2>/dev/null
     rm -f sites/.common_site_config.json 2>/dev/null
     rm -f common_site_config.json 2>/dev/null
+    rm -f sites/currentsite.txt 2>/dev/null
+    
+    # Clear any Frappe cache that might contain old credentials
+    rm -rf sites/assets 2>/dev/null
+    rm -rf __pycache__ 2>/dev/null
+    find . -name "*.pyc" -delete 2>/dev/null
     
     # Create fresh site config with correct PostgreSQL credentials
     cat > sites/$SITE_NAME/site_config.json << EOF
@@ -159,33 +183,41 @@ if [ "$SKIP_SITE_CREATION" = "false" ] || ! grep -q '"db_user": "postgres"' site
 }
 EOF
 
-    # Ensure no common config overrides our settings
-    echo '{}' > common_site_config.json
+    # Create common site config with correct PostgreSQL settings to prevent fallback
+    cat > common_site_config.json << EOF
+{
+  "db_type": "postgres",
+  "db_host": "$DB_HOST",
+  "db_port": $DB_PORT,
+  "db_name": "$DB_NAME",
+  "root_login": "$DB_USER",
+  "root_password": "$DB_PASS"
+}
+EOF
 
     echo "✅ Site config file created with correct PostgreSQL credentials"
     echo "   User: $DB_USER"
     echo "   Host: $DB_HOST"
     echo "   Database: $DB_NAME"
+    
+    # Set current site to ensure Frappe uses correct configuration
+    echo "$SITE_NAME" > sites/currentsite.txt
+    bench use $SITE_NAME
+    
+    # Verify database connectivity with correct credentials before proceeding
+    echo "🔧 Testing database connectivity with site config..."
+    if PGPASSWORD=$DB_PASS psql -h $DB_HOST -p $DB_PORT -U $DB_USER -d $DB_NAME -c "SELECT 1;" 2>/dev/null; then
+        echo "✅ Database connection successful with postgres user"
+    else
+        echo "❌ Database connection failed - but continuing as site config should work"
+    fi
 fi
 
 # Skip cache clearing as it fails after config overwrite
 echo "✅ Configuration updated, proceeding to app installation..."
 
-# Set environment variables to force PostgreSQL connection
-export FRAPPE_DB_USER=$DB_USER
-export FRAPPE_DB_PASSWORD=$DB_PASS
-export FRAPPE_DB_HOST=$DB_HOST
-export FRAPPE_DB_PORT=$DB_PORT
-export FRAPPE_DB_NAME=$DB_NAME
-
-# Force environment variables to override any cached "railway" user
-export DB_USER=$DB_USER  
-export DB_PASSWORD=$DB_PASS
-export PGUSER=$DB_USER
-export PGPASSWORD=$DB_PASS
-export PGHOST=$DB_HOST
-export PGPORT=$DB_PORT
-export PGDATABASE=$DB_NAME
+# Environment variables already set during database configuration
+echo "🔧 All database environment variables are configured"
 
 # Check if Flansa app is already installed
 if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
