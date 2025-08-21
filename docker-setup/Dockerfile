@@ -1,58 +1,44 @@
-# Frappe + Flansa Docker Image
-FROM frappe/erpnext:v15.75.0
+# Railway-Optimized Frappe + Flansa Dockerfile
+FROM frappe/bench:latest
 
-# Set working directory
-WORKDIR /home/frappe/frappe-bench
-
-# Switch to root for installations
 USER root
 
-# Install additional system dependencies
+# Install system dependencies for Railway
 RUN apt-get update && apt-get install -y \
     git \
     curl \
     netcat-traditional \
+    mariadb-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Switch back to frappe user
 USER frappe
+WORKDIR /home/frappe
 
-# Remove ERPNext completely and install Flansa
-RUN if [ -d "apps/erpnext" ]; then rm -rf apps/erpnext; fi \
-    && sed -i '/erpnext/d' sites/apps.txt 2>/dev/null || true \
-    && git clone https://github.com/dineshvijayakumar2/flansa.git apps/flansa \
-    && pip install -e apps/flansa \
-    && echo "frappe" > sites/apps.txt \
-    && echo "flansa" >> sites/apps.txt
+# Initialize bench and get apps
+RUN bench init --skip-redis-config-generation --frappe-branch version-15 frappe-bench
+WORKDIR /home/frappe/frappe-bench
 
-# Copy apps.json for Railway deployment
-COPY --chown=frappe:frappe apps.json /home/frappe/frappe-bench/
+# Get Flansa app
+RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
 
-# Set environment variables
-ENV FRAPPE_SITE_NAME=mysite.local
-ENV DEVELOPER_MODE=0
-ENV ADMIN_PASSWORD=admin123
-ENV DB_HOST=mariadb
-ENV DB_PORT=3306
-ENV DB_NAME=frappe_db
-ENV DB_USER=frappe
-ENV DB_PASSWORD=frappe123
-ENV REDIS_HOST=redis
-ENV REDIS_PORT=6379
-
-# Create sites directory and basic site config
-RUN mkdir -p sites/mysite.local \
-    && echo '{\n "db_name": "frappe_db",\n "db_password": "frappe123",\n "developer_mode": 0\n}' > sites/mysite.local/site_config.json
-
-# Expose port
-EXPOSE 8000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD bench --site $FRAPPE_SITE_NAME list-apps || exit 1
-
-# Start script
-COPY --chown=frappe:frappe start.sh /home/frappe/frappe-bench/
+# Copy startup script
+COPY --chown=frappe:frappe railway-start.sh ./start.sh
 RUN chmod +x start.sh
+
+# Environment variables
+ENV FRAPPE_SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-mysite.railway.app}
+ENV ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
+ENV DEVELOPER_MODE=${DEVELOPER_MODE:-0}
+
+# Railway automatically provides these via DATABASE_URL and REDIS_URL
+ENV DB_HOST=${MYSQLHOST:-mysql}
+ENV DB_PORT=${MYSQLPORT:-3306}
+ENV DB_NAME=${MYSQLDATABASE:-frappe}
+ENV DB_USER=${MYSQLUSER:-root}
+ENV DB_PASSWORD=${MYSQLPASSWORD}
+ENV REDIS_HOST=${REDISHOST:-redis}
+ENV REDIS_PORT=${REDISPORT:-6379}
+
+EXPOSE ${PORT:-8000}
 
 CMD ["./start.sh"]
