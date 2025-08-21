@@ -1,0 +1,64 @@
+services:
+  mariadb:
+    image: mariadb:10.6
+    container_name: flansa-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_DATABASE: frappe_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    networks:
+      - frappe-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: flansa-redis
+    ports:
+      - "6381:6379"
+    networks:
+      - frappe-network
+
+  frappe:
+    image: frappe/bench:latest
+    container_name: flansa-app
+    command: |
+      bash -c "
+      bench init --skip-redis-config-generation frappe-bench &&
+      cd frappe-bench &&
+      bench get-app frappe --branch version-15 &&
+      bench get-app https://github.com/dineshvijayakumar2/flansa.git &&
+      bench set-config -g db_host mariadb &&
+      bench set-config -g redis_cache redis://redis:6379 &&
+      bench set-config -g redis_queue redis://redis:6379 &&
+      bench set-config -g redis_socketio redis://redis:6379 &&
+      bench new-site mysite.local --db-root-password admin123 --admin-password admin123 --no-mariadb-socket --mariadb-root-password admin123 &&
+      bench --site mysite.local install-app flansa &&
+      bench --site mysite.local set-config home_page 'app/flansa' &&
+      bench --site mysite.local set-config default_workspace 'Flansa' &&
+      bench serve --host 0.0.0.0 --port 8000
+      "
+    environment:
+      - FRAPPE_SITE_NAME=mysite.local
+      - DB_HOST=mariadb
+      - REDIS_HOST=redis
+    ports:
+      - "8080:8000"
+    depends_on:
+      - mariadb
+      - redis
+    networks:
+      - frappe-network
+    volumes:
+      - frappe_sites:/home/frappe/frappe-bench/sites
+      - frappe_apps:/home/frappe/frappe-bench/apps
+
+networks:
+  frappe-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+  frappe_sites:
+  frappe_apps:

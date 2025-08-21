@@ -1,0 +1,39 @@
+# Working Frappe + Flansa Docker Image
+FROM frappe/bench:latest
+
+USER root
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    netcat-traditional \
+    mariadb-client \
+    && rm -rf /var/lib/apt/lists/*
+
+USER frappe
+
+# Set working directory
+WORKDIR /home/frappe
+
+# Initialize bench
+RUN bench init --skip-redis-config-generation frappe-bench
+
+WORKDIR /home/frappe/frappe-bench
+
+# Get Frappe and Flansa apps
+RUN bench get-app frappe --branch version-15 \
+    && bench get-app https://github.com/dineshvijayakumar2/flansa.git
+
+# Copy configuration files
+COPY --chown=frappe:frappe start-working.sh ./start.sh
+RUN chmod +x start.sh
+
+# Environment variables
+ENV FRAPPE_SITE_NAME=mysite.local
+ENV ADMIN_PASSWORD=admin123
+ENV DB_HOST=mariadb
+ENV DB_PORT=3306
+ENV REDIS_HOST=redis
+
+EXPOSE 8000
+
+CMD ["./start.sh"]

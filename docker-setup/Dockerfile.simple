@@ -1,0 +1,52 @@
+# Simple Frappe + Flansa Docker Image
+FROM frappe/bench:latest
+
+# Set working directory
+WORKDIR /home/frappe/frappe-bench
+
+# Switch to root for installations
+USER root
+
+# Install additional system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    netcat-traditional \
+    mariadb-client \
+    && rm -rf /var/lib/apt/lists/*
+
+# Switch back to frappe user
+USER frappe
+
+# Initialize a new bench and install Frappe
+RUN bench init --skip-redis-config-generation . \
+    && cd apps \
+    && git clone https://github.com/dineshvijayakumar2/flansa.git flansa
+
+# Copy configuration files
+COPY --chown=frappe:frappe apps.json /home/frappe/frappe-bench/
+COPY --chown=frappe:frappe start.sh /home/frappe/frappe-bench/
+
+# Make start script executable
+RUN chmod +x start.sh
+
+# Set environment variables
+ENV FRAPPE_SITE_NAME=mysite.local
+ENV DEVELOPER_MODE=0
+ENV ADMIN_PASSWORD=admin123
+ENV DB_HOST=mariadb
+ENV DB_PORT=3306
+ENV DB_NAME=frappe_db
+ENV DB_USER=frappe
+ENV DB_PASSWORD=frappe123
+ENV REDIS_HOST=redis
+ENV REDIS_PORT=6379
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:8000/api/method/ping || exit 1
+
+CMD ["./start.sh"]

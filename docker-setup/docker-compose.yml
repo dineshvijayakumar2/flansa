@@ -1,0 +1,91 @@
+version: '3.8'
+
+services:
+  # MariaDB Database
+  mariadb:
+    image: mariadb:10.6
+    container_name: flansa-mariadb
+    environment:
+      MYSQL_ROOT_PASSWORD: frappe123
+      MYSQL_DATABASE: frappe_db
+      MYSQL_USER: frappe
+      MYSQL_PASSWORD: frappe123
+      MYSQL_CHARACTER_SET_SERVER: utf8mb4
+      MYSQL_COLLATION_SERVER: utf8mb4_unicode_ci
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./mariadb-config.cnf:/etc/mysql/conf.d/mariadb.cnf
+    ports:
+      - "3307:3306"
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      start_period: 1m
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: flansa-redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6381:6379"
+    networks:
+      - frappe-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # Frappe + Flansa Application
+  frappe-flansa:
+    build: .
+    container_name: flansa-app
+    environment:
+      - FRAPPE_SITE_NAME=mysite.local
+      - DEVELOPER_MODE=0
+      - ADMIN_PASSWORD=admin123
+      - DB_HOST=mariadb
+      - DB_PORT=3306
+      - DB_NAME=frappe_db
+      - DB_USER=frappe
+      - DB_PASSWORD=frappe123
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    ports:
+      - "8080:8000"
+    volumes:
+      - frappe_sites:/home/frappe/frappe-bench/sites
+      - frappe_logs:/home/frappe/frappe-bench/logs
+    networks:
+      - frappe-network
+    depends_on:
+      mariadb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/method/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 180s
+
+networks:
+  frappe-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local
+  redis_data:
+    driver: local
+  frappe_sites:
+    driver: local
+  frappe_logs:
+    driver: local
