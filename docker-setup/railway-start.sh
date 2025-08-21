@@ -3,6 +3,7 @@ set -e
 
 echo "🚀 Starting Frappe + Flansa on Railway"
 echo "======================================"
+echo "🔗 Variables: MYSQL_URL and REDIS_URL should be available"
 
 # Use Railway's PORT or default to 8000
 PORT=${PORT:-8000}
