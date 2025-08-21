@@ -4,6 +4,8 @@ set -e
 echo "🚀 Starting Frappe + Flansa on Railway"
 echo "======================================"
 echo "🔗 Variables: MYSQL_URL and REDIS_URL should be available"
+echo "🔍 Debug - MYSQL_URL length: ${#MYSQL_URL}"
+echo "🔍 Debug - REDIS_URL length: ${#REDIS_URL}"
 
 # Use Railway's PORT or default to 8000
 PORT=${PORT:-8000}
@@ -27,10 +29,30 @@ if [ -n "$MYSQL_URL" ]; then
     DB_PORT=$(echo $PORT_DB | cut -d'/' -f1)
     
     echo "⏳ Waiting for database at $DB_HOST:$DB_PORT..."
-    while ! nc -z $DB_HOST $DB_PORT 2>/dev/null; do
-        echo "   Still waiting for database..."
+    
+    # Try a few connection attempts with more verbose output
+    ATTEMPT=0
+    MAX_ATTEMPTS=30
+    while ! nc -z $DB_HOST $DB_PORT 2>/dev/null && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+        ATTEMPT=$((ATTEMPT + 1))
+        echo "   Attempt $ATTEMPT/$MAX_ATTEMPTS - Still waiting for database..."
+        
+        # Try to resolve hostname
+        if [ $ATTEMPT -eq 5 ]; then
+            echo "🔍 Testing hostname resolution..."
+            nslookup $DB_HOST || echo "   DNS resolution failed"
+        fi
+        
         sleep 2
     done
+    
+    if [ $ATTEMPT -eq $MAX_ATTEMPTS ]; then
+        echo "❌ Database connection failed after $MAX_ATTEMPTS attempts"
+        echo "🔍 Final attempt with verbose netcat..."
+        nc -v -z $DB_HOST $DB_PORT || echo "   Connection definitely failed"
+        exit 1
+    fi
+    
     echo "✅ Database ready"
 fi
 
