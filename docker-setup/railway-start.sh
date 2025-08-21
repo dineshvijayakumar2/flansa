@@ -7,9 +7,10 @@ echo "🔗 Variables: DATABASE_URL and REDIS_URL should be available"
 echo "🔍 Debug - DATABASE_URL length: ${#DATABASE_URL}"
 echo "🔍 Debug - REDIS_URL length: ${#REDIS_URL}"
 
-# Set environment variables to bypass Frappe version checks
+# Set environment variables for PostgreSQL usage
 export FRAPPE_VERSION_CHECK_DISABLED=1
 export SKIP_VERSION_CHECK=1
+export FRAPPE_DB_TYPE=postgres
 
 # Use Railway's PORT or default to 8000
 PORT=${PORT:-8000}
@@ -105,12 +106,16 @@ if [ -n "$DATABASE_URL" ]; then
     echo "📊 PostgreSQL config - Host: $DB_HOST, Port: $DB_PORT, User: $DB_USER, DB: $DB_NAME"
     
     # Configure bench for PostgreSQL
+    echo "🔧 Setting global PostgreSQL configuration..."
     bench set-config -g db_type postgres
     bench set-config -g db_host $DB_HOST
     bench set-config -g db_port $DB_PORT
     bench set-config -g db_name $DB_NAME
     bench set-config -g root_login $DB_USER
     bench set-config -g root_password $DB_PASS
+    
+    # Force PostgreSQL driver usage
+    export FRAPPE_DB_TYPE=postgres
     
     echo "✅ PostgreSQL configuration complete - no strict mode issues!"
 fi
@@ -135,6 +140,7 @@ echo "🏗️ Creating fresh site: $SITE_NAME"
 # Create site with Railway PostgreSQL database  
 echo "🔧 Creating site with Railway PostgreSQL database..."
 bench new-site $SITE_NAME \
+    --db-type postgres \
     --db-name $DB_NAME \
     --db-root-password $DB_PASS \
     --admin-password ${ADMIN_PASSWORD:-admin123} \
