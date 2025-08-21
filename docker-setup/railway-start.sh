@@ -218,8 +218,9 @@ export FRAPPE_SITE_NAME_HEADER=$SITE_NAME
 echo "🚀 Starting Frappe server with Railway configuration"
 echo "🔧 Serving site: $SITE_NAME"
 
-# Set the default site for this bench instance
-echo $SITE_NAME > sites/currentsite.txt
+# Set the default site for this bench instance using modern command
+echo "🔧 Setting $SITE_NAME as default site..."
+bench use $SITE_NAME
 
 # Start server
 bench serve --port $PORT
