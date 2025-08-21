@@ -129,7 +129,7 @@ if [ ! -d "sites/$SITE_NAME" ]; then
         --db-root-username $DB_USER \
         --db-root-password $DB_PASS \
         --admin-password ${ADMIN_PASSWORD:-admin123} \
-        --no-mariadb-socket \
+        --mariadb-user-host-login-scope='%' \
         --install-app flansa
     
     echo "🏠 Setting homepage configuration"
