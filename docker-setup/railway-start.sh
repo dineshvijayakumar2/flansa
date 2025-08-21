@@ -36,8 +36,8 @@ if [ -n "$MYSQL_URL" ]; then
     
     # Try a few connection attempts with more verbose output
     ATTEMPT=0
-    MAX_ATTEMPTS=15
-    while ! nc -z $DB_HOST $DB_PORT 2>/dev/null && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+    MAX_ATTEMPTS=10
+    while ! nc -6 -z $DB_HOST $DB_PORT 2>/dev/null && [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
         ATTEMPT=$((ATTEMPT + 1))
         echo "   Attempt $ATTEMPT/$MAX_ATTEMPTS - Still waiting for database..."
         
@@ -65,14 +65,17 @@ fi
 # Wait for Redis if URL provided
 if [ -n "$REDIS_URL" ]; then
     echo "⏳ Waiting for Redis..."
-    REDIS_HOST=$(echo $REDIS_URL | cut -d'@' -f2 | cut -d':' -f1)
-    REDIS_PORT=$(echo $REDIS_URL | cut -d':' -f3 | cut -d'/' -f1)
+    echo "🔧 Parsing Redis URL: $REDIS_URL"
     
-    while ! nc -z $REDIS_HOST $REDIS_PORT 2>/dev/null; do
-        echo "   Waiting for Redis at $REDIS_HOST:$REDIS_PORT..."
-        sleep 2
-    done
-    echo "✅ Redis ready"
+    # Parse redis://default:password@host:port format
+    REDIS_URL_WITHOUT_PROTOCOL=$(echo $REDIS_URL | sed 's/redis:\/\///')
+    REDIS_HOST=$(echo $REDIS_URL_WITHOUT_PROTOCOL | cut -d'@' -f2 | cut -d':' -f1)
+    REDIS_PORT=$(echo $REDIS_URL_WITHOUT_PROTOCOL | cut -d'@' -f2 | cut -d':' -f2)
+    
+    echo "🔍 Redis connection details - Host: $REDIS_HOST, Port: $REDIS_PORT"
+    
+    # Skip Redis connection check for now - let Frappe handle it
+    echo "⚠️  Skipping Redis connection check - letting Frappe handle connection"
 fi
 
 # Configure bench for Railway
