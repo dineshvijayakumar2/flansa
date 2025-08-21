@@ -135,6 +135,12 @@ if [ -n "$DATABASE_URL" ]; then
     # Ensure Railway variables don't interfere
     unset RAILWAY_USER 2>/dev/null
     unset MYSQL_USER 2>/dev/null
+    unset POSTGRES_DB 2>/dev/null
+    
+    # Force unset any variables that might contain 'railway'
+    env | grep -i railway | cut -d= -f1 | while read var; do
+        unset "$var" 2>/dev/null
+    done
     
     # Verify environment variables are set correctly
     echo "🔍 Verifying environment variables:"
@@ -254,9 +260,15 @@ if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
     echo "✅ Flansa app already installed"
     FLANSA_INSTALLED=true
 else
-    echo "⚠️  Skipping automatic Flansa installation due to database user issues"
-    echo "📝 Flansa can be installed manually after login to the site"
-    FLANSA_INSTALLED=false
+    echo "🔧 Installing Flansa app on site..."
+    if bench --site $SITE_NAME install-app flansa; then
+        echo "✅ Flansa app installed successfully"
+        FLANSA_INSTALLED=true
+    else
+        echo "⚠️  Flansa installation failed - will be available for manual install"
+        echo "📝 Flansa can be installed manually after login to the site"
+        FLANSA_INSTALLED=false
+    fi
 fi
 
 echo "🏠 Setting homepage configuration"
@@ -294,6 +306,35 @@ echo "🔗 Access at: https://$SITE_NAME/login"
 echo "📝 Login: Administrator / admin123"
 if [ "$FLANSA_INSTALLED" = "false" ]; then
     echo "📋 To install Flansa: Go to App Installer and install 'flansa' manually"
+fi
+
+# Final aggressive database configuration override before server start
+echo "🔧 Final database configuration override..."
+
+# Re-export all database variables to ensure they persist
+export PGUSER="postgres"
+export PGPASSWORD="$DB_PASS"
+export PGHOST="$DB_HOST"  
+export PGPORT="$DB_PORT"
+export PGDATABASE="$DB_NAME"
+export FRAPPE_DB_USER="postgres"
+export FRAPPE_DB_PASSWORD="$DB_PASS"
+
+# Override any potential Railway-specific variables one more time
+unset RAILWAY_USER 2>/dev/null
+unset POSTGRES_USER_RAILWAY 2>/dev/null
+unset DB_USER_RAILWAY 2>/dev/null
+
+# Force recreate site config one final time to ensure no cached 'railway' user
+if [ -f "sites/$SITE_NAME/site_config.json" ]; then
+    echo "🔧 Final site config override to prevent railway user..."
+    # Use sed to replace any occurrence of 'railway' user with 'postgres'
+    sed -i 's/"db_user": "railway"/"db_user": "postgres"/g' sites/$SITE_NAME/site_config.json
+    sed -i 's/"root_login": "railway"/"root_login": "postgres"/g' sites/$SITE_NAME/site_config.json
+    
+    # Show final site config for debugging
+    echo "🔍 Final site config content:"
+    grep -E '"db_user"|"root_login"' sites/$SITE_NAME/site_config.json || echo "   No user config found"
 fi
 
 # Ensure server binds to all interfaces for Railway
