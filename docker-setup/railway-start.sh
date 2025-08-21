@@ -116,6 +116,13 @@ if [ -n "$MYSQL_URL" ]; then
         SET GLOBAL sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
         SET SESSION sql_mode = 'ALLOW_INVALID_DATES,ERROR_FOR_DIVISION_BY_ZERO,NO_AUTO_CREATE_USER,NO_ENGINE_SUBSTITUTION';
     " 2>/dev/null || echo "   MySQL configuration may need manual adjustment"
+    
+    # Clean up any existing generated databases to start fresh
+    echo "🧹 Cleaning up existing generated databases..."
+    mysql -h $DB_HOST -P $DB_PORT -u $DB_USER -p$DB_PASS -e "
+        DROP DATABASE IF EXISTS \`_5010b1d868f1b77b\`;
+        DROP USER IF EXISTS '_5010b1d868f1b77b'@'%';
+    " 2>/dev/null || echo "   Database cleanup completed"
 fi
 
 # Configure Redis
@@ -130,9 +137,10 @@ fi
 if [ ! -d "sites/$SITE_NAME" ]; then
     echo "🏗️ Creating site: $SITE_NAME"
     
-    # Create site with minimal parameters first
-    echo "🔧 Creating site with basic parameters..."
+    # Create site with Railway database
+    echo "🔧 Creating site with Railway database..."
     bench new-site $SITE_NAME \
+        --db-name $DB_NAME \
         --db-root-password $DB_PASS \
         --admin-password ${ADMIN_PASSWORD:-admin123}
     
