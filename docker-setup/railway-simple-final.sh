@@ -4,6 +4,10 @@ set -e
 echo "🚀 Flansa Railway - Simple Final Approach"
 echo "=========================================="
 
+# NUCLEAR OPTION: Patch database connections at module level
+echo "🔥 Applying nuclear database user patch..."
+python3 force-postgres-user.py
+
 PORT=${PORT:-8000}
 SITE_NAME="flansa-production-4543.up.railway.app"
 SETUP_COMPLETE="/home/frappe/frappe-bench/.railway_setup_complete"

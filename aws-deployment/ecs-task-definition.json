@@ -1,0 +1,55 @@
+{
+  "family": "flansa-mvp-task",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "executionRoleArn": "arn:aws:iam::794038225817:role/ecsTaskExecutionRole",
+  "taskRoleArn": "arn:aws:iam::794038225817:role/ecsTaskRole",
+  "containerDefinitions": [
+    {
+      "name": "flansa-mvp",
+      "image": "794038225817.dkr.ecr.us-east-1.amazonaws.com/flansa-mvp:db-fixed",
+      "essential": true,
+      "portMappings": [
+        {
+          "containerPort": 8000,
+          "protocol": "tcp"
+        }
+      ],
+      "environment": [
+        {
+          "name": "DATABASE_URL",
+          "value": "postgresql://flansa_admin:FlanSa2025Prod@flansa-mvp-db.copguw28cxxg.us-east-1.rds.amazonaws.com:5432/flansa_production"
+        },
+        {
+          "name": "REDIS_URL",
+          "value": "redis://flansa-mvp-redis.iugqi6.0001.use1.cache.amazonaws.com:6379"
+        },
+        {
+          "name": "ADMIN_PASSWORD",
+          "value": "FlanSa2025Prod"
+        },
+        {
+          "name": "AWS_REGION",
+          "value": "us-east-1"
+        }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/flansa-mvp",
+          "awslogs-region": "us-east-1",
+          "awslogs-stream-prefix": "ecs"
+        }
+      },
+      "healthCheck": {
+        "command": ["CMD-SHELL", "curl -f http://localhost:8000/ || exit 1"],
+        "interval": 30,
+        "timeout": 5,
+        "retries": 3,
+        "startPeriod": 60
+      }
+    }
+  ]
+}
