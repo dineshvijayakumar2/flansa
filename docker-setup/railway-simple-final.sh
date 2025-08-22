@@ -13,6 +13,21 @@ cd /home/frappe/frappe-bench
 echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"
 
+# Debug Railway environment variables
+echo "🔍 Debug - Environment Variables:"
+echo "   DATABASE_URL length: ${#DATABASE_URL}"
+echo "   PGUSER: $PGUSER"  
+echo "   PGHOST: $PGHOST"
+echo "   PGPORT: $PGPORT"
+
+# Check if DATABASE_URL is empty
+if [ -z "$DATABASE_URL" ]; then
+    echo "❌ ERROR: DATABASE_URL is empty!"
+    echo "   Railway should provide this automatically."
+    echo "   Check your PostgreSQL service is running and linked."
+    exit 1
+fi
+
 # Create logs directory once
 mkdir -p /home/frappe/logs
 

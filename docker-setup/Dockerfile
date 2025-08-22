@@ -28,8 +28,8 @@ RUN echo "🔨 Pre-building assets during Docker build..." && \
     bench build --app frappe || echo "⚠️  Frappe pre-build failed, will retry at startup" && \
     bench build --app flansa || echo "⚠️  Flansa pre-build failed, will retry at startup"
 
-# Copy startup script
-COPY --chown=frappe:frappe railway-start.sh ./start.sh
+# Copy startup script  
+COPY --chown=frappe:frappe railway-simple-final.sh ./start.sh
 RUN chmod +x start.sh
 
 # Environment variables
