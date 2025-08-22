@@ -20,13 +20,22 @@ echo "   PGUSER: $PGUSER"
 echo "   PGHOST: $PGHOST"
 echo "   PGPORT: $PGPORT"
 
-# Check if DATABASE_URL is empty
+# Check if DATABASE_URL is empty and build it if needed
 if [ -z "$DATABASE_URL" ]; then
-    echo "❌ ERROR: DATABASE_URL is empty!"
-    echo "   Railway should provide this automatically."
-    echo "   Check your PostgreSQL service is running and linked."
-    exit 1
+    echo "⚠️ DATABASE_URL is empty, building from individual components..."
+    
+    # We need the password - try to get it from reference variables
+    if [ -n "$PGPASSWORD" ]; then
+        DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/railway"
+        echo "✅ Built DATABASE_URL from components"
+    else
+        echo "❌ ERROR: PGPASSWORD not available to build DATABASE_URL"
+        echo "   Available: PGUSER=$PGUSER, PGHOST=$PGHOST, PGPORT=$PGPORT"
+        exit 1
+    fi
 fi
+
+echo "✅ DATABASE_URL available (length: ${#DATABASE_URL})"
 
 # Create logs directory once
 mkdir -p /home/frappe/logs
