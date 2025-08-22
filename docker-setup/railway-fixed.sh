@@ -14,8 +14,12 @@ cd /home/frappe/frappe-bench
 export DB_URL=${DATABASE_URL}
 export PGHOST=${PGHOST:-$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')}
 export PGPORT=${PGPORT:-$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')}
+export PGPASSWORD=${PGPASSWORD:-$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')}
 export PGDATABASE=${POSTGRES_DB:-"railway"}
 export PGUSER=${PGUSER:-"postgres"}
+
+# Also set for Frappe's database connection
+export DATABASE_URL_POSTGRES="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/$PGDATABASE"
 
 echo "📍 Site: $SITE_NAME"
 echo "📍 Port: $PORT"
@@ -33,6 +37,8 @@ if [ ! -d "sites/$SITE_NAME" ]; then
         --db-type postgres \
         --db-host $PGHOST \
         --db-port $PGPORT \
+        --db-root-username $PGUSER \
+        --db-root-password $PGPASSWORD \
         --admin-password admin123 \
         --force
 fi
