@@ -30,8 +30,10 @@ RUN echo "🔨 Pre-building assets during Docker build..." && \
 
 # Copy startup script and database patches
 COPY --chown=frappe:frappe railway-simple-final.sh ./start.sh
-COPY --chown=frappe:frappe db-patch.py ./db-patch.py  
 COPY --chown=frappe:frappe force-postgres-user.py ./force-postgres-user.py
+COPY --chown=frappe:frappe frappe-db-patch.py ./frappe-db-patch.py
+COPY --chown=frappe:frappe sql-level-patch.py ./sql-level-patch.py
+COPY --chown=frappe:frappe bench-startup-patch.py ./bench-startup-patch.py
 RUN chmod +x start.sh
 
 # Environment variables

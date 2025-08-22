@@ -8,6 +8,14 @@ echo "=========================================="
 echo "🔥 Applying nuclear database user patch..."
 python3 force-postgres-user.py
 
+# TARGETED PATCH: Patch Frappe's specific database connection method
+echo "🎯 Applying targeted Frappe database patch..."
+python3 frappe-db-patch.py
+
+# SQL-LEVEL PATCH: Patch at SQL execution level
+echo "🎯 Applying SQL-level database patch..."
+python3 sql-level-patch.py
+
 PORT=${PORT:-8000}
 SITE_NAME="flansa-production-4543.up.railway.app"
 SETUP_COMPLETE="/home/frappe/frappe-bench/.railway_setup_complete"
@@ -137,7 +145,9 @@ cat "sites/$SITE_NAME/site_config.json" || echo "❌ site_config.json not found"
 
 echo "🚀 Starting server with memory optimization..."
 
-# The nuclear patch was already applied at startup
+# FINAL PATCH: Apply right before server start
+echo "🎯 Applying final bench startup patch..."
+python3 bench-startup-patch.py
 
 # Set Python path early
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
