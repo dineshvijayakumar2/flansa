@@ -32,7 +32,7 @@ RUN echo "🔨 Pre-building assets..." && \
 RUN mkdir -p /home/frappe/logs
 
 # Copy Railway startup script
-COPY --chown=frappe:frappe railway-fixed.sh ./start.sh
+COPY --chown=frappe:frappe railway-simple-final.sh ./start.sh
 RUN chmod +x start.sh
 
 # Railway uses PORT environment variable
