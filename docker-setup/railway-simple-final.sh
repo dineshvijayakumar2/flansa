@@ -22,9 +22,18 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
     
     # Create site with DATABASE_URL
     if [ ! -d "sites/$SITE_NAME" ]; then
+        echo "🔧 Creating site with parsed DATABASE_URL components..."
+        
+        # Extract components from DATABASE_URL
+        PGPASSWORD_EXTRACTED=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
+        
         bench new-site $SITE_NAME \
             --db-type postgres \
-            --database-url $DATABASE_URL \
+            --db-host "$PGHOST" \
+            --db-port "$PGPORT" \
+            --db-name "railway" \
+            --db-root-username "postgres" \
+            --db-root-password "$PGPASSWORD_EXTRACTED" \
             --admin-password admin123 \
             --force
     fi
