@@ -4,6 +4,11 @@ set -e
 echo "🚀 Flansa Railway - Clean Approach (Railway User)"
 echo "==============================================="
 
+# First, debug credentials
+echo "🔧 Running credential debug..."
+chmod +x debug-railway-creds.sh
+./debug-railway-creds.sh
+
 PORT=${PORT:-8080}
 SITE_NAME="flansa-production-4543.up.railway.app"
 SETUP_COMPLETE="/home/frappe/frappe-bench/.railway_setup_complete"
