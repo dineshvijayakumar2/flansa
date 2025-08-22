@@ -131,6 +131,10 @@ export DB_NAME="railway"
 
 echo "✅ All PostgreSQL configurations updated with postgres user"
 
+# Debug: Show what's actually in the site config
+echo "🔍 Current site_config.json contents:"
+cat "sites/$SITE_NAME/site_config.json" || echo "❌ site_config.json not found"
+
 echo "🚀 Starting server with memory optimization..."
 
 # The nuclear patch was already applied at startup
