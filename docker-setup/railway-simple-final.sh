@@ -93,7 +93,9 @@ else
 fi
 
 # Always ensure correct PostgreSQL configuration (for existing sites)
-echo "🔧 Ensuring correct PostgreSQL configuration..."
+echo "🔧 Forcing correct PostgreSQL configuration in all possible locations..."
+
+# Update site_config.json
 cat > "sites/$SITE_NAME/site_config.json" <<EOF
 {
   "db_name": "railway",
@@ -104,7 +106,26 @@ cat > "sites/$SITE_NAME/site_config.json" <<EOF
   "db_password": "$PGPASSWORD"
 }
 EOF
-echo "✅ Site configuration updated with postgres user"
+
+# Update common_site_config.json
+cat > "sites/common_site_config.json" <<EOF
+{
+  "db_host": "$PGHOST",
+  "db_port": $PGPORT,
+  "db_user": "postgres",
+  "db_password": "$PGPASSWORD",
+  "db_type": "postgres"
+}
+EOF
+
+# Force environment variables for the running process
+export DB_HOST="$PGHOST"
+export DB_PORT="$PGPORT" 
+export DB_USER="postgres"
+export DB_PASSWORD="$PGPASSWORD"
+export DB_NAME="railway"
+
+echo "✅ All PostgreSQL configurations updated with postgres user"
 
 echo "🚀 Starting server with memory optimization..."
 # Set Python path early
