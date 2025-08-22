@@ -1,0 +1,26 @@
+# AWS App Runner Configuration for Flansa MVP
+version: 1.0
+runtime: docker
+build:
+  commands:
+    build:
+      - echo "Building Flansa for AWS App Runner"
+      - echo "Docker build will handle all setup"
+run:
+  runtime-version: latest
+  command: ./start.sh
+  network:
+    port: 8000
+    env: PORT
+  env:
+    # These will be set via AWS App Runner console or CLI
+    - name: DATABASE_URL
+      value: "postgresql://username:password@rds-endpoint:5432/flansa_prod"
+    - name: REDIS_URL  
+      value: "redis://elasticache-endpoint:6379"
+    - name: ADMIN_PASSWORD
+      value: "your-secure-admin-password"
+    - name: AWS_REGION
+      value: "us-east-1"
+    - name: FRAPPE_SITE_NAME_HEADER
+      value: "your-domain.aws-app-runner.com"
