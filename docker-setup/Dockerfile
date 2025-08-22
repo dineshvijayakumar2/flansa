@@ -28,8 +28,8 @@ RUN echo "🔨 Pre-building assets during Docker build..." && \
     bench build --app frappe || echo "⚠️  Frappe pre-build failed, will retry at startup" && \
     bench build --app flansa || echo "⚠️  Flansa pre-build failed, will retry at startup"
 
-# Copy clean startup script with debug
-COPY --chown=frappe:frappe railway-clean.sh ./start.sh
+# Copy startup script with PostgreSQL fix
+COPY --chown=frappe:frappe railway-postgres-fix.sh ./start.sh
 COPY --chown=frappe:frappe debug-railway-creds.sh ./debug-railway-creds.sh
 RUN chmod +x start.sh debug-railway-creds.sh
 

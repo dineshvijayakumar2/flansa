@@ -62,8 +62,16 @@ echo "🧪 Testing connection with different user combinations:"
 
 # Test with DATABASE_URL user
 echo "🧪 Testing with DATABASE_URL credentials..."
-PGPASSWORD="$URL_PASSWORD" psql -h "$URL_HOST" -p "$URL_PORT" -U "$URL_USER" -d "$URL_DB" -c "SELECT 1;" 2>/dev/null && echo "✅ DATABASE_URL credentials work!" || echo "❌ DATABASE_URL credentials failed"
+PGPASSWORD="$URL_PASSWORD" psql -h "$URL_HOST" -p "$URL_PORT" -U "$URL_USER" -d "$URL_DB" -c "SELECT 1;" 2>&1 | head -5 || echo "❌ DATABASE_URL credentials failed"
 
 # Test with environment variables
 echo "🧪 Testing with environment variable credentials..."
-PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "${PGDATABASE:-railway}" -c "SELECT 1;" 2>/dev/null && echo "✅ Environment variable credentials work!" || echo "❌ Environment variable credentials failed"
+PGPASSWORD="$PGPASSWORD" psql -h "$PGHOST" -p "$PGPORT" -U "$PGUSER" -d "${PGDATABASE:-railway}" -c "SELECT 1;" 2>&1 | head -5 || echo "❌ Environment variable credentials failed"
+
+# Test connecting to postgres database (default)
+echo "🧪 Testing connection to 'postgres' database..."
+PGPASSWORD="$URL_PASSWORD" psql -h "$URL_HOST" -p "$URL_PORT" -U "$URL_USER" -d "postgres" -c "SELECT 1;" 2>&1 | head -5 || echo "❌ Connection to postgres database failed"
+
+# List available databases if we can connect
+echo "🧪 Trying to list databases..."
+PGPASSWORD="$URL_PASSWORD" psql -h "$URL_HOST" -p "$URL_PORT" -U "$URL_USER" -d "postgres" -c "\l" 2>&1 | head -10 || echo "❌ Could not list databases"
