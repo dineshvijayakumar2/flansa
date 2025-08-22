@@ -1,0 +1,41 @@
+# Railway Deployment - Frappe + Flansa with PostgreSQL fix
+FROM frappe/bench:latest
+
+USER root
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    postgresql-client \
+    && rm -rf /var/lib/apt/lists/*
+
+USER frappe
+WORKDIR /home/frappe
+
+# Initialize bench and get apps
+RUN bench init --skip-redis-config-generation --frappe-branch version-15 frappe-bench
+WORKDIR /home/frappe/frappe-bench
+
+# Install gunicorn for production
+RUN pip install gunicorn
+
+# Get Flansa app
+RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
+
+# Pre-build assets
+RUN echo "🔨 Pre-building assets..." && \
+    bench build --app frappe || echo "⚠️ Frappe pre-build failed" && \
+    bench build --app flansa || echo "⚠️ Flansa pre-build failed"
+
+# Create logs directory
+RUN mkdir -p /home/frappe/logs
+
+# Copy Railway startup script
+COPY --chown=frappe:frappe railway-fixed.sh ./start.sh
+RUN chmod +x start.sh
+
+# Railway uses PORT environment variable
+EXPOSE ${PORT:-8000}
+
+CMD ["./start.sh"]
