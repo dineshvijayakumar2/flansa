@@ -4,6 +4,14 @@ set -e
 echo "🚀 Flansa Railway - Runtime Authentication Fix"
 echo "=============================================="
 
+# Run psycopg2 interception FIRST, before any Python code runs
+echo "🎯 Installing psycopg2 connection interceptor..."
+export PYTHONPATH="/home/frappe/frappe-bench:$PYTHONPATH"
+python3 -c "exec(open('intercept-psycopg2.py').read())" &
+
+# Also add it to Python startup
+export PYTHONSTARTUP="intercept-psycopg2.py"
+
 PORT=${PORT:-8080}
 SITE_NAME="flansa-production-4543.up.railway.app"
 SETUP_COMPLETE="/home/frappe/frappe-bench/.railway_setup_complete"
@@ -153,9 +161,12 @@ cat "sites/common_site_config.json"
 # Set Python path
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
 
-# Apply Python patch before starting
+# Apply Python patches before starting
 echo "🔧 Applying Frappe database patch..."
 python3 patch-frappe-db.py
+
+echo "🔧 Fixing Frappe's db_name/db_user bug..."
+python3 fix-frappe-user-bug.py
 
 # Start server with all environment variables
 echo "🚀 Starting server with correct runtime credentials..."
