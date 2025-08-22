@@ -45,9 +45,29 @@ fi
 echo "$SITE_NAME" > sites/currentsite.txt
 bench use $SITE_NAME
 
+# Force override any cached database connections
+export PGUSER=postgres
+export PGPASSWORD=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
+
 # Install Flansa if not installed
 if ! bench --site $SITE_NAME list-apps | grep -q "flansa"; then
-    echo "🔧 Installing Flansa app..."
+    echo "🔧 Installing Flansa app with forced postgres user..."
+    
+    # Clear any cached connections
+    bench --site $SITE_NAME clear-cache
+    
+    # Force rebuild site config
+    cat > "sites/$SITE_NAME/site_config.json" <<EOF
+{
+  "db_name": "railway",
+  "db_type": "postgres", 
+  "db_host": "$PGHOST",
+  "db_port": $PGPORT,
+  "db_user": "postgres",
+  "db_password": "$PGPASSWORD"
+}
+EOF
+    
     bench --site $SITE_NAME install-app flansa
 fi
 
