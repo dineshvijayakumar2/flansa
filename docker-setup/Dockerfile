@@ -28,12 +28,9 @@ RUN echo "🔨 Pre-building assets during Docker build..." && \
     bench build --app frappe || echo "⚠️  Frappe pre-build failed, will retry at startup" && \
     bench build --app flansa || echo "⚠️  Flansa pre-build failed, will retry at startup"
 
-# Copy startup script with runtime authentication fix
-COPY --chown=frappe:frappe fix-runtime-auth.sh ./start.sh
-COPY --chown=frappe:frappe patch-frappe-db.py ./patch-frappe-db.py
-COPY --chown=frappe:frappe fix-frappe-user-bug.py ./fix-frappe-user-bug.py
-COPY --chown=frappe:frappe debug-railway-creds.sh ./debug-railway-creds.sh
-RUN chmod +x start.sh debug-railway-creds.sh
+# Copy startup script with db_user fix
+COPY --chown=frappe:frappe railway-dbuser-fix.sh ./start.sh
+RUN chmod +x start.sh
 
 # Environment variables
 ENV ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}

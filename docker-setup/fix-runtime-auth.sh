@@ -4,13 +4,7 @@ set -e
 echo "🚀 Flansa Railway - Runtime Authentication Fix"
 echo "=============================================="
 
-# Run psycopg2 interception FIRST, before any Python code runs
-echo "🎯 Installing psycopg2 connection interceptor..."
-export PYTHONPATH="/home/frappe/frappe-bench:$PYTHONPATH"
-python3 -c "exec(open('intercept-psycopg2.py').read())" &
-
-# Also add it to Python startup
-export PYTHONSTARTUP="intercept-psycopg2.py"
+# Skip psycopg2 interception for now (file not copied to container)
 
 PORT=${PORT:-8080}
 SITE_NAME="flansa-production-4543.up.railway.app"
@@ -86,7 +80,7 @@ fi
 # CRITICAL: Update ALL configuration files before starting server
 echo "🔧 Updating ALL site configurations for runtime..."
 
-# 1. Update site_config.json
+# 1. Update site_config.json - CRITICAL: db_user must be set!
 cat > "sites/$SITE_NAME/site_config.json" <<EOF
 {
   "db_name": "$DB_NAME",
