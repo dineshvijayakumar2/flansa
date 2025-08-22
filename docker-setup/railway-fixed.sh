@@ -30,8 +30,23 @@ echo "📍 PGPORT: $PGPORT"
 # Create logs directory
 mkdir -p /home/frappe/logs
 
+# Create site configuration first
+mkdir -p "sites/$SITE_NAME"
+
+# Create site_config.json with correct PostgreSQL credentials
+cat > "sites/$SITE_NAME/site_config.json" <<EOF
+{
+  "db_name": "railway",
+  "db_type": "postgres",
+  "db_host": "$PGHOST",
+  "db_port": $PGPORT,
+  "db_user": "$PGUSER",
+  "db_password": "$PGPASSWORD"
+}
+EOF
+
 # Create site if needed
-if [ ! -d "sites/$SITE_NAME" ]; then
+if [ ! -f "sites/$SITE_NAME/site_config.json.bak" ]; then
     echo "🔧 Creating site with PostgreSQL..."
     bench new-site $SITE_NAME \
         --db-type postgres \
@@ -41,6 +56,7 @@ if [ ! -d "sites/$SITE_NAME" ]; then
         --db-root-password $PGPASSWORD \
         --admin-password admin123 \
         --force
+    cp "sites/$SITE_NAME/site_config.json" "sites/$SITE_NAME/site_config.json.bak"
 fi
 
 # Set as current site
@@ -54,8 +70,11 @@ if ! bench --site $SITE_NAME list-apps | grep -q "flansa"; then
 fi
 
 echo "🚀 Starting server..."
+# Set Python path for both bench and gunicorn
+export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
+
 exec bench serve --port $PORT --host 0.0.0.0 || {
     echo "Bench serve failed, using gunicorn..."
-    export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
-    exec env/bin/gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 frappe.app:application
+    cd /home/frappe/frappe-bench
+    exec env/bin/gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --chdir /home/frappe/frappe-bench frappe.app:application
 }
