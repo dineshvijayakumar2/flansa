@@ -133,9 +133,7 @@ echo "✅ All PostgreSQL configurations updated with postgres user"
 
 echo "🚀 Starting server with memory optimization..."
 
-# Apply database connection monkey patch
-echo "🔧 Applying database connection monkey patch..."
-python3 db-patch.py || echo "⚠️ Monkey patch failed, continuing..."
+# The nuclear patch was already applied at startup
 
 # Set Python path early
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
