@@ -28,12 +28,9 @@ RUN echo "🔨 Pre-building assets during Docker build..." && \
     bench build --app frappe || echo "⚠️  Frappe pre-build failed, will retry at startup" && \
     bench build --app flansa || echo "⚠️  Flansa pre-build failed, will retry at startup"
 
-# Copy startup script and simple patches
-COPY --chown=frappe:frappe railway-simple-wrapper.sh ./start.sh
-COPY --chown=frappe:frappe simple-env-patch.sh ./simple-env-patch.sh
-COPY --chown=frappe:frappe bench-wrapper.sh ./bench-wrapper.sh
-COPY --chown=frappe:frappe runtime-db-patch.py ./runtime-db-patch.py
-RUN chmod +x start.sh simple-env-patch.sh bench-wrapper.sh
+# Copy clean startup script (no patches)
+COPY --chown=frappe:frappe railway-clean.sh ./start.sh
+RUN chmod +x start.sh
 
 # Environment variables
 ENV ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}

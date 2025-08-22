@@ -1,12 +1,8 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Flansa Railway - Wrapper Approach"
-echo "===================================="
-
-# Simple environment setup
-echo "🔧 Setting up environment..."
-source simple-env-patch.sh
+echo "🚀 Flansa Railway - Clean Approach (Railway User)"
+echo "==============================================="
 
 PORT=${PORT:-8080}
 SITE_NAME="flansa-production-4543.up.railway.app"
@@ -29,29 +25,28 @@ if [ -z "$DATABASE_URL" ]; then
     echo "⚠️ DATABASE_URL is empty, building from individual components..."
     
     if [ -n "$PGPASSWORD" ]; then
-        DATABASE_URL="postgresql://$PGUSER:$PGPASSWORD@$PGHOST:$PGPORT/railway"
-        echo "✅ Built DATABASE_URL from components"
+        DATABASE_URL="postgresql://railway:$PGPASSWORD@$PGHOST:$PGPORT/railway"
+        echo "✅ Built DATABASE_URL with railway user"
     else
         echo "❌ ERROR: PGPASSWORD not available to build DATABASE_URL"
-        echo "   Available: PGUSER=$PGUSER, PGHOST=$PGHOST, PGPORT=$PGPORT"
         exit 1
     fi
 fi
 
 echo "✅ DATABASE_URL available (length: ${#DATABASE_URL})"
 
-# Create logs directory once
+# Create logs directory
 mkdir -p /home/frappe/logs
 
 # Only run setup if not already completed
 if [ ! -f "$SETUP_COMPLETE" ]; then
     echo "🔧 First-time setup: Creating site and installing app..."
     
-    # Create site with DATABASE_URL
+    # Create site with Railway database user
     if [ ! -d "sites/$SITE_NAME" ]; then
-        echo "🔧 Creating site with parsed DATABASE_URL components..."
+        echo "🔧 Creating site with railway user..."
         
-        # Extract components from DATABASE_URL
+        # Extract password from DATABASE_URL
         PGPASSWORD_EXTRACTED=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
         
         bench new-site $SITE_NAME \
@@ -59,7 +54,7 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
             --db-host "$PGHOST" \
             --db-port "$PGPORT" \
             --db-name "railway" \
-            --db-root-username "$PGUSER" \
+            --db-root-username "railway" \
             --db-root-password "$PGPASSWORD_EXTRACTED" \
             --admin-password admin123 \
             --force
@@ -68,23 +63,22 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
     # Set as current site
     bench use $SITE_NAME
     
-    # Try to install Flansa - if it fails, mark as complete anyway
+    # Try to install Flansa
     echo "🔧 Installing Flansa app..."
     bench --site $SITE_NAME install-app flansa || {
         echo "⚠️ Flansa installation had issues, but marking setup as complete"
-        echo "Site created successfully, can install app manually later"
     }
     
-    # Mark setup as complete to prevent recreation
+    # Mark setup as complete
     echo "$(date): Railway setup completed" > "$SETUP_COMPLETE"
-    echo "✅ Setup marked as complete - will not recreate site on restart"
+    echo "✅ Setup marked as complete"
 else
     echo "✅ Setup already complete, using existing site"
     bench use $SITE_NAME
 fi
 
-# Always update configurations before starting
-echo "🔧 Updating site configurations..."
+# Update configurations with railway user
+echo "🔧 Updating site configurations with railway user..."
 
 # Update site_config.json
 cat > "sites/$SITE_NAME/site_config.json" <<EOF
@@ -93,7 +87,7 @@ cat > "sites/$SITE_NAME/site_config.json" <<EOF
   "db_type": "postgres",
   "db_host": "$PGHOST",
   "db_port": $PGPORT,
-  "db_user": "$PGUSER",
+  "db_user": "railway",
   "db_password": "$PGPASSWORD"
 }
 EOF
@@ -103,20 +97,22 @@ cat > "sites/common_site_config.json" <<EOF
 {
   "db_host": "$PGHOST",
   "db_port": $PGPORT,
-  "db_user": "$PGUSER",
+  "db_user": "railway",
   "db_password": "$PGPASSWORD",
   "db_type": "postgres",
   "default_site": "$SITE_NAME"
 }
 EOF
 
-echo "✅ All configurations updated"
+echo "✅ All configurations updated with railway user"
 
-# Debug: Show what's actually in the site config
+# Debug: Show current config
 echo "🔍 Current site_config.json contents:"
-cat "sites/$SITE_NAME/site_config.json" || echo "❌ site_config.json not found"
+cat "sites/$SITE_NAME/site_config.json"
 
-echo "🚀 Starting server with wrapper approach..."
+# Set Python path
+export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
 
-# Use the bench wrapper instead of direct bench serve
-exec ./bench-wrapper.sh
+# Start server with clean environment
+echo "🚀 Starting server with railway user (no patches)..."
+exec bench serve --port $PORT
