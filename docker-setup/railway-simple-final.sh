@@ -96,5 +96,5 @@ echo "🚀 Starting server with memory optimization..."
 # Set Python path early
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
 
-# Start with simple bench serve
-exec bench serve --port $PORT --host 0.0.0.0
+# Start with simple bench serve (--host not supported in all versions)
+exec bench serve --port $PORT
