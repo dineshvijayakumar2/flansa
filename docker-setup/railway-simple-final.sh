@@ -65,7 +65,7 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
     # Set as current site
     bench use $SITE_NAME
     
-    # Force correct PostgreSQL config in site
+    # Force correct PostgreSQL config in site (using PGPASSWORD from shared variable)
     cat > "sites/$SITE_NAME/site_config.json" <<EOF
 {
   "db_name": "railway",
@@ -73,7 +73,7 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
   "db_host": "$PGHOST",
   "db_port": $PGPORT,
   "db_user": "postgres",
-  "db_password": "$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')"
+  "db_password": "$PGPASSWORD"
 }
 EOF
     
@@ -91,6 +91,20 @@ else
     echo "✅ Setup already complete, using existing site"
     bench use $SITE_NAME
 fi
+
+# Always ensure correct PostgreSQL configuration (for existing sites)
+echo "🔧 Ensuring correct PostgreSQL configuration..."
+cat > "sites/$SITE_NAME/site_config.json" <<EOF
+{
+  "db_name": "railway",
+  "db_type": "postgres",
+  "db_host": "$PGHOST",
+  "db_port": $PGPORT,
+  "db_user": "postgres",
+  "db_password": "$PGPASSWORD"
+}
+EOF
+echo "✅ Site configuration updated with postgres user"
 
 echo "🚀 Starting server with memory optimization..."
 # Set Python path early
