@@ -5,7 +5,8 @@ echo "🚀 Flansa Production Server (Railway with PGUSER fix)"
 echo "======================================================"
 
 PORT=${PORT:-8000}
-SITE_NAME="flansa-mvp.local"
+# Use Railway's auto-generated domain or fallback
+SITE_NAME=${RAILWAY_PUBLIC_DOMAIN:-"flansa-production-4543.up.railway.app"}
 
 cd /home/frappe/frappe-bench
 
@@ -30,33 +31,14 @@ echo "📍 PGPORT: $PGPORT"
 # Create logs directory
 mkdir -p /home/frappe/logs
 
-# Create site configuration first
-mkdir -p "sites/$SITE_NAME"
-
-# Create site_config.json with correct PostgreSQL credentials
-cat > "sites/$SITE_NAME/site_config.json" <<EOF
-{
-  "db_name": "railway",
-  "db_type": "postgres",
-  "db_host": "$PGHOST",
-  "db_port": $PGPORT,
-  "db_user": "$PGUSER",
-  "db_password": "$PGPASSWORD"
-}
-EOF
-
-# Create site if needed
-if [ ! -f "sites/$SITE_NAME/site_config.json.bak" ]; then
-    echo "🔧 Creating site with PostgreSQL..."
+# Create site if needed using DATABASE_URL directly
+if [ ! -d "sites/$SITE_NAME" ]; then
+    echo "🔧 Creating site with Railway PostgreSQL using DATABASE_URL..."
     bench new-site $SITE_NAME \
         --db-type postgres \
-        --db-host $PGHOST \
-        --db-port $PGPORT \
-        --db-root-username $PGUSER \
-        --db-root-password $PGPASSWORD \
+        --database-url $DATABASE_URL \
         --admin-password admin123 \
         --force
-    cp "sites/$SITE_NAME/site_config.json" "sites/$SITE_NAME/site_config.json.bak"
 fi
 
 # Set as current site
