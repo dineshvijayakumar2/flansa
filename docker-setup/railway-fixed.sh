@@ -75,8 +75,9 @@ echo "🚀 Starting server..."
 # Set Python path for both bench and gunicorn
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
 
+# Use single worker to reduce memory usage for Railway
 exec bench serve --port $PORT --host 0.0.0.0 || {
-    echo "Bench serve failed, using gunicorn..."
+    echo "Bench serve failed, using gunicorn with memory optimization..."
     cd /home/frappe/frappe-bench
-    exec env/bin/gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 120 --chdir /home/frappe/frappe-bench frappe.app:application
+    exec env/bin/gunicorn --bind 0.0.0.0:$PORT --workers 1 --worker-class sync --max-requests 1000 --timeout 120 --chdir /home/frappe/frappe-bench frappe.app:application
 }
