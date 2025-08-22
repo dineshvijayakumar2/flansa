@@ -17,18 +17,18 @@ if [ -n "$DATABASE_URL" ]; then
     DB_PASSWORD=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
     DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
     DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
-    # Use postgres as database name to match the user
-    DB_NAME="postgres"
+    # Extract the actual database name from DATABASE_URL
+    DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
     echo "   User: $DB_USER"
     echo "   Host: $DB_HOST"
-    echo "   Database: $DB_NAME (using postgres to match user)"
+    echo "   Database: $DB_NAME"
 else
     DB_USER="$PGUSER"
     DB_PASSWORD="$PGPASSWORD"
     DB_HOST="$PGHOST"
     DB_PORT="$PGPORT"
-    DB_NAME="postgres"
+    DB_NAME="${PGDATABASE:-railway}"
 fi
 
 # Create logs directory
@@ -69,6 +69,7 @@ cat > "sites/$SITE_NAME/site_config.json" <<EOF
   "db_type": "postgres",
   "db_host": "$DB_HOST",
   "db_port": $DB_PORT,
+  "db_user": "$DB_USER",
   "db_password": "$DB_PASSWORD"
 }
 EOF
@@ -77,6 +78,7 @@ cat > "sites/common_site_config.json" <<EOF
 {
   "db_host": "$DB_HOST",
   "db_port": $DB_PORT,
+  "db_user": "$DB_USER",
   "db_password": "$DB_PASSWORD",
   "db_type": "postgres",
   "default_site": "$SITE_NAME"
