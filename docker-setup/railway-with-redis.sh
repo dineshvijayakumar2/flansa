@@ -84,12 +84,24 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
     bench use $SITE_NAME
     
     echo "🔧 Installing Flansa..."
-    bench --site $SITE_NAME install-app flansa || echo "⚠️ Flansa installation had issues"
+    # Try normal install first, if it fails due to duplicate, force it
+    bench --site $SITE_NAME install-app flansa || {
+        echo "⚠️ Normal install failed, trying with --force to handle duplicates..."
+        bench --site $SITE_NAME install-app flansa --force || echo "⚠️ Flansa installation had issues"
+    }
+    
+    # Run migrations to ensure everything is synced
+    echo "🔧 Running migrations..."
+    bench --site $SITE_NAME migrate || echo "⚠️ Migration had issues"
     
     echo "$(date): Setup completed" > "$SETUP_COMPLETE"
 else
     echo "✅ Using existing site"
     bench use $SITE_NAME
+    
+    # Always run migrations for existing sites to ensure they're up to date
+    echo "🔧 Running migrations for existing site..."
+    bench --site $SITE_NAME migrate || echo "⚠️ Migration had issues"
 fi
 
 # Create site configuration
@@ -125,8 +137,16 @@ echo "✅ Configuration created"
 echo "🔍 Final configuration:"
 cat "sites/common_site_config.json"
 
+# Build assets for Flansa
+echo "🔧 Building Flansa assets..."
+bench build --app flansa || echo "⚠️ Asset build had issues, but continuing..."
+
 # Set Python path
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
+
+# Clear cache to ensure fresh start
+echo "🔧 Clearing cache..."
+bench --site $SITE_NAME clear-cache || echo "⚠️ Cache clear had issues"
 
 # Start server
 echo "🚀 Starting server..."
