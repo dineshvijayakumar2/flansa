@@ -35,5 +35,8 @@ RUN chmod +x start.sh && chmod +x railway_migration_fix.py
 # Expose port (will be overridden by environment)
 EXPOSE 8080
 
+# Force rebuild trigger - PostgreSQL database viewer fix
+ENV REBUILD_TRIGGER=v4_postgres_dbviewer_fix
+
 # Start the application
 CMD ["./start.sh"]
