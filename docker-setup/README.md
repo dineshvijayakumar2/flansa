@@ -1,130 +1,118 @@
-# Frappe + Flansa Docker Setup
+# Frappe + Flansa Docker Deployment
 
-This Docker configuration provides a complete setup for running Frappe with the Flansa app.
+Production-ready Docker deployment for Frappe with Flansa application.
 
-## Quick Start
+## 🚀 Quick Start
 
-### 1. Build and Run
+### Railway Deployment
 ```bash
-# Clone or navigate to this directory
-cd /home/ubuntu/frappe-bench/docker-setup
+# 1. Push to GitHub
+git push origin main
 
-# Build and start services
+# 2. In Railway:
+# - Create PostgreSQL service
+# - Create Redis service (optional)
+# - Create new service from GitHub repo
+# - Set environment variables
+# - Deploy
+```
+
+### Local Development
+```bash
+# Build and run with docker-compose
 docker-compose up --build
 
-# Access the application
-# Homepage: http://localhost:8000/app/flansa
-# Login: Administrator / admin123
+# Access at http://localhost:8080
 ```
 
-### 2. Development Mode
+## 📁 Essential Files
+
+| File | Purpose |
+|------|---------|
+| `Dockerfile` | Production Docker configuration |
+| `railway-production.sh` | Clean production startup script |
+| `docker-compose.yml` | Local development setup |
+| `RAILWAY_DEPLOYMENT.md` | Detailed Railway guide |
+
+## 🔧 Key Features
+
+- **No Database Creation**: Uses `--no-setup-db` for managed databases
+- **Auto Redis Detection**: Configures Redis if REDIS_URL is present
+- **Frappe Bug Fix**: Handles db_user configuration issue
+- **Production Ready**: Pre-built assets, optimized startup
+- **Multi-Database**: Works with PostgreSQL and MariaDB
+
+## 🔐 Environment Variables
+
+### Required
 ```bash
-# For development with hot reloading
-DEVELOPER_MODE=1 docker-compose up --build
+DATABASE_URL=postgresql://user:pass@host:5432/dbname
+ADMIN_PASSWORD=secure-admin-password
 ```
 
-## Services
-
-- **frappe-flansa**: Main application (Port 8080, internal 8000)
-- **mariadb**: Database (Port 3307, internal 3306) 
-- **redis**: Cache (Port 6380, internal 6379)
-
-## Configuration
-
-### Environment Variables
-Copy `.env.example` to `.env` and modify:
-
+### Optional
 ```bash
-cp .env.example .env
-# Edit .env with your settings
+REDIS_URL=redis://user:pass@host:6379
+PORT=8080
 ```
 
-### Key Settings
-- `FRAPPE_SITE_NAME`: Site name (default: mysite.local)
-- `ADMIN_PASSWORD`: Admin password (default: admin123)
-- `DB_PASSWORD`: Database password
-- `DEVELOPER_MODE`: Enable for development (0/1)
+## 🚢 Deployment Platforms
 
-## Access Points
+### Railway
+- PostgreSQL and Redis services
+- Reference variables for credentials
+- See `RAILWAY_DEPLOYMENT.md` for details
 
-### Application
-- **Homepage**: http://localhost:8080/app/flansa
-- **Admin**: http://localhost:8080/app/flansa (Login: Administrator)
+### AWS ECS
+- Build and push to ECR
+- Configure with RDS PostgreSQL
+- ElastiCache for Redis
 
-### Flansa Features
-- **Flansa Workspace**: Main tenant management
-- **Switch Tenant**: Multi-tenant switching
-- **Register Tenant**: New tenant creation  
-- **Database Viewer**: System database access
+### Docker Compose (Local)
+- Includes MariaDB and Redis
+- Volumes for persistence
+- Development mode support
 
-## Database Access
+## 🔍 How It Works
 
-### Via Docker
-```bash
-docker-compose exec mariadb mysql -u frappe -pfrappe123 frappe_db
-```
+1. **Extract Credentials**: From DATABASE_URL
+2. **Test Connection**: Verify database access
+3. **Create Site**: Using existing database (--no-setup-db)
+4. **Install Flansa**: With migrations
+5. **Configure**: Set db_user in configs
+6. **Start Server**: On specified PORT
 
-### Via Host (if port exposed)
-```bash
-mysql -h localhost -P 3307 -u frappe -pfrappe123 frappe_db
-```
+## 🐛 Troubleshooting
 
-## Troubleshooting
+### Authentication Failed
+- Check DATABASE_URL is correct
+- Ensure db_user is in site_config.json
+- Verify PostgreSQL credentials
 
-### Check Services
-```bash
-# View logs
-docker-compose logs -f frappe-flansa
+### Redis Connection Refused
+- Add Redis service if needed
+- Check REDIS_URL is set
+- Or disable with empty redis_cache config
 
-# Check service status
-docker-compose ps
+### Flansa Pages Not Working
+- Run migrations: `bench migrate`
+- Build assets: `bench build --app flansa`
+- Clear cache: `bench clear-cache`
 
-# Restart services
-docker-compose restart
-```
+## 📚 Documentation
 
-### Database Issues
-```bash
-# Reset database
-docker-compose down -v
-docker-compose up --build
-```
+- [RAILWAY_DEPLOYMENT.md](RAILWAY_DEPLOYMENT.md) - Complete Railway guide
+- [Frappe Documentation](https://frappeframework.com)
+- [Docker Documentation](https://docs.docker.com)
 
-### Build Issues
-```bash
-# Clean build
-docker-compose down
-docker system prune -f
-docker-compose build --no-cache
-```
+## 🔒 Security
 
-## Data Persistence
+In production, always:
+- Use strong ADMIN_PASSWORD
+- Secure database credentials
+- Enable HTTPS/TLS
+- Regular security updates
 
-Volumes are created for:
-- `mariadb_data`: Database files
-- `redis_data`: Cache data
-- `frappe_sites`: Site configurations
-- `frappe_logs`: Application logs
+## 📝 License
 
-## Production Deployment
-
-For Railway.com deployment:
-1. Use the Dockerfile
-2. Set environment variables in Railway
-3. Configure database service
-4. Update ADMIN_PASSWORD and security keys
-
-## Health Checks
-
-Services include health checks:
-- MariaDB: Database connectivity
-- Redis: Cache availability  
-- Frappe: Application responsiveness
-
-## Security Notes
-
-**Change these in production:**
-- ADMIN_PASSWORD
-- DB_PASSWORD  
-- SECRET_KEY
-- ENCRYPTION_KEY
+MIT License - See LICENSE file for details

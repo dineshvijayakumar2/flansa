@@ -1,44 +1,38 @@
-# Railway-Optimized Frappe + Flansa Dockerfile
+# Production Dockerfile for Frappe + Flansa
+# Works with Railway, AWS ECS, and other container platforms
 FROM frappe/bench:latest
 
 USER root
 
-# Install system dependencies for Railway
+# Install PostgreSQL client for database operations
 RUN apt-get update && apt-get install -y \
-    git \
-    curl \
     postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
 USER frappe
 WORKDIR /home/frappe
 
-# Initialize bench and get apps
+# Initialize bench with Frappe v15
 RUN bench init --skip-redis-config-generation --frappe-branch version-15 frappe-bench
+
 WORKDIR /home/frappe/frappe-bench
 
-# Install gunicorn for production server
+# Install production dependencies
 RUN pip install gunicorn
 
-# Get Flansa app
+# Get Flansa app from GitHub
 RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
 
-# Pre-build assets during Docker build to reduce startup time
-RUN echo "🔨 Pre-building assets during Docker build..." && \
-    bench build --app frappe || echo "⚠️  Frappe pre-build failed, will retry at startup" && \
-    bench build --app flansa || echo "⚠️  Flansa pre-build failed, will retry at startup"
+# Pre-build assets to reduce startup time
+RUN bench build --app frappe || true && \
+    bench build --app flansa || true
 
-# Copy Railway solution with Redis support
-COPY --chown=frappe:frappe railway-with-redis.sh ./start.sh
+# Copy production startup script
+COPY --chown=frappe:frappe railway-production.sh ./start.sh
 RUN chmod +x start.sh
 
-# Environment variables
-ENV ADMIN_PASSWORD=${ADMIN_PASSWORD:-admin123}
-ENV DEVELOPER_MODE=${DEVELOPER_MODE:-0}
+# Expose port (will be overridden by environment)
+EXPOSE 8080
 
-# Railway automatically provides DATABASE_URL and REDIS_URL
-# No need for individual DB environment variables
-
-EXPOSE ${PORT:-8000}
-
+# Start the application
 CMD ["./start.sh"]

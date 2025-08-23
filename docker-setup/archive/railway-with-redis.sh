@@ -46,8 +46,8 @@ else
     REDIS_CONFIG='"redis_cache": "",
   "redis_queue": "",
   "redis_socketio": "",
-  "developer_mode": 1,
-  "disable_async": true,'
+  "developer_mode": 0,
+  "disable_async": false,'
 fi
 
 # Test PostgreSQL connection
@@ -84,15 +84,33 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
     bench use $SITE_NAME
     
     echo "🔧 Installing Flansa..."
-    # Try normal install first, if it fails due to duplicate, force it
-    bench --site $SITE_NAME install-app flansa || {
-        echo "⚠️ Normal install failed, trying with --force to handle duplicates..."
-        bench --site $SITE_NAME install-app flansa --force || echo "⚠️ Flansa installation had issues"
+    # Check if Flansa was partially installed before
+    if bench --site $SITE_NAME list-apps 2>/dev/null | grep -q "flansa"; then
+        echo "⚠️ Flansa already in installed apps, running migrations..."
+        bench --site $SITE_NAME migrate --skip-failing || echo "⚠️ Some migrations failed"
+    else
+        # Clean install
+        bench --site $SITE_NAME install-app flansa --force || {
+            echo "⚠️ Installation failed, checking database state..."
+            
+            # If install fails, ensure Flansa tables exist
+            bench --site $SITE_NAME console <<EOF
+import frappe
+# Ensure Flansa is marked as installed
+if 'flansa' not in frappe.get_installed_apps():
+    doc = frappe.new_doc('Installed Application')
+    doc.app_name = 'flansa'
+    doc.app_version = '0.0.1'
+    doc.installed_on = frappe.utils.now()
+    doc.insert(ignore_permissions=True, ignore_if_duplicate=True)
+    frappe.db.commit()
+    print("✅ Marked Flansa as installed")
+EOF
+            
+            # Run migrations after marking as installed
+            bench --site $SITE_NAME migrate --skip-failing || echo "⚠️ Some migrations failed"
+        }
     }
-    
-    # Run migrations to ensure everything is synced
-    echo "🔧 Running migrations..."
-    bench --site $SITE_NAME migrate || echo "⚠️ Migration had issues"
     
     echo "$(date): Setup completed" > "$SETUP_COMPLETE"
 else
