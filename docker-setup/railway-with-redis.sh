@@ -1,8 +1,8 @@
 #!/bin/bash
 set -e
 
-echo "🚀 Flansa Railway - Final Solution"
-echo "================================="
+echo "🚀 Flansa Railway - With Redis Support"
+echo "======================================"
 
 PORT=${PORT:-8080}
 SITE_NAME="flansa-production-4543.up.railway.app"
@@ -10,42 +10,61 @@ SETUP_COMPLETE="/home/frappe/frappe-bench/.railway_setup_complete"
 
 cd /home/frappe/frappe-bench
 
-# Extract credentials from DATABASE_URL (Railway's actual working credentials)
+# Extract PostgreSQL credentials from DATABASE_URL
 if [ -n "$DATABASE_URL" ]; then
-    echo "🔧 Using Railway DATABASE_URL credentials..."
+    echo "🔧 Extracting PostgreSQL credentials..."
     DB_USER=$(echo $DATABASE_URL | sed -n 's/.*:\/\/\([^:]*\):.*/\1/p')
     DB_PASSWORD=$(echo $DATABASE_URL | sed -n 's/.*:\/\/[^:]*:\([^@]*\)@.*/\1/p')
     DB_HOST=$(echo $DATABASE_URL | sed -n 's/.*@\([^:]*\):.*/\1/p')
     DB_PORT=$(echo $DATABASE_URL | sed -n 's/.*:\([0-9]*\)\/.*/\1/p')
     DB_NAME=$(echo $DATABASE_URL | sed -n 's/.*\/\([^?]*\).*/\1/p')
     
-    echo "   User: $DB_USER"
-    echo "   Host: $DB_HOST"
-    echo "   Database: $DB_NAME"
-    echo "   Password: ${DB_PASSWORD:0:8}..."
+    echo "   PostgreSQL User: $DB_USER"
+    echo "   PostgreSQL Host: $DB_HOST"
+    echo "   PostgreSQL Database: $DB_NAME"
 else
     echo "❌ DATABASE_URL not available"
     exit 1
 fi
 
-# Test connection first
-echo "🧪 Testing database connection..."
+# Check for Redis
+REDIS_CONFIG=""
+if [ -n "$REDIS_URL" ]; then
+    echo "🔧 Redis URL found"
+    # Use the full Redis URL directly - it includes auth
+    # Format: redis://default:password@redis.railway.internal:6379
+    
+    # Remove trailing slash if any and append database numbers
+    REDIS_BASE=$(echo $REDIS_URL | sed 's/\/$//')
+    
+    REDIS_CONFIG='"redis_cache": "'$REDIS_BASE'/0",
+  "redis_queue": "'$REDIS_BASE'/1",
+  "redis_socketio": "'$REDIS_BASE'/2",'
+    echo "   Redis configured with Railway Redis service"
+else
+    echo "⚠️ No Redis URL found, disabling Redis features"
+    REDIS_CONFIG='"redis_cache": "",
+  "redis_queue": "",
+  "redis_socketio": "",
+  "developer_mode": 1,
+  "disable_async": true,'
+fi
+
+# Test PostgreSQL connection
+echo "🧪 Testing PostgreSQL connection..."
 if ! PGPASSWORD="$DB_PASSWORD" psql -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" -d "$DB_NAME" -c "SELECT 1;" >/dev/null 2>&1; then
-    echo "❌ Database connection test failed with Railway credentials"
-    echo "   This indicates a Railway configuration issue"
+    echo "❌ PostgreSQL connection failed"
     exit 1
 fi
-echo "✅ Database connection successful"
+echo "✅ PostgreSQL connection successful"
 
 # Create logs directory
 mkdir -p /home/frappe/logs
 
 # Only run setup if not already completed
 if [ ! -f "$SETUP_COMPLETE" ]; then
-    echo "🔧 Creating Frappe site with --no-setup-db (uses existing Railway database)..."
+    echo "🔧 Creating Frappe site..."
     
-    # Use --no-setup-db to skip database/user creation, just create tables
-    # Still need root credentials for bootstrap_database to connect
     bench new-site $SITE_NAME \
         --db-type postgres \
         --db-host "$DB_HOST" \
@@ -61,23 +80,20 @@ if [ ! -f "$SETUP_COMPLETE" ]; then
             exit 1
         }
     
-    echo "✅ Site created successfully"
+    echo "✅ Site created"
     bench use $SITE_NAME
     
-    echo "🔧 Installing Flansa app..."
-    bench --site $SITE_NAME install-app flansa || {
-        echo "⚠️ Flansa installation had issues, but continuing..."
-    }
+    echo "🔧 Installing Flansa..."
+    bench --site $SITE_NAME install-app flansa || echo "⚠️ Flansa installation had issues"
     
     echo "$(date): Setup completed" > "$SETUP_COMPLETE"
-    echo "✅ Setup complete"
 else
     echo "✅ Using existing site"
     bench use $SITE_NAME
 fi
 
-# Create site config with Railway's actual credentials (CRITICAL for runtime)
-echo "🔧 Creating site configuration with Railway credentials..."
+# Create site configuration
+echo "🔧 Creating site configuration..."
 cat > "sites/$SITE_NAME/site_config.json" <<EOF
 {
   "db_name": "$DB_NAME",
@@ -89,7 +105,7 @@ cat > "sites/$SITE_NAME/site_config.json" <<EOF
 }
 EOF
 
-# Also update common site config
+# Create common site config with Redis settings
 cat > "sites/common_site_config.json" <<EOF
 {
   "db_host": "$DB_HOST",
@@ -97,25 +113,21 @@ cat > "sites/common_site_config.json" <<EOF
   "db_user": "$DB_USER",
   "db_password": "$DB_PASSWORD",
   "db_type": "postgres",
+  $REDIS_CONFIG
   "default_site": "$SITE_NAME",
-  "serve_default_site": true,
-  "redis_cache": "",
-  "redis_queue": "",
-  "redis_socketio": "",
-  "developer_mode": 1,
-  "disable_async": true
+  "serve_default_site": true
 }
 EOF
 
-echo "✅ Site configuration created"
+echo "✅ Configuration created"
 
-# Debug: Show final config
-echo "🔍 Final site_config.json:"
-cat "sites/$SITE_NAME/site_config.json"
+# Show final config
+echo "🔍 Final configuration:"
+cat "sites/common_site_config.json"
 
 # Set Python path
 export PYTHONPATH="/home/frappe/frappe-bench/apps/frappe:/home/frappe/frappe-bench/apps/flansa:$PYTHONPATH"
 
 # Start server
-echo "🚀 Starting Frappe server..."
+echo "🚀 Starting server..."
 exec bench serve --port $PORT

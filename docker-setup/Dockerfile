@@ -28,8 +28,8 @@ RUN echo "🔨 Pre-building assets during Docker build..." && \
     bench build --app frappe || echo "⚠️  Frappe pre-build failed, will retry at startup" && \
     bench build --app flansa || echo "⚠️  Flansa pre-build failed, will retry at startup"
 
-# Copy final Railway solution
-COPY --chown=frappe:frappe railway-final.sh ./start.sh
+# Copy Railway solution with Redis support
+COPY --chown=frappe:frappe railway-with-redis.sh ./start.sh
 RUN chmod +x start.sh
 
 # Environment variables
