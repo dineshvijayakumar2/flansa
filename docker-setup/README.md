@@ -30,15 +30,18 @@ docker-compose up --build
 | File | Purpose |
 |------|---------|
 | `Dockerfile` | Production Docker configuration |
-| `railway-production.sh` | Clean production startup script |
+| `railway-production-v2.sh` | Enhanced Railway startup script with fixes |
+| `railway_migration_fix.py` | Railway-specific migration patches |
 | `docker-compose.yml` | Local development setup |
 | `RAILWAY_DEPLOYMENT.md` | Detailed Railway guide |
 
 ## 🔧 Key Features
 
 - **No Database Creation**: Uses `--no-setup-db` for managed databases
-- **Auto Redis Detection**: Configures Redis if REDIS_URL is present
+- **Auto Redis Detection**: Configures Redis if REDIS_URL is present  
 - **Frappe Bug Fix**: Handles db_user configuration issue
+- **Railway Service Patches**: Bypasses local service checks for managed services
+- **Enhanced Migration**: Multiple fallback strategies for database setup
 - **Production Ready**: Pre-built assets, optimized startup
 - **Multi-Database**: Works with PostgreSQL and MariaDB
 

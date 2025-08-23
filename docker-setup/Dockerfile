@@ -27,9 +27,10 @@ RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
 RUN bench build --app frappe || true && \
     bench build --app flansa || true
 
-# Copy production startup script
-COPY --chown=frappe:frappe railway-production.sh ./start.sh
-RUN chmod +x start.sh
+# Copy production startup script (v2 with Railway fixes)
+COPY --chown=frappe:frappe railway-production-v2.sh ./start.sh
+COPY --chown=frappe:frappe railway_migration_fix.py ./railway_migration_fix.py
+RUN chmod +x start.sh && chmod +x railway_migration_fix.py
 
 # Expose port (will be overridden by environment)
 EXPOSE 8080
