@@ -35,7 +35,7 @@ RUN chmod +x start.sh
 EXPOSE 8080
 
 # Deployment version - increment for changes
-ENV DEPLOYMENT_VERSION=v5_persistent_site
+ENV DEPLOYMENT_VERSION=v6_postgres_table_fix
 
 # Start the application
 CMD ["./start.sh"]
