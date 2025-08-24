@@ -65,7 +65,7 @@ cat > sites/common_site_config.json <<EOF
   $REDIS_CONFIG
   "default_site": "$SITE_NAME",
   "serve_default_site": true,
-  "developer_mode": 0
+  "developer_mode": 1
 }
 EOF
 
