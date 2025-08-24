@@ -27,15 +27,15 @@ RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
 RUN bench build --app frappe || true && \
     bench build --app flansa || true
 
-# Copy production startup script (v4 with persistence)
-COPY --chown=frappe:frappe railway-production-v4.sh ./start.sh
+# Copy production startup script (smart version)
+COPY --chown=frappe:frappe railway-smart-start.sh ./start.sh
 RUN chmod +x start.sh
 
 # Expose port (will be overridden by environment)
 EXPOSE 8080
 
 # Deployment version - increment for changes
-ENV DEPLOYMENT_VERSION=v6_postgres_table_fix
+ENV DEPLOYMENT_VERSION=v7_smart_setup_with_assets
 
 # Start the application
 CMD ["./start.sh"]
