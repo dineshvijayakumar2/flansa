@@ -11,12 +11,24 @@ frappe.pages['tenant-registration'].on_page_load = function(wrapper) {
 
 // Handle route changes to reinitialize when needed
 frappe.pages['tenant-registration'].on_page_show = function() {
+    console.log('Tenant registration page shown, route:', frappe.get_route());
     const page = frappe.pages['tenant-registration'];
     if (page.tenantRegistration) {
         // Reinitialize the page when route changes
         page.tenantRegistration.handleRouteChange();
     }
 };
+
+// Alternative approach - also listen to route change events
+$(document).on('frappe:route_changed', function() {
+    if (frappe.get_route()[0] === 'tenant-registration') {
+        console.log('Route changed to tenant-registration, route:', frappe.get_route());
+        const page = frappe.pages['tenant-registration'];
+        if (page && page.tenantRegistration) {
+            page.tenantRegistration.handleRouteChange();
+        }
+    }
+});
 
 class TenantRegistration {
     constructor(page) {
@@ -44,19 +56,22 @@ class TenantRegistration {
         const wasEditMode = this.isEditMode;
         const previousTenantId = this.editingTenantId;
         
+        console.log('HandleRouteChange - Current route:', route);
+        console.log('Previous state - EditMode:', wasEditMode, 'TenantId:', previousTenantId);
+        console.log('New state - EditMode:', !!currentEditingTenantId, 'TenantId:', currentEditingTenantId);
+        
         // Update mode and tenant ID based on current route
         this.isEditMode = !!currentEditingTenantId;
         this.editingTenantId = currentEditingTenantId;
         
-        // If the mode changed or we're editing a different tenant, reinitialize
-        if (wasEditMode !== this.isEditMode || previousTenantId !== currentEditingTenantId) {
-            // Clear any existing form data
-            this.clearForm();
-            // Update page title
-            this.page.set_title(this.isEditMode ? 'Edit Tenant' : 'Tenant Registration');
-            this.setup_ui();
-            this.load_limits();
-        }
+        // Always reinitialize to ensure fresh state (for debugging)
+        console.log('Reinitializing page with new state');
+        // Clear any existing form data
+        this.clearForm();
+        // Update page title
+        this.page.set_title(this.isEditMode ? 'Edit Tenant' : 'Tenant Registration');
+        this.setup_ui();
+        this.load_limits();
     }
     
     clearForm() {
@@ -374,8 +389,10 @@ class TenantRegistration {
     }
     
     async load_tenant_data() {
+        console.log('Loading tenant data for:', this.editingTenantId);
         try {
             const tenantData = await this.call_api('get_tenant_details', { tenant_id: this.editingTenantId });
+            console.log('Tenant data loaded:', tenantData);
             
             // Populate form fields
             $('#tenant_name').val(tenantData.tenant_name);
@@ -396,7 +413,10 @@ class TenantRegistration {
             // Disable tenant name field in edit mode (to prevent ID changes)
             $('#tenant_name').prop('disabled', true);
             
+            console.log('Form populated successfully');
+            
         } catch (error) {
+            console.error('Error loading tenant data:', error);
             frappe.msgprint({
                 title: 'Error Loading Tenant',
                 message: 'Failed to load tenant data: ' + error.message,
