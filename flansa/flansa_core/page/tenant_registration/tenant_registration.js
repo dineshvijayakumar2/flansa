@@ -372,20 +372,29 @@ class TenantRegistration {
             // Register tenant
             const result = await this.call_api('register_new_tenant', formData);
             
-            // Show success message
-            frappe.msgprint({
-                title: 'Success',
-                message: `
-                    <div class="text-center">
-                        <i class="fa fa-check-circle text-success" style="font-size: 48px;"></i>
-                        <h4 class="mt-3">Tenant Registered Successfully!</h4>
-                        <p><strong>Tenant:</strong> ${result.tenant_name}</p>
-                        <p><strong>Tenant ID:</strong> <code>${result.tenant_id}</code></p>
-                        <p><strong>Domain:</strong> ${result.primary_domain}</p>
-                    </div>
-                `,
-                indicator: 'green'
-            });
+            // Show success message with options
+            frappe.confirm(
+                `<div class="text-center">
+                    <i class="fa fa-check-circle text-success" style="font-size: 48px;"></i>
+                    <h4 class="mt-3">Tenant Registered Successfully!</h4>
+                    <p><strong>Tenant:</strong> ${result.tenant_name}</p>
+                    <p><strong>Tenant ID:</strong> <code>${result.tenant_id}</code></p>
+                    <p><strong>Domain:</strong> ${result.primary_domain}</p>
+                    <hr>
+                    <p class="mt-3">Would you like to switch to this tenant and go to Flansa Workspace?</p>
+                </div>`,
+                () => {
+                    // User clicked Yes - Switch tenant and redirect
+                    this.switch_tenant_and_redirect(result.tenant_id);
+                },
+                () => {
+                    // User clicked No - Just redirect to workspace with current tenant
+                    this.redirect_to_workspace();
+                },
+                'Switch to New Tenant?',
+                'Switch & Go to Workspace',
+                'Go to Workspace'
+            );
             
             // Reset form
             $('#tenant-registration-form')[0].reset();
@@ -404,6 +413,33 @@ class TenantRegistration {
             // Reset button state
             submitBtn.html(originalText).prop('disabled', false);
         }
+    }
+    
+    async switch_tenant_and_redirect(tenant_id) {
+        try {
+            // Show switching message
+            frappe.show_alert('Switching to new tenant...', 'blue');
+            
+            // Set the tenant in session/local storage for the workspace
+            localStorage.setItem('flansa_current_tenant_id', tenant_id);
+            
+            // Redirect to Flansa Workspace
+            setTimeout(() => {
+                frappe.set_route('flansa-workspace');
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error switching tenant:', error);
+            frappe.show_alert('Error switching tenant, redirecting anyway...', 'orange');
+            this.redirect_to_workspace();
+        }
+    }
+    
+    redirect_to_workspace() {
+        frappe.show_alert('Redirecting to Flansa Workspace...', 'blue');
+        setTimeout(() => {
+            frappe.set_route('flansa-workspace');
+        }, 500);
     }
     
     async call_api(method, args = {}) {
