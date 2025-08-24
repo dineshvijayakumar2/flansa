@@ -9,26 +9,14 @@ frappe.pages['tenant-registration'].on_page_load = function(wrapper) {
     page.tenantRegistration = new TenantRegistration(page);
 };
 
-// Handle route changes to reinitialize when needed
+// Handle route changes by completely recreating the instance
 frappe.pages['tenant-registration'].on_page_show = function() {
     console.log('Tenant registration page shown, route:', frappe.get_route());
     const page = frappe.pages['tenant-registration'];
-    if (page.tenantRegistration) {
-        // Reinitialize the page when route changes
-        page.tenantRegistration.handleRouteChange();
-    }
+    
+    // Always recreate the instance to avoid any caching issues
+    page.tenantRegistration = new TenantRegistration(page);
 };
-
-// Alternative approach - also listen to route change events
-$(document).on('frappe:route_changed', function() {
-    if (frappe.get_route()[0] === 'tenant-registration') {
-        console.log('Route changed to tenant-registration, route:', frappe.get_route());
-        const page = frappe.pages['tenant-registration'];
-        if (page && page.tenantRegistration) {
-            page.tenantRegistration.handleRouteChange();
-        }
-    }
-});
 
 class TenantRegistration {
     constructor(page) {
@@ -45,41 +33,13 @@ class TenantRegistration {
             this.editingTenantId = route[1];
         }
         
+        // Log for debugging
+        console.log('TenantRegistration initialized - EditMode:', this.isEditMode, 'TenantId:', this.editingTenantId);
+        
         this.setup_ui();
         this.load_limits();
     }
     
-    handleRouteChange() {
-        // Check current route and reinitialize if needed
-        const route = frappe.get_route();
-        const currentEditingTenantId = route.length > 1 ? route[1] : null;
-        const wasEditMode = this.isEditMode;
-        const previousTenantId = this.editingTenantId;
-        
-        console.log('HandleRouteChange - Current route:', route);
-        console.log('Previous state - EditMode:', wasEditMode, 'TenantId:', previousTenantId);
-        console.log('New state - EditMode:', !!currentEditingTenantId, 'TenantId:', currentEditingTenantId);
-        
-        // Update mode and tenant ID based on current route
-        this.isEditMode = !!currentEditingTenantId;
-        this.editingTenantId = currentEditingTenantId;
-        
-        // Always reinitialize to ensure fresh state (for debugging)
-        console.log('Reinitializing page with new state');
-        // Clear any existing form data
-        this.clearForm();
-        // Update page title
-        this.page.set_title(this.isEditMode ? 'Edit Tenant' : 'Tenant Registration');
-        this.setup_ui();
-        this.load_limits();
-    }
-    
-    clearForm() {
-        // Clear form fields to prevent data leakage between modes
-        $('#tenant-registration-form')[0]?.reset();
-        $('#generated_tenant_id').val('');
-        $('#tenant_name').prop('disabled', false);
-    }
     
     setup_ui() {
         this.$container.html(`
@@ -349,11 +309,6 @@ class TenantRegistration {
     
     async load_limits() {
         try {
-            // Load existing tenant data if in edit mode
-            if (this.isEditMode) {
-                await this.load_tenant_data();
-            }
-            
             const limits = await this.call_api('get_tenant_limits');
             
             // Populate user limits
@@ -386,6 +341,14 @@ class TenantRegistration {
         
         // Load existing tenants
         this.load_existing_tenants();
+        
+        // Load tenant data after everything is set up if in edit mode
+        if (this.isEditMode) {
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                this.load_tenant_data();
+            }, 100);
+        }
     }
     
     async load_tenant_data() {
@@ -526,17 +489,20 @@ class TenantRegistration {
                 );
             }
             
-            // Reset form
-            $('#tenant-registration-form')[0].reset();
-            $('#generated_tenant_id').val('');
-            
-            // Reload existing tenants list
-            this.load_existing_tenants();
+            // Only reset form and reload for create mode, not edit mode
+            if (!this.isEditMode) {
+                // Reset form
+                $('#tenant-registration-form')[0].reset();
+                $('#generated_tenant_id').val('');
+                
+                // Reload existing tenants list
+                this.load_existing_tenants();
+            }
             
         } catch (error) {
             frappe.msgprint({
-                title: 'Registration Failed',
-                message: error.message || 'An error occurred during tenant registration',
+                title: this.isEditMode ? 'Update Failed' : 'Registration Failed',
+                message: error.message || 'An error occurred during tenant ' + (this.isEditMode ? 'update' : 'registration'),
                 indicator: 'red'
             });
         } finally {
