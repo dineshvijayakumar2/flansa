@@ -102,6 +102,16 @@ class TenantSwitcher {
                     background-color: #f8fff9;
                 }
                 
+                .tenant-card.inactive {
+                    border-color: #6c757d;
+                    background-color: #f8f9fa;
+                    opacity: 0.8;
+                }
+                
+                .tenant-card.inactive h5 {
+                    color: #6c757d;
+                }
+                
                 .tenant-card h5 {
                     margin-bottom: 5px;
                     color: #333;
@@ -210,7 +220,12 @@ class TenantSwitcher {
         let html = '';
         tenants.forEach(tenant => {
             const isCurrent = tenant.tenant_id === currentTenantId;
-            const cardClass = isCurrent ? 'tenant-card current' : 'tenant-card';
+            let cardClass = 'tenant-card';
+            if (isCurrent) {
+                cardClass += ' current';
+            } else if (tenant.status === 'Inactive') {
+                cardClass += ' inactive';
+            }
             const statusColor = tenant.status === 'Active' ? 'success' : 'secondary';
             
             html += `
@@ -244,7 +259,8 @@ class TenantSwitcher {
                             </div>
                         </div>
                     </div>
-                    ${!isCurrent ? '<button class="btn btn-sm btn-primary switch-btn mt-2" onclick="event.stopPropagation(); tenantSwitcher.switchTenant(\'' + tenant.tenant_id + '\')"><i class="fa fa-exchange"></i> Switch to this tenant</button>' : ''}
+                    ${!isCurrent && tenant.status === 'Active' ? '<button class="btn btn-sm btn-primary switch-btn mt-2" onclick="event.stopPropagation(); tenantSwitcher.switchTenant(\'' + tenant.tenant_id + '\')"><i class="fa fa-exchange"></i> Switch to this tenant</button>' : ''}
+                    ${tenant.status === 'Inactive' ? '<div class="mt-2"><small class="text-muted"><i class="fa fa-info-circle"></i> Activate tenant to enable switching</small></div>' : ''}
                 </div>
             `;
         });

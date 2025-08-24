@@ -2,12 +2,11 @@ import frappe
 
 @frappe.whitelist()
 def get_available_tenants():
-    """Get list of available tenants for switching"""
+    """Get list of all tenants for management"""
     
     tenants = frappe.get_all("Flansa Tenant Registry",
-                           filters={"status": "Active"},
                            fields=["tenant_id", "tenant_name", "primary_domain", "status"],
-                           order_by="tenant_name")
+                           order_by="status desc, tenant_name")
     
     return tenants
 
