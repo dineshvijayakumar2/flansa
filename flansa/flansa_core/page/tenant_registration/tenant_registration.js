@@ -350,10 +350,11 @@ class TenantRegistration {
     }
     
     async register_tenant() {
+        // Show loading state
+        const submitBtn = $('button[type="submit"]');
+        const originalText = submitBtn.html();
+        
         try {
-            // Show loading state
-            const submitBtn = $('button[type="submit"]');
-            const originalText = submitBtn.html();
             submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Registering...').prop('disabled', true);
             
             // Gather form data
@@ -401,7 +402,6 @@ class TenantRegistration {
             });
         } finally {
             // Reset button state
-            const submitBtn = $('button[type="submit"]');
             submitBtn.html(originalText).prop('disabled', false);
         }
     }
