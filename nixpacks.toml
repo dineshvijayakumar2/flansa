@@ -1,0 +1,8 @@
+[phases.setup]
+nixPkgs = ["python3", "nodejs", "git"]
+
+[phases.install]
+cmds = ["pip install frappe-bench"]
+
+[start]
+cmd = "bash apps/flansa/docker-setup/railway-runtime-setup.sh"
