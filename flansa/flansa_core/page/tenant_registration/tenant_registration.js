@@ -5,7 +5,17 @@ frappe.pages['tenant-registration'].on_page_load = function(wrapper) {
         single_column: true
     });
     
-    new TenantRegistration(page);
+    // Store page reference for reinitialization
+    page.tenantRegistration = new TenantRegistration(page);
+};
+
+// Handle route changes by completely recreating the instance
+frappe.pages['tenant-registration'].on_page_show = function() {
+    console.log('Tenant registration page shown, route:', frappe.get_route());
+    const page = frappe.pages['tenant-registration'];
+    
+    // Always recreate the instance to avoid any caching issues
+    page.tenantRegistration = new TenantRegistration(page);
 };
 
 class TenantRegistration {
@@ -13,10 +23,23 @@ class TenantRegistration {
         this.page = page;
         this.wrapper = page.wrapper;
         this.$container = $(this.wrapper).find('.layout-main-section');
+        this.isEditMode = false;
+        this.editingTenantId = null;
+        
+        // Check if we're in edit mode (tenant ID in route)
+        const route = frappe.get_route();
+        if (route.length > 1 && route[1]) {
+            this.isEditMode = true;
+            this.editingTenantId = route[1];
+        }
+        
+        // Log for debugging
+        console.log('TenantRegistration initialized - EditMode:', this.isEditMode, 'TenantId:', this.editingTenantId);
         
         this.setup_ui();
         this.load_limits();
     }
+    
     
     setup_ui() {
         this.$container.html(`
@@ -25,8 +48,8 @@ class TenantRegistration {
                     <div class="col-md-8">
                         <div class="card">
                             <div class="card-header">
-                                <h3><i class="fa fa-plus-circle"></i> Register New Tenant</h3>
-                                <p class="text-muted">Create a new tenant for multi-tenant management</p>
+                                <h3><i class="fa fa-${this.isEditMode ? 'edit' : 'plus-circle'}"></i> ${this.isEditMode ? 'Edit Tenant' : 'Register New Tenant'}</h3>
+                                <p class="text-muted">${this.isEditMode ? 'Modify tenant information and settings' : 'Create a new tenant for multi-tenant management'}</p>
                             </div>
                             <div class="card-body">
                                 <form id="tenant-registration-form">
@@ -43,9 +66,9 @@ class TenantRegistration {
                                             </div>
                                             <div class="col-md-6">
                                                 <div class="form-group">
-                                                    <label for="generated_tenant_id">Generated Tenant ID</label>
-                                                    <input type="text" class="form-control" id="generated_tenant_id" readonly placeholder="Will be generated automatically">
-                                                    <small class="form-text text-muted">Auto-generated from tenant name</small>
+                                                    <label for="generated_tenant_id">${this.isEditMode ? 'Tenant ID (Read-only)' : 'Generated Tenant ID'}</label>
+                                                    <input type="text" class="form-control" id="generated_tenant_id" readonly placeholder="${this.isEditMode ? 'Loading...' : 'Will be generated automatically'}">
+                                                    <small class="form-text text-muted">${this.isEditMode ? 'Tenant ID cannot be changed' : 'Auto-generated from tenant name'}</small>
                                                 </div>
                                             </div>
                                         </div>
@@ -121,10 +144,10 @@ class TenantRegistration {
                                     <!-- Actions -->
                                     <div class="form-actions">
                                         <button type="submit" class="btn btn-primary btn-lg">
-                                            <i class="fa fa-plus-circle"></i> Register Tenant
+                                            <i class="fa fa-${this.isEditMode ? 'save' : 'plus-circle'}"></i> ${this.isEditMode ? 'Update Tenant' : 'Register Tenant'}
                                         </button>
-                                        <button type="button" class="btn btn-secondary btn-lg ml-2" onclick="history.back()">
-                                            <i class="fa fa-arrow-left"></i> Cancel
+                                        <button type="button" class="btn btn-secondary btn-lg ml-2" onclick="frappe.set_route('tenant-switcher')">
+                                            <i class="fa fa-arrow-left"></i> Back to Tenant Management
                                         </button>
                                     </div>
                                 </form>
@@ -318,6 +341,52 @@ class TenantRegistration {
         
         // Load existing tenants
         this.load_existing_tenants();
+        
+        // Load tenant data after everything is set up if in edit mode
+        if (this.isEditMode) {
+            // Use setTimeout to ensure DOM is ready
+            setTimeout(() => {
+                this.load_tenant_data();
+            }, 100);
+        }
+    }
+    
+    async load_tenant_data() {
+        console.log('Loading tenant data for:', this.editingTenantId);
+        try {
+            const tenantData = await this.call_api('get_tenant_details', { tenant_id: this.editingTenantId });
+            console.log('Tenant data loaded:', tenantData);
+            
+            // Populate form fields
+            $('#tenant_name').val(tenantData.tenant_name);
+            $('#generated_tenant_id').val(tenantData.tenant_id);
+            $('#admin_email').val(tenantData.admin_email);
+            $('#primary_domain').val(tenantData.primary_domain);
+            $('#max_users').val(tenantData.max_users);
+            $('#max_tables').val(tenantData.max_tables);
+            $('#storage_limit_gb').val(tenantData.storage_limit_gb);
+            $('#custom_branding').prop('checked', tenantData.custom_branding === 1);
+            
+            // Handle custom domains
+            if (tenantData.custom_domains && tenantData.custom_domains.length > 0) {
+                const domainsText = tenantData.custom_domains.map(d => d.domain).join('\n');
+                $('#custom_domains').val(domainsText);
+            }
+            
+            // Disable tenant name field in edit mode (to prevent ID changes)
+            $('#tenant_name').prop('disabled', true);
+            
+            console.log('Form populated successfully');
+            
+        } catch (error) {
+            console.error('Error loading tenant data:', error);
+            frappe.msgprint({
+                title: 'Error Loading Tenant',
+                message: 'Failed to load tenant data: ' + error.message,
+                indicator: 'red'
+            });
+            frappe.set_route('tenant-switcher'); // Go back to tenant switcher
+        }
     }
     
     async load_existing_tenants() {
@@ -350,10 +419,11 @@ class TenantRegistration {
     }
     
     async register_tenant() {
+        // Show loading state
+        const submitBtn = $('button[type="submit"]');
+        const originalText = submitBtn.html();
+        
         try {
-            // Show loading state
-            const submitBtn = $('button[type="submit"]');
-            const originalText = submitBtn.html();
             submitBtn.html('<i class="fa fa-spinner fa-spin"></i> Registering...').prop('disabled', true);
             
             // Gather form data
@@ -368,42 +438,104 @@ class TenantRegistration {
                 custom_domains: $('#custom_domains').val()
             };
             
-            // Register tenant
-            const result = await this.call_api('register_new_tenant', formData);
+            // Register or update tenant
+            const apiMethod = this.isEditMode ? 'update_tenant' : 'register_new_tenant';
+            if (this.isEditMode) {
+                formData.tenant_id = this.editingTenantId; // Add tenant_id for updates
+            }
+            const result = await this.call_api(apiMethod, formData);
             
-            // Show success message
-            frappe.msgprint({
-                title: 'Success',
-                message: `
-                    <div class="text-center">
+            if (this.isEditMode) {
+                // Show simple success message for updates
+                frappe.msgprint({
+                    title: 'Success',
+                    message: `
+                        <div class="text-center">
+                            <i class="fa fa-check-circle text-success" style="font-size: 48px;"></i>
+                            <h4 class="mt-3">Tenant Updated Successfully!</h4>
+                            <p><strong>Tenant:</strong> ${result.tenant_name}</p>
+                            <p><strong>Tenant ID:</strong> <code>${result.tenant_id}</code></p>
+                        </div>
+                    `,
+                    indicator: 'green',
+                    primary_action: {
+                        label: 'Back to Tenant Management',
+                        action: () => frappe.set_route('tenant-switcher')
+                    }
+                });
+            } else {
+                // Show success message with options for new registrations
+                frappe.confirm(
+                    `<div class="text-center">
                         <i class="fa fa-check-circle text-success" style="font-size: 48px;"></i>
                         <h4 class="mt-3">Tenant Registered Successfully!</h4>
                         <p><strong>Tenant:</strong> ${result.tenant_name}</p>
                         <p><strong>Tenant ID:</strong> <code>${result.tenant_id}</code></p>
                         <p><strong>Domain:</strong> ${result.primary_domain}</p>
-                    </div>
-                `,
-                indicator: 'green'
-            });
+                        <hr>
+                        <p class="mt-3">Would you like to switch to this tenant and go to Flansa Workspace?</p>
+                    </div>`,
+                    () => {
+                        // User clicked Yes - Switch tenant and redirect
+                        this.switch_tenant_and_redirect(result.tenant_id);
+                    },
+                    () => {
+                        // User clicked No - Just redirect to workspace with current tenant
+                        this.redirect_to_workspace();
+                    },
+                    'Switch to New Tenant?',
+                    'Switch & Go to Workspace',
+                    'Go to Workspace'
+                );
+            }
             
-            // Reset form
-            $('#tenant-registration-form')[0].reset();
-            $('#generated_tenant_id').val('');
-            
-            // Reload existing tenants list
-            this.load_existing_tenants();
+            // Only reset form and reload for create mode, not edit mode
+            if (!this.isEditMode) {
+                // Reset form
+                $('#tenant-registration-form')[0].reset();
+                $('#generated_tenant_id').val('');
+                
+                // Reload existing tenants list
+                this.load_existing_tenants();
+            }
             
         } catch (error) {
             frappe.msgprint({
-                title: 'Registration Failed',
-                message: error.message || 'An error occurred during tenant registration',
+                title: this.isEditMode ? 'Update Failed' : 'Registration Failed',
+                message: error.message || 'An error occurred during tenant ' + (this.isEditMode ? 'update' : 'registration'),
                 indicator: 'red'
             });
         } finally {
             // Reset button state
-            const submitBtn = $('button[type="submit"]');
             submitBtn.html(originalText).prop('disabled', false);
         }
+    }
+    
+    async switch_tenant_and_redirect(tenant_id) {
+        try {
+            // Show switching message
+            frappe.show_alert('Switching to new tenant...', 'blue');
+            
+            // Set the tenant in session/local storage for the workspace
+            localStorage.setItem('flansa_current_tenant_id', tenant_id);
+            
+            // Redirect to Flansa Workspace
+            setTimeout(() => {
+                frappe.set_route('flansa-workspace');
+            }, 500);
+            
+        } catch (error) {
+            console.error('Error switching tenant:', error);
+            frappe.show_alert('Error switching tenant, redirecting anyway...', 'orange');
+            this.redirect_to_workspace();
+        }
+    }
+    
+    redirect_to_workspace() {
+        frappe.show_alert('Redirecting to Flansa Workspace...', 'blue');
+        setTimeout(() => {
+            frappe.set_route('flansa-workspace');
+        }, 500);
     }
     
     async call_api(method, args = {}) {
@@ -426,11 +558,4 @@ class TenantRegistration {
     }
 }
 
-// Make globally accessible
-window.tenantRegistration = null;
-
-frappe.pages['tenant-registration'].on_page_show = function() {
-    if (window.tenantRegistration) {
-        window.tenantRegistration.load_existing_tenants();
-    }
-};
+// Legacy global access removed - now handled by on_page_show above

@@ -2,12 +2,11 @@ import frappe
 
 @frappe.whitelist()
 def get_available_tenants():
-    """Get list of available tenants for switching"""
+    """Get list of all tenants for management"""
     
     tenants = frappe.get_all("Flansa Tenant Registry",
-                           filters={"status": "Active"},
                            fields=["tenant_id", "tenant_name", "primary_domain", "status"],
-                           order_by="tenant_name")
+                           order_by="status desc, tenant_name")
     
     return tenants
 
@@ -105,3 +104,154 @@ def get_current_tenant_info():
                 "reports": 0
             }
         }
+
+@frappe.whitelist()
+def activate_tenant(tenant_id):
+    """Activate a tenant"""
+    try:
+        # Find the tenant document
+        tenant_list = frappe.get_all("Flansa Tenant Registry", 
+                                   filters={"tenant_id": tenant_id}, 
+                                   fields=["name"], limit=1)
+        
+        if not tenant_list:
+            frappe.throw(f"Tenant with ID '{tenant_id}' not found")
+        
+        tenant_doc = frappe.get_doc("Flansa Tenant Registry", tenant_list[0].name)
+        tenant_doc.status = "Active"
+        tenant_doc.save(ignore_version=True)
+        frappe.db.commit()
+        
+        return {"status": "success", "message": f"Tenant {tenant_id} activated"}
+    except Exception as e:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(e)}
+
+@frappe.whitelist()
+def deactivate_tenant(tenant_id):
+    """Deactivate a tenant"""
+    try:
+        # Find the tenant document
+        tenant_list = frappe.get_all("Flansa Tenant Registry", 
+                                   filters={"tenant_id": tenant_id}, 
+                                   fields=["name"], limit=1)
+        
+        if not tenant_list:
+            frappe.throw(f"Tenant with ID '{tenant_id}' not found")
+        
+        tenant_doc = frappe.get_doc("Flansa Tenant Registry", tenant_list[0].name)
+        tenant_doc.status = "Inactive"
+        tenant_doc.save(ignore_version=True)
+        frappe.db.commit()
+        
+        return {"status": "success", "message": f"Tenant {tenant_id} deactivated"}
+    except Exception as e:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(e)}
+
+@frappe.whitelist()
+def get_tenant_statistics(tenant_id):
+    """Get detailed statistics for a tenant"""
+    try:
+        # Find the tenant document
+        tenant_list = frappe.get_all("Flansa Tenant Registry", 
+                                   filters={"tenant_id": tenant_id}, 
+                                   fields=["name"], limit=1)
+        
+        if not tenant_list:
+            frappe.throw(f"Tenant with ID '{tenant_id}' not found")
+        
+        tenant_doc = frappe.get_doc("Flansa Tenant Registry", tenant_list[0].name)
+        
+        # Get statistics
+        stats = {
+            "applications": frappe.db.count("Flansa Application", {"tenant_id": tenant_id}) if frappe.db.exists("DocType", "Flansa Application") else 0,
+            "tables": frappe.db.count("Flansa Table", {"tenant_id": tenant_id}) if frappe.db.exists("DocType", "Flansa Table") else 0,
+            "relationships": frappe.db.count("Flansa Relationship", {"tenant_id": tenant_id}) if frappe.db.exists("DocType", "Flansa Relationship") else 0,
+            "reports": frappe.db.count("Flansa Saved Report", {"tenant_id": tenant_id}) if frappe.db.exists("DocType", "Flansa Saved Report") else 0,
+            "form_configs": frappe.db.count("Flansa Form Config", {"tenant_id": tenant_id}) if frappe.db.exists("DocType", "Flansa Form Config") else 0,
+            "last_activity": tenant_doc.last_activity
+        }
+        
+        return {
+            "status": "success",
+            "statistics": stats
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+@frappe.whitelist()
+def get_tenant_details(tenant_id):
+    """Get detailed tenant information for editing"""
+    try:
+        # Try to find tenant by tenant_id field
+        tenant_list = frappe.get_all("Flansa Tenant Registry", 
+                                   filters={"tenant_id": tenant_id}, 
+                                   fields=["name"], limit=1)
+        
+        if not tenant_list:
+            frappe.throw(f"Tenant with ID '{tenant_id}' not found")
+        
+        tenant_doc = frappe.get_doc("Flansa Tenant Registry", tenant_list[0].name)
+        
+        # Convert custom domains to list format
+        custom_domains = []
+        if tenant_doc.custom_domains:
+            for domain in tenant_doc.custom_domains:
+                custom_domains.append({
+                    'domain': domain.domain,
+                    'is_verified': domain.is_verified,
+                    'verification_status': domain.verification_status
+                })
+        
+        return {
+            "tenant_id": tenant_doc.tenant_id,
+            "tenant_name": tenant_doc.tenant_name,
+            "admin_email": tenant_doc.admin_email or "",
+            "primary_domain": tenant_doc.primary_domain or "",
+            "max_users": tenant_doc.max_users or 100,
+            "max_tables": tenant_doc.max_tables or 50,
+            "storage_limit_gb": tenant_doc.storage_limit_gb or 10.0,
+            "custom_branding": tenant_doc.custom_branding or 0,
+            "custom_domains": custom_domains,
+            "status": tenant_doc.status
+        }
+        
+    except Exception as e:
+        frappe.throw(f"Failed to load tenant details: {str(e)}")
+
+@frappe.whitelist()
+def register_new_tenant(**kwargs):
+    """Register a new tenant"""
+    # Import the method from tenant_registration page
+    from flansa.flansa_core.page.tenant_registration.tenant_registration import register_new_tenant
+    return register_new_tenant(**kwargs)
+
+@frappe.whitelist()
+def update_tenant(**kwargs):
+    """Update an existing tenant"""
+    # Import the method from tenant_registration page
+    from flansa.flansa_core.page.tenant_registration.tenant_registration import update_tenant
+    return update_tenant(**kwargs)
+
+@frappe.whitelist()
+def delete_tenant(tenant_id):
+    """Delete a tenant permanently"""
+    try:
+        # Find the tenant document
+        tenant_list = frappe.get_all("Flansa Tenant Registry", 
+                                   filters={"tenant_id": tenant_id}, 
+                                   fields=["name"], limit=1)
+        
+        if not tenant_list:
+            frappe.throw(f"Tenant with ID '{tenant_id}' not found")
+        
+        # Delete the tenant document
+        tenant_doc = frappe.get_doc("Flansa Tenant Registry", tenant_list[0].name)
+        tenant_doc.delete()
+        frappe.db.commit()
+        
+        return {"status": "success", "message": f"Tenant {tenant_id} deleted successfully"}
+    except Exception as e:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(e)}

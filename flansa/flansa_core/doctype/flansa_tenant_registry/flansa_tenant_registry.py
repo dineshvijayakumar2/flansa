@@ -40,7 +40,9 @@ class FlansaTenantRegistry(Document):
             
     def before_save(self):
         """Update statistics before saving"""
-        self.update_tenant_stats()
+        # Skip stats update if explicitly disabled (e.g., during manual edits)
+        if not getattr(self.flags, 'ignore_stats_update', False):
+            self.update_tenant_stats()
         
     def update_tenant_stats(self):
         """Update tenant usage statistics - works with both databases"""
