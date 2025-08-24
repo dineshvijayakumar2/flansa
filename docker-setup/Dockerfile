@@ -23,9 +23,9 @@ RUN pip install gunicorn
 # Get Flansa app from GitHub
 RUN bench get-app https://github.com/dineshvijayakumar2/flansa.git
 
-# Pre-build assets to reduce startup time
-RUN bench build --app frappe || true && \
-    bench build --app flansa || true
+# Skip asset building during Docker build (OOM issues in Railway)
+# Assets will be built at runtime when BUILD_ASSETS=true
+RUN echo "Assets will be built at runtime to avoid memory issues"
 
 # Copy production startup script (smart version)
 COPY --chown=frappe:frappe railway-smart-start.sh ./start.sh
@@ -35,7 +35,7 @@ RUN chmod +x start.sh
 EXPOSE 8080
 
 # Deployment version - increment for changes
-ENV DEPLOYMENT_VERSION=v7_smart_setup_with_assets
+ENV DEPLOYMENT_VERSION=v8_smart_deployment_active
 
 # Start the application
 CMD ["./start.sh"]
