@@ -127,9 +127,9 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
 fi
 
 # Run Railway-specific fixes
-if [ -f "claude-code/fix_railway_complete.py" ]; then
+if [ -f "apps/flansa/docker-setup/railway-fixes/fix_railway_complete.py" ]; then
     echo "🔧 Running Railway deployment fixes..."
-    bench --site $SITE_NAME console --execute "exec(open('claude-code/fix_railway_complete.py').read())" || true
+    bench --site $SITE_NAME console --execute "exec(open('apps/flansa/docker-setup/railway-fixes/fix_railway_complete.py').read())" || true
     echo "✅ Railway fixes completed"
 fi
 
