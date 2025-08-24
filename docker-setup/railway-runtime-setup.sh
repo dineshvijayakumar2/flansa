@@ -126,6 +126,13 @@ if [ "$RUN_MIGRATIONS" = "true" ]; then
     bench --site $SITE_NAME migrate --skip-failing || true
 fi
 
+# Run Railway-specific fixes
+if [ -f "claude-code/fix_railway_complete.py" ]; then
+    echo "🔧 Running Railway deployment fixes..."
+    bench --site $SITE_NAME console --execute "exec(open('claude-code/fix_railway_complete.py').read())" || true
+    echo "✅ Railway fixes completed"
+fi
+
 # Clear cache
 bench --site $SITE_NAME clear-cache || true
 
