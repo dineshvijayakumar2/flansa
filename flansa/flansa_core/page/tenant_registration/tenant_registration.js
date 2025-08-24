@@ -5,7 +5,17 @@ frappe.pages['tenant-registration'].on_page_load = function(wrapper) {
         single_column: true
     });
     
-    new TenantRegistration(page);
+    // Store page reference for reinitialization
+    page.tenantRegistration = new TenantRegistration(page);
+};
+
+// Handle route changes to reinitialize when needed
+frappe.pages['tenant-registration'].on_page_show = function() {
+    const page = frappe.pages['tenant-registration'];
+    if (page.tenantRegistration) {
+        // Reinitialize the page when route changes
+        page.tenantRegistration.handleRouteChange();
+    }
 };
 
 class TenantRegistration {
@@ -25,6 +35,35 @@ class TenantRegistration {
         
         this.setup_ui();
         this.load_limits();
+    }
+    
+    handleRouteChange() {
+        // Check current route and reinitialize if needed
+        const route = frappe.get_route();
+        const currentEditingTenantId = route.length > 1 ? route[1] : null;
+        const wasEditMode = this.isEditMode;
+        const previousTenantId = this.editingTenantId;
+        
+        // Update mode and tenant ID based on current route
+        this.isEditMode = !!currentEditingTenantId;
+        this.editingTenantId = currentEditingTenantId;
+        
+        // If the mode changed or we're editing a different tenant, reinitialize
+        if (wasEditMode !== this.isEditMode || previousTenantId !== currentEditingTenantId) {
+            // Clear any existing form data
+            this.clearForm();
+            // Update page title
+            this.page.set_title(this.isEditMode ? 'Edit Tenant' : 'Tenant Registration');
+            this.setup_ui();
+            this.load_limits();
+        }
+    }
+    
+    clearForm() {
+        // Clear form fields to prevent data leakage between modes
+        $('#tenant-registration-form')[0]?.reset();
+        $('#generated_tenant_id').val('');
+        $('#tenant_name').prop('disabled', false);
     }
     
     setup_ui() {
@@ -533,11 +572,4 @@ class TenantRegistration {
     }
 }
 
-// Make globally accessible
-window.tenantRegistration = null;
-
-frappe.pages['tenant-registration'].on_page_show = function() {
-    if (window.tenantRegistration) {
-        window.tenantRegistration.load_existing_tenants();
-    }
-};
+// Legacy global access removed - now handled by on_page_show above
