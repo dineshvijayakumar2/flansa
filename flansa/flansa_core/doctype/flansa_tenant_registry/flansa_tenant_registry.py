@@ -3,6 +3,18 @@
 import frappe
 from frappe.model.document import Document
 
+def get_db_type():
+    """Get current database type"""
+    return getattr(frappe.conf, 'db_type', 'mariadb')
+
+def get_table_name(doctype):
+    """Get properly quoted table name based on database type"""
+    table = f"tab{doctype.replace(' ', '_')}"
+    if get_db_type() == 'postgres':
+        return f'"{table}"'
+    else:
+        return f'`{table}`'
+
 class FlansaTenantRegistry(Document):
     def validate(self):
         """Validate tenant data before saving"""
@@ -31,44 +43,60 @@ class FlansaTenantRegistry(Document):
         self.update_tenant_stats()
         
     def update_tenant_stats(self):
-        """Update tenant usage statistics"""
+        """Update tenant usage statistics - works with both databases"""
         
         try:
-            # Count applications
-            self.total_applications = frappe.db.count("Flansa Application", 
-                                                    {"tenant_id": self.tenant_id})
+            # Database-agnostic approach using frappe methods
+            # These work with both MariaDB and PostgreSQL
             
-            # Count tables  
-            self.total_tables = frappe.db.count("Flansa Table",
-                                              {"tenant_id": self.tenant_id})
+            # Check if tables exist before counting
+            doctypes_to_count = [
+                ("total_applications", "Flansa Application"),
+                ("total_tables", "Flansa Table"),
+                ("total_relationships", "Flansa Relationship"),
+                ("total_reports", "Flansa Saved Report"),
+                ("total_form_configs", "Flansa Form Config")
+            ]
             
-            # Count relationships
-            self.total_relationships = frappe.db.count("Flansa Relationship", 
-                                                     {"tenant_id": self.tenant_id})
-            
-            # Count saved reports
-            self.total_reports = frappe.db.count("Flansa Saved Report",
-                                                {"tenant_id": self.tenant_id})
-            
-            # Count form configs
-            self.total_form_configs = frappe.db.count("Flansa Form Config",
-                                                    {"tenant_id": self.tenant_id})
+            for field_name, doctype in doctypes_to_count:
+                try:
+                    # Check if DocType exists
+                    if frappe.db.exists("DocType", doctype):
+                        # Use frappe.db.count which works with both databases
+                        count = frappe.db.count(doctype, {"tenant_id": self.tenant_id})
+                        setattr(self, field_name, count or 0)
+                    else:
+                        # DocType doesn't exist yet
+                        setattr(self, field_name, 0)
+                except Exception:
+                    # If table doesn't exist or any error, set to 0
+                    setattr(self, field_name, 0)
             
             # Update last activity
             self.last_activity = frappe.utils.now()
             
         except Exception as e:
-            frappe.log_error(f"Error updating tenant stats: {str(e)}")
+            # Don't use frappe.log_error in before_save - it can cause recursion
+            # Instead, set defaults silently
+            self.total_applications = 0
+            self.total_tables = 0
+            self.total_relationships = 0
+            self.total_reports = 0
+            self.total_form_configs = 0
+            # Optionally log to console for debugging
+            if frappe.conf.developer_mode:
+                print(f"Note: Tenant stats update skipped: {str(e)}", flush=True)
             
     def get_domain_list(self):
         """Get list of all domains for this tenant"""
         
         domains = [self.primary_domain] if self.primary_domain else []
         
-        # Add custom domains
-        for custom_domain in self.custom_domains:
-            if custom_domain.domain and custom_domain.domain not in domains:
-                domains.append(custom_domain.domain)
+        # Add custom domains (handle None case)
+        if self.custom_domains:
+            for custom_domain in self.custom_domains:
+                if custom_domain.domain and custom_domain.domain not in domains:
+                    domains.append(custom_domain.domain)
                 
         return domains
         
@@ -78,71 +106,104 @@ class FlansaTenantRegistry(Document):
         if domain == self.primary_domain:
             return True
             
-        # Check custom domains
-        for custom_domain in self.custom_domains:
-            if custom_domain.domain == domain:
-                return custom_domain.is_verified
+        # Check custom domains (handle None case)
+        if self.custom_domains:
+            for custom_domain in self.custom_domains:
+                if custom_domain.domain == domain:
+                    return custom_domain.is_verified
                 
         return False
 
 @frappe.whitelist()
 def get_tenant_by_domain(domain):
-    """Get tenant information by domain"""
+    """Get tenant information by domain - database agnostic"""
     
-    # Check primary domain
-    tenant = frappe.db.get_value("Flansa Tenant Registry", 
-                                {"primary_domain": domain}, 
-                                ["name", "tenant_id", "tenant_name", "status"])
-    
-    if tenant:
-        return {
-            "name": tenant[0],
-            "tenant_id": tenant[1], 
-            "tenant_name": tenant[2],
-            "status": tenant[3]
-        }
-    
-    # Check custom domains
-    custom_domain = frappe.db.sql("""
-        SELECT tr.name, tr.tenant_id, tr.tenant_name, tr.status
-        FROM `tabFlansa Tenant Registry` tr
-        INNER JOIN `tabFlansa Tenant Domain` td ON td.parent = tr.name
-        WHERE td.domain = %s AND td.is_verified = 1
-    """, (domain,), as_dict=True)
-    
-    if custom_domain:
-        return custom_domain[0]
+    try:
+        # Method 1: Use frappe.db.get_value (works with both databases)
+        tenant = frappe.db.get_value(
+            "Flansa Tenant Registry", 
+            {"primary_domain": domain}, 
+            ["name", "tenant_id", "tenant_name", "status"],
+            as_dict=True
+        )
         
-    return None
+        if tenant:
+            return tenant
+        
+        # Method 2: Check custom domains using frappe methods
+        # Get all tenants with custom domains
+        tenants = frappe.get_all(
+            "Flansa Tenant Registry",
+            fields=["name", "tenant_id", "tenant_name", "status"]
+        )
+        
+        for tenant in tenants:
+            doc = frappe.get_doc("Flansa Tenant Registry", tenant.name)
+            if doc.custom_domains:
+                for custom_domain in doc.custom_domains:
+                    if custom_domain.domain == domain:
+                        return {
+                            "name": doc.name,
+                            "tenant_id": doc.tenant_id,
+                            "tenant_name": doc.tenant_name,
+                            "status": doc.status
+                        }
+        
+        return None
+        
+    except Exception as e:
+        # Return None on error
+        if frappe.conf.developer_mode:
+            print(f"Error getting tenant by domain: {str(e)}", flush=True)
+        return None
 
 @frappe.whitelist()
-def create_default_tenant():
-    """Create default tenant if none exists"""
-    
-    # Check if any tenants exist
-    if frappe.db.count("Flansa Tenant Registry") > 0:
-        return {"status": "exists", "message": "Tenants already exist"}
-    
-    # Create default tenant
-    tenant_doc = frappe.get_doc({
-        "doctype": "Flansa Tenant Registry",
-        "tenant_id": "default",
-        "tenant_name": "Default Tenant",
-        "status": "Active",
-        "primary_domain": frappe.local.site or "localhost",
-        "admin_email": "admin@example.com",
-        "max_users": 1000,
-        "max_tables": 100,
-        "storage_limit_gb": 50.0,
-        "features_enabled": 1,
-        "api_access_enabled": 1
-    })
-    
-    tenant_doc.insert()
-    frappe.db.commit()
-    
-    return {
-        "status": "created",
-        "tenant_id": tenant_doc.tenant_id,
-        "message": "Default tenant created successfully"
-    }
+def activate_tenant(tenant_id):
+    """Activate a tenant - database agnostic"""
+    try:
+        # Use frappe.get_doc which works with both databases
+        tenant = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": tenant_id})
+        tenant.status = "Active"
+        tenant.save()
+        frappe.db.commit()
+        return {"status": "success", "message": f"Tenant {tenant_id} activated"}
+    except Exception as e:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(e)}
+
+@frappe.whitelist()
+def deactivate_tenant(tenant_id):
+    """Deactivate a tenant - database agnostic"""
+    try:
+        # Use frappe.get_doc which works with both databases
+        tenant = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": tenant_id})
+        tenant.status = "Inactive"
+        tenant.save()
+        frappe.db.commit()
+        return {"status": "success", "message": f"Tenant {tenant_id} deactivated"}
+    except Exception as e:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(e)}
+
+@frappe.whitelist()
+def get_tenant_statistics(tenant_id):
+    """Get detailed statistics for a tenant - database agnostic"""
+    try:
+        tenant = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": tenant_id})
+        
+        # Update stats before returning
+        tenant.update_tenant_stats()
+        
+        return {
+            "status": "success",
+            "statistics": {
+                "applications": tenant.total_applications,
+                "tables": tenant.total_tables,
+                "relationships": tenant.total_relationships,
+                "reports": tenant.total_reports,
+                "form_configs": tenant.total_form_configs,
+                "last_activity": tenant.last_activity
+            }
+        }
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
