@@ -1,7 +1,7 @@
 frappe.pages['tenant-switcher'].on_page_load = function(wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
-        title: 'Tenant Switcher',
+        title: 'Tenant Management & Switcher',
         single_column: true
     });
     
@@ -66,8 +66,11 @@ class TenantSwitcher {
                                 <button class="btn btn-primary btn-block" onclick="window.location.reload()">
                                     <i class="fa fa-refresh"></i> Refresh Page
                                 </button>
-                                <button class="btn btn-secondary btn-block mt-2" onclick="frappe.set_route('List', 'Flansa Tenant Registry')">
-                                    <i class="fa fa-list"></i> Manage Tenants
+                                <button class="btn btn-success btn-block mt-2" onclick="frappe.set_route('tenant-registration')">
+                                    <i class="fa fa-plus"></i> Add New Tenant
+                                </button>
+                                <button class="btn btn-info btn-block mt-2" onclick="frappe.set_route('flansa-workspace')">
+                                    <i class="fa fa-cogs"></i> Go to Workspace
                                 </button>
                             </div>
                         </div>
@@ -129,6 +132,28 @@ class TenantSwitcher {
                     font-size: 0.8em;
                     margin-left: 10px;
                 }
+                
+                .tenant-actions .btn-group-vertical {
+                    gap: 2px;
+                }
+                
+                .tenant-actions .btn {
+                    border-radius: 4px;
+                    min-width: 32px;
+                }
+                
+                .tenant-card .d-flex {
+                    gap: 10px;
+                }
+                
+                .tenant-card:hover .tenant-actions {
+                    opacity: 1;
+                }
+                
+                .tenant-actions {
+                    opacity: 0.7;
+                    transition: opacity 0.3s ease;
+                }
             </style>
         `);
     }
@@ -186,14 +211,37 @@ class TenantSwitcher {
         tenants.forEach(tenant => {
             const isCurrent = tenant.tenant_id === currentTenantId;
             const cardClass = isCurrent ? 'tenant-card current' : 'tenant-card';
+            const statusColor = tenant.status === 'Active' ? 'success' : 'secondary';
             
             html += `
-                <div class="${cardClass}" onclick="tenantSwitcher.switchTenant('${tenant.tenant_id}')">
-                    <h5>${tenant.tenant_name}${isCurrent ? '<span class="current-tenant-badge">CURRENT</span>' : ''}</h5>
-                    <div class="tenant-id">ID: ${tenant.tenant_id}</div>
-                    <div>Domain: ${tenant.primary_domain || 'N/A'}</div>
-                    <div>Status: <span class="badge badge-${tenant.status === 'Active' ? 'success' : 'secondary'}">${tenant.status}</span></div>
-                    ${!isCurrent ? '<button class="btn btn-sm btn-primary switch-btn" onclick="event.stopPropagation(); tenantSwitcher.switchTenant(\'' + tenant.tenant_id + '\')"><i class="fa fa-exchange"></i> Switch to this tenant</button>' : ''}
+                <div class="${cardClass}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="flex-grow-1" onclick="tenantSwitcher.switchTenant('${tenant.tenant_id}')" style="cursor: pointer;">
+                            <h5>${tenant.tenant_name}${isCurrent ? '<span class="current-tenant-badge">CURRENT</span>' : ''}</h5>
+                            <div class="tenant-id">ID: ${tenant.tenant_id}</div>
+                            <div>Domain: ${tenant.primary_domain || 'N/A'}</div>
+                            <div>Status: <span class="badge badge-${statusColor}">${tenant.status}</span></div>
+                        </div>
+                        <div class="tenant-actions">
+                            <div class="btn-group-vertical btn-group-sm">
+                                <button class="btn btn-outline-info" onclick="event.stopPropagation(); tenantSwitcher.viewTenantStats('${tenant.tenant_id}')" title="View Statistics">
+                                    <i class="fa fa-chart-bar"></i>
+                                </button>
+                                ${tenant.status === 'Active' ? 
+                                    `<button class="btn btn-outline-warning" onclick="event.stopPropagation(); tenantSwitcher.deactivateTenant('${tenant.tenant_id}')" title="Deactivate">
+                                        <i class="fa fa-pause"></i>
+                                    </button>` : 
+                                    `<button class="btn btn-outline-success" onclick="event.stopPropagation(); tenantSwitcher.activateTenant('${tenant.tenant_id}')" title="Activate">
+                                        <i class="fa fa-play"></i>
+                                    </button>`
+                                }
+                                <button class="btn btn-outline-primary" onclick="event.stopPropagation(); tenantSwitcher.editTenant('${tenant.tenant_id}')" title="Edit Tenant">
+                                    <i class="fa fa-edit"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    ${!isCurrent ? '<button class="btn btn-sm btn-primary switch-btn mt-2" onclick="event.stopPropagation(); tenantSwitcher.switchTenant(\'' + tenant.tenant_id + '\')"><i class="fa fa-exchange"></i> Switch to this tenant</button>' : ''}
                 </div>
             `;
         });
@@ -207,6 +255,9 @@ class TenantSwitcher {
                 message: 'Switching tenant context...',
                 indicator: 'blue'
             });
+            
+            // Store in localStorage for workspace
+            localStorage.setItem('flansa_current_tenant_id', tenantId);
             
             const result = await this.call_api('switch_tenant_context', { tenant_id: tenantId });
             
@@ -229,6 +280,101 @@ class TenantSwitcher {
                 indicator: 'red'
             });
         }
+    }
+    
+    async viewTenantStats(tenantId) {
+        try {
+            const stats = await this.call_api('get_tenant_statistics', { tenant_id: tenantId });
+            
+            if (stats.status === 'success') {
+                const s = stats.statistics;
+                frappe.msgprint({
+                    title: `Tenant Statistics: ${tenantId}`,
+                    message: `
+                        <div class="row">
+                            <div class="col-6">
+                                <h6><i class="fa fa-cube"></i> Applications</h6>
+                                <h4 class="text-primary">${s.applications}</h4>
+                            </div>
+                            <div class="col-6">
+                                <h6><i class="fa fa-table"></i> Tables</h6>
+                                <h4 class="text-info">${s.tables}</h4>
+                            </div>
+                            <div class="col-6 mt-3">
+                                <h6><i class="fa fa-link"></i> Relationships</h6>
+                                <h4 class="text-warning">${s.relationships}</h4>
+                            </div>
+                            <div class="col-6 mt-3">
+                                <h6><i class="fa fa-chart-bar"></i> Reports</h6>
+                                <h4 class="text-success">${s.reports}</h4>
+                            </div>
+                            <div class="col-6 mt-3">
+                                <h6><i class="fa fa-cogs"></i> Form Configs</h6>
+                                <h4 class="text-secondary">${s.form_configs}</h4>
+                            </div>
+                            <div class="col-6 mt-3">
+                                <h6><i class="fa fa-clock"></i> Last Activity</h6>
+                                <small class="text-muted">${s.last_activity || 'Never'}</small>
+                            </div>
+                        </div>
+                    `,
+                    wide: true
+                });
+            }
+        } catch (error) {
+            frappe.msgprint({
+                title: 'Error',
+                message: 'Failed to load tenant statistics: ' + error.message,
+                indicator: 'red'
+            });
+        }
+    }
+    
+    async activateTenant(tenantId) {
+        frappe.confirm(
+            `Are you sure you want to activate tenant: <strong>${tenantId}</strong>?`,
+            async () => {
+                try {
+                    const result = await this.call_api('activate_tenant', { tenant_id: tenantId });
+                    if (result.status === 'success') {
+                        frappe.show_alert('Tenant activated successfully', 'green');
+                        this.load_data(); // Refresh the list
+                    }
+                } catch (error) {
+                    frappe.msgprint({
+                        title: 'Error',
+                        message: 'Failed to activate tenant: ' + error.message,
+                        indicator: 'red'
+                    });
+                }
+            }
+        );
+    }
+    
+    async deactivateTenant(tenantId) {
+        frappe.confirm(
+            `Are you sure you want to deactivate tenant: <strong>${tenantId}</strong>?<br><small class="text-warning">This will prevent users from accessing this tenant.</small>`,
+            async () => {
+                try {
+                    const result = await this.call_api('deactivate_tenant', { tenant_id: tenantId });
+                    if (result.status === 'success') {
+                        frappe.show_alert('Tenant deactivated successfully', 'orange');
+                        this.load_data(); // Refresh the list
+                    }
+                } catch (error) {
+                    frappe.msgprint({
+                        title: 'Error',
+                        message: 'Failed to deactivate tenant: ' + error.message,
+                        indicator: 'red'
+                    });
+                }
+            }
+        );
+    }
+    
+    async editTenant(tenantId) {
+        // Navigate to tenant registration page with edit mode
+        frappe.set_route('tenant-registration', tenantId);
     }
     
     async call_api(method, args = {}) {
