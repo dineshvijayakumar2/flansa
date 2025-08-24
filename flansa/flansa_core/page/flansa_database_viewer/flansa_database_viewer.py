@@ -187,10 +187,10 @@ def get_table_structure(table_name):
                 SELECT 
                     schemaname as "Name",
                     n_tup_ins as "Rows",
-                    pg_size_pretty(pg_total_relation_size(current_schema()||'.'||tablename)) as "Data_length"
+                    pg_size_pretty(pg_total_relation_size(%s::regclass)) as "Data_length"
                 FROM pg_stat_user_tables 
                 WHERE tablename = %s
-            """, (table_name,), as_dict=True)
+            """, (table_name, table_name), as_dict=True)
             
             # PostgreSQL doesn't have SHOW CREATE TABLE equivalent
             create_table = [{'Create Table': 'PostgreSQL table schema not available via SHOW CREATE'}]
