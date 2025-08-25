@@ -136,6 +136,24 @@ class TenantContext:
         except Exception:
             return None
     
+def resolve_tenant_from_request():
+    """Resolve tenant context from current request domain - called on every request"""
+    try:
+        if hasattr(frappe.local, 'request') and frappe.local.request:
+            # Get current tenant from domain
+            tenant_id = TenantContext.get_current_tenant_id()
+            
+            # Set in frappe.local for easy access throughout request
+            frappe.local.tenant_id = tenant_id
+            
+            # Optional: Set in session for persistence
+            if hasattr(frappe.local, 'session') and frappe.local.session:
+                frappe.local.session.tenant_id = tenant_id
+                
+    except Exception as e:
+        # Fail silently to not break requests
+        frappe.local.tenant_id = TenantContext._get_default_tenant()
+
     @classmethod
     def _get_default_tenant(cls) -> str:
         """Get the default tenant ID"""

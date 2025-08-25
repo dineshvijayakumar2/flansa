@@ -283,7 +283,7 @@ doc_events = {
 
 # Request Events
 # ----------------
-# before_request = ["flansa.utils.before_request"]
+before_request = ["flansa.flansa_core.tenant_service.resolve_tenant_from_request"]
 # after_request = ["flansa.utils.after_request"]
 
 # Boot Session
