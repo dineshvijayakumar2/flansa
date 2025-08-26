@@ -610,3 +610,191 @@ def delete_orphaned_table(table_name, confirm_delete=False):
             'success': False,
             'error': f"Failed to delete orphaned table: {str(e)}"
         }
+
+@frappe.whitelist()
+def register_orphaned_table_as_doctype(table_name, doctype_name=None, confirm_register=False):
+    """Register an orphaned table as a proper Frappe DocType"""
+    try:
+        if not confirm_register:
+            return {
+                'success': False,
+                'error': 'Registration not confirmed'
+            }
+        
+        db_type = get_db_type()
+        
+        # Validate table name
+        if not re.match(r'^tab[a-zA-Z_][a-zA-Z0-9_\s\+\-]*$', table_name):
+            raise ValueError(f"Invalid table name format: {table_name}")
+        
+        # Extract DocType name from table name if not provided
+        if not doctype_name:
+            doctype_name = table_name[3:]  # Remove 'tab' prefix
+        
+        # Validate DocType name
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_\s\+\-]*$', doctype_name):
+            raise ValueError(f"Invalid DocType name format: {doctype_name}")
+        
+        # Check if DocType already exists
+        if frappe.db.exists("DocType", doctype_name):
+            return {
+                'success': False,
+                'error': f'DocType "{doctype_name}" already exists'
+            }
+        
+        # Check if table exists
+        if db_type == 'postgres':
+            table_exists = frappe.db.sql("""
+                SELECT 1 FROM information_schema.tables 
+                WHERE table_schema = current_schema() 
+                AND table_name = %s
+            """, (table_name,))
+        else:
+            table_exists = frappe.db.sql("SHOW TABLES LIKE %s", (table_name,))
+        
+        if not table_exists:
+            raise ValueError(f"Table {table_name} does not exist")
+        
+        # Get table structure to create DocType fields
+        if db_type == 'postgres':
+            columns = frappe.db.sql("""
+                SELECT 
+                    column_name, 
+                    data_type, 
+                    is_nullable,
+                    column_default,
+                    character_maximum_length
+                FROM information_schema.columns 
+                WHERE table_schema = current_schema() 
+                AND table_name = %s
+                ORDER BY ordinal_position
+            """, (table_name,), as_dict=True)
+        else:
+            desc_result = frappe.db.sql(f"DESCRIBE `{table_name}`", as_dict=True)
+            columns = [{
+                'column_name': col['Field'], 
+                'data_type': col['Type'], 
+                'is_nullable': col['Null'],
+                'column_default': col['Default'],
+                'character_maximum_length': None
+            } for col in desc_result]
+        
+        # Create DocType structure
+        doctype_doc = frappe.get_doc({
+            'doctype': 'DocType',
+            'name': doctype_name,
+            'module': 'Flansa Generated',  # Use a specific module for registered tables
+            'custom': 1,
+            'is_submittable': 0,
+            'track_changes': 1,
+            'allow_rename': 1,
+            'sort_field': 'modified',
+            'sort_order': 'DESC',
+            'fields': []
+        })
+        
+        # Define standard fields that should be skipped
+        standard_fields = {
+            'name', 'owner', 'creation', 'modified', 'modified_by', 
+            'docstatus', 'parent', 'parentfield', 'parenttype', 'idx',
+            '_user_tags', '_comments', '_assign', '_liked_by', '_seen',
+            'reference_doctype', 'reference_name', 'workflow_state', 
+            '_action', '_version', 'is_cancelled', 'amended_from'
+        }
+        
+        # Add fields based on table structure
+        field_idx = 1
+        for col in columns:
+            fieldname = col['column_name']
+            
+            # Skip standard fields
+            if fieldname in standard_fields:
+                continue
+            
+            # Determine fieldtype based on data type
+            data_type = col['data_type'].lower()
+            fieldtype = 'Data'  # Default
+            options = None
+            precision = None
+            
+            if 'varchar' in data_type or 'char' in data_type:
+                fieldtype = 'Data'
+            elif 'text' in data_type or 'longtext' in data_type:
+                fieldtype = 'Text Editor' if 'longtext' in data_type else 'Small Text'
+            elif 'int' in data_type or 'bigint' in data_type:
+                fieldtype = 'Int'
+            elif 'decimal' in data_type or 'numeric' in data_type:
+                fieldtype = 'Currency'
+                precision = 2
+            elif 'float' in data_type or 'double' in data_type:
+                fieldtype = 'Float'
+                precision = 2
+            elif 'date' in data_type and 'datetime' not in data_type:
+                fieldtype = 'Date'
+            elif 'datetime' in data_type or 'timestamp' in data_type:
+                fieldtype = 'Datetime'
+            elif 'json' in data_type or 'jsonb' in data_type:
+                fieldtype = 'JSON'
+            elif 'boolean' in data_type or 'tinyint(1)' in data_type:
+                fieldtype = 'Check'
+            
+            # Create field definition
+            field_dict = {
+                'fieldname': fieldname,
+                'fieldtype': fieldtype,
+                'label': fieldname.replace('_', ' ').title(),
+                'idx': field_idx,
+                'reqd': 1 if col['is_nullable'] == 'NO' and fieldname != 'name' else 0,
+                'in_list_view': 1 if field_idx <= 5 else 0,  # Show first 5 fields in list view
+                'in_standard_filter': 1 if field_idx <= 3 else 0  # Add first 3 as filters
+            }
+            
+            # Add precision for numeric fields
+            if precision is not None:
+                field_dict['precision'] = precision
+            
+            # Add options if needed
+            if options:
+                field_dict['options'] = options
+            
+            doctype_doc.append('fields', field_dict)
+            field_idx += 1
+        
+        # Add a few permissions for System Manager
+        doctype_doc.append('permissions', {
+            'role': 'System Manager',
+            'read': 1,
+            'write': 1,
+            'create': 1,
+            'delete': 1,
+            'submit': 0,
+            'cancel': 0,
+            'amend': 0
+        })
+        
+        # Insert the DocType
+        doctype_doc.flags.ignore_validate = True
+        doctype_doc.flags.ignore_links = True
+        doctype_doc.flags.ignore_permissions = True
+        doctype_doc.insert(ignore_permissions=True)
+        
+        # Important: Don't sync to database as table already exists
+        # Just save the DocType definition
+        frappe.db.commit()
+        
+        # Clear cache to make new DocType available
+        frappe.clear_cache(doctype=doctype_name)
+        
+        return {
+            'success': True,
+            'message': f'Successfully registered table "{table_name}" as DocType "{doctype_name}" with {len(columns)} fields',
+            'doctype_name': doctype_name,
+            'fields_count': len([f for f in columns if f['column_name'] not in standard_fields])
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            'success': False,
+            'error': f"Failed to register table as DocType: {str(e)}"
+        }

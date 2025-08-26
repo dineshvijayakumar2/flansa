@@ -621,6 +621,9 @@ class FlansaDatabaseViewer {
                         <button class="btn btn-xs btn-outline-primary" onclick="window.dbViewer.viewTableData('${table.table_name}')">
                             <i class="fa fa-eye"></i> View
                         </button>
+                        <button class="btn btn-xs btn-outline-success ml-1" onclick="window.dbViewer.registerOrphanedTable('${table.table_name}', '${table.doctype_name}')">
+                            <i class="fa fa-plus-circle"></i> Register
+                        </button>
                         <button class="btn btn-xs btn-outline-danger ml-1" onclick="window.dbViewer.deleteOrphanedTable('${table.table_name}', ${table.row_count})">
                             <i class="fa fa-trash"></i> Delete
                         </button>
@@ -640,7 +643,9 @@ class FlansaDatabaseViewer {
                     • Leftover from deleted custom DocTypes<br>
                     • Created by third-party apps that were uninstalled<br>
                     • Result of incomplete migrations or manual database operations<br>
-                    <strong class="text-danger">⚠️ Tables with data (highlighted in red) need careful review before deletion!</strong>
+                    • <strong class="text-success">Tables from redeployed sites with preserved databases</strong><br>
+                    <strong class="text-danger">⚠️ Tables with data (highlighted in red) need careful review before deletion!</strong><br>
+                    <strong class="text-success">💡 Use "Register" to restore orphaned tables as DocTypes for continued use!</strong>
                 </div>
             </div>
         `;
@@ -742,6 +747,61 @@ class FlansaDatabaseViewer {
                             frappe.msgprint({
                                 title: 'Deletion Failed',
                                 message: r.message?.error || 'Failed to delete field',
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
+            }
+        );
+    }
+    
+    registerOrphanedTable(tableName, doctypeName) {
+        frappe.confirm(
+            `<div>
+                <h4>🔄 Register Orphaned Table as DocType</h4>
+                <p>This will create a DocType definition for the orphaned table:</p>
+                <p><strong>Table:</strong> <code>${tableName}</code></p>
+                <p><strong>DocType Name:</strong> <strong>${doctypeName}</strong></p>
+                <div class="alert alert-info">
+                    <strong>What this does:</strong>
+                    <ul>
+                        <li>Creates a new DocType definition based on the table structure</li>
+                        <li>Maps database columns to appropriate Frappe field types</li>
+                        <li>Makes the table accessible through Frappe interface</li>
+                        <li>Preserves all existing data in the table</li>
+                    </ul>
+                </div>
+                <div class="alert alert-success">
+                    <strong>✅ Safe Operation:</strong> This will NOT modify the existing table or data.
+                    It only creates the DocType definition to make the table usable.
+                </div>
+            </div>`,
+            () => {
+                // User confirmed, now register
+                frappe.call({
+                    method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.register_orphaned_table_as_doctype',
+                    args: {
+                        table_name: tableName,
+                        doctype_name: doctypeName,
+                        confirm_register: true
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.msgprint({
+                                title: 'Registration Successful',
+                                message: `${r.message.message}<br><br>
+                                    <strong>DocType:</strong> ${r.message.doctype_name}<br>
+                                    <strong>Fields Created:</strong> ${r.message.fields_count}<br><br>
+                                    You can now access this DocType through the Frappe interface.`,
+                                indicator: 'green'
+                            });
+                            // Refresh the orphaned tables list
+                            this.scan_orphaned_tables();
+                        } else {
+                            frappe.msgprint({
+                                title: 'Registration Failed',
+                                message: r.message?.error || 'Failed to register table as DocType',
                                 indicator: 'red'
                             });
                         }
