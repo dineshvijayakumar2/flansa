@@ -169,7 +169,7 @@ def get_table_structure(table_name):
                 ORDER BY ordinal_position
             """, (table_name,), as_dict=True)
             
-            # Get indexes for PostgreSQL
+            # Get indexes for PostgreSQL - handle case sensitive table names
             indexes = frappe.db.sql("""
                 SELECT 
                     i.relname as "Key_name",
@@ -181,6 +181,7 @@ def get_table_structure(table_name):
                 AND a.attrelid = t.oid
                 AND a.attnum = ANY(ix.indkey)
                 AND t.relname = %s
+                AND t.relnamespace = (SELECT oid FROM pg_namespace WHERE nspname = current_schema())
             """, (table_name,), as_dict=True)
             
             # Get table status for PostgreSQL
@@ -342,14 +343,53 @@ def scan_orphaned_tables():
             SELECT name FROM `tabDocType`
         """, as_dict=True)
         
-        # Rest of the logic remains the same...
-        # (The orphaned table detection logic is already database-agnostic)
+        # Create a set of registered DocType names for faster lookup
+        registered_names = {dt['name'] for dt in registered_doctypes}
+        
+        # Check each table to see if it has a corresponding DocType
+        for table in all_tables:
+            table_name = table['table_name']
+            
+            # Extract DocType name from table name (remove 'tab' prefix)
+            if table_name.startswith('tab'):
+                doctype_name = table_name[3:]  # Remove 'tab' prefix
+                
+                # Skip system tables
+                if doctype_name in ['Singles', 'Deleted Documents', 'Version', 'Activity Log']:
+                    continue
+                
+                # Check if DocType exists
+                if doctype_name not in registered_names:
+                    # Get table row count
+                    try:
+                        if db_type == 'postgres':
+                            count_result = frappe.db.sql('SELECT COUNT(*) as count FROM "{}"'.format(table_name), as_dict=True)
+                        else:
+                            escaped_table = table_name.replace('`', '``')
+                            count_result = frappe.db.sql("SELECT COUNT(*) as count FROM `{}`".format(escaped_table), as_dict=True)
+                        
+                        row_count = count_result[0]['count'] if count_result else 0
+                        
+                        orphaned_tables.append({
+                            'table_name': table_name,
+                            'doctype_name': doctype_name,
+                            'row_count': row_count,
+                            'reason': 'No corresponding DocType found'
+                        })
+                    except Exception as e:
+                        # If we can't count rows, still mark as orphaned
+                        orphaned_tables.append({
+                            'table_name': table_name,
+                            'doctype_name': doctype_name,
+                            'row_count': 'Unknown',
+                            'reason': f'No DocType found, count error: {str(e)[:50]}'
+                        })
         
         return {
             'success': True,
-            'orphaned_tables': [],  # Simplified for now
-            'total_count': 0,
-            'scan_summary': f"Orphaned table scan completed for {db_type}",
+            'orphaned_tables': orphaned_tables,
+            'total_count': len(orphaned_tables),
+            'scan_summary': f"Found {len(orphaned_tables)} orphaned tables in {db_type} database",
             'database_type': db_type
         }
         
@@ -357,4 +397,216 @@ def scan_orphaned_tables():
         return {
             'success': False,
             'error': f"Scan error: {str(e)[:100]}"
+        }
+
+@frappe.whitelist()
+def scan_orphaned_fields():
+    """Scan for fields that exist in database tables but not in DocType definitions"""
+    try:
+        db_type = get_db_type()
+        orphaned_fields = []
+        
+        # Get all DocTypes
+        doctypes = frappe.get_all("DocType", fields=["name", "custom"], filters={"istable": 0})
+        
+        for doctype_info in doctypes:
+            doctype_name = doctype_info['name']
+            table_name = f"tab{doctype_name}"
+            
+            # Check if table exists - database agnostic
+            if db_type == 'postgres':
+                table_exists = frappe.db.sql("""
+                    SELECT 1 FROM information_schema.tables 
+                    WHERE table_schema = current_schema() 
+                    AND table_name = %s
+                """, (table_name,))
+            else:
+                table_exists = frappe.db.sql("SHOW TABLES LIKE %s", (table_name,))
+            
+            if not table_exists:
+                continue
+            
+            try:
+                # Get actual columns from database table
+                if db_type == 'postgres':
+                    actual_columns = frappe.db.sql("""
+                        SELECT column_name 
+                        FROM information_schema.columns 
+                        WHERE table_schema = current_schema() 
+                        AND table_name = %s
+                    """, (table_name,), as_dict=True)
+                else:
+                    desc_result = frappe.db.sql(f"DESCRIBE `{table_name}`", as_dict=True)
+                    actual_columns = [{"column_name": col["Field"]} for col in desc_result]
+                
+                # Get defined fields using Frappe's own method to get table columns
+                # This should be the most accurate way to determine what fields SHOULD exist
+                try:
+                    from frappe.model.meta import get_table_columns
+                    defined_fields = set(get_table_columns(doctype_name))
+                except:
+                    # Fallback to manual method if get_table_columns doesn't work
+                    defined_fields = set()
+                    
+                    # Standard DocType fields
+                    meta = frappe.get_meta(doctype_name)
+                    for field in meta.fields:
+                        defined_fields.add(field.fieldname)
+                    
+                    # Add standard fields that all DocTypes have
+                    # This is the comprehensive list of standard fields that Frappe adds automatically
+                    standard_fields = {
+                        # Core DocType fields
+                        'name', 'owner', 'creation', 'modified', 'modified_by', 
+                        'docstatus', 'parent', 'parentfield', 'parenttype', 'idx',
+                        
+                        # System fields added by Frappe
+                        '_user_tags', '_comments', '_assign', '_liked_by',
+                        
+                        # Communication and tracking fields
+                        '_seen', 'reference_doctype', 'reference_name',
+                        
+                        # Workflow and automation fields
+                        'workflow_state', '_action',
+                        
+                        # Version control
+                        '_version',
+                        
+                        # Additional system fields that may appear
+                        'is_cancelled', 'amended_from'
+                    }
+                    defined_fields.update(standard_fields)
+                    
+                    # Custom fields
+                    custom_fields = frappe.get_all("Custom Field", 
+                        filters={"dt": doctype_name}, 
+                        fields=["fieldname"])
+                    for cf in custom_fields:
+                        defined_fields.add(cf.fieldname)
+                
+                # Find orphaned fields
+                for col in actual_columns:
+                    column_name = col["column_name"]
+                    if column_name not in defined_fields:
+                        # Get column details
+                        if db_type == 'postgres':
+                            col_details = frappe.db.sql("""
+                                SELECT data_type, is_nullable, column_default
+                                FROM information_schema.columns 
+                                WHERE table_schema = current_schema() 
+                                AND table_name = %s AND column_name = %s
+                            """, (table_name, column_name), as_dict=True)
+                        else:
+                            col_details = frappe.db.sql(f"""
+                                SELECT COLUMN_TYPE as data_type, IS_NULLABLE as is_nullable, COLUMN_DEFAULT as column_default
+                                FROM information_schema.columns 
+                                WHERE table_schema = DATABASE() 
+                                AND table_name = %s AND column_name = %s
+                            """, (table_name, column_name), as_dict=True)
+                        
+                        detail = col_details[0] if col_details else {}
+                        
+                        orphaned_fields.append({
+                            'doctype': doctype_name,
+                            'table_name': table_name,
+                            'field_name': column_name,
+                            'field_type': detail.get('data_type', 'Unknown'),
+                            'nullable': detail.get('is_nullable', 'Unknown'),
+                            'default_value': detail.get('column_default', None),
+                            'is_custom_doctype': doctype_info.get('custom', 0)
+                        })
+                        
+            except Exception as field_error:
+                # If we can't analyze a specific DocType, continue with others
+                print(f"Error analyzing {doctype_name}: {str(field_error)}", flush=True)
+                continue
+        
+        return {
+            'success': True,
+            'orphaned_fields': orphaned_fields,
+            'total_count': len(orphaned_fields),
+            'scan_summary': f"Found {len(orphaned_fields)} orphaned fields across {len(doctypes)} DocTypes in {db_type} database",
+            'database_type': db_type
+        }
+        
+    except Exception as e:
+        return {
+            'success': False,
+            'error': f"Orphaned fields scan error: {str(e)[:100]}"
+        }
+
+@frappe.whitelist()
+def delete_orphaned_field(doctype_name, field_name, confirm_delete=False):
+    """Delete an orphaned field from database table"""
+    try:
+        if not confirm_delete:
+            return {
+                'success': False,
+                'error': 'Deletion not confirmed'
+            }
+        
+        db_type = get_db_type()
+        table_name = f"tab{doctype_name}"
+        
+        # Validate inputs
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', doctype_name):
+            raise ValueError(f"Invalid DocType name: {doctype_name}")
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', field_name):
+            raise ValueError(f"Invalid field name: {field_name}")
+        
+        # Execute DROP COLUMN
+        if db_type == 'postgres':
+            frappe.db.sql(f'ALTER TABLE "{table_name}" DROP COLUMN IF EXISTS "{field_name}"')
+        else:
+            frappe.db.sql(f"ALTER TABLE `{table_name}` DROP COLUMN `{field_name}`")
+        
+        frappe.db.commit()
+        
+        return {
+            'success': True,
+            'message': f'Successfully deleted orphaned field {field_name} from {table_name}'
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            'success': False,
+            'error': f"Failed to delete orphaned field: {str(e)}"
+        }
+
+@frappe.whitelist()
+def delete_orphaned_table(table_name, confirm_delete=False):
+    """Delete an orphaned table from database"""
+    try:
+        if not confirm_delete:
+            return {
+                'success': False,
+                'error': 'Deletion not confirmed'
+            }
+        
+        db_type = get_db_type()
+        
+        # Validate table name
+        if not re.match(r'^tab[a-zA-Z_][a-zA-Z0-9_\s\+\-]*$', table_name):
+            raise ValueError(f"Invalid table name format: {table_name}")
+        
+        # Execute DROP TABLE
+        if db_type == 'postgres':
+            frappe.db.sql(f'DROP TABLE IF EXISTS "{table_name}"')
+        else:
+            escaped_table = table_name.replace('`', '``')
+            frappe.db.sql(f"DROP TABLE `{escaped_table}`")
+        
+        frappe.db.commit()
+        
+        return {
+            'success': True,
+            'message': f'Successfully deleted orphaned table {table_name}'
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            'success': False,
+            'error': f"Failed to delete orphaned table: {str(e)}"
         }
