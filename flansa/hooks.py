@@ -13,14 +13,11 @@ website_context = {
     "splash_image": "/assets/flansa/images/flansa-logo.svg"
 }
 
-
 # Includes in <head>
 # ------------------
 
 # include js, css files in header of desk.html
 app_include_css = [
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/css/flansa-logo-size.css",  # FORCE LARGER LOGO SIZE - LOAD FIRST
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/css/flansa-navbar-override.css",  # Navbar logo and branding
     "/assets/flansa/css/flansa-theme-vars.css",
     "/assets/flansa/css/flansa-theme-components.css",
     "/assets/flansa/css/flansa-theme-updated.css",
@@ -33,8 +30,6 @@ app_include_css = [
 ]
 app_include_js = [
     "/assets/flansa/js/flansa-browser-cache-manager.js",  # Load first for comprehensive browser cache management
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/js/flansa-global-logo.js",  # Global Flansa logo replacement with central config - MAIN LOGO SYSTEM
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/js/flansa-logo-redirect.js",  # Handle logo redirect and duplicate removal
     
     # Foundation Services - Load these first for other components to use
     "/assets/flansa/js/flansa-state-manager.js",  # Centralized state management
@@ -46,19 +41,15 @@ app_include_js = [
     "/assets/flansa/js/flansa-unified-data-view.js",  # Unified data view system for tables and reports
     "/assets/flansa/js/flansa_report_renderer.js",  # Shared report display component for consistency
     "/assets/flansa/js/flansa-theme-manager.js",
-    "/assets/flansa/js/theme-migration.js",  # Temporary migration script
     "/assets/flansa/js/flansa-theme.js",
     "/assets/flansa/js/gallery_field.js",
     "/assets/flansa/js/gallery_field_renderer.js",  # Multi-image gallery renderer for JSON fields
     "/assets/flansa/js/flansa_home_redirect.js",
     
     # Legacy - to be refactored
-    # "/assets/flansa/js/flansa-navigation-manager.js",  # Role-based navigation system - DISABLED TEMP
-    # "/assets/flansa/js/cache-buster.js"  # DISABLED (redundant with browser cache manager)
     ]
 
 # include js, css files in header of web template
-    # DISABLED NAVBAR INTERFERENCE: web_include_css = "/assets/flansa/css/flansa-logo-size.css"
 # web_include_js = "/assets/flansa/js/flansa.js"
 
 # include custom scss in every website theme (without file extension ".scss")
@@ -230,7 +221,6 @@ doc_events = {
         "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
     }
 }
-
 
 # Scheduled Tasks
 # ---------------
