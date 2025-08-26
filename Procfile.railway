@@ -1,0 +1,1 @@
+web: cd /home/frappe/frappe-bench && bench serve --port $PORT --socketio-port 9000
