@@ -155,6 +155,7 @@ def get_table_structure(table_name):
         
         # Get column details - database agnostic
         if db_type == 'postgres':
+            # For PostgreSQL, use exact table name as provided (case-sensitive)
             structure = frappe.db.sql("""
                 SELECT 
                     column_name as "Field",
@@ -183,14 +184,16 @@ def get_table_structure(table_name):
             """, (table_name,), as_dict=True)
             
             # Get table status for PostgreSQL
+            # Use quote_ident to properly handle case-sensitive table names
+            quoted_table = '"{}"'.format(table_name.replace('"', '""'))
             status = frappe.db.sql("""
                 SELECT 
                     schemaname as "Name",
                     n_tup_ins as "Rows",
-                    pg_size_pretty(pg_total_relation_size(%s::regclass)) as "Data_length"
+                    pg_size_pretty(pg_total_relation_size(%s)) as "Data_length"
                 FROM pg_stat_user_tables 
                 WHERE tablename = %s
-            """, (table_name, table_name), as_dict=True)
+            """, (quoted_table, table_name), as_dict=True)
             
             # PostgreSQL doesn't have SHOW CREATE TABLE equivalent
             create_table = [{'Create Table': 'PostgreSQL table schema not available via SHOW CREATE'}]
@@ -213,10 +216,15 @@ def get_table_structure(table_name):
         }
         
     except Exception as e:
-        frappe.log_error(f"Error getting table structure for {table_name}: {str(e)}")
+        # Rollback any failed transaction
+        if frappe.db:
+            frappe.db.rollback()
+        
+        # Return error without trying to log (which causes another transaction issue)
         return {
             'success': False,
-            'error': str(e)
+            'error': str(e),
+            'message': f"Error getting table structure for {table_name}"
         }
 
 @frappe.whitelist()
