@@ -7,6 +7,7 @@ import frappe
 from flansa.flansa_core.tenant_security import apply_tenant_filter, get_current_tenant
 from frappe import _
 import json
+from flansa.id_based_utils import generate_id_based_doctype_name, get_tenant_id_from_context
 
 @frappe.whitelist()
 def activate_table(table_name):
@@ -24,20 +25,15 @@ def activate_table(table_name):
                 "error": "Table is already active"
             }
         
-        # Generate DocType name if not exists
+        # Generate ID-based DocType name if not exists
         if not table_doc.doctype_name:
-            # Create a cleaner DocType name
-            clean_name = (table_doc.table_label or table_doc.name).replace(" ", "").replace("-", "")
-            base_name = f"FLS{clean_name}"
-            doctype_name = base_name
-            counter = 1
+            tenant_id = get_current_tenant()
+            application_id = table_doc.application  # Hash ID
+            table_id = table_doc.name              # Hash ID
             
-            while frappe.db.exists("DocType", doctype_name):
-                doctype_name = f"{base_name}{counter}"
-                counter += 1
-            
+            doctype_name = generate_id_based_doctype_name(tenant_id, application_id, table_id)
             table_doc.doctype_name = doctype_name
-            print(f"Generated DocType name: {doctype_name}")
+            print(f"Generated ID-based DocType name: {doctype_name}")
         
         # Parse fields from JSON
         fields_data = []
