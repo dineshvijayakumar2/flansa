@@ -132,7 +132,7 @@ after_migrate = "flansa.doctype_overrides.setup_doctype_overrides"
 # Custom pages for Flansa no-code platform
 
 page_js = {
-    "flansa-form-builder": "flansa_platform/page/flansa_form_builder/flansa_form_builder.js",
+    "flansa-form-builder": "flansa_core/page/flansa_form_builder/flansa_form_builder.js",
     "flansa-record-viewer": [
         "flansa_core/page/flansa_record_viewer/field_config_manager.js",
         "flansa_core/page/flansa_record_viewer/report_integration.js"
