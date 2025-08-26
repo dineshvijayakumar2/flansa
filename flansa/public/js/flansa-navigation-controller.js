@@ -479,7 +479,7 @@ class FlansaNavigationController {
             'flansa-record-viewer',
             'flansa-report-viewer',
             'flansa-form-builder',
-            'flansa-workspace'
+            'flansa'
         ];
         
         return flansaPages.includes(route[0]);

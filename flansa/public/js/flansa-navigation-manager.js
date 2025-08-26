@@ -14,7 +14,7 @@ window.FlansaNavigationManager = {
     ],
     
     END_USER_PAGES: [
-        'flansa-workspace',
+        'flansa',
         'flansa-app-dashboard',
         'flansa-record-viewer',
         'flansa-report-viewer'
@@ -67,7 +67,7 @@ window.FlansaNavigationManager = {
         },
         
         // End-User Pages
-        'flansa-workspace': {
+        'flansa': {
             title: '🏠 Workspace',
             description: 'Application portfolio',
             category: 'user',
@@ -322,7 +322,7 @@ window.FlansaNavigationManager = {
                 <i class="fa fa-lock fa-3x" style="color: #dc3545; margin-bottom: 16px;"></i>
                 <h4 style="color: #dc3545; margin-bottom: 8px;">Access Denied</h4>
                 <p style="color: #6c757d; margin-bottom: 20px;">You don't have permission to access this page.</p>
-                <button class="btn btn-primary" onclick="window.location.href='/app/flansa-workspace'">
+                <button class="btn btn-primary" onclick="window.location.href='/app/flansa'">
                     <i class="fa fa-home"></i> Go to Workspace
                 </button>
             </div>

@@ -19,8 +19,8 @@ website_context = {
 
 # include js, css files in header of desk.html
 app_include_css = [
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/css/flansa-logo-size.css",  # FORCE LARGER LOGO SIZE - LOAD FIRST
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/css/flansa-navbar-override.css",  # Navbar logo and branding
+    "/assets/flansa/css/flansa-logo-size.css",  # FORCE LARGER LOGO SIZE - LOAD FIRST
+    "/assets/flansa/css/flansa-navbar-override.css",  # Navbar logo and branding
     "/assets/flansa/css/flansa-theme-vars.css",
     "/assets/flansa/css/flansa-theme-components.css",
     "/assets/flansa/css/flansa-theme-updated.css",
@@ -33,8 +33,8 @@ app_include_css = [
 ]
 app_include_js = [
     "/assets/flansa/js/flansa-browser-cache-manager.js",  # Load first for comprehensive browser cache management
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/js/flansa-global-logo.js",  # Global Flansa logo replacement with central config - MAIN LOGO SYSTEM
-    # DISABLED NAVBAR INTERFERENCE: "/assets/flansa/js/flansa-logo-redirect.js",  # Handle logo redirect and duplicate removal
+    "/assets/flansa/js/flansa-global-logo.js",  # Global Flansa logo replacement with central config - MAIN LOGO SYSTEM
+    "/assets/flansa/js/flansa-logo-redirect.js",  # Handle logo redirect and duplicate removal
     
     # Foundation Services - Load these first for other components to use
     "/assets/flansa/js/flansa-state-manager.js",  # Centralized state management
@@ -58,7 +58,7 @@ app_include_js = [
     ]
 
 # include js, css files in header of web template
-    # DISABLED NAVBAR INTERFERENCE: web_include_css = "/assets/flansa/css/flansa-logo-size.css"
+web_include_css = "/assets/flansa/css/flansa-logo-size.css"
 # web_include_js = "/assets/flansa/js/flansa.js"
 
 # include custom scss in every website theme (without file extension ".scss")

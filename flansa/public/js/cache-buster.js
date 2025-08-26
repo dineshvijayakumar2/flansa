@@ -92,7 +92,7 @@ window.flansaCacheBuster = {
         document.querySelectorAll('.navbar-brand, .navbar-home a').forEach(element => {
             if (element.textContent && element.textContent.trim() === 'Frappe') {
                 element.textContent = 'Flansa';
-                element.href = '/app/flansa-workspace';
+                element.href = '/app/flansa';
             }
         });
         

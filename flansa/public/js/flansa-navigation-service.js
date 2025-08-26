@@ -224,7 +224,7 @@ class FlansaNavigationService {
      * Navigate to report list
      */
     navigateToReportList() {
-        frappe.set_route('flansa-workspace');
+        frappe.set_route('flansa');
     }
 
     /**
@@ -247,7 +247,7 @@ class FlansaNavigationService {
      * Go to home/dashboard
      */
     goHome() {
-        frappe.set_route('flansa-workspace');
+        frappe.set_route('flansa');
     }
 
     /**
@@ -462,7 +462,7 @@ class FlansaNavigationService {
                 case 'report':
                     breadcrumbs.push({
                         label: 'Reports',
-                        route: ['flansa-workspace']
+                        route: ['flansa']
                     });
                     breadcrumbs.push({
                         label: this.currentContext.table,
@@ -473,7 +473,7 @@ class FlansaNavigationService {
                 case 'record':
                     breadcrumbs.push({
                         label: 'Reports',
-                        route: ['flansa-workspace']
+                        route: ['flansa']
                     });
                     breadcrumbs.push({
                         label: this.currentContext.table,

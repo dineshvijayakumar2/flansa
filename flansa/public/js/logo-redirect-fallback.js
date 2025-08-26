@@ -9,14 +9,14 @@ $(window).on('load', function() {
         appLinks.forEach(function(link) {
             if (link.closest('.navbar')) {
                 console.log('Fallback: fixing navbar app link', link);
-                link.href = '/app/flansa-workspace';
+                link.href = '/app/flansa';
                 
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     if (frappe && frappe.set_route) {
-                        frappe.set_route('flansa-workspace');
+                        frappe.set_route('flansa');
                     } else {
-                        window.location.href = '/app/flansa-workspace';
+                        window.location.href = '/app/flansa';
                     }
                 });
             }
@@ -26,14 +26,14 @@ $(window).on('load', function() {
         const navbarBrand = document.querySelector('.navbar-brand');
         if (navbarBrand && navbarBrand.href && navbarBrand.href.includes('/app')) {
             console.log('Fallback: fixing navbar-brand', navbarBrand);
-            navbarBrand.href = '/app/flansa-workspace';
+            navbarBrand.href = '/app/flansa';
             
             navbarBrand.addEventListener('click', function(e) {
                 e.preventDefault();
                 if (frappe && frappe.set_route) {
-                    frappe.set_route('flansa-workspace');
+                    frappe.set_route('flansa');
                 } else {
-                    window.location.href = '/app/flansa-workspace';
+                    window.location.href = '/app/flansa';
                 }
             });
         }

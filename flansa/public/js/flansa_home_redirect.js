@@ -7,11 +7,11 @@ function initFlansaRedirect() {
             frappe.call({
                 method: 'flansa.overrides.get_home_page',
                 callback: function(r) {
-                    if (r.message === 'flansa-workspace') {
-                        // Only redirect if not already on flansa-workspace
-                        if (!window.location.href.includes('flansa-workspace')) {
+                    if (r.message === 'flansa') {
+                        // Only redirect if not already on flansa
+                        if (!window.location.href.includes('flansa')) {
                             if (frappe.set_route) {
-                                frappe.set_route('flansa-workspace');
+                                frappe.set_route('flansa');
                             }
                         }
                     }
@@ -45,11 +45,11 @@ if (typeof $ !== 'undefined') {
 //     setTimeout(function() {
 //         try {
 //             // Check if we need to add the Flansa workspace link
-//             if ($('.navbar-home').length && !$('.flansa-workspace-link').length) {
+//             if ($('.navbar-home').length && !$('.flansa-link').length) {
 //                 // Add Flansa Workspace link to navbar
 //                 const flansaLink = `
-//                     <li class="flansa-workspace-link">
-//                         <a href="/app/flansa-workspace" class="text-primary" style="font-weight: 500;">
+//                     <li class="flansa-link">
+//                         <a href="/app/flansa" class="text-primary" style="font-weight: 500;">
 //                             <i class="fa fa-th-large"></i> Flansa
 //                         </a>
 //                     </li>
@@ -62,7 +62,7 @@ if (typeof $ !== 'undefined') {
 //             if ($('.desk-sidebar').length && !$('.flansa-sidebar-link').length) {
 //                 const flansaSidebarLink = `
 //                     <div class="flansa-sidebar-link">
-//                         <a href="/app/flansa-workspace" class="btn btn-primary btn-sm mb-2" style="width: 100%;">
+//                         <a href="/app/flansa" class="btn btn-primary btn-sm mb-2" style="width: 100%;">
 //                             <i class="fa fa-th-large"></i> Flansa Workspace
 //                         </a>
 //                     </div>
@@ -93,7 +93,7 @@ function setupRouterOverride() {
     setTimeout(function() {
         if (typeof frappe !== 'undefined' && frappe.router) {
             frappe.router.on('change', function() {
-                // If user lands on desk without a specific route, redirect to flansa-workspace
+                // If user lands on desk without a specific route, redirect to flansa
                 const route = frappe.get_route();
                 
                 if (route.length === 0 || (route.length === 1 && route[0] === '')) {
@@ -101,8 +101,8 @@ function setupRouterOverride() {
                     frappe.call({
                         method: 'flansa.overrides.get_home_page',
                         callback: function(r) {
-                            if (r.message === 'flansa-workspace') {
-                                frappe.set_route('flansa-workspace');
+                            if (r.message === 'flansa') {
+                                frappe.set_route('flansa');
                             }
                         }
                     });
