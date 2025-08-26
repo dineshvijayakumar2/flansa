@@ -76,6 +76,11 @@ class FlansaDatabaseViewer {
             this.scan_orphaned_tables();
         });
         
+        // Fix Flansa references
+        $(this.wrapper).find('#fixFlansaReferences').click(() => {
+            this.fix_flansa_references();
+        });
+        
         // Tab switching
         $(this.wrapper).find('.nav-link').click((e) => {
             e.preventDefault();
@@ -809,6 +814,41 @@ class FlansaDatabaseViewer {
                 });
             }
         );
+    }
+    
+    fix_flansa_references() {
+        this.update_status('Fixing Flansa Table doctype references...');
+        
+        $(this.wrapper).find('#fixFlansaReferences').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Fixing...');
+        
+        frappe.call({
+            method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.fix_flansa_table_references',
+            callback: (r) => {
+                $(this.wrapper).find('#fixFlansaReferences').prop('disabled', false).html('<i class="fa fa-wrench"></i> Fix Flansa References');
+                
+                if (r.message && r.message.success) {
+                    const msg = r.message;
+                    frappe.msgprint({
+                        title: 'Flansa References Fixed',
+                        message: `${msg.message}<br><br>
+                            <strong>Fixed:</strong> ${msg.fixed_count} references<br>
+                            <strong>Total checked:</strong> ${msg.total_count}<br>
+                            ${msg.remaining > 0 ? `<strong>Still missing:</strong> ${msg.remaining}` : ''}
+                            <br><br>
+                            <em>Tables should now be visible in the visual builder!</em>`,
+                        indicator: 'green'
+                    });
+                    this.update_status(msg.message);
+                    
+                    // Refresh orphaned tables list if needed
+                    if (msg.fixed_count > 0) {
+                        this.scan_orphaned_tables();
+                    }
+                } else {
+                    this.show_error('Failed to fix Flansa references: ' + (r.message?.error || 'Unknown error'));
+                }
+            }
+        });
     }
     
     show_error(message) {

@@ -785,11 +785,42 @@ def register_orphaned_table_as_doctype(table_name, doctype_name=None, confirm_re
         # Clear cache to make new DocType available
         frappe.clear_cache(doctype=doctype_name)
         
+        # Step 4: Update Flansa Table reference if it exists
+        flansa_table_updated = False
+        try:
+            # Look for Flansa Table records that might reference this table
+            flansa_tables = frappe.db.sql("""
+                SELECT name, table_name 
+                FROM `tabFlansa Table` 
+                WHERE table_name = %s 
+                AND (doctype_name IS NULL OR doctype_name = '')
+            """, (table_name,), as_dict=True)
+            
+            if flansa_tables:
+                for ft in flansa_tables:
+                    frappe.db.sql("""
+                        UPDATE `tabFlansa Table` 
+                        SET doctype_name = %s 
+                        WHERE name = %s
+                    """, (doctype_name, ft.name))
+                    flansa_table_updated = True
+                
+                frappe.db.commit()
+                
+        except Exception as flansa_update_error:
+            # Don't fail the main operation if Flansa Table update fails
+            print(f"Warning: Could not update Flansa Table reference: {str(flansa_update_error)}", flush=True)
+        
+        success_message = f'Successfully registered table "{table_name}" as DocType "{doctype_name}" with {len(columns)} fields'
+        if flansa_table_updated:
+            success_message += f'. Also updated {len(flansa_tables)} Flansa Table reference(s) - now visible in visual builder!'
+        
         return {
             'success': True,
-            'message': f'Successfully registered table "{table_name}" as DocType "{doctype_name}" with {len(columns)} fields',
+            'message': success_message,
             'doctype_name': doctype_name,
-            'fields_count': len([f for f in columns if f['column_name'] not in standard_fields])
+            'fields_count': len([f for f in columns if f['column_name'] not in standard_fields]),
+            'flansa_table_updated': flansa_table_updated
         }
         
     except Exception as e:
@@ -797,4 +828,90 @@ def register_orphaned_table_as_doctype(table_name, doctype_name=None, confirm_re
         return {
             'success': False,
             'error': f"Failed to register table as DocType: {str(e)}"
+        }
+
+@frappe.whitelist()
+def fix_flansa_table_references():
+    """Fix Flansa Table doctype references that were cleared after redeployment"""
+    try:
+        # Get all Flansa Tables with missing doctype references
+        flansa_tables = frappe.db.sql("""
+            SELECT name, table_name, doctype_name
+            FROM `tabFlansa Table`
+            WHERE (doctype_name IS NULL OR doctype_name = '')
+            AND table_name IS NOT NULL 
+            AND table_name != ''
+            ORDER BY name
+        """, as_dict=True)
+        
+        if not flansa_tables:
+            return {
+                'success': True,
+                'message': 'No Flansa Tables found with missing doctype references',
+                'fixed_count': 0,
+                'total_count': 0
+            }
+        
+        # Get all registered DocTypes
+        registered_doctypes = frappe.db.sql("""
+            SELECT name FROM `tabDocType`
+            WHERE custom = 1 OR module LIKE '%Flansa%'
+            ORDER BY name
+        """, as_dict=True)
+        
+        doctype_names = {dt.name for dt in registered_doctypes}
+        
+        # Match and fix references
+        fixed_count = 0
+        for ft in flansa_tables:
+            table_name = ft.table_name
+            flansa_table_name = ft.name
+            
+            # Try to determine the correct DocType name
+            if table_name.startswith('tab'):
+                potential_doctype = table_name[3:]  # Remove 'tab' prefix
+                
+                # Try exact match first
+                if potential_doctype in doctype_names:
+                    frappe.db.sql("""
+                        UPDATE `tabFlansa Table` 
+                        SET doctype_name = %s 
+                        WHERE name = %s
+                    """, (potential_doctype, flansa_table_name))
+                    fixed_count += 1
+                    continue
+                
+                # Try variations
+                variations = [
+                    potential_doctype.replace('_', ' '),  # Underscore to space
+                    potential_doctype.replace(' ', '_'),  # Space to underscore
+                    potential_doctype.title(),            # Title case
+                    potential_doctype.replace('_', ''),   # Remove underscores
+                ]
+                
+                for variation in variations:
+                    if variation in doctype_names:
+                        frappe.db.sql("""
+                            UPDATE `tabFlansa Table` 
+                            SET doctype_name = %s 
+                            WHERE name = %s
+                        """, (variation, flansa_table_name))
+                        fixed_count += 1
+                        break
+        
+        frappe.db.commit()
+        
+        return {
+            'success': True,
+            'message': f'Successfully fixed {fixed_count} out of {len(flansa_tables)} Flansa Table doctype references',
+            'fixed_count': fixed_count,
+            'total_count': len(flansa_tables),
+            'remaining': len(flansa_tables) - fixed_count
+        }
+        
+    except Exception as e:
+        frappe.db.rollback()
+        return {
+            'success': False,
+            'error': f"Failed to fix Flansa Table references: {str(e)}"
         }

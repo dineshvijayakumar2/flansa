@@ -199,9 +199,14 @@ SHOW TABLES LIKE &quot;tab%&quot;;"></textarea>
                         <div class="card">
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <h6>Orphaned Tables Detection</h6>
-                                <button class="btn btn-sm btn-primary" id="scanOrphanedTables">
-                                    <i class="fa fa-search"></i> Scan for Orphaned Tables
-                                </button>
+                                <div>
+                                    <button class="btn btn-sm btn-warning mr-2" id="fixFlansaReferences">
+                                        <i class="fa fa-wrench"></i> Fix Flansa References
+                                    </button>
+                                    <button class="btn btn-sm btn-primary" id="scanOrphanedTables">
+                                        <i class="fa fa-search"></i> Scan for Orphaned Tables
+                                    </button>
+                                </div>
                             </div>
                             <div class="card-body">
                                 <div id="orphanedTablesResults">
