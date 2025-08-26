@@ -4,7 +4,9 @@
  * Specifically addresses cached CSS, JS, and theme files that persist across sessions
  */
 
-class FlansaBrowserCacheManager {
+// Prevent redeclaration if already exists
+if (typeof FlansaBrowserCacheManager === 'undefined') {
+    window.FlansaBrowserCacheManager = class FlansaBrowserCacheManager {
     constructor() {
         this.cacheVersion = Date.now();
         this.assetTimestamp = this.getAssetTimestamp();
@@ -672,4 +674,5 @@ window.flansaCache = {
         
         return `Cleared ${galleryKeys.length} gallery cache items`;
     }
-};
+}; // End of FlansaBrowserCacheManager class
+} // End of conditional class declaration

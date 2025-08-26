@@ -44,7 +44,8 @@ app_include_js = [
     "/assets/flansa/js/flansa-theme.js",
     "/assets/flansa/js/gallery_field.js",
     "/assets/flansa/js/gallery_field_renderer.js",  # Multi-image gallery renderer for JSON fields
-    "/assets/flansa/js/flansa_home_redirect.js",
+    #"/assets/flansa/js/flansa_home_redirect.js",
+    "/assets/flansa/js/railway-navbar-force.js"
     
     # Legacy - to be refactored
     ]
