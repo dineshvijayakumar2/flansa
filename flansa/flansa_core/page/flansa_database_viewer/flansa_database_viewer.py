@@ -789,20 +789,39 @@ def register_orphaned_table_as_doctype(table_name, doctype_name=None, confirm_re
         flansa_table_updated = False
         try:
             # Look for Flansa Table records that might reference this table
-            flansa_tables = frappe.db.sql("""
-                SELECT name, table_name 
-                FROM `tabFlansa Table` 
-                WHERE table_name = %s 
-                AND (doctype_name IS NULL OR doctype_name = '')
-            """, (table_name,), as_dict=True)
+            if db_type == 'postgres':
+                flansa_tables = frappe.db.sql("""
+                    SELECT ft.name, ft.table_name, ft.application, app.app_name
+                    FROM "tabFlansa Table" ft
+                    LEFT JOIN "tabFlansa Application" app ON ft.application = app.name
+                    WHERE ft.table_name = %s 
+                    AND (ft.doctype_name IS NULL OR ft.doctype_name = '' 
+                         OR ft.doctype_name != %s)
+                """, (table_name, doctype_name), as_dict=True)
+            else:
+                flansa_tables = frappe.db.sql("""
+                    SELECT ft.name, ft.table_name, ft.application, app.app_name
+                    FROM `tabFlansa Table` ft
+                    LEFT JOIN `tabFlansa Application` app ON ft.application = app.name
+                    WHERE ft.table_name = %s 
+                    AND (ft.doctype_name IS NULL OR ft.doctype_name = '' 
+                         OR ft.doctype_name != %s)
+                """, (table_name, doctype_name), as_dict=True)
             
             if flansa_tables:
                 for ft in flansa_tables:
-                    frappe.db.sql("""
-                        UPDATE `tabFlansa Table` 
-                        SET doctype_name = %s 
-                        WHERE name = %s
-                    """, (doctype_name, ft.name))
+                    if db_type == 'postgres':
+                        frappe.db.sql("""
+                            UPDATE "tabFlansa Table" 
+                            SET doctype_name = %s 
+                            WHERE name = %s
+                        """, (doctype_name, ft.name))
+                    else:
+                        frappe.db.sql("""
+                            UPDATE `tabFlansa Table` 
+                            SET doctype_name = %s 
+                            WHERE name = %s
+                        """, (doctype_name, ft.name))
                     flansa_table_updated = True
                 
                 frappe.db.commit()
@@ -832,75 +851,122 @@ def register_orphaned_table_as_doctype(table_name, doctype_name=None, confirm_re
 
 @frappe.whitelist()
 def fix_flansa_table_references():
-    """Fix Flansa Table doctype references that were cleared after redeployment"""
+    """Fix Flansa Table doctype references to use correct CamelCase pattern"""
     try:
-        # Get all Flansa Tables with missing doctype references
-        flansa_tables = frappe.db.sql("""
-            SELECT name, table_name, doctype_name
-            FROM `tabFlansa Table`
-            WHERE (doctype_name IS NULL OR doctype_name = '')
-            AND table_name IS NOT NULL 
-            AND table_name != ''
-            ORDER BY name
-        """, as_dict=True)
+        db_type = get_db_type()
+        
+        # Get all Flansa Tables that need fixing (including those with incorrect casing)
+        if db_type == 'postgres':
+            flansa_tables = frappe.db.sql("""
+                SELECT 
+                    ft.name, 
+                    ft.application,
+                    ft.table_name, 
+                    ft.doctype_name,
+                    app.app_name
+                FROM "tabFlansa Table" ft
+                LEFT JOIN "tabFlansa Application" app ON ft.application = app.name
+                WHERE ft.application IS NOT NULL 
+                AND ft.table_name IS NOT NULL
+                AND (
+                    ft.doctype_name IS NULL 
+                    OR ft.doctype_name = ''
+                    OR (ft.doctype_name LIKE '%_%' AND ft.doctype_name = LOWER(ft.doctype_name))
+                )
+                ORDER BY ft.name
+            """, as_dict=True)
+        else:
+            flansa_tables = frappe.db.sql("""
+                SELECT 
+                    ft.name, 
+                    ft.application,
+                    ft.table_name, 
+                    ft.doctype_name,
+                    app.app_name
+                FROM `tabFlansa Table` ft
+                LEFT JOIN `tabFlansa Application` app ON ft.application = app.name
+                WHERE ft.application IS NOT NULL 
+                AND ft.table_name IS NOT NULL
+                AND (
+                    ft.doctype_name IS NULL 
+                    OR ft.doctype_name = ''
+                    OR (ft.doctype_name LIKE '%_%' AND ft.doctype_name = LOWER(ft.doctype_name))
+                )
+                ORDER BY ft.name
+            """, as_dict=True)
         
         if not flansa_tables:
             return {
                 'success': True,
-                'message': 'No Flansa Tables found with missing doctype references',
+                'message': 'No Flansa Tables found that need fixing',
                 'fixed_count': 0,
                 'total_count': 0
             }
         
-        # Get all registered DocTypes - be comprehensive to catch all possible matches
-        registered_doctypes = frappe.db.sql("""
-            SELECT name FROM `tabDocType`
-            ORDER BY name
-        """, as_dict=True)
+        # Get all registered DocTypes that belong to Flansa Generated module
+        if db_type == 'postgres':
+            registered_doctypes = frappe.db.sql("""
+                SELECT name FROM "tabDocType"
+                WHERE module IN ('Flansa Generated', 'Flansa Core', 'Flansa Builder')
+                OR custom = 1
+                ORDER BY name
+            """, as_dict=True)
+        else:
+            registered_doctypes = frappe.db.sql("""
+                SELECT name FROM `tabDocType`
+                WHERE module IN ('Flansa Generated', 'Flansa Core', 'Flansa Builder')
+                OR custom = 1
+                ORDER BY name
+            """, as_dict=True)
         
         doctype_names = {dt.name for dt in registered_doctypes}
         
-        # Match and fix references
+        # Match and fix references using CamelCase pattern
         fixed_count = 0
         debug_info = []
         
         for ft in flansa_tables:
             table_name = ft.table_name
+            app_name = ft.app_name
             flansa_table_name = ft.name
-            matched_doctype = None
+            current_doctype = ft.doctype_name
             
-            # Try to determine the correct DocType name
-            if table_name.startswith('tab'):
-                potential_doctype = table_name[3:]  # Remove 'tab' prefix
+            if app_name and table_name:
+                # Convert to CamelCase pattern: AppName_TableName
+                # Convert snake_case to CamelCase by capitalizing each word
+                def to_camel_case(snake_str):
+                    """Convert snake_case to CamelCase"""
+                    if not snake_str:
+                        return ""
+                    # Split by underscore, capitalize each word, join
+                    components = snake_str.split('_')
+                    return ''.join(x.capitalize() for x in components if x)
                 
-                # Try exact match first
-                if potential_doctype in doctype_names:
-                    matched_doctype = potential_doctype
-                else:
-                    # Try variations
-                    variations = [
-                        potential_doctype.replace('_', ' '),  # Underscore to space
-                        potential_doctype.replace(' ', '_'),  # Space to underscore
-                        potential_doctype.title(),            # Title case
-                        potential_doctype.replace('_', ''),   # Remove underscores
-                    ]
+                expected_doctype = f"{to_camel_case(app_name)}_{to_camel_case(table_name)}"
+                
+                # Check if this DocType actually exists
+                if expected_doctype in doctype_names:
+                    # Update the reference
+                    if db_type == 'postgres':
+                        frappe.db.sql("""
+                            UPDATE "tabFlansa Table" 
+                            SET doctype_name = %s 
+                            WHERE name = %s
+                        """, (expected_doctype, flansa_table_name))
+                    else:
+                        frappe.db.sql("""
+                            UPDATE `tabFlansa Table` 
+                            SET doctype_name = %s 
+                            WHERE name = %s
+                        """, (expected_doctype, flansa_table_name))
                     
-                    for variation in variations:
-                        if variation in doctype_names:
-                            matched_doctype = variation
-                            break
-                
-                # If we found a match, update it
-                if matched_doctype:
-                    frappe.db.sql("""
-                        UPDATE `tabFlansa Table` 
-                        SET doctype_name = %s 
-                        WHERE name = %s
-                    """, (matched_doctype, flansa_table_name))
                     fixed_count += 1
-                    debug_info.append(f"✅ {flansa_table_name} -> {matched_doctype}")
+                    debug_info.append(f"✅ Fixed: {flansa_table_name} from '{current_doctype}' to '{expected_doctype}'")
                 else:
-                    debug_info.append(f"❌ {flansa_table_name} (table: {table_name}) - no matching DocType found")
+                    # DocType doesn't exist - needs registration
+                    debug_info.append(f"❌ DocType not found: {expected_doctype} for table {flansa_table_name}")
+            else:
+                debug_info.append(f"⚠️ Missing app_name or table_name for {flansa_table_name}")
         
         frappe.db.commit()
         
