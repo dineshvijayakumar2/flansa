@@ -45,7 +45,7 @@ app_include_js = [
     "/assets/flansa/js/gallery_field.js",
     "/assets/flansa/js/gallery_field_renderer.js",  # Multi-image gallery renderer for JSON fields
     #"/assets/flansa/js/flansa_home_redirect.js",
-    "/assets/flansa/js/railway-navbar-force.js"
+    "/assets/flansa/js/frappe-navbar-force.js"  # Fix for navbar visibility in Railway deployment
     
     # Legacy - to be refactored
     ]
