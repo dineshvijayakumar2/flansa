@@ -828,15 +828,22 @@ class FlansaDatabaseViewer {
                 
                 if (r.message && r.message.success) {
                     const msg = r.message;
+                    
+                    let debugInfo = '';
+                    if (msg.debug_info && msg.debug_info.length > 0) {
+                        debugInfo = '<br><br><strong>Details:</strong><br>' + msg.debug_info.join('<br>');
+                    }
+                    
                     frappe.msgprint({
                         title: 'Flansa References Fixed',
                         message: `${msg.message}<br><br>
                             <strong>Fixed:</strong> ${msg.fixed_count} references<br>
                             <strong>Total checked:</strong> ${msg.total_count}<br>
                             ${msg.remaining > 0 ? `<strong>Still missing:</strong> ${msg.remaining}` : ''}
+                            ${debugInfo}
                             <br><br>
                             <em>Tables should now be visible in the visual builder!</em>`,
-                        indicator: 'green'
+                        indicator: msg.fixed_count > 0 ? 'green' : 'orange'
                     });
                     this.update_status(msg.message);
                     
