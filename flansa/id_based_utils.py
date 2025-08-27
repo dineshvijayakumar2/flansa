@@ -63,6 +63,24 @@ def get_tenant_id_from_context():
         return tenant_id if tenant_id else "default"
     except Exception:
         return "default"
+
+def get_tenant_id_from_application(application_id):
+    """Get tenant_id from the Flansa Application (preferred method for consistent tenant lookup)"""
+    try:
+        if not application_id:
+            return get_tenant_id_from_context()  # Fallback
+        
+        app_doc = frappe.get_doc("Flansa Application", application_id)
+        
+        if hasattr(app_doc, 'tenant_id') and app_doc.tenant_id:
+            return app_doc.tenant_id
+        else:
+            # Application doesn't have tenant_id set, use context as fallback
+            return get_tenant_id_from_context()
+            
+    except Exception as e:
+        frappe.log_error(f"Error getting tenant from application {application_id}: {str(e)}")
+        return get_tenant_id_from_context()  # Fallback
         
 def get_application_and_table_ids(application_name, table_name):
     """Get the actual IDs from names"""

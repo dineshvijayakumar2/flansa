@@ -1,15 +1,31 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
-from flansa.id_based_utils import generate_id_based_doctype_name, get_tenant_id_from_context
+from flansa.id_based_utils import generate_id_based_doctype_name, get_tenant_id_from_context, get_tenant_id_from_application
 
 class FlansaTable(Document):
     def validate(self):
         """Validate table configuration"""
         self.validate_naming_convention()
+        self.inherit_tenant_from_application()
         # Auto-generate DocType name if needed
         if not self.doctype_name and self.application and self.table_name:
             self.doctype_name = self.get_generated_doctype_name()
+    
+    def inherit_tenant_from_application(self):
+        """Inherit tenant_id from the parent Application for consistent multi-tenancy"""
+        try:
+            if self.application:
+                # Get the tenant_id from the Application
+                app_tenant_id = get_tenant_id_from_application(self.application)
+                
+                if app_tenant_id and app_tenant_id != "default":
+                    # Set tenant_id if not already set or different
+                    if not self.tenant_id or self.tenant_id != app_tenant_id:
+                        self.tenant_id = app_tenant_id
+                        
+        except Exception as e:
+            frappe.log_error(f"Error inheriting tenant from application: {str(e)}")
     
     def after_insert(self):
         """Auto-trigger DocType creation after table creation"""
@@ -49,8 +65,9 @@ class FlansaTable(Document):
             return ""
         
         try:
-            # Get tenant_id from current context
-            tenant_id = get_tenant_id_from_context()
+            # IMPORTANT: Get tenant_id from the Application for consistent multi-tenant naming
+            # This ensures all tables in the same application use the same tenant_id
+            tenant_id = get_tenant_id_from_application(self.application)
             
             # Use application and table IDs directly (they're already hashes from autoname)
             application_id = self.application  # This is the hash ID
