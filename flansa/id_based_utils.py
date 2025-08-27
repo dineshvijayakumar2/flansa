@@ -6,30 +6,54 @@ Uses unique IDs instead of names for DocType generation
 import frappe
 
 def generate_id_based_doctype_name(tenant_id, application_id, table_id):
-    """Generate DocType name using unique IDs"""
+    """Generate DocType name using unique IDs - ensures name starts with a letter"""
     try:
-        # Clean tenant_id
-        clean_tenant = str(tenant_id).replace('-', '').replace('_', '')[:10]
+        # Clean tenant_id - remove special chars
+        clean_tenant = str(tenant_id).replace('-', '').replace('_', '').replace(' ', '')[:10]
         
         # Use first 8 chars of hash IDs
         clean_app = str(application_id)[:8] if application_id else "app"
         clean_table = str(table_id)[:8] if table_id else "table"
         
-        # Generate name
+        # Build the DocType name
+        # Pattern: {clean_tenant}_{app_hash}_{table_hash}
         doctype_name = f"{clean_tenant}_{clean_app}_{clean_table}"
         
-        # Ensure reasonable length
+        # IMPORTANT: Check if name starts with a letter (Frappe requirement)
+        # Only add 'FLS' prefix if the name doesn't start with a letter
+        if doctype_name and not doctype_name[0].isalpha():
+            # Add FLS prefix only when needed
+            doctype_name = f"FLS_{doctype_name}"
+        
+        # Ensure reasonable length (Frappe limit is ~140 but keep it practical)
         if len(doctype_name) > 60:
-            clean_tenant = clean_tenant[:8]
-            clean_app = clean_app[:6]
-            clean_table = clean_table[:6]
-            doctype_name = f"{clean_tenant}_{clean_app}_{clean_table}"
+            # Truncate parts proportionally
+            if doctype_name.startswith("FLS_"):
+                # Keep FLS prefix and truncate the rest
+                clean_tenant = clean_tenant[:6]
+                clean_app = clean_app[:6]
+                clean_table = clean_table[:6]
+                doctype_name = f"FLS_{clean_tenant}_{clean_app}_{clean_table}"
+            else:
+                clean_tenant = clean_tenant[:8]
+                clean_app = clean_app[:6]
+                clean_table = clean_table[:6]
+                doctype_name = f"{clean_tenant}_{clean_app}_{clean_table}"
+        
+        # Replace any remaining invalid characters
+        import re
+        doctype_name = re.sub(r'[^a-zA-Z0-9_\- ]', '', doctype_name)
+        
+        # Final check - if still doesn't start with letter, add FLS
+        if not doctype_name[0].isalpha():
+            doctype_name = f"FLS_{doctype_name}"
         
         return doctype_name
         
     except Exception as e:
         frappe.log_error(f"Error generating ID-based DocType name: {str(e)}")
-        return f"ERR_{str(application_id)[:6]}_{str(table_id)[:6]}"
+        # Fallback with guaranteed valid prefix
+        return f"FLS_ERR_{str(application_id)[:6]}_{str(table_id)[:6]}"
 
 def get_tenant_id_from_context():
     """Get tenant_id from current context or default"""
