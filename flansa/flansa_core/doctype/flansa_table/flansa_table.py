@@ -7,8 +7,9 @@ class FlansaTable(Document):
     def validate(self):
         """Validate table configuration"""
         self.validate_naming_convention()
-        self.update_generated_doctype_name()
-        self.auto_generate_doctype_name()
+        # Auto-generate DocType name if needed
+        if not self.doctype_name and self.application and self.table_name:
+            self.doctype_name = self.get_generated_doctype_name()
     
     def after_insert(self):
         """Auto-trigger DocType creation after table creation"""
@@ -40,22 +41,7 @@ class FlansaTable(Document):
                     "Current value: '{0}'"
                 ).format(self.table_name))
     
-    def update_generated_doctype_name(self):
-        """Update the generated DocType name using new convention"""
-        if self.application and self.table_name:
-            self.doctype_name = self.get_generated_doctype_name()
-    
-    def auto_generate_doctype_name(self):
-        """Auto-generate DocType name - requires application and table_name"""
-        if not self.doctype_name:
-            if self.application and self.table_name:
-                # Use proper app-based naming
-                proper_name = self.get_generated_doctype_name()
-                if proper_name:
-                    self.doctype_name = proper_name
-            else:
-                # No fallback - application and table_name are required
-                frappe.throw(_("Application and Table Name are required for DocType generation"))
+    # Removed redundant DocType naming methods - only get_generated_doctype_name() is needed
     
     def get_generated_doctype_name(self):
         """Get the generated DocType name using ID-based naming for guaranteed uniqueness"""

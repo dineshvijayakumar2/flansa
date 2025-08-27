@@ -8,10 +8,8 @@ frappe.ui.form.on('Flansa Table', {
             add_flansa_indicators(frm);
         }
         
-        // Auto-populate doctype_name if empty
-        if (!frm.doc.doctype_name && frm.doc.table_label) {
-            frm.set_value('doctype_name', generate_doctype_name(frm.doc.table_label));
-        }
+        // Auto-populate doctype_name will be handled server-side using ID-based naming
+        // No need to set it in JavaScript - let the server generate it properly
     },
     
     table_label(frm) {
@@ -25,16 +23,11 @@ frappe.ui.form.on('Flansa Table', {
             frm.set_value('table_name', table_name);
         }
         
-        if (frm.doc.table_label && !frm.doc.doctype_name) {
-            frm.set_value('doctype_name', generate_doctype_name(frm.doc.table_label));
-        }
+        // DocType name generation will be handled server-side with ID-based naming
     },
     
     table_name(frm) {
-        // Auto-generate doctype_name when table_name changes
-        if (frm.doc.table_name && !frm.doc.doctype_name) {
-            frm.set_value('doctype_name', generate_doctype_name(frm.doc.table_name));
-        }
+        // DocType name generation will be handled server-side with ID-based naming
     }
 });
 
@@ -149,9 +142,7 @@ function add_flansa_indicators(frm) {
     }
 }
 
-function generate_doctype_name(label) {
-    return 'FLS' + label.replace(/[^a-zA-Z0-9]/g, '').substring(0, 20);
-}
+// Removed generate_doctype_name function - DocType naming now handled server-side with ID-based naming
 
 function open_visual_builder_with_app_name(frm) {
     const app_name = frm.doc.application || frm.doc.app_name;
