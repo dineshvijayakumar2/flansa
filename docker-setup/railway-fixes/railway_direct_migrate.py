@@ -27,7 +27,6 @@ def run_direct_migration():
         print("🔍 Step 2: Running migration patches...", flush=True)
         
         # Import migration functions directly
-        from frappe.migrate import migrate
         from frappe.modules.patch_handler import run_all
         
         # Run migration for current site
