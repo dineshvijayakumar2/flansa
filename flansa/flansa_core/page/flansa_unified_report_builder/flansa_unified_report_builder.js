@@ -265,6 +265,77 @@ class UnifiedReportBuilder {
     }
 
     build_report_config() {
+        // Build filters from UI
+        const filters = [];
+        $('.filter-item').each(function() {
+            const fieldSelect = $(this).find('.field-select');
+            const operatorSelect = $(this).find('.operator-select');
+            const valueInput = $(this).find('.filter-value');
+            const valueDropdown = $(this).find('.filter-dropdown');
+            
+            if (fieldSelect.val()) {
+                const operator = operatorSelect.val();
+                let value = '';
+                
+                // Get value from dropdown or input
+                if (valueDropdown.is(':visible')) {
+                    if (valueDropdown.val() === '__choose__') {
+                        return; // Skip if not selected
+                    }
+                    value = valueDropdown.val() || '';
+                } else if (valueInput.is(':visible')) {
+                    value = valueInput.val() || '';
+                }
+                
+                // Handle empty value checks
+                if (['is', 'is not'].includes(operator)) {
+                    value = 'null';
+                }
+                
+                filters.push({
+                    field: fieldSelect.val(),
+                    operator: operator,
+                    value: value
+                });
+            }
+        });
+        
+        // Build sorting from UI  
+        const sort = [];
+        $('.sort-item').each(function() {
+            const fieldSelect = $(this).find('.sort-field-select');
+            const directionSelect = $(this).find('.sort-direction-select');
+            
+            if (fieldSelect.val()) {
+                sort.push({
+                    field: fieldSelect.val(),
+                    direction: directionSelect.val()
+                });
+            }
+        });
+        
+        // Build grouping from UI
+        const grouping = [];
+        $('.group-item').each(function() {
+            const fieldSelect = $(this).find('.group-field-select');
+            const periodSelect = $(this).find('.group-period-select');
+            const aggregateSelect = $(this).find('.group-aggregate-select');
+            
+            if (fieldSelect.val()) {
+                const group = {
+                    field: fieldSelect.val(),
+                    aggregate: aggregateSelect.val()
+                };
+                
+                // Add period if visible (for date fields)
+                if (periodSelect.is(':visible')) {
+                    group.period = periodSelect.val();
+                }
+                
+                grouping.push(group);
+            }
+        });
+        
         // Enhanced configuration builder
         const config = {
             base_table: this.current_table,
@@ -272,9 +343,9 @@ class UnifiedReportBuilder {
                 ...field,
                 custom_label: field.custom_label || field.field_label
             })),
-            filters: this.filters,
-            sort: this.sort_config,
-            grouping: this.grouping_config
+            filters: filters,
+            sort: sort,
+            grouping: grouping
         };
         
         console.log('Built enhanced report config:', config);
@@ -1184,19 +1255,217 @@ class UnifiedReportBuilder {
         });
     }
 
-    add_filter() {
-        // Filter addition logic
-        console.log('Adding filter...');
+    add_filter(existingFilter = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        const container = $('#filters-container');
+        const filterDiv = $(`
+            <div class="filter-item mb-2" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select class="form-control form-control-sm field-select" style="flex: 1;">
+                    ${this.selected_fields.map(f => `<option value="${f.fieldname}" ${existingFilter && existingFilter.field === f.fieldname ? 'selected' : ''}>${f.custom_label || f.field_label}</option>`).join('')}
+                </select>
+                <select class="form-control form-control-sm operator-select" style="flex: 1;">
+                    <option value="=" ${existingFilter && existingFilter.operator === '=' ? 'selected' : ''}>Equals</option>
+                    <option value="!=" ${existingFilter && existingFilter.operator === '!=' ? 'selected' : ''}>Not Equals</option>
+                    <option value="like" ${existingFilter && existingFilter.operator === 'like' ? 'selected' : ''}>Contains</option>
+                    <option value="not like" ${existingFilter && existingFilter.operator === 'not like' ? 'selected' : ''}>Does Not Contain</option>
+                    <option value=">" ${existingFilter && existingFilter.operator === '>' ? 'selected' : ''}>Greater Than</option>
+                    <option value="<" ${existingFilter && existingFilter.operator === '<' ? 'selected' : ''}>Less Than</option>
+                    <option value=">=" ${existingFilter && existingFilter.operator === '>=' ? 'selected' : ''}>Greater or Equal</option>
+                    <option value="<=" ${existingFilter && existingFilter.operator === '<=' ? 'selected' : ''}>Less or Equal</option>
+                    <option value="is" ${existingFilter && existingFilter.operator === 'is' ? 'selected' : ''}>Is Empty</option>
+                    <option value="is not" ${existingFilter && existingFilter.operator === 'is not' ? 'selected' : ''}>Is Not Empty</option>
+                </select>
+                <div class="filter-value-container" style="flex: 1;">
+                    <input type="text" class="form-control form-control-sm filter-value" placeholder="Value" value="${existingFilter ? existingFilter.value || '' : ''}">
+                    <select class="form-control form-control-sm filter-dropdown" style="display: none;"></select>
+                </div>
+                <button class="btn btn-sm btn-outline-danger remove-filter-btn">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        container.append(filterDiv);
+        
+        // Bind remove event
+        filterDiv.find('.remove-filter-btn').on('click', function() {
+            $(this).closest('.filter-item').remove();
+        });
+        
+        // Handle field-specific value input
+        const fieldSelect = filterDiv.find('.field-select');
+        const operatorSelect = filterDiv.find('.operator-select');
+        const valueInput = filterDiv.find('.filter-value');
+        const valueDropdown = filterDiv.find('.filter-dropdown');
+        
+        const handleFieldChange = async () => {
+            const selectedFieldname = fieldSelect.val();
+            const selectedField = this.selected_fields.find(f => f.fieldname === selectedFieldname);
+            
+            if (selectedField && ['Select', 'Link'].includes(selectedField.fieldtype)) {
+                try {
+                    const options = await this.get_field_options(selectedField);
+                    if (options && options.length > 0) {
+                        valueDropdown.empty();
+                        valueDropdown.append('<option value="__choose__">Choose...</option>');
+                        valueDropdown.append('<option value="">Empty</option>');
+                        options.forEach(option => {
+                            valueDropdown.append(`<option value="${option.value}">${option.label}</option>`);
+                        });
+                        valueInput.hide();
+                        valueDropdown.show();
+                    } else {
+                        valueInput.show();
+                        valueDropdown.hide();
+                    }
+                } catch (error) {
+                    console.warn('Could not load field options:', error);
+                    valueInput.show();
+                    valueDropdown.hide();
+                }
+            } else {
+                valueInput.show();
+                valueDropdown.hide();
+            }
+        };
+        
+        fieldSelect.on('change', handleFieldChange);
+        handleFieldChange(); // Initialize
     }
 
-    add_sort() {
-        // Sort addition logic
-        console.log('Adding sort...');
+    add_sort(existingSort = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        const container = $('#sort-container');
+        const sortDiv = $(`
+            <div class="sort-item mb-2" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select class="form-control form-control-sm sort-field-select" style="flex: 2;">
+                    ${this.selected_fields.map(f => `<option value="${f.fieldname}" ${existingSort && existingSort.field === f.fieldname ? 'selected' : ''}>${f.custom_label || f.field_label}</option>`).join('')}
+                </select>
+                <select class="form-control form-control-sm sort-direction-select" style="flex: 1;">
+                    <option value="asc" ${existingSort && existingSort.direction === 'asc' ? 'selected' : ''}>Ascending</option>
+                    <option value="desc" ${existingSort && existingSort.direction === 'desc' ? 'selected' : ''}>Descending</option>
+                </select>
+                <button class="btn btn-sm btn-outline-danger remove-sort-btn">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        container.append(sortDiv);
+        
+        // Bind remove event
+        sortDiv.find('.remove-sort-btn').on('click', function() {
+            $(this).closest('.sort-item').remove();
+        });
     }
 
-    add_grouping() {
-        // Grouping addition logic
-        console.log('Adding grouping...');
+    add_grouping(existingGroup = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        // Determine which fields can be grouped
+        const groupableFields = this.selected_fields.filter(f => 
+            ['Data', 'Select', 'Link', 'Date', 'Datetime', 'Text', 'Small Text'].includes(f.fieldtype)
+        );
+        
+        if (groupableFields.length === 0) {
+            frappe.msgprint('No suitable fields for grouping. Select text, select, link or date fields.');
+            return;
+        }
+        
+        const container = $('#grouping-container');
+        const groupDiv = $(`
+            <div class="group-item mb-2" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select class="form-control form-control-sm group-field-select" style="flex: 2;">
+                    ${groupableFields.map(f => `<option value="${f.fieldname}" ${existingGroup && existingGroup.field === f.fieldname ? 'selected' : ''}>${f.custom_label || f.field_label}</option>`).join('')}
+                </select>
+                <select class="form-control form-control-sm group-period-select" style="display: none; flex: 1;">
+                    <option value="exact" ${existingGroup && existingGroup.period === 'exact' ? 'selected' : ''}>Exact Value</option>
+                    <option value="year" ${existingGroup && existingGroup.period === 'year' ? 'selected' : ''}>By Year</option>
+                    <option value="month" ${existingGroup && existingGroup.period === 'month' ? 'selected' : ''}>By Month</option>
+                    <option value="week" ${existingGroup && existingGroup.period === 'week' ? 'selected' : ''}>By Week</option>
+                    <option value="day" ${existingGroup && existingGroup.period === 'day' ? 'selected' : ''}>By Day</option>
+                    <option value="hour" ${existingGroup && existingGroup.period === 'hour' ? 'selected' : ''}>By Hour</option>
+                </select>
+                <select class="form-control form-control-sm group-aggregate-select" style="flex: 1;">
+                    <option value="group" ${existingGroup && existingGroup.aggregate === 'group' ? 'selected' : ''}>Group Only</option>
+                    <option value="count" ${existingGroup && existingGroup.aggregate === 'count' ? 'selected' : ''}>Count Records</option>
+                    <option value="sum" ${existingGroup && existingGroup.aggregate === 'sum' ? 'selected' : ''}>Sum Values</option>
+                    <option value="avg" ${existingGroup && existingGroup.aggregate === 'avg' ? 'selected' : ''}>Average Values</option>
+                    <option value="min" ${existingGroup && existingGroup.aggregate === 'min' ? 'selected' : ''}>Minimum Value</option>
+                    <option value="max" ${existingGroup && existingGroup.aggregate === 'max' ? 'selected' : ''}>Maximum Value</option>
+                </select>
+                <button class="btn btn-sm btn-outline-danger remove-group-btn">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        container.append(groupDiv);
+        
+        // Add event handler to show/hide time period options
+        const fieldSelect = groupDiv.find('.group-field-select');
+        const periodSelect = groupDiv.find('.group-period-select');
+        
+        const updatePeriodVisibility = () => {
+            const selectedField = groupableFields.find(f => f.fieldname === fieldSelect.val());
+            if (selectedField && ['Date', 'Datetime'].includes(selectedField.fieldtype)) {
+                periodSelect.show();
+            } else {
+                periodSelect.hide();
+                periodSelect.val('exact'); // Reset to default
+            }
+        };
+        
+        fieldSelect.on('change', updatePeriodVisibility);
+        updatePeriodVisibility(); // Initialize on creation
+        
+        // Bind remove event
+        groupDiv.find('.remove-group-btn').on('click', function() {
+            $(this).closest('.group-item').remove();
+        });
+    }
+    
+    async get_field_options(field) {
+        // Get dropdown options for Link/Select fields
+        try {
+            if (field.fieldtype === 'Link' && field.options) {
+                const response = await frappe.call({
+                    method: 'frappe.desk.search.search_link',
+                    args: {
+                        doctype: field.options,
+                        txt: '',
+                        page_length: 20
+                    }
+                });
+                
+                if (response.message) {
+                    return response.message.map(item => ({
+                        value: item.value,
+                        label: item.description || item.value
+                    }));
+                }
+            } else if (field.fieldtype === 'Select' && field.options) {
+                return field.options.split('\n').filter(opt => opt.trim()).map(opt => ({
+                    value: opt.trim(),
+                    label: opt.trim()
+                }));
+            }
+        } catch (error) {
+            console.warn('Could not load field options:', error);
+        }
+        
+        return null;
     }
 }
 
