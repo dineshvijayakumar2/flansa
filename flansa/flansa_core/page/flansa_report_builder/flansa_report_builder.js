@@ -3791,11 +3791,11 @@ class FlansaReportBuilder {
         }
         
         if (this.preselected_table) {
-            // Navigate back to Visual Builder with the same table
-            window.location.href = `/app/flansa-visual-builder/${this.preselected_table}`;
+            // Navigate back to Table Builder with the same table
+            window.location.href = `/app/flansa-table-builder/${this.preselected_table}`;
         } else {
-            // Navigate to general Visual Builder
-            window.location.href = '/app/flansa-visual-builder';
+            // Navigate to general Table Builder
+            window.location.href = '/app/flansa-table-builder';
         }
     }
 
@@ -4139,7 +4139,7 @@ class FlansaReportBuilder {
         $(document).on('click', '#quick-nav-table-builder', (e) => {
             e.preventDefault();
             if (this.filter_app) {
-                window.location.href = `/app/flansa-visual-builder/${this.filter_app}`;
+                window.location.href = `/app/flansa-table-builder/${this.filter_app}`;
             } else {
                 frappe.show_alert('App information not available', 'orange');
             }
@@ -4308,7 +4308,7 @@ class FlansaReportBuilder {
                 if (table_response.message) {
                     frappe.breadcrumbs.add(
                         table_response.message.table_label || this.filter_table,
-                        `/app/flansa-visual-builder/${this.filter_table}`
+                        `/app/flansa-table-builder/${this.filter_table}`
                     );
                 }
             } catch (error) {
@@ -4343,7 +4343,7 @@ class FlansaReportBuilder {
             // Show app name indicator
             this.show_app_name_indicator(this.filter_app);
         } else if (this.filter_table) {
-            breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-visual-builder/${this.filter_table}` });
+            breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-table-builder/${this.filter_table}` });
             breadcrumbs.push({ text: "📊 Reports" });
         } else {
             breadcrumbs.push({ text: "📊 Report Builder" });
@@ -4365,7 +4365,7 @@ class FlansaReportBuilder {
     }
     
     async update_reports_header_count(count, filter_context) {
-        // Update the section header to show report count (consistent with Visual Builder pattern)
+        // Update the section header to show report count (consistent with Table Builder pattern)
         const countText = `${count} report${count !== 1 ? 's' : ''}`;
         
         // Update header title
@@ -4401,10 +4401,10 @@ class FlansaReportBuilder {
             sectionHeaderTitle.html(`<i class="fa fa-bookmark"></i> ${baseTitle}`);
         }
         
-        // Update count display (consistent with Visual Builder's field count display)
+        // Update count display (consistent with Table Builder's field count display)
         const countDisplay = $('.section-header small');
         if (countDisplay.length) {
-            // Simple count display like Visual Builder: "X reports"
+            // Simple count display like Table Builder: "X reports"
             countDisplay.text(countText);
             countDisplay.css('color', 'var(--flansa-text-secondary, var(--flansa-gray-600))');
         }
@@ -4442,8 +4442,8 @@ class FlansaReportBuilder {
             
             // Add table settings button for current table (use same icon as relationships)
             this.page.add_button('🔗 Table Settings', () => {
-                // Use the correct URL format: /app/flansa-visual-builder/TABLE_ID
-                window.location.href = `/app/flansa-visual-builder/${this.filter_table}`;
+                // Use the correct URL format: /app/flansa-table-builder/TABLE_ID
+                window.location.href = `/app/flansa-table-builder/${this.filter_table}`;
             }, 'btn-default');
         }
         

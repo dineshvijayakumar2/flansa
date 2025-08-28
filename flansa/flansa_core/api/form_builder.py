@@ -255,7 +255,7 @@ def upload_gallery_image(docname, fieldname, doctype_name):
 
 @frappe.whitelist()
 def get_table_form_config(table_name, force_refresh=False):
-    """Get form configuration for a Flansa table using native fields"""
+    """Get form configuration for a Flansa table using filtered fields"""
     try:
         # Validate table exists
         if not frappe.db.exists('Flansa Table', table_name):
@@ -264,48 +264,25 @@ def get_table_form_config(table_name, force_refresh=False):
         # Get table document
         table_doc = frappe.get_doc('Flansa Table', table_name)
         
-        # Clear any caching if force refresh requested
-        if force_refresh:
-            if table_doc.doctype_name:
-                frappe.clear_cache(doctype=table_doc.doctype_name)
-                frappe.clear_document_cache(table_doc.doctype_name, table_name)
+        # Clear cache if requested
+        if force_refresh and table_doc.doctype_name:
+            frappe.clear_cache(doctype=table_doc.doctype_name)
+            frappe.clear_document_cache(table_doc.doctype_name, table_name)
         
-        # Get fields directly from DocType
-        fields_data = []
+        # Get filtered fields using consistent Visual Builder API
+        from flansa.flansa_core.api.field_management import get_visual_builder_fields
+        fields_result = get_visual_builder_fields(table_name)
         
-        if table_doc.doctype_name and frappe.db.exists("DocType", table_doc.doctype_name):
-            doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
-            for field in doctype_doc.fields:
-                # Include ALL fields (including system fields) for form builder
-                fields_data.append({
-                    'fieldname': field.fieldname,
-                    'label': field.label or field.fieldname,
-                    'fieldtype': field.fieldtype,
-                    'options': field.options or '',
-                    'reqd': field.reqd or 0,
-                    'read_only': field.read_only or 0,
-                    'description': field.description or ''
-                })
+        if not fields_result.get('success'):
+            return {'success': False, 'error': fields_result.get('error', 'Failed to get fields')}
         
-        native_result = {'success': True, 'fields': fields_data}
+        # Use fields directly from the Visual Builder API - no redundant formatting
+        fields = fields_result.get('fields', [])
         
-        # Format fields for form builder - simplified
-        formatted_fields = []
-        
-        for field in native_result.get('fields', []):
-            formatted_fields.append({
-                'field_name': field['fieldname'],
-                'field_label': field['label'],
-                'field_type': field['fieldtype'],
-                'options': field.get('options', ''),
-                'is_required': field.get('reqd', 0),
-                'is_readonly': field.get('read_only', 0),
-                'description': field.get('description', '')
-            })
-        
-        # Check if form configuration already exists
+        # Get form configuration if exists
         form_config = {}
         field_overrides = {}
+        
         if frappe.db.exists('Flansa Form Config', table_name):
             form_doc = frappe.get_doc('Flansa Form Config', table_name)
             form_config = {
@@ -316,32 +293,32 @@ def get_table_form_config(table_name, force_refresh=False):
                 'form_title': form_doc.form_title,
                 'form_description': form_doc.form_description
             }
-            # Parse field overrides for display customization
+            # Parse field overrides
             if form_doc.field_overrides:
                 try:
                     field_overrides = json.loads(form_doc.field_overrides)
                 except:
                     field_overrides = {}
         
-        # Apply field overrides to formatted fields
-        for field in formatted_fields:
-            field_name = field['field_name']
-            if field_name in field_overrides:
-                override = field_overrides[field_name]
-                # Apply display overrides
-                if override.get('hide_description'):
-                    field['description'] = ''
-                if override.get('custom_label'):
-                    field['field_label'] = override['custom_label']
-                if override.get('show_custom_help'):
-                    field['description'] = override['show_custom_help']
+        # Apply field overrides if any
+        if field_overrides:
+            for field in fields:
+                field_name = field.get('fieldname')
+                if field_name in field_overrides:
+                    override = field_overrides[field_name]
+                    if override.get('hide_description'):
+                        field['description'] = ''
+                    if override.get('custom_label'):
+                        field['label'] = override['custom_label']
+                    if override.get('show_custom_help'):
+                        field['description'] = override['show_custom_help']
         
         return {
             'success': True,
             'table_name': table_name,
             'table_label': table_doc.table_label,
             'doctype_name': table_doc.doctype_name,
-            'fields': formatted_fields,
+            'fields': fields,
             'form_config': form_config,
             'field_overrides': field_overrides
         }

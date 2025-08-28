@@ -158,7 +158,7 @@ window.FlansaBreadcrumbUtils = {
         if (context.table) {
             this.addBreadcrumb(
                 context.table.label || context.table.name,
-                `/app/flansa-visual-builder/${context.table.name}`
+                `/app/flansa-table-builder/${context.table.name}`
             );
         }
         

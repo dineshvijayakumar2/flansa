@@ -1,5 +1,5 @@
 """
-DocType hooks for Logic Field calculations
+DocType hooks for Logic Field calculations and tenant inheritance
 """
 import frappe
 from flansa.flansa_core.api.flansa_logic_engine import get_logic_engine
@@ -108,4 +108,58 @@ def validate_logic_fields(doc, method=None):
     except Exception as e:
         # Don't break document save if validation fails
         frappe.log_error(f"Logic Field validation error: {str(e)}", "FlansaLogic Validation")
+
+def apply_tenant_inheritance(doc, method=None):
+    """Auto-populate tenant fields for Flansa Generated DocTypes"""
+    
+    # Only apply to Flansa Generated DocTypes
+    if not hasattr(doc, 'meta') or doc.meta.module != "Flansa Generated":
+        return
+    
+    try:
+        # Auto-populate tenant_id if not set
+        if hasattr(doc, 'tenant_id') and not doc.tenant_id:
+            from flansa.id_based_utils import get_tenant_id_from_context
+            doc.tenant_id = get_tenant_id_from_context()
+        
+        # Auto-populate application_id if available from context  
+        if hasattr(doc, 'application_id') and not doc.application_id:
+            # Try to get from session or request context
+            application_id = frappe.local.form_dict.get('application') or frappe.session.get('current_application')
+            if application_id:
+                doc.application_id = application_id
+        
+        # Auto-populate flansa_table_id if available
+        if hasattr(doc, 'flansa_table_id') and not doc.flansa_table_id:
+            # Try to determine from DocType name mapping
+            table_mapping = frappe.cache().get_value("flansa_doctype_table_mapping")
+            if table_mapping and doc.doctype in table_mapping:
+                doc.flansa_table_id = table_mapping[doc.doctype]
+            else:
+                # Rebuild table mapping cache if not found
+                rebuild_doctype_table_mapping()
+                table_mapping = frappe.cache().get_value("flansa_doctype_table_mapping")
+                if table_mapping and doc.doctype in table_mapping:
+                    doc.flansa_table_id = table_mapping[doc.doctype]
+    
+    except Exception as e:
+        frappe.log_error(f"Tenant inheritance error: {str(e)}", "Tenant Inheritance")
+
+def rebuild_doctype_table_mapping():
+    """Rebuild the DocType to Table mapping cache"""
+    try:
+        tables = frappe.get_all("Flansa Table", 
+            filters={"doctype_name": ["!=", ""]},
+            fields=["name", "doctype_name"]
+        )
+        
+        table_mapping = {}
+        for table in tables:
+            if table.doctype_name:
+                table_mapping[table.doctype_name] = table.name
+        
+        frappe.cache().set_value("flansa_doctype_table_mapping", table_mapping)
+        
+    except Exception as e:
+        frappe.log_error(f"Error rebuilding DocType table mapping: {str(e)}", "Tenant Inheritance")
 
