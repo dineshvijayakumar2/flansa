@@ -106,7 +106,7 @@ def add_missing_naming_fields():
             ('naming_prefix', 'Data', 'Naming Prefix', None, None),
             ('naming_digits', 'Int', 'Number of Digits', None, 5),
             ('naming_start_from', 'Int', 'Start From', None, 1),
-            ('naming_field', 'Link', 'Naming Field', 'Flansa Field', None),
+            ('naming_field', 'Data', 'Naming Field', None, None),  # Changed to Data instead of Link
             ('naming_expression', 'Small Text', 'Naming Expression', None, None),
             ('show_gallery', 'Check', 'Show Gallery', None, 0)
         ]
