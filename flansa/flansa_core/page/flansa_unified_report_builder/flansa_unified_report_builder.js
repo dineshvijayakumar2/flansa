@@ -4500,7 +4500,7 @@ class FlansaReportBuilder {
 }
 
 // Initialize the Report Builder when page loads
-frappe.pages['flansa-unified-report-builder-v2'].on_page_load = function(wrapper) {
+frappe.pages['flansa-unified-report-builder'].on_page_load = function(wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
         title: 'Unified Report Builder',
@@ -4515,16 +4515,11 @@ frappe.pages['flansa-unified-report-builder-v2'].on_page_load = function(wrapper
         }, 100);
     }
     
-    // Load the HTML template
-    $(page.body).html(frappe.render_template('flansa_unified_report_builder_v2'));
-    
-    // Initialize the report builder after HTML is loaded
-    setTimeout(() => {
-        window.report_builder = new FlansaReportBuilder(page);
-    }, 100);
+    // Initialize the report builder directly (no template needed)
+    window.report_builder = new FlansaReportBuilder(page);
 };
 
-frappe.pages['flansa-report-builder'].on_page_show = function(wrapper) {
+frappe.pages['flansa-unified-report-builder'].on_page_show = function(wrapper) {
     console.log('=== FRAPPE PAGE SHOW EVENT START ===');
     console.log('Current URL:', window.location.href);
     console.log('Search params:', window.location.search);
