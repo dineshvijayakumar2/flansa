@@ -376,7 +376,7 @@ class FlansaApplicationsWorkspace {
         $('.edit-app-btn').on('click', function() {
             const app_name = $(this).data('app');
             // Navigate to app dashboard which has settings and management options
-            window.location.href = `/app/flansa-app-dashboard?app=${app_name}`;
+            window.location.href = `/app/flansa-app-builder/${app_name}`;
         });
         
         // Delete application
@@ -399,7 +399,7 @@ class FlansaApplicationsWorkspace {
     open_application(app_name) {
         // Navigate to application dashboard page
         // This shows the application home with stats and overview
-        window.location.href = `/app/flansa-app-dashboard?app=${app_name}`;
+        window.location.href = `/app/flansa-app-builder/${app_name}`;
     }
     
     create_new_application() {

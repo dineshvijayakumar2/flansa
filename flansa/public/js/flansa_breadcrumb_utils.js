@@ -151,7 +151,7 @@ window.FlansaBreadcrumbUtils = {
         if (context.application) {
             this.addBreadcrumb(
                 context.application.title || context.application.name,
-                `/app/flansa-app-dashboard/${context.application.name}`
+                `/app/flansa-app-builder/${context.application.name}`
             );
         }
         

@@ -32,7 +32,7 @@ window.FlansaNavigation = {
         
         if (showDashboard && currentPage !== 'dashboard') {
             page.add_menu_item('📱 Application Dashboard', () => {
-                window.location.href = `/app/flansa-app-dashboard/${app_id}`;
+                window.location.href = `/app/flansa-app-builder/${app_id}`;
             });
         }
         

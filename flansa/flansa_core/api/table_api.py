@@ -1051,6 +1051,216 @@ def add_logic_field_entry(table_name, field_config):
         frappe.log_error(f"Error creating Logic Field entry: {str(e)}", "Table API")
         return {"success": False, "error": str(e)}
 
+@frappe.whitelist()
+def get_available_link_targets(table_id, scope='all'):
+    """Get available link targets for a table"""
+    try:
+        targets = []
+        
+        if scope in ['all', 'flansa']:
+            # Get Flansa tables
+            flansa_tables = frappe.get_all("Flansa Table",
+                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                fields=["name", "table_label", "table_name"]
+            )
+            for table in flansa_tables:
+                if table.name != table_id:  # Don't include self
+                    targets.append({
+                        "value": table.name,
+                        "label": f"{table.table_label or table.table_name} (Flansa)",
+                        "type": "flansa"
+                    })
+        
+        if scope in ['all', 'frappe']:
+            # Get standard Frappe doctypes
+            standard_doctypes = frappe.get_all("DocType",
+                filters={"custom": 0, "issingle": 0, "istable": 0},
+                fields=["name"],
+                limit=50
+            )
+            for doctype in standard_doctypes:
+                targets.append({
+                    "value": doctype.name,
+                    "label": f"{doctype.name} (Frappe)",
+                    "type": "frappe"
+                })
+        
+        return {
+            "success": True,
+            "targets": sorted(targets, key=lambda x: x['label'])
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link targets: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "targets": []}
+
+@frappe.whitelist()
+def get_link_fields(table_id):
+    """Get link fields for a specific table"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all Link type fields
+        link_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype == 'Link':
+                link_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "options": field.options
+                })
+        
+        return {
+            "success": True,
+            "fields": link_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_target_fields_for_link(table_id, link_field):
+    """Get target fields for a link field"""
+    try:
+        # Get table data and link field options
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        meta = frappe.get_meta(doctype_name)
+        link_field_meta = None
+        
+        for field in meta.fields:
+            if field.fieldname == link_field:
+                link_field_meta = field
+                break
+        
+        if not link_field_meta:
+            return {"success": False, "error": "Link field not found", "fields": []}
+        
+        target_doctype = link_field_meta.options
+        target_fields = []
+        
+        # Check if it's a Flansa table
+        flansa_table = frappe.db.exists("Flansa Table", {"name": target_doctype})
+        if flansa_table:
+            flansa_doc = frappe.get_doc("Flansa Table", flansa_table)
+            target_meta = frappe.get_meta(flansa_doc.doctype_name)
+        else:
+            target_meta = frappe.get_meta(target_doctype)
+        
+        for field in target_meta.fields:
+            if field.fieldtype in ['Data', 'Text', 'Int', 'Float', 'Currency', 'Date', 'Datetime']:
+                target_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": target_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting target fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_child_tables(table_id):
+    """Get child tables for rollup calculations"""
+    try:
+        # For now, return all other Flansa tables as potential child tables
+        # In a real implementation, you might want to check for actual relationships
+        child_tables = frappe.get_all("Flansa Table",
+            filters=apply_tenant_filter({
+                "status": ["!=", "Deleted"],
+                "name": ["!=", table_id]
+            }),
+            fields=["name", "table_label", "table_name"]
+        )
+        
+        formatted_tables = []
+        for table in child_tables:
+            formatted_tables.append({
+                "name": table.name,
+                "label": table.table_label or table.table_name
+            })
+        
+        return {
+            "success": True,
+            "tables": formatted_tables
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting child tables: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "tables": []}
+
+@frappe.whitelist()
+def get_numeric_fields(table_id):
+    """Get numeric fields from a table for rollup calculations"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all numeric fields
+        numeric_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype in ['Int', 'Float', 'Currency']:
+                numeric_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": numeric_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting numeric fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def test_logic_field(expression, sample_data='{"field1": 10, "field2": 20}'):
+    """Test a logic field expression with sample data"""
+    try:
+        import json
+        from flansa.flansa_core.logic_engine import get_logic_engine
+        
+        # Parse sample data
+        try:
+            data = json.loads(sample_data) if isinstance(sample_data, str) else sample_data
+        except:
+            data = {"field1": 10, "field2": 20}
+        
+        # Get logic engine and evaluate
+        engine = get_logic_engine()
+        result = engine.evaluate_logic(expression, data)
+        
+        return {
+            "success": True,
+            "result": result,
+            "expression": expression,
+            "sample_data": data
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error testing logic field: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "expression": expression
+        }
+
 
 @frappe.whitelist()
 def add_logic_field_entry_with_migration(table_name, field_config):
@@ -1242,6 +1452,216 @@ def add_logic_field_entry_with_migration(table_name, field_config):
         frappe.db.rollback()
         frappe.log_error(f"Error creating Logic Field with migration: {str(e)}", "Table API")
         return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def get_available_link_targets(table_id, scope='all'):
+    """Get available link targets for a table"""
+    try:
+        targets = []
+        
+        if scope in ['all', 'flansa']:
+            # Get Flansa tables
+            flansa_tables = frappe.get_all("Flansa Table",
+                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                fields=["name", "table_label", "table_name"]
+            )
+            for table in flansa_tables:
+                if table.name != table_id:  # Don't include self
+                    targets.append({
+                        "value": table.name,
+                        "label": f"{table.table_label or table.table_name} (Flansa)",
+                        "type": "flansa"
+                    })
+        
+        if scope in ['all', 'frappe']:
+            # Get standard Frappe doctypes
+            standard_doctypes = frappe.get_all("DocType",
+                filters={"custom": 0, "issingle": 0, "istable": 0},
+                fields=["name"],
+                limit=50
+            )
+            for doctype in standard_doctypes:
+                targets.append({
+                    "value": doctype.name,
+                    "label": f"{doctype.name} (Frappe)",
+                    "type": "frappe"
+                })
+        
+        return {
+            "success": True,
+            "targets": sorted(targets, key=lambda x: x['label'])
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link targets: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "targets": []}
+
+@frappe.whitelist()
+def get_link_fields(table_id):
+    """Get link fields for a specific table"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all Link type fields
+        link_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype == 'Link':
+                link_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "options": field.options
+                })
+        
+        return {
+            "success": True,
+            "fields": link_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_target_fields_for_link(table_id, link_field):
+    """Get target fields for a link field"""
+    try:
+        # Get table data and link field options
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        meta = frappe.get_meta(doctype_name)
+        link_field_meta = None
+        
+        for field in meta.fields:
+            if field.fieldname == link_field:
+                link_field_meta = field
+                break
+        
+        if not link_field_meta:
+            return {"success": False, "error": "Link field not found", "fields": []}
+        
+        target_doctype = link_field_meta.options
+        target_fields = []
+        
+        # Check if it's a Flansa table
+        flansa_table = frappe.db.exists("Flansa Table", {"name": target_doctype})
+        if flansa_table:
+            flansa_doc = frappe.get_doc("Flansa Table", flansa_table)
+            target_meta = frappe.get_meta(flansa_doc.doctype_name)
+        else:
+            target_meta = frappe.get_meta(target_doctype)
+        
+        for field in target_meta.fields:
+            if field.fieldtype in ['Data', 'Text', 'Int', 'Float', 'Currency', 'Date', 'Datetime']:
+                target_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": target_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting target fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_child_tables(table_id):
+    """Get child tables for rollup calculations"""
+    try:
+        # For now, return all other Flansa tables as potential child tables
+        # In a real implementation, you might want to check for actual relationships
+        child_tables = frappe.get_all("Flansa Table",
+            filters=apply_tenant_filter({
+                "status": ["!=", "Deleted"],
+                "name": ["!=", table_id]
+            }),
+            fields=["name", "table_label", "table_name"]
+        )
+        
+        formatted_tables = []
+        for table in child_tables:
+            formatted_tables.append({
+                "name": table.name,
+                "label": table.table_label or table.table_name
+            })
+        
+        return {
+            "success": True,
+            "tables": formatted_tables
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting child tables: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "tables": []}
+
+@frappe.whitelist()
+def get_numeric_fields(table_id):
+    """Get numeric fields from a table for rollup calculations"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all numeric fields
+        numeric_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype in ['Int', 'Float', 'Currency']:
+                numeric_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": numeric_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting numeric fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def test_logic_field(expression, sample_data='{"field1": 10, "field2": 20}'):
+    """Test a logic field expression with sample data"""
+    try:
+        import json
+        from flansa.flansa_core.logic_engine import get_logic_engine
+        
+        # Parse sample data
+        try:
+            data = json.loads(sample_data) if isinstance(sample_data, str) else sample_data
+        except:
+            data = {"field1": 10, "field2": 20}
+        
+        # Get logic engine and evaluate
+        engine = get_logic_engine()
+        result = engine.evaluate_logic(expression, data)
+        
+        return {
+            "success": True,
+            "result": result,
+            "expression": expression,
+            "sample_data": data
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error testing logic field: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "expression": expression
+        }
 
 
 @frappe.whitelist()
@@ -2011,6 +2431,216 @@ def get_logic_field_for_field(table_name, field_name):
         return {"success": False, "error": str(e)}
 
 @frappe.whitelist()
+def get_available_link_targets(table_id, scope='all'):
+    """Get available link targets for a table"""
+    try:
+        targets = []
+        
+        if scope in ['all', 'flansa']:
+            # Get Flansa tables
+            flansa_tables = frappe.get_all("Flansa Table",
+                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                fields=["name", "table_label", "table_name"]
+            )
+            for table in flansa_tables:
+                if table.name != table_id:  # Don't include self
+                    targets.append({
+                        "value": table.name,
+                        "label": f"{table.table_label or table.table_name} (Flansa)",
+                        "type": "flansa"
+                    })
+        
+        if scope in ['all', 'frappe']:
+            # Get standard Frappe doctypes
+            standard_doctypes = frappe.get_all("DocType",
+                filters={"custom": 0, "issingle": 0, "istable": 0},
+                fields=["name"],
+                limit=50
+            )
+            for doctype in standard_doctypes:
+                targets.append({
+                    "value": doctype.name,
+                    "label": f"{doctype.name} (Frappe)",
+                    "type": "frappe"
+                })
+        
+        return {
+            "success": True,
+            "targets": sorted(targets, key=lambda x: x['label'])
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link targets: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "targets": []}
+
+@frappe.whitelist()
+def get_link_fields(table_id):
+    """Get link fields for a specific table"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all Link type fields
+        link_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype == 'Link':
+                link_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "options": field.options
+                })
+        
+        return {
+            "success": True,
+            "fields": link_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_target_fields_for_link(table_id, link_field):
+    """Get target fields for a link field"""
+    try:
+        # Get table data and link field options
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        meta = frappe.get_meta(doctype_name)
+        link_field_meta = None
+        
+        for field in meta.fields:
+            if field.fieldname == link_field:
+                link_field_meta = field
+                break
+        
+        if not link_field_meta:
+            return {"success": False, "error": "Link field not found", "fields": []}
+        
+        target_doctype = link_field_meta.options
+        target_fields = []
+        
+        # Check if it's a Flansa table
+        flansa_table = frappe.db.exists("Flansa Table", {"name": target_doctype})
+        if flansa_table:
+            flansa_doc = frappe.get_doc("Flansa Table", flansa_table)
+            target_meta = frappe.get_meta(flansa_doc.doctype_name)
+        else:
+            target_meta = frappe.get_meta(target_doctype)
+        
+        for field in target_meta.fields:
+            if field.fieldtype in ['Data', 'Text', 'Int', 'Float', 'Currency', 'Date', 'Datetime']:
+                target_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": target_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting target fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_child_tables(table_id):
+    """Get child tables for rollup calculations"""
+    try:
+        # For now, return all other Flansa tables as potential child tables
+        # In a real implementation, you might want to check for actual relationships
+        child_tables = frappe.get_all("Flansa Table",
+            filters=apply_tenant_filter({
+                "status": ["!=", "Deleted"],
+                "name": ["!=", table_id]
+            }),
+            fields=["name", "table_label", "table_name"]
+        )
+        
+        formatted_tables = []
+        for table in child_tables:
+            formatted_tables.append({
+                "name": table.name,
+                "label": table.table_label or table.table_name
+            })
+        
+        return {
+            "success": True,
+            "tables": formatted_tables
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting child tables: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "tables": []}
+
+@frappe.whitelist()
+def get_numeric_fields(table_id):
+    """Get numeric fields from a table for rollup calculations"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all numeric fields
+        numeric_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype in ['Int', 'Float', 'Currency']:
+                numeric_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": numeric_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting numeric fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def test_logic_field(expression, sample_data='{"field1": 10, "field2": 20}'):
+    """Test a logic field expression with sample data"""
+    try:
+        import json
+        from flansa.flansa_core.logic_engine import get_logic_engine
+        
+        # Parse sample data
+        try:
+            data = json.loads(sample_data) if isinstance(sample_data, str) else sample_data
+        except:
+            data = {"field1": 10, "field2": 20}
+        
+        # Get logic engine and evaluate
+        engine = get_logic_engine()
+        result = engine.evaluate_logic(expression, data)
+        
+        return {
+            "success": True,
+            "result": result,
+            "expression": expression,
+            "sample_data": data
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error testing logic field: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "expression": expression
+        }
+
+@frappe.whitelist()
 def get_logic_field_for_field(table_name, field_name):
     """Get Logic Field entry for a specific field if it exists"""
     try:
@@ -2038,4 +2668,339 @@ def get_logic_field_for_field(table_name, field_name):
         
     except Exception as e:
         frappe.log_error(f"Error getting Logic Field for field: {str(e)}", "Table API")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def get_available_link_targets(table_id, scope='all'):
+    """Get available link targets for a table"""
+    try:
+        targets = []
+        
+        if scope in ['all', 'flansa']:
+            # Get Flansa tables
+            flansa_tables = frappe.get_all("Flansa Table",
+                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                fields=["name", "table_label", "table_name"]
+            )
+            for table in flansa_tables:
+                if table.name != table_id:  # Don't include self
+                    targets.append({
+                        "value": table.name,
+                        "label": f"{table.table_label or table.table_name} (Flansa)",
+                        "type": "flansa"
+                    })
+        
+        if scope in ['all', 'frappe']:
+            # Get standard Frappe doctypes
+            standard_doctypes = frappe.get_all("DocType",
+                filters={"custom": 0, "issingle": 0, "istable": 0},
+                fields=["name"],
+                limit=50
+            )
+            for doctype in standard_doctypes:
+                targets.append({
+                    "value": doctype.name,
+                    "label": f"{doctype.name} (Frappe)",
+                    "type": "frappe"
+                })
+        
+        return {
+            "success": True,
+            "targets": sorted(targets, key=lambda x: x['label'])
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link targets: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "targets": []}
+
+@frappe.whitelist()
+def get_link_fields(table_id):
+    """Get link fields for a specific table"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all Link type fields
+        link_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype == 'Link':
+                link_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "options": field.options
+                })
+        
+        return {
+            "success": True,
+            "fields": link_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting link fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_target_fields_for_link(table_id, link_field):
+    """Get target fields for a link field"""
+    try:
+        # Get table data and link field options
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        meta = frappe.get_meta(doctype_name)
+        link_field_meta = None
+        
+        for field in meta.fields:
+            if field.fieldname == link_field:
+                link_field_meta = field
+                break
+        
+        if not link_field_meta:
+            return {"success": False, "error": "Link field not found", "fields": []}
+        
+        target_doctype = link_field_meta.options
+        target_fields = []
+        
+        # Check if it's a Flansa table
+        flansa_table = frappe.db.exists("Flansa Table", {"name": target_doctype})
+        if flansa_table:
+            flansa_doc = frappe.get_doc("Flansa Table", flansa_table)
+            target_meta = frappe.get_meta(flansa_doc.doctype_name)
+        else:
+            target_meta = frappe.get_meta(target_doctype)
+        
+        for field in target_meta.fields:
+            if field.fieldtype in ['Data', 'Text', 'Int', 'Float', 'Currency', 'Date', 'Datetime']:
+                target_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": target_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting target fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def get_child_tables(table_id):
+    """Get child tables for rollup calculations"""
+    try:
+        # For now, return all other Flansa tables as potential child tables
+        # In a real implementation, you might want to check for actual relationships
+        child_tables = frappe.get_all("Flansa Table",
+            filters=apply_tenant_filter({
+                "status": ["!=", "Deleted"],
+                "name": ["!=", table_id]
+            }),
+            fields=["name", "table_label", "table_name"]
+        )
+        
+        formatted_tables = []
+        for table in child_tables:
+            formatted_tables.append({
+                "name": table.name,
+                "label": table.table_label or table.table_name
+            })
+        
+        return {
+            "success": True,
+            "tables": formatted_tables
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting child tables: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "tables": []}
+
+@frappe.whitelist()
+def get_numeric_fields(table_id):
+    """Get numeric fields from a table for rollup calculations"""
+    try:
+        # Get table data
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Get all numeric fields
+        numeric_fields = []
+        meta = frappe.get_meta(doctype_name)
+        
+        for field in meta.fields:
+            if field.fieldtype in ['Int', 'Float', 'Currency']:
+                numeric_fields.append({
+                    "field_name": field.fieldname,
+                    "label": field.label,
+                    "fieldtype": field.fieldtype
+                })
+        
+        return {
+            "success": True,
+            "fields": numeric_fields
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting numeric fields: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e), "fields": []}
+
+@frappe.whitelist()
+def test_logic_field(expression, sample_data='{"field1": 10, "field2": 20}'):
+    """Test a logic field expression with sample data"""
+    try:
+        import json
+        from flansa.flansa_core.logic_engine import get_logic_engine
+        
+        # Parse sample data
+        try:
+            data = json.loads(sample_data) if isinstance(sample_data, str) else sample_data
+        except:
+            data = {"field1": 10, "field2": 20}
+        
+        # Get logic engine and evaluate
+        engine = get_logic_engine()
+        result = engine.evaluate_logic(expression, data)
+        
+        return {
+            "success": True,
+            "result": result,
+            "expression": expression,
+            "sample_data": data
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error testing logic field: {str(e)}", "Table API Error")
+        return {
+            "success": False,
+            "error": str(e),
+            "expression": expression
+        }
+
+
+@frappe.whitelist()
+def add_field_to_table(table_id, field_name, field_type, label=None, description=None, required=0, options=None):
+    """Add a new field to a Flansa table"""
+    try:
+        # Get the table document
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Validate field name
+        if not field_name or not field_name.replace('_', '').replace('-', '').isalnum():
+            return {"success": False, "error": "Invalid field name. Use only letters, numbers, underscores and hyphens."}
+            
+        # Check if field already exists
+        existing_field = frappe.db.exists("Custom Field", {
+            "dt": doctype_name,
+            "fieldname": field_name
+        })
+        
+        if existing_field:
+            return {"success": False, "error": f"Field '{field_name}' already exists"}
+        
+        # Create the custom field
+        custom_field = frappe.get_doc({
+            "doctype": "Custom Field",
+            "dt": doctype_name,
+            "fieldname": field_name,
+            "fieldtype": field_type,
+            "label": label or field_name.replace('_', ' ').title(),
+            "description": description or '',
+            "reqd": int(required),
+            "options": options or '',
+            "insert_after": "title"  # Insert after the title field by default
+        })
+        
+        custom_field.insert()
+        frappe.db.commit()
+        
+        # Clear cache to reflect changes
+        frappe.clear_cache(doctype=doctype_name)
+        
+        return {
+            "success": True,
+            "message": f"Field '{field_name}' added successfully",
+            "field_name": field_name
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error adding field to table: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist() 
+def update_field(table_id, field_name, **kwargs):
+    """Update an existing field in a Flansa table"""
+    try:
+        # Get the table document
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Find the custom field
+        custom_field_name = frappe.db.exists("Custom Field", {
+            "dt": doctype_name,
+            "fieldname": field_name
+        })
+        
+        if not custom_field_name:
+            return {"success": False, "error": f"Field '{field_name}' not found"}
+        
+        # Update the custom field
+        custom_field = frappe.get_doc("Custom Field", custom_field_name)
+        
+        # Update allowed properties
+        allowed_updates = ['label', 'description', 'reqd', 'options']
+        for key, value in kwargs.items():
+            if key in allowed_updates:
+                setattr(custom_field, key, value)
+        
+        custom_field.save()
+        frappe.db.commit()
+        
+        # Clear cache to reflect changes
+        frappe.clear_cache(doctype=doctype_name)
+        
+        return {
+            "success": True,
+            "message": f"Field '{field_name}' updated successfully"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error updating field: {str(e)}", "Table API Error")
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def delete_field(table_id, field_name):
+    """Delete a field from a Flansa table"""
+    try:
+        # Get the table document
+        table_doc = frappe.get_doc("Flansa Table", table_id)
+        doctype_name = table_doc.doctype_name
+        
+        # Find the custom field
+        custom_field_name = frappe.db.exists("Custom Field", {
+            "dt": doctype_name,
+            "fieldname": field_name
+        })
+        
+        if not custom_field_name:
+            return {"success": False, "error": f"Field '{field_name}' not found"}
+        
+        # Delete the custom field
+        frappe.delete_doc("Custom Field", custom_field_name)
+        frappe.db.commit()
+        
+        # Clear cache to reflect changes
+        frappe.clear_cache(doctype=doctype_name)
+        
+        return {
+            "success": True,
+            "message": f"Field '{field_name}' deleted successfully"
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error deleting field: {str(e)}", "Table API Error")
         return {"success": False, "error": str(e)}

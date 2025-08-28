@@ -37,6 +37,8 @@ app_include_js = [
     "/assets/flansa/js/flansa-navigation-service.js",  # Navigation controller
     
     # UI Components
+    "/assets/flansa/js/flansa_global_nav.js",  # Global navigation bar with dark mode and user menu
+    "/assets/flansa/js/flansa_breadcrumb_utils.js",  # Enhanced breadcrumb functionality
     "/assets/flansa/js/flansa-header-manager.js",  # Modern header component system
     "/assets/flansa/js/flansa-unified-data-view.js",  # Unified data view system for tables and reports
     "/assets/flansa/js/flansa_report_renderer.js",  # Shared report display component for consistency
