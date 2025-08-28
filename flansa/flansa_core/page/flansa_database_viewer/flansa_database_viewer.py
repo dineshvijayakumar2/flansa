@@ -194,7 +194,7 @@ def get_table_structure(table_name):
                     n_tup_ins as "Rows",
                     pg_size_pretty(pg_total_relation_size(%s)) as "Data_length"
                 FROM pg_stat_user_tables 
-                WHERE table_name = %s
+                WHERE relname = %s
             """, (quoted_table, table_name), as_dict=True)
             
             # PostgreSQL doesn't have SHOW CREATE TABLE equivalent
