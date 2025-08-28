@@ -25,8 +25,44 @@ class FlansaAppBuilder {
     init() {
         this.make_layout();
         this.load_data();
-        this.load_tenant_logo();
+        this.load_workspace_logo();
         this.bind_events();
+    }
+    
+    getApplicationTitle() {
+        if (this.current_app?.application_title) {
+            return this.current_app.application_title;
+        }
+        if (this.current_app?.application_name) {
+            return this.current_app.application_name;
+        }
+        if (this.current_app?.app_name) {
+            return this.current_app.app_name;
+        }
+        return this.current_app?.name || 'Flansa Application';
+    }
+    
+    getApplicationDescription() {
+        if (this.current_app?.application_description) {
+            return this.current_app.application_description;
+        }
+        if (this.current_app?.description) {
+            return this.current_app.description;
+        }
+        return 'Application builder and data management';
+    }
+    
+    update_banner_info() {
+        const titleElement = document.querySelector('.app-title');
+        const statusElement = document.querySelector('.app-status-inline');
+        
+        if (titleElement && this.current_app) {
+            titleElement.textContent = this.getApplicationTitle();
+        }
+        
+        if (statusElement && this.current_app) {
+            statusElement.textContent = this.getApplicationDescription();
+        }
     }
     
     setup_header() {
@@ -50,9 +86,9 @@ class FlansaAppBuilder {
                         <!-- Main Header Row -->
                         <div class="header-row">
                             <div class="app-info">
-                                <!-- Optional Tenant Logo -->
-                                <div class="tenant-logo-container" id="tenant-logo-container" style="display: none;">
-                                    <img src="" alt="Tenant Logo" class="tenant-logo" id="tenant-logo" />
+                                <!-- Optional Workspace Logo -->
+                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
+                                    <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
                                 </div>
                                 
                                 <div class="app-info-inline">
@@ -205,12 +241,12 @@ class FlansaAppBuilder {
                     gap: 1rem;
                 }
                 
-                /* Tenant Logo */
-                .tenant-logo-container {
+                /* Workspace Logo */
+                .workspace-logo-container {
                     margin-right: 0.5rem;
                 }
                 
-                .tenant-logo {
+                .workspace-logo {
                     height: 36px;
                     width: auto;
                     max-width: 100px;
@@ -774,6 +810,7 @@ class FlansaAppBuilder {
             callback: (r) => {
                 if (r.message) {
                     this.current_app = r.message;
+                    this.update_banner_info(); // Update banner with loaded app data
                     this.load_tables_data();
                 } else {
                     frappe.msgprint('Failed to load application data');
@@ -1346,19 +1383,19 @@ class FlansaAppBuilder {
         frappe.set_route('Form', 'Flansa Application', this.app_id);
     }
     
-    async load_tenant_logo() {
+    async load_workspace_logo() {
         try {
-            // Try to get tenant logo if tenant system is available
+            // Try to get workspace logo if workspace system is available
             const result = await frappe.call({
-                method: 'flansa.flansa_core.tenant_service.get_tenant_logo',
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
                 args: {},
                 freeze: false,
                 quiet: true // Don't show errors if method doesn't exist
             });
             
             if (result.message && result.message.logo) {
-                const logoContainer = document.getElementById('tenant-logo-container');
-                const logoImg = document.getElementById('tenant-logo');
+                const logoContainer = document.getElementById('workspace-logo-container');
+                const logoImg = document.getElementById('workspace-logo');
                 
                 if (logoContainer && logoImg) {
                     logoImg.src = result.message.logo;
@@ -1366,8 +1403,8 @@ class FlansaAppBuilder {
                 }
             }
         } catch (error) {
-            // Silently fail if tenant system isn't available
-            console.debug('Tenant logo not available:', error);
+            // Silently fail if workspace system isn't available
+            console.debug('Workspace logo not available:', error);
         }
     }
 }

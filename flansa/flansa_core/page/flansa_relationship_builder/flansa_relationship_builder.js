@@ -678,34 +678,82 @@ show_create_dialog() {
     render_relationships_list(relationships) {
         const html = `
             <div class="relationships-container">
-                <!-- Compact Modern Header - Now at absolute top -->
-                <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: 0 -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
-                    <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
-                        <i class="fa fa-cube" style="font-size: 18px; opacity: 0.9;"></i>
-                        <span style="font-size: 16px; font-weight: 600;" id="app-name-display">Loading...</span>
-                    </div>
-                    <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
-                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;">🔗 Relationships</h3>
-                        <div class="context-menu-wrapper" style="position: relative;">
-                            <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
-                                ⋯
-                            </button>
-                            <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
-                                <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-paint-brush" style="width: 16px;"></i>
-                                    <span>Theme Settings</span>
+                <!-- Ultra-modern sleek header -->
+                <div class="sleek-header">
+                    <div class="header-backdrop"></div>
+                    <div class="header-content">
+                        <!-- Breadcrumb Trail -->
+                        <nav class="breadcrumb-trail">
+                            <a href="/app/flansa-workspace" class="breadcrumb-link">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                                </svg>
+                                <span>Workspace</span>
+                            </a>
+                            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <a href="/app/flansa-app-builder/${this.app_id || ''}" class="breadcrumb-link">
+                                <span>App Builder</span>
+                            </a>
+                            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="breadcrumb-current">🔗 Relationships</span>
+                        </nav>
+                        
+                        <!-- Application Banner with Workspace Logo -->
+                        <div class="app-banner">
+                            <div class="banner-left">
+                                <!-- Optional Workspace Logo -->
+                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
+                                    <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
                                 </div>
-                                <div class="context-menu-item" data-action="refresh-cache" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-refresh" style="width: 16px;"></i>
-                                    <span>Clear Cache</span>
+                                <!-- App Info Section -->
+                                <div class="app-info">
+                                    <div class="app-icon">📱</div>
+                                    <div class="app-details">
+                                        <h1 class="app-name" id="app-name-display">Loading...</h1>
+                                        <div class="app-type">
+                                            <div class="counter-pill">
+                                                <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                                                </svg>
+                                                <span class="counter-text">Relationships</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div class="context-menu-item" data-action="export-data" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-download" style="width: 16px;"></i>
-                                    <span>Export Relationships</span>
-                                </div>
-                                <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-keyboard-o" style="width: 16px;"></i>
-                                    <span>Keyboard Shortcuts</span>
+                            </div>
+                            <div class="banner-right">
+                                <div class="banner-actions">
+                                    <!-- Stats counter -->
+                                    <div class="stats-pill">
+                                        <span id="relationship-count" class="count">0</span>
+                                        <span>relationships</span>
+                                    </div>
+                                    <!-- Context Menu -->
+                                    <div class="context-menu-wrapper">
+                                        <button id="context-menu-btn" class="context-menu-trigger" title="More options">
+                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM16 12a2 2 0 100-4 2 2 0 000 4z" />
+                                            </svg>
+                                        </button>
+                                        <div id="context-menu" class="context-menu-panel">
+                                            <div class="context-menu-item" data-action="theme">
+                                                <i class="fa fa-paint-brush"></i>
+                                                <span>Theme Settings</span>
+                                            </div>
+                                            <div class="context-menu-item" data-action="refresh-cache">
+                                                <i class="fa fa-refresh"></i>
+                                                <span>Clear Cache</span>
+                                            </div>
+                                            <div class="context-menu-item" data-action="export-data">
+                                                <i class="fa fa-download"></i>
+                                                <span>Export Relationships</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -794,6 +842,223 @@ show_create_dialog() {
                     </div>
                 </div>
             </div>
+            
+            <style>
+                /* Ultra-modern Sleek Header */
+                .sleek-header {
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                    background: white;
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    backdrop-filter: blur(20px);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                }
+                
+                .header-backdrop {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(20px);
+                    z-index: 0;
+                }
+                
+                .header-content {
+                    position: relative;
+                    z-index: 1;
+                    padding: 16px 24px;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                
+                /* Breadcrumb Trail */
+                .breadcrumb-trail {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 13px;
+                    color: #6b7280;
+                    margin: 0;
+                }
+                
+                .breadcrumb-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    color: #6b7280;
+                    text-decoration: none;
+                    transition: color 0.2s;
+                }
+                
+                .breadcrumb-link:hover {
+                    color: #667eea;
+                }
+                
+                .breadcrumb-current {
+                    font-weight: 500;
+                    color: #374151;
+                }
+                
+                .breadcrumb-divider {
+                    color: #d1d5db;
+                }
+                
+                /* Application Banner */
+                .app-banner {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .banner-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+                
+                .workspace-logo-container {
+                    display: none;
+                }
+                
+                .workspace-logo {
+                    height: 32px;
+                    width: auto;
+                    max-width: 100px;
+                    object-fit: contain;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+                
+                .app-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                .app-icon {
+                    font-size: 24px;
+                    line-height: 1;
+                }
+                
+                .app-details h1.app-name {
+                    margin: 0;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #111827;
+                    line-height: 1.2;
+                }
+                
+                .app-type {
+                    margin-top: 2px;
+                }
+                
+                .counter-pill {
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    padding: 4px 12px;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                
+                .counter-text {
+                    font-weight: 500;
+                }
+                
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                .stats-pill {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(0, 0, 0, 0.05);
+                    padding: 6px 12px;
+                    border-radius: 8px;
+                    font-size: 13px;
+                    color: #6b7280;
+                }
+                
+                .stats-pill .count {
+                    font-weight: 600;
+                    color: #374151;
+                }
+                
+                /* Context Menu */
+                .context-menu-wrapper {
+                    position: relative;
+                }
+                
+                .context-menu-trigger {
+                    background: rgba(0, 0, 0, 0.04);
+                    border: none;
+                    color: #6b7280;
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                }
+                
+                .context-menu-trigger:hover {
+                    background: rgba(0, 0, 0, 0.08);
+                    color: #374151;
+                }
+                
+                .context-menu-panel {
+                    display: none;
+                    position: absolute;
+                    top: calc(100% + 8px);
+                    right: 0;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    min-width: 200px;
+                    z-index: 1000;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                    overflow: hidden;
+                }
+                
+                .context-menu-item {
+                    padding: 12px 16px;
+                    cursor: pointer;
+                    border-bottom: 1px solid #f3f4f6;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    color: #374151;
+                    font-size: 14px;
+                    transition: background-color 0.2s;
+                }
+                
+                .context-menu-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .context-menu-item:hover {
+                    background: #f9fafb;
+                }
+                
+                .context-menu-item i {
+                    width: 16px;
+                    color: #6b7280;
+                }
+            </style>
         `;
         
         this.$container.html(html);
@@ -922,12 +1187,16 @@ show_create_dialog() {
                 });
                 
                 if (app_response.message && app_response.message.app_title) {
+                    this.app_data = app_response.message;
                     $('#app-name-display').text(app_response.message.app_title);
                     $('#app-breadcrumb').text(`📱 ${app_response.message.app_title}`);
                 } else {
                     $('#app-name-display').text('Flansa Platform');
                     $('#app-breadcrumb').text('📱 Application');
                 }
+                
+                // Update banner info and load workspace logo
+                this.update_banner_info();
             } catch (error) {
                 console.error('Error loading app info:', error);
                 $('#app-name-display').text('Flansa Platform');
@@ -2596,6 +2865,41 @@ show_create_dialog() {
                 }
             }
         });
+    }
+    
+    async load_workspace_logo() {
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                callback: (r) => {
+                    if (r.message && r.message.logo) {
+                        const logoContainer = document.getElementById('workspace-logo-container');
+                        const logoImg = document.getElementById('workspace-logo');
+                        
+                        if (logoContainer && logoImg) {
+                            logoImg.src = r.message.logo;
+                            logoImg.alt = `${r.message.workspace_name || 'Workspace'} Logo`;
+                            logoContainer.style.display = 'block';
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.log('No workspace logo configured:', error);
+        }
+    }
+    
+    update_banner_info() {
+        // Load workspace logo
+        this.load_workspace_logo();
+        
+        // Update app name in banner if available
+        if (this.app_data?.app_title) {
+            const appDisplay = document.getElementById('app-name-display');
+            if (appDisplay) {
+                appDisplay.textContent = this.app_data.app_title;
+            }
+        }
     }
 }
 

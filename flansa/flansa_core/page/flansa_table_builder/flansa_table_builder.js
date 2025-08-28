@@ -35,10 +35,11 @@ class EnhancedFlansaTableBuilder {
         } else {
             await this.load_table();
             this.render_table_builder();
+            this.update_banner_info(); // Update banner with loaded data
         }
         
         this.setup_page_actions();
-        this.load_tenant_logo();
+        this.load_workspace_logo();
     }
     
     setup_page_actions() {
@@ -78,17 +79,17 @@ class EnhancedFlansaTableBuilder {
                         <!-- Single Row Header Section -->
                         <div class="header-main">
                             <div class="header-left">
-                                <!-- Optional Tenant Logo -->
-                                <div class="tenant-logo-container" id="tenant-logo-container" style="display: none;">
-                                    <img src="" alt="Tenant Logo" class="tenant-logo" id="tenant-logo" />
+                                <!-- Optional Workspace Logo -->
+                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
+                                    <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
                                 </div>
                                 
                                 <div class="header-title-inline">
                                     <h1 class="header-title">
-                                        <span class="title-text">${this.application_data?.application_title || this.table_data.application || 'Flansa'}</span>
+                                        <span class="title-text">Loading...</span>
                                     </h1>
                                     <span class="header-separator">•</span>
-                                    <p class="header-subtitle-inline">${this.application_data?.application_description || 'Application builder and data management'}</p>
+                                    <p class="header-subtitle-inline">Loading application information...</p>
                                 </div>
                             </div>
                             
@@ -304,12 +305,12 @@ class EnhancedFlansaTableBuilder {
                     flex: 1;
                 }
                 
-                /* Tenant Logo */
-                .tenant-logo-container {
+                /* Workspace Logo */
+                .workspace-logo-container {
                     margin-right: 1rem;
                 }
                 
-                .tenant-logo {
+                .workspace-logo {
                     height: 40px;
                     width: auto;
                     max-width: 120px;
@@ -1541,7 +1542,7 @@ class EnhancedFlansaTableBuilder {
         $container.on('click', '#add-logic-field', (e) => {
             e.preventDefault();
             $container.find('#add-field-dropdown').removeClass('show');
-            this.show_logic_field_wizard();
+            this.show_link_field_dialog();
         });
         
         $container.on('click', '#add-gallery-field', (e) => {
@@ -2631,19 +2632,19 @@ class EnhancedFlansaTableBuilder {
         window.location.href = `/app/flansa-report-viewer/${this.table_id}`;
     }
     
-    async load_tenant_logo() {
+    async load_workspace_logo() {
         try {
-            // Try to get tenant logo if tenant system is available
+            // Try to get workspace logo if workspace system is available
             const result = await frappe.call({
-                method: 'flansa.flansa_core.tenant_service.get_tenant_logo',
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
                 args: {},
                 freeze: false,
                 quiet: true // Don't show errors if method doesn't exist
             });
             
             if (result.message && result.message.logo) {
-                const logoContainer = document.getElementById('tenant-logo-container');
-                const logoImg = document.getElementById('tenant-logo');
+                const logoContainer = document.getElementById('workspace-logo-container');
+                const logoImg = document.getElementById('workspace-logo');
                 
                 if (logoContainer && logoImg) {
                     logoImg.src = result.message.logo;
@@ -2651,8 +2652,52 @@ class EnhancedFlansaTableBuilder {
                 }
             }
         } catch (error) {
-            // Silently fail if tenant system isn't available
-            console.debug('Tenant logo not available:', error);
+            // Silently fail if workspace system isn't available
+            console.debug('Workspace logo not available:', error);
+        }
+    }
+    
+    getApplicationTitle() {
+        // Priority: application_title > application_name > fallback (never show table name in app banner)
+        if (this.application_data?.application_title) {
+            return this.application_data.application_title;
+        }
+        if (this.application_data?.application_name) {
+            return this.application_data.application_name;
+        }
+        // Try to get application name from table data if available
+        if (this.table_data?.application && this.table_data.application !== this.table_data.table_name) {
+            return this.table_data.application;
+        }
+        return 'Flansa Application';
+    }
+    
+    getApplicationDescription() {
+        if (this.application_data?.application_description) {
+            return this.application_data.application_description;
+        }
+        if (this.table_data?.table_description) {
+            return this.table_data.table_description;
+        }
+        return 'Data management application';
+    }
+    
+    update_banner_info() {
+        // Update banner title and description with loaded data
+        const titleElement = document.querySelector('.title-text');
+        const descriptionElement = document.querySelector('.header-subtitle-inline');
+        
+        const appTitle = this.getApplicationTitle();
+        const appDescription = this.getApplicationDescription();
+        
+        console.log('Updating banner with:', { appTitle, appDescription, application_data: this.application_data, table_data: this.table_data });
+        
+        if (titleElement) {
+            titleElement.textContent = appTitle;
+        }
+        
+        if (descriptionElement) {
+            descriptionElement.textContent = appDescription;
         }
     }
     

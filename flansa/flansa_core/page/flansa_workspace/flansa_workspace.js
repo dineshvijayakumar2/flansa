@@ -91,8 +91,12 @@ class FlansaApplicationsWorkspace {
                 <!-- Compact Modern Header -->
                 <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: 0 -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
                     <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
+                        <!-- Optional Workspace Logo -->
+                        <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
+                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" style="height: 32px; width: auto; max-width: 100px; object-fit: contain; border-radius: 4px;" />
+                        </div>
                         <i class="fa fa-cubes" style="font-size: 18px; opacity: 0.9;"></i>
-                        <span style="font-size: 16px; font-weight: 600;">Flansa Platform</span>
+                        <span style="font-size: 16px; font-weight: 600;" id="workspace-title">Flansa Platform</span>
                         <div class="tenant-info-badge" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px;" id="current-tenant-badge">
                             <i class="fa fa-user" style="font-size: 10px;"></i>
                             <span id="tenant-name-display">Loading...</span>
@@ -281,6 +285,9 @@ class FlansaApplicationsWorkspace {
                     
                     // Update application count
                     self.update_stats();
+                    
+                    // Update banner info and load workspace logo
+                    self.update_banner_info();
                     
                     if (self.applications.length > 0) {
                         self.render_applications();
@@ -1174,6 +1181,39 @@ class FlansaApplicationsWorkspace {
                 }
             });
         });
+    }
+    
+    async load_workspace_logo() {
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                callback: (r) => {
+                    if (r.message && r.message.logo) {
+                        const logoContainer = document.getElementById('workspace-logo-container');
+                        const logoImg = document.getElementById('workspace-logo');
+                        
+                        if (logoContainer && logoImg) {
+                            logoImg.src = r.message.logo;
+                            logoImg.alt = `${r.message.workspace_name || 'Workspace'} Logo`;
+                            logoContainer.style.display = 'block';
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.log('No workspace logo configured:', error);
+        }
+    }
+    
+    update_banner_info() {
+        // Update workspace title if needed
+        const workspaceTitle = document.getElementById('workspace-title');
+        if (workspaceTitle && this.tenant_info?.tenant_name) {
+            workspaceTitle.textContent = this.tenant_info.tenant_name;
+        }
+        
+        // Load workspace logo
+        this.load_workspace_logo();
     }
 }
 

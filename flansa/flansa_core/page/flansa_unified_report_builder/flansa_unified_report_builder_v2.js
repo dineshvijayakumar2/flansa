@@ -4516,7 +4516,7 @@ frappe.pages['flansa-unified-report-builder-v2'].on_page_load = function(wrapper
     }
     
     // Load the HTML template
-    $(page.body).html(frappe.render_template('flansa_report_builder'));
+    $(page.body).html(frappe.render_template('flansa_unified_report_builder_v2'));
     
     // Initialize the report builder after HTML is loaded
     setTimeout(() => {

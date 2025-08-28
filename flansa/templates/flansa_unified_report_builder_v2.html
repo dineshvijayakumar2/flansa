@@ -1,0 +1,613 @@
+<!-- Unified Report Builder v2 Template -->
+<div class="flansa-unified-report-builder">
+    
+    <!-- Ultra-modern sleek header -->
+    <div class="sleek-header">
+        <div class="header-backdrop"></div>
+        <div class="header-content">
+            <!-- Breadcrumb Trail -->
+            <nav class="breadcrumb-trail">
+                <a href="/app/flansa-workspace" class="breadcrumb-link">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 10h-1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-6H1a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
+                    </svg>
+                    Workspace
+                </a>
+                <svg width="8" height="8" viewBox="0 0 20 20" fill="currentColor" class="breadcrumb-separator">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <a href="/app/flansa-unified-report-builder" class="breadcrumb-link current">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                    </svg>
+                    Report Builder
+                </a>
+            </nav>
+            
+            <!-- Single Row Header Section -->
+            <div class="header-main">
+                <div class="header-left">
+                    <!-- Optional Workspace Logo -->
+                    <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
+                        <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                    </div>
+                    
+                    <div class="header-title-inline">
+                        <h1 class="header-title">
+                            <span class="title-text" id="app-name-display">Loading...</span>
+                        </h1>
+                        <span class="header-separator">•</span>
+                        <p class="header-subtitle-inline">Building custom reports for your data</p>
+                    </div>
+                </div>
+                
+                <!-- Action Buttons -->
+                <div class="header-actions">
+                    <button class="sleek-btn primary" id="create-new-report-btn">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        New Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Context Header Area for additional controls -->
+    <div class="context-header">
+        <div class="context-container">
+            <div class="context-info" id="filter-toggle-group">
+                <span class="context-label">FILTER:</span>
+                <span class="context-value" id="filter-table-name">All Tables</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="container main-content">
+        <!-- Saved Reports Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <h4><i class="fa fa-bookmark"></i> Saved Reports</h4>
+                <small>Manage your custom reports</small>
+            </div>
+            <div class="section-body">
+                <div id="saved-reports-list">
+                    <!-- Reports will be populated here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Table Selection Section -->
+        <div class="section-card">
+            <div class="section-header">
+                <h4><i class="fa fa-database"></i> Select Table</h4>
+                <small>Choose a table to create reports from</small>
+            </div>
+            <div class="section-body">
+                <div class="form-group">
+                    <select class="form-control" id="table-selector">
+                        <option value="">Choose table...</option>
+                    </select>
+                </div>
+                <div id="table-info" style="display: none;">
+                    <div class="table-info-card">
+                        <h5 id="selected-table-name"></h5>
+                        <p id="selected-table-details"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Field Selection Section -->
+        <div class="section-card" id="field-selection-section" style="display: none;">
+            <div class="section-header">
+                <h4><i class="fa fa-columns"></i> Select Fields</h4>
+                <small>Choose fields to include in your report</small>
+            </div>
+            <div class="section-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="fields-panel">
+                            <h5>Available Fields</h5>
+                            <div class="field-categories">
+                                <!-- Current Table Fields -->
+                                <div class="field-category">
+                                    <div class="category-header" data-toggle="collapse" data-target="#current-fields" aria-expanded="true">
+                                        <i class="fa fa-chevron-down"></i>
+                                        <strong>Current Table Fields</strong>
+                                        <span class="badge" id="current-fields-count">0</span>
+                                    </div>
+                                    <div class="collapse show" id="current-fields">
+                                        <div class="field-list" id="current-fields-list"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- System Fields -->
+                                <div class="field-category">
+                                    <div class="category-header" data-toggle="collapse" data-target="#system-fields" aria-expanded="false">
+                                        <i class="fa fa-chevron-right"></i>
+                                        <strong>System Fields</strong>
+                                        <span class="badge" id="system-fields-count">0</span>
+                                    </div>
+                                    <div class="collapse" id="system-fields">
+                                        <div class="field-list" id="system-fields-list"></div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Related Fields -->
+                                <div class="field-category">
+                                    <div class="category-header" data-toggle="collapse" data-target="#related-fields" aria-expanded="false">
+                                        <i class="fa fa-chevron-right"></i>
+                                        <strong>Related Fields</strong>
+                                        <span class="badge" id="related-fields-count">0</span>
+                                    </div>
+                                    <div class="collapse" id="related-fields">
+                                        <div class="field-list" id="related-fields-list"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="selected-panel">
+                            <h5>Selected Fields</h5>
+                            <div id="selected-fields"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Filters Section -->
+        <div class="section-card" id="filters-section" style="display: none;">
+            <div class="section-header">
+                <h4><i class="fa fa-filter"></i> Filters</h4>
+                <button class="btn btn-sm btn-primary" id="add-filter-btn">
+                    <i class="fa fa-plus"></i> Add Filter
+                </button>
+            </div>
+            <div class="section-body">
+                <div id="filters-container"></div>
+            </div>
+        </div>
+
+        <!-- Sort Configuration Section -->
+        <div class="section-card" id="sort-section" style="display: none;">
+            <div class="section-header">
+                <h4><i class="fa fa-sort"></i> Sort Order</h4>
+                <button class="btn btn-sm btn-primary" id="add-sort-btn">
+                    <i class="fa fa-plus"></i> Add Sort
+                </button>
+            </div>
+            <div class="section-body">
+                <div id="sort-container"></div>
+            </div>
+        </div>
+
+        <!-- Report Results Section -->
+        <div class="section-card" id="report-results-section" style="display: none;">
+            <div class="section-header">
+                <h4><i class="fa fa-table"></i> Report Results</h4>
+                <div class="header-actions">
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-primary" id="run-report-btn">
+                            <i class="fa fa-play"></i> Run Report
+                        </button>
+                        <button class="btn btn-sm btn-success" id="save-report-btn" style="display: none;">
+                            <i class="fa fa-save"></i> Save Report
+                        </button>
+                    </div>
+                    <div class="btn-group view-controls">
+                        <button class="btn btn-sm btn-default view-mode-btn active" data-view="table">
+                            <i class="fa fa-table"></i> Table
+                        </button>
+                        <button class="btn btn-sm btn-default view-mode-btn" data-view="gallery">
+                            <i class="fa fa-th"></i> Gallery
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="section-body">
+                <div id="report-results-container"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ultra-modern Sleek Header Styles -->
+<style>
+/* Ultra-modern Sleek Header */
+.sleek-header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+    backdrop-filter: blur(20px) saturate(180%);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header-backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, 
+        rgba(99, 102, 241, 0.03) 0%, 
+        rgba(168, 85, 247, 0.03) 50%, 
+        rgba(236, 72, 153, 0.03) 100%);
+    z-index: -1;
+}
+
+.header-content {
+    padding: 0.625rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Breadcrumb Navigation */
+.breadcrumb-trail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.breadcrumb-link {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    color: rgba(0, 0, 0, 0.6);
+    text-decoration: none;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.25rem 0.5rem;
+    border-radius: 6px;
+    transition: all 0.2s;
+}
+
+.breadcrumb-link:hover {
+    color: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.04);
+    text-decoration: none;
+}
+
+.breadcrumb-link.current {
+    color: rgba(0, 0, 0, 0.8);
+    font-weight: 600;
+}
+
+.breadcrumb-separator {
+    color: rgba(0, 0, 0, 0.3);
+}
+
+/* Header Main Section */
+.header-main {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.header-left {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+/* Workspace Logo */
+.workspace-logo-container {
+    display: flex;
+    align-items: center;
+}
+
+.workspace-logo {
+    height: 40px;
+    width: auto;
+    max-width: 120px;
+    object-fit: contain;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.header-title-inline {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.header-title {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.9);
+}
+
+.header-separator {
+    color: rgba(0, 0, 0, 0.3);
+    font-weight: 500;
+}
+
+.header-subtitle-inline {
+    color: #6b7280;
+    font-size: 0.8125rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+.title-text {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+}
+
+/* Header Actions */
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+/* Modern Action Buttons */
+.sleek-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(10px);
+    color: rgba(0, 0, 0, 0.8);
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.sleek-btn:hover {
+    background: rgba(255, 255, 255, 0.95);
+    border-color: rgba(0, 0, 0, 0.2);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sleek-btn.primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-color: rgba(102, 126, 234, 0.3);
+    color: white;
+}
+
+.sleek-btn.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Context Header Area */
+.context-header {
+    background: #ffffff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    padding: 0.875rem 0;
+}
+
+.context-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+}
+
+.context-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.context-label {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.05em;
+}
+
+.context-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: rgba(0, 0, 0, 0.8);
+}
+
+/* Main Content Area */
+.main-content {
+    padding: 2rem 0;
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.section-card {
+    background: white;
+    border-radius: 12px;
+    margin-bottom: 2rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.section-header h4 {
+    margin: 0;
+    color: #2d3748;
+    font-weight: 600;
+    font-size: 1.125rem;
+}
+
+.section-header small {
+    color: #6b7280;
+    font-size: 0.875rem;
+}
+
+.section-body {
+    padding: 1.5rem;
+}
+
+/* Field Categories */
+.field-categories {
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+}
+
+.field-category {
+    border-bottom: 1px solid #e9ecef;
+}
+
+.field-category:last-child {
+    border-bottom: none;
+}
+
+.category-header {
+    padding: 12px 16px;
+    background: #f8f9fa;
+    cursor: pointer;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s;
+}
+
+.category-header:hover {
+    background: #e9ecef;
+}
+
+.category-header .badge {
+    margin-left: auto;
+    background: #6c757d;
+    color: white;
+    font-size: 0.75rem;
+}
+
+.field-list {
+    padding: 8px 0;
+}
+
+.field-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.field-item:hover {
+    background: #f8f9fa;
+}
+
+.field-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.field-type-badge {
+    font-size: 0.7rem;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.field-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.btn-field-action {
+    border: none;
+    background: transparent;
+    color: #6c757d;
+    padding: 4px 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-field-action:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+/* Selected Fields Panel */
+.selected-panel {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    min-height: 400px;
+}
+
+.selected-field-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+/* View Controls */
+.view-controls {
+    display: flex;
+    gap: 8px;
+}
+
+.view-mode-btn.active {
+    background: #007bff;
+    color: white;
+    border-color: #007bff;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .header-main {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+    
+    .header-title-inline {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.25rem;
+    }
+    
+    .header-separator {
+        display: none;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+    }
+}
+</style>

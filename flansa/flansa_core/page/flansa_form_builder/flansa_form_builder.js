@@ -858,6 +858,11 @@ if (typeof FlansaFormBuilder === 'undefined') {
                     
                     // Update available fields list
                     this.load_available_fields();
+                    
+                    // Update banner info and load workspace logo
+                    setTimeout(() => {
+                        this.update_banner_info();
+                    }, 100);
                 } else {
                     const error_msg = r.message?.error || 'Error loading table data';
                     frappe.msgprint(error_msg);
@@ -2067,6 +2072,80 @@ if (typeof FlansaFormBuilder === 'undefined') {
         
         // You can expand this to show a properties panel
         console.log('Selected section:', section);
+    }
+    
+    async load_workspace_logo() {
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                callback: (r) => {
+                    if (r.message && r.message.logo) {
+                        const logoContainer = document.getElementById('workspace-logo-container');
+                        const logoImg = document.getElementById('workspace-logo');
+                        
+                        if (logoContainer && logoImg) {
+                            logoImg.src = r.message.logo;
+                            logoImg.alt = `${r.message.workspace_name || 'Workspace'} Logo`;
+                            logoContainer.style.display = 'block';
+                        }
+                    }
+                }
+            });
+        } catch (error) {
+            console.log('No workspace logo configured:', error);
+        }
+    }
+    
+    update_banner_info() {
+        // Load workspace logo
+        this.load_workspace_logo();
+        
+        // Update table name and app info if available
+        if (this.table_name) {
+            frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: 'Flansa Table',
+                    filters: { name: this.table_name },
+                    fieldname: ['table_label', 'application']
+                },
+                callback: (r) => {
+                    if (r.message) {
+                        const tableLabel = r.message.table_label || this.table_name;
+                        // Show table name in breadcrumb, not in main banner
+                        $('#table-breadcrumb-link span').text(tableLabel);
+                        
+                        // Get app info and show app name in main banner
+                        if (r.message.application) {
+                            frappe.call({
+                                method: 'frappe.client.get_value',
+                                args: {
+                                    doctype: 'Flansa Application',
+                                    filters: { name: r.message.application },
+                                    fieldname: ['app_title']
+                                },
+                                callback: (app_r) => {
+                                    if (app_r.message && app_r.message.app_title) {
+                                        // Show app name in main banner (next to workspace logo)
+                                        $('#app-name-display').text(app_r.message.app_title);
+                                        // Update breadcrumb links
+                                        $('#app-breadcrumb-link').attr('href', `/app/flansa-app-builder?app=${r.message.application}`);
+                                        $('#app-breadcrumb-link span').text(app_r.message.app_title);
+                                        $('#table-breadcrumb-link').attr('href', `/app/flansa-table-builder?table=${this.table_name}`);
+                                    } else {
+                                        // Fallback to table name if no app info available
+                                        $('#app-name-display').text(tableLabel);
+                                    }
+                                }
+                            });
+                        } else {
+                            // Fallback to table name if no app associated
+                            $('#app-name-display').text(tableLabel);
+                        }
+                    }
+                }
+            });
+        }
     }
 } // End of FlansaFormBuilder class
 } // End of conditional class declaration

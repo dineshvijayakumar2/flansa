@@ -180,19 +180,51 @@ class FlansaRecordViewer {
         
         this.page.main.html(`
             <div class="flansa-record-viewer-page">
-                <!-- Compact Modern Header -->
-                <div class="flansa-compact-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 20px; margin: -20px -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
-                    <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
-                        <i class="fa fa-file-text-o" style="font-size: 20px; opacity: 0.9;"></i>
-                        <div>
-                            <h3 style="margin: 0; font-size: 18px; font-weight: 600;">${modeTitle}</h3>
-                            <p style="margin: 0; font-size: 12px; opacity: 0.8;">Table: ${this.table_name || 'Unknown'}</p>
+                <!-- Ultra-modern sleek header -->
+                <div class="sleek-header">
+                    <div class="header-backdrop"></div>
+                    <div class="header-content">
+                        <!-- Breadcrumb Trail -->
+                        <nav class="breadcrumb-trail">
+                            <a href="/app/flansa-workspace" class="breadcrumb-link">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 10h-1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-6H1a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
+                                </svg>
+                                Workspace
+                            </a>
+                            <svg width="8" height="8" viewBox="0 0 20 20" fill="currentColor" class="breadcrumb-separator">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <a href="#" class="breadcrumb-link current">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2v8h12V6H4z" clip-rule="evenodd" />
+                                </svg>
+                                ${modeTitle}
+                            </a>
+                        </nav>
+                        
+                        <!-- Single Row Header Section -->
+                        <div class="header-main">
+                            <div class="header-left">
+                                <!-- Optional Workspace Logo -->
+                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
+                                    <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                                </div>
+                                
+                                <div class="header-title-inline">
+                                    <h1 class="header-title">
+                                        <span class="title-text" id="app-name-display">${modeTitle}</span>
+                                    </h1>
+                                    <span class="header-separator">•</span>
+                                    <p class="header-subtitle-inline">Table: ${this.table_name || 'Unknown'}</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="header-actions">
+                                <span class="sleek-badge mode-badge">${this.mode.toUpperCase()}</span>
+                            </div>
                         </div>
-                    </div>
-                    <div class="header-right" style="display: flex; align-items: center; gap: 8px;">
-                        <span class="mode-badge" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
-                            ${this.mode.toUpperCase()}
-                        </span>
                     </div>
                 </div>
 

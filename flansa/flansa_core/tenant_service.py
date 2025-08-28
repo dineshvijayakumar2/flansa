@@ -301,50 +301,62 @@ def get_tenant_stats(tenant_id: Optional[str] = None) -> Dict[str, int]:
     }
 
 @frappe.whitelist()
-def get_tenant_logo(tenant_id=None):
-    """Get tenant logo configuration"""
+def get_workspace_logo(tenant_id=None):
+    """Get workspace logo configuration"""
     try:
         if not tenant_id:
             tenant_id = get_current_tenant_id()
             
         if not tenant_id:
-            return {"logo": None, "tenant_name": None}
+            return {"logo": None, "workspace_name": None}
         
-        # Check if tenant has custom logo configured
+        # Check if tenant has custom workspace logo configured
         tenant_settings = frappe.db.get_value(
             "Flansa Tenant", 
             tenant_id, 
-            ["tenant_logo", "tenant_name"], 
+            ["workspace_logo", "tenant_name"], 
             as_dict=True
         )
         
         if tenant_settings:
             return {
-                "logo": tenant_settings.get("tenant_logo"),
-                "tenant_name": tenant_settings.get("tenant_name"),
+                "logo": tenant_settings.get("workspace_logo"),
+                "workspace_name": tenant_settings.get("tenant_name"),
                 "success": True
             }
         
-        return {"logo": None, "tenant_name": None, "success": True}
+        return {"logo": None, "workspace_name": None, "success": True}
         
     except Exception as e:
-        frappe.log_error(f"Error getting tenant logo: {str(e)}")
-        return {"logo": None, "tenant_name": None, "success": False, "error": str(e)}
+        frappe.log_error(f"Error getting workspace logo: {str(e)}")
+        return {"logo": None, "workspace_name": None, "success": False, "error": str(e)}
+
+# Backward compatibility alias
+@frappe.whitelist()
+def get_tenant_logo(tenant_id=None):
+    """Backward compatibility - use get_workspace_logo instead"""
+    return get_workspace_logo(tenant_id)
 
 @frappe.whitelist()
-def set_tenant_logo(tenant_logo=None):
-    """Set tenant logo for current tenant"""
+def set_workspace_logo(workspace_logo=None):
+    """Set workspace logo for current workspace"""
     try:
         tenant_id = get_current_tenant_id()
         if not tenant_id:
-            return {"success": False, "message": "No active tenant"}
+            return {"success": False, "message": "No active workspace"}
             
-        # Update tenant logo
-        frappe.db.set_value("Flansa Tenant", tenant_id, "tenant_logo", tenant_logo)
+        # Update workspace logo
+        frappe.db.set_value("Flansa Tenant", tenant_id, "workspace_logo", workspace_logo)
         frappe.db.commit()
         
-        return {"success": True, "message": "Tenant logo updated successfully"}
+        return {"success": True, "message": "Workspace logo updated successfully"}
         
     except Exception as e:
-        frappe.log_error(f"Error setting tenant logo: {str(e)}")
+        frappe.log_error(f"Error setting workspace logo: {str(e)}")
         return {"success": False, "message": str(e)}
+
+# Backward compatibility alias
+@frappe.whitelist()
+def set_tenant_logo(tenant_logo=None):
+    """Backward compatibility - use set_workspace_logo instead"""
+    return set_workspace_logo(tenant_logo)
