@@ -281,26 +281,171 @@ class UnifiedReportBuilder {
         return config;
     }
 
-    show_preview_dialog() {
-        // Full preview in dialog
+    async show_preview_dialog() {
+        const title = $('#report-title-input').val() || 'Report Preview';
+        
+        try {
+            // Execute the report to get data
+            const config = this.build_report_config();
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.report_builder_api.execute_report',
+                args: {
+                    report_config: JSON.stringify(config),
+                    view_options: JSON.stringify({ page_size: 100 })
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                this.display_full_preview_dialog(response.message, title);
+            } else {
+                throw new Error(response.message?.error || 'Failed to execute report');
+            }
+        } catch (error) {
+            console.error('Error loading preview:', error);
+            frappe.msgprint('Error loading preview: ' + error.message);
+        }
+    }
+    
+    display_full_preview_dialog(data, title) {
+        console.log('🔍 FULL PREVIEW DATA:', data);
+        console.log('🔍 IS_GROUPED:', data.is_grouped);
+        console.log('🔍 HAS_GROUPS:', !!data.groups);
+        console.log('🔍 GROUPS_COUNT:', data.groups ? data.groups.length : 0);
+        
+        let contentHtml;
+        
+        // Use shared renderer for consistency if available
+        if (window.FlansaReportRenderer && typeof window.FlansaReportRenderer.render === 'function') {
+            console.log('🔍 USING SHARED RENDERER IN DIALOG');
+            try {
+                contentHtml = window.FlansaReportRenderer.render(data, {
+                    showActions: false,
+                    fields: this.selected_fields,
+                    tableClass: 'table table-striped table-hover'
+                });
+            } catch (error) {
+                console.warn('FlansaReportRenderer failed in dialog:', error);
+                contentHtml = this.build_fallback_preview(data);
+            }
+        } else {
+            console.warn('FlansaReportRenderer not available, using fallback display');
+            contentHtml = this.build_fallback_preview(data);
+        }
+        
         const dialog = new frappe.ui.Dialog({
-            title: 'Report Preview',
+            title: title,
             size: 'extra-large',
             fields: [{
                 fieldtype: 'HTML',
-                options: '<div id="preview-dialog-content">Loading preview...</div>'
+                fieldname: 'preview_content',
+                options: contentHtml
             }],
             primary_action_label: 'Save Report',
             primary_action: () => {
-                this.save_report_from_dialog();
+                this.save_report();
+                dialog.hide();
             }
         });
         
         dialog.show();
+    }
+    
+    build_fallback_preview(data) {
+        if (data.is_grouped && data.groups) {
+            return this.build_grouped_fallback_view(data);
+        } else {
+            return this.build_simple_fallback_view(data);
+        }
+    }
+    
+    build_grouped_fallback_view(data) {
+        if (!data.groups || !Array.isArray(data.groups)) {
+            return '<p>No grouped data available</p>';
+        }
         
-        // Generate preview
-        const config = this.build_report_config();
-        this.execute_report_preview(config, '#preview-dialog-content');
+        let html = '<div class="grouped-report-fallback">';
+        
+        data.groups.forEach((group) => {
+            const groupLabel = group.group_label || '(Empty)';
+            const count = group.count || 0;
+            const aggregate = group.aggregate ? ` • ${group.aggregate_type}: ${parseFloat(group.aggregate).toFixed(2)}` : '';
+            
+            html += `
+                <div class="group-section" style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div class="group-header" style="background: #f8f9fa; padding: 15px; border-radius: 8px 8px 0 0;">
+                        <strong>${groupLabel}</strong> 
+                        <span style="color: #666;">(${count} records${aggregate})</span>
+                    </div>
+                    <div class="group-content" style="padding: 10px;">
+                        ${this.build_simple_fallback_view({ data: group.records || [], fields: this.selected_fields })}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        return html;
+    }
+    
+    build_simple_fallback_view(data) {
+        if (!data.data || !Array.isArray(data.data)) {
+            return '<p>No data available</p>';
+        }
+        
+        const fields = data.fields || this.selected_fields || [];
+        
+        if (fields.length === 0) {
+            return '<p>No fields configured</p>';
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            ${fields.map(field => {
+                                const label = field.custom_label || field.field_label || field.label || field.fieldname;
+                                return `<th>${label}</th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.data.forEach(record => {
+            html += '<tr>';
+            fields.forEach(field => {
+                const value = record[field.fieldname] || '';
+                const formattedValue = this.format_fallback_value(value, field.fieldtype);
+                html += `<td>${formattedValue}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    format_fallback_value(value, fieldtype) {
+        if (!value && value !== 0) return '';
+        
+        switch (fieldtype) {
+            case 'Currency':
+                return parseFloat(value).toFixed(2);
+            case 'Date':
+                return new Date(value).toLocaleDateString();
+            case 'Datetime':
+                return new Date(value).toLocaleString();
+            case 'Check':
+                return value ? '✓' : '✗';
+            default:
+                return String(value).length > 50 ? String(value).substring(0, 47) + '...' : String(value);
+        }
     }
 
     bind_events() {
@@ -507,6 +652,7 @@ class UnifiedReportBuilder {
             },
             callback: (r) => {
                 if (r.message && r.message.success) {
+                    this.current_report_data = r.message; // Store for view switching
                     this.render_report_data(r.message, container);
                 } else {
                     $(container).html('<div class="alert alert-danger">Failed to load preview</div>');
@@ -516,6 +662,29 @@ class UnifiedReportBuilder {
     }
 
     render_report_data(report_data, container) {
+        console.log('🔍 RENDERING REPORT DATA:', report_data);
+        console.log('🔍 IS_GROUPED:', report_data.is_grouped);
+        console.log('🔍 HAS_GROUPS:', !!report_data.groups);
+        
+        // Use shared FlansaReportRenderer for consistency if available
+        if (window.FlansaReportRenderer && typeof window.FlansaReportRenderer.render === 'function') {
+            console.log('🔍 USING FLANSA REPORT RENDERER');
+            try {
+                const renderedHtml = window.FlansaReportRenderer.render(report_data, {
+                    showActions: false,
+                    fields: this.selected_fields,
+                    tableClass: 'table table-striped table-hover',
+                    view_mode: this.current_view
+                });
+                $(container).html(renderedHtml);
+                return;
+            } catch (error) {
+                console.warn('FlansaReportRenderer failed:', error);
+                // Fall back to local rendering
+            }
+        }
+        
+        // Fallback to local rendering methods
         if (this.current_view === 'table') {
             this.render_table_view(report_data, container);
         } else {
@@ -554,6 +723,77 @@ class UnifiedReportBuilder {
         `;
         
         $(container).html(tableHtml);
+    }
+
+    render_gallery_view(report_data, container) {
+        const data = report_data.data || [];
+        if (data.length === 0) {
+            $(container).html('<div class="alert alert-info">No data found</div>');
+            return;
+        }
+
+        // Find gallery/image fields
+        const galleryField = this.selected_fields.find(field => field.is_gallery || 
+            field.fieldtype === 'Attach Image' || field.fieldtype === 'Attach');
+        
+        if (!galleryField) {
+            $(container).html('<div class="alert alert-warning">No image fields selected for gallery view</div>');
+            return;
+        }
+
+        const galleryHtml = `
+            <div class="gallery-container">
+                <div class="row">
+                    ${data.slice(0, 12).map(row => {
+                        const imageUrl = this.process_image_url(row[galleryField.fieldname]);
+                        const title = row[this.selected_fields[0].fieldname] || 'Untitled';
+                        
+                        return `
+                            <div class="col-md-3 col-sm-4 col-6 mb-4">
+                                <div class="gallery-item">
+                                    <div class="gallery-image-container">
+                                        <img src="${imageUrl}" alt="${title}" class="gallery-image" 
+                                             onerror="this.src='/assets/frappe/images/default-avatar.png'">
+                                    </div>
+                                    <div class="gallery-item-details">
+                                        <h6>${title}</h6>
+                                        ${this.selected_fields.slice(1, 3).map(field => 
+                                            `<small class="text-muted">${row[field.fieldname] || ''}</small>`
+                                        ).join('<br>')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            <div class="text-muted">Showing first 12 items of ${report_data.total} total records</div>
+        `;
+        
+        $(container).html(galleryHtml);
+    }
+
+    process_image_url(imageValue) {
+        if (!imageValue) return '/assets/frappe/images/default-avatar.png';
+        
+        // Handle JSON strings
+        if (typeof imageValue === 'string' && imageValue.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(imageValue);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed[0].file_url || parsed[0];
+                }
+            } catch (e) {
+                // Continue with original value
+            }
+        }
+        
+        // Handle direct URLs
+        if (typeof imageValue === 'string') {
+            return imageValue.startsWith('/') ? imageValue : `/files/${imageValue}`;
+        }
+        
+        return '/assets/frappe/images/default-avatar.png';
     }
 
     switch_view_mode(view) {
@@ -804,6 +1044,47 @@ class UnifiedReportBuilder {
                     color: white;
                     border-color: #007bff;
                 }
+                
+                /* Gallery Styles */
+                .gallery-container {
+                    margin-top: 1rem;
+                }
+                
+                .gallery-item {
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                    transition: transform 0.2s;
+                }
+                
+                .gallery-item:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+                }
+                
+                .gallery-image-container {
+                    position: relative;
+                    width: 100%;
+                    height: 200px;
+                    overflow: hidden;
+                }
+                
+                .gallery-image {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                
+                .gallery-item-details {
+                    padding: 1rem;
+                }
+                
+                .gallery-item-details h6 {
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 600;
+                    color: #2d3748;
+                }
             </style>
         `;
         
@@ -916,6 +1197,17 @@ class UnifiedReportBuilder {
     add_grouping() {
         // Grouping addition logic
         console.log('Adding grouping...');
+    }
+}
+
+// Load shared FlansaReportRenderer if not already available
+if (!window.FlansaReportRenderer) {
+    console.log('Loading FlansaReportRenderer in report builder...');
+    try {
+        frappe.require('/assets/flansa/js/flansa_report_renderer.js');
+        console.log('FlansaReportRenderer loaded successfully');
+    } catch (error) {
+        console.warn('Could not load FlansaReportRenderer:', error);
     }
 }
 
