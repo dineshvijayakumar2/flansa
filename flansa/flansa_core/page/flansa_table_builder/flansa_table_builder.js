@@ -34,14 +34,29 @@ class FlansaTableBuilder {
     }
     
     show_table_selector() {
+        // Hide default page title for cleaner look
+        this.page.$title_area.hide();
+        
         this.$container.html(`
-            <div class="table-selector-container" style="max-width: 800px; margin: 40px auto;">
-                <div class="card">
-                    <div class="card-header">
-                        <h3>Select a Table to Build</h3>
-                    </div>
-                    <div class="card-body">
-                        <div id="table-list" style="max-height: 500px; overflow-y: auto;">
+            <div class="table-selector-container" style="margin: -20px;">
+                <!-- Header -->
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                     color: white; padding: 24px; text-align: center;">
+                    <i class="fa fa-table" style="font-size: 36px; opacity: 0.9;"></i>
+                    <h2 style="margin: 12px 0 4px 0; font-weight: 600;">Table Builder</h2>
+                    <p style="margin: 0; opacity: 0.9;">Select a table to manage its fields</p>
+                </div>
+                
+                <!-- Table List -->
+                <div style="padding: 24px; background: #fafbfc; min-height: calc(100vh - 180px);">
+                    <div style="max-width: 1000px; margin: 0 auto;">
+                        <div style="margin-bottom: 20px;">
+                            <input type="text" class="form-control" id="table-search" 
+                                   placeholder="Search tables..." 
+                                   style="max-width: 400px; padding-left: 36px;">
+                            <i class="fa fa-search" style="position: absolute; left: 36px; top: 10px; color: #8d99a6;"></i>
+                        </div>
+                        <div id="table-list">
                             <div class="text-center text-muted">Loading tables...</div>
                         </div>
                     </div>
@@ -50,6 +65,28 @@ class FlansaTableBuilder {
         `);
         
         this.load_table_list();
+        
+        // Setup search
+        this.$container.find('#table-search').on('input', (e) => {
+            this.filter_table_list(e.target.value);
+        });
+    }
+    
+    filter_table_list(search_term) {
+        const term = search_term.toLowerCase();
+        const cards = this.$container.find('.table-card');
+        
+        cards.each(function() {
+            const $card = $(this);
+            const name = $card.data('name').toLowerCase();
+            const label = $card.data('label').toLowerCase();
+            
+            if (name.includes(term) || label.includes(term)) {
+                $card.show();
+            } else {
+                $card.hide();
+            }
+        });
     }
     
     async load_table_list() {
@@ -58,7 +95,7 @@ class FlansaTableBuilder {
                 method: 'frappe.client.get_list',
                 args: {
                     doctype: 'Flansa Table',
-                    fields: ['name', 'table_name', 'table_label', 'doctype_name'],
+                    fields: ['name', 'table_name', 'table_label', 'doctype_name', 'creation'],
                     order_by: 'creation desc',
                     limit_page_length: 100
                 }
@@ -68,32 +105,70 @@ class FlansaTableBuilder {
             const $list = this.$container.find('#table-list');
             
             if (tables.length === 0) {
-                $list.html('<div class="text-center text-muted">No tables found. Create a table first.</div>');
+                $list.html(`
+                    <div class="text-center" style="padding: 60px; background: white; border-radius: 8px;">
+                        <i class="fa fa-database" style="font-size: 48px; color: #8d99a6;"></i>
+                        <h5 style="margin-top: 15px;">No tables found</h5>
+                        <p class="text-muted">Create a table first to start building</p>
+                    </div>
+                `);
                 return;
             }
             
-            let html = '<div class="list-group">';
+            let html = '<div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px;">';
             tables.forEach(table => {
+                const hasDoctype = table.doctype_name ? true : false;
+                const statusColor = hasDoctype ? '#28a745' : '#fd7e14';
+                const statusText = hasDoctype ? 'Active' : 'Not Generated';
+                const iconColor = hasDoctype ? '#28a745' : '#8d99a6';
+                
                 html += `
-                    <a href="/app/flansa-table-builder?table=${table.name}" 
-                       class="list-group-item list-group-item-action">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5 class="mb-1">${table.table_label || table.table_name}</h5>
-                                <small class="text-muted">${table.table_name}</small>
-                            </div>
-                            <div>
-                                ${table.doctype_name ? 
-                                    '<span class="badge badge-success">Active</span>' : 
-                                    '<span class="badge badge-warning">Not Generated</span>'}
-                            </div>
+                    <div class="table-card" data-name="${table.table_name}" data-label="${table.table_label || table.table_name}"
+                         style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; 
+                                padding: 20px; cursor: pointer; transition: all 0.2s; position: relative;"
+                         onclick="window.location.href='/app/flansa-table-builder?table=${table.name}'">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                            <i class="fa fa-table" style="font-size: 24px; color: ${iconColor};"></i>
+                            <span style="background: ${statusColor}20; color: ${statusColor}; 
+                                        padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600;">
+                                ${statusText}
+                            </span>
                         </div>
-                    </a>
+                        <h5 style="margin: 0 0 4px 0; color: #2e3338;">
+                            ${table.table_label || table.table_name}
+                        </h5>
+                        <div style="font-size: 12px; color: #8d99a6;">
+                            ${table.table_name}
+                        </div>
+                        ${hasDoctype ? `
+                            <div style="margin-top: 8px; font-size: 11px; color: #6c757d;">
+                                <i class="fa fa-code"></i> ${table.doctype_name}
+                            </div>
+                        ` : ''}
+                    </div>
                 `;
             });
             html += '</div>';
             
             $list.html(html);
+            
+            // Add hover effect
+            this.$container.find('.table-card').hover(
+                function() {
+                    $(this).css({
+                        'border-color': '#667eea',
+                        'box-shadow': '0 4px 12px rgba(102,126,234,0.15)',
+                        'transform': 'translateY(-2px)'
+                    });
+                },
+                function() {
+                    $(this).css({
+                        'border-color': '#e2e8f0',
+                        'box-shadow': 'none',
+                        'transform': 'translateY(0)'
+                    });
+                }
+            );
             
         } catch (error) {
             frappe.msgprint({
@@ -124,9 +199,6 @@ class FlansaTableBuilder {
                 return;
             }
             
-            // Update page title
-            this.page.set_title(`Table Builder: ${this.table_data.table_label || this.table_data.table_name}`);
-            
             // Setup page UI
             this.setup_page();
             
@@ -144,59 +216,95 @@ class FlansaTableBuilder {
     }
     
     setup_page() {
-        // Add buttons
-        this.page.add_button('Back to Tables', () => {
-            window.location.href = '/app/flansa-table-builder';
-        });
+        // Hide default page title for modern look
+        this.page.$title_area.hide();
         
-        this.page.add_button('Add Field', () => {
-            this.show_add_field_dialog();
-        }, 'primary');
-        
-        // Create main layout
+        // Create modern layout matching Visual Builder style
         this.$container.html(`
-            <div class="table-builder-container">
-                <!-- Table Info Header -->
-                <div class="table-info-header" style="background: white; border: 1px solid #d1d8dd; 
-                     border-radius: 4px; padding: 15px; margin-bottom: 20px;">
-                    <div class="row">
-                        <div class="col-md-8">
-                            <h4 style="margin: 0 0 5px 0;">${this.table_data.table_label}</h4>
-                            <div class="text-muted">
-                                <small>Table Name: ${this.table_data.table_name}</small>
-                                ${this.table_data.doctype_name ? 
-                                    `<small class="ml-3">DocType: ${this.table_data.doctype_name}</small>` : ''}
+            <div class="table-builder-container" style="margin: -20px;">
+                <!-- Modern Header with gradient -->
+                <div class="table-builder-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                     color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); border: none; color: white;"
+                                onclick="window.location.href='/app/flansa-table-builder'">
+                            <i class="fa fa-arrow-left"></i>
+                        </button>
+                        <i class="fa fa-table" style="font-size: 20px; opacity: 0.9;"></i>
+                        <div>
+                            <h3 style="margin: 0; font-size: 20px; font-weight: 600;">Table Builder</h3>
+                            <div style="font-size: 12px; opacity: 0.9; margin-top: 2px;">
+                                ${this.table_data.table_label || this.table_data.table_name}
                             </div>
                         </div>
-                        <div class="col-md-4 text-right">
-                            <button class="btn btn-sm btn-default" onclick="frappe.pages['flansa-table-builder'].builder.refresh_fields()">
-                                <i class="fa fa-refresh"></i> Refresh
-                            </button>
-                            ${this.table_data.doctype_name ? 
-                                `<button class="btn btn-sm btn-primary ml-2" onclick="frappe.pages['flansa-table-builder'].builder.view_records()">
-                                    <i class="fa fa-eye"></i> View Records
-                                </button>` : ''}
-                        </div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-sm" style="background: rgba(255,255,255,0.2); border: none; color: white;"
+                                onclick="frappe.pages['flansa-table-builder'].builder.refresh_fields()">
+                            <i class="fa fa-refresh"></i>
+                        </button>
+                        ${this.table_data.doctype_name ? 
+                            `<button class="btn btn-sm" style="background: white; color: #667eea; border: none;"
+                                    onclick="frappe.pages['flansa-table-builder'].builder.view_data()">
+                                <i class="fa fa-chart-bar"></i> View Data
+                            </button>` : ''}
                     </div>
                 </div>
                 
-                <!-- Fields Section -->
-                <div class="fields-section">
-                    <div class="section-header" style="display: flex; justify-content: space-between; 
-                         align-items: center; margin-bottom: 15px;">
-                        <h5>Table Fields</h5>
-                        <div class="field-stats">
-                            <span class="badge badge-default" id="field-count">0 fields</span>
+                <!-- Toolbar Section -->
+                <div class="table-builder-toolbar" style="background: white; padding: 12px 24px; 
+                     border-bottom: 1px solid #e0e0e0; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="display: flex; gap: 8px;">
+                        <button class="btn btn-primary btn-sm" onclick="frappe.pages['flansa-table-builder'].builder.show_add_field_dialog()">
+                            <i class="fa fa-plus"></i> Add Field
+                        </button>
+                        <button class="btn btn-default btn-sm" onclick="frappe.pages['flansa-table-builder'].builder.show_add_gallery_dialog()">
+                            <i class="fa fa-images"></i> Add Gallery
+                        </button>
+                        <button class="btn btn-default btn-sm" onclick="frappe.pages['flansa-table-builder'].builder.show_naming_settings()">
+                            <i class="fa fa-tag"></i> Naming Settings
+                        </button>
+                    </div>
+                    <div style="display: flex; gap: 12px; align-items: center;">
+                        <div style="position: relative;">
+                            <input type="text" class="form-control" id="field-search" 
+                                   placeholder="Search fields..." 
+                                   style="width: 300px; padding-left: 32px; border-radius: 4px;">
+                            <i class="fa fa-search" style="position: absolute; left: 12px; top: 50%; 
+                               transform: translateY(-50%); color: #8d99a6;"></i>
                         </div>
+                        <select class="form-control" id="field-type-filter" style="width: 150px;">
+                            <option value="">All Types</option>
+                            <option value="Data">Data</option>
+                            <option value="Text">Text</option>
+                            <option value="Int">Number</option>
+                            <option value="Currency">Currency</option>
+                            <option value="Date">Date</option>
+                            <option value="Select">Select</option>
+                            <option value="Check">Checkbox</option>
+                            <option value="Link">Link</option>
+                        </select>
                     </div>
-                    
-                    <!-- Search Bar -->
-                    <div class="field-search-bar" style="margin-bottom: 15px;">
-                        <input type="text" class="form-control" id="field-search" 
-                               placeholder="Search fields..." style="max-width: 400px;">
+                </div>
+                
+                <!-- Stats Bar -->
+                <div class="table-stats-bar" style="background: #f8f9fa; padding: 8px 24px; 
+                     display: flex; justify-content: space-between; align-items: center; font-size: 13px;">
+                    <div>
+                        <span style="color: #6c757d;">Table: </span>
+                        <span style="font-weight: 600;">${this.table_data.table_name}</span>
+                        ${this.table_data.doctype_name ? 
+                            `<span style="margin-left: 16px; color: #6c757d;">DocType: </span>
+                             <span style="font-weight: 600;">${this.table_data.doctype_name}</span>` : 
+                            `<span style="margin-left: 16px; color: #fd7e14;">⚠️ Not Generated</span>`}
                     </div>
-                    
-                    <!-- Fields List -->
+                    <div id="field-count" style="color: #6c757d;">
+                        <i class="fa fa-database"></i> 0 fields
+                    </div>
+                </div>
+                
+                <!-- Fields Container -->
+                <div class="fields-main-container" style="padding: 20px 24px; background: #fafbfc; min-height: calc(100vh - 200px);">
                     <div id="fields-container">
                         <div class="text-center text-muted">Loading fields...</div>
                     </div>
@@ -210,6 +318,11 @@ class FlansaTableBuilder {
         // Setup search
         this.$container.find('#field-search').on('input', (e) => {
             this.filter_fields(e.target.value);
+        });
+        
+        // Setup type filter
+        this.$container.find('#field-type-filter').on('change', (e) => {
+            this.filter_by_type(e.target.value);
         });
     }
     
@@ -243,14 +356,14 @@ class FlansaTableBuilder {
     render_fields() {
         const $container = this.$container.find('#fields-container');
         
-        // Update count
-        this.$container.find('#field-count').text(`${this.fields.length} fields`);
+        // Update count with better formatting
+        this.$container.find('#field-count').html(`<i class="fa fa-database"></i> ${this.fields.length} fields`);
         
         if (this.fields.length === 0) {
             $container.html(`
-                <div class="text-center" style="padding: 40px;">
+                <div class="text-center" style="padding: 60px 20px; background: white; border-radius: 8px; border: 2px dashed #d1d8dd;">
                     <i class="fa fa-database" style="font-size: 48px; color: #8d99a6;"></i>
-                    <h5 style="margin-top: 15px;">No fields yet</h5>
+                    <h5 style="margin-top: 15px; color: #2e3338;">No fields yet</h5>
                     <p class="text-muted">Add your first field to get started</p>
                     <button class="btn btn-primary" onclick="frappe.pages['flansa-table-builder'].builder.show_add_field_dialog()">
                         <i class="fa fa-plus"></i> Add Field
@@ -269,8 +382,8 @@ class FlansaTableBuilder {
         // User fields
         if (user_fields.length > 0) {
             html += `
-                <div class="field-category" style="margin-bottom: 30px;">
-                    <h6 style="color: #6c757d; margin-bottom: 15px;">
+                <div class="field-category" style="margin-bottom: 24px;">
+                    <h6 style="color: #6c757d; margin-bottom: 12px; font-weight: 600;">
                         <i class="fa fa-user"></i> User Fields (${user_fields.length})
                     </h6>
                     <div class="field-grid">
@@ -286,8 +399,8 @@ class FlansaTableBuilder {
         // System fields
         if (system_fields.length > 0) {
             html += `
-                <div class="field-category" style="margin-bottom: 30px;">
-                    <h6 style="color: #6c757d; margin-bottom: 15px;">
+                <div class="field-category" style="margin-bottom: 24px;">
+                    <h6 style="color: #6c757d; margin-bottom: 12px; font-weight: 600;">
                         <i class="fa fa-cog"></i> System Fields (${system_fields.length})
                     </h6>
                     <div class="field-grid">
@@ -311,21 +424,23 @@ class FlansaTableBuilder {
             style.innerHTML = `
                 .field-grid {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                    gap: 15px;
+                    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+                    gap: 12px;
                 }
                 
                 .field-card {
                     background: white;
-                    border: 1px solid #d1d8dd;
-                    border-radius: 4px;
-                    padding: 12px;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    padding: 14px;
                     transition: all 0.2s;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
                 }
                 
                 .field-card:hover {
-                    border-color: #5e64ff;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    border-color: #667eea;
+                    box-shadow: 0 4px 12px rgba(102,126,234,0.15);
+                    transform: translateY(-2px);
                 }
                 
                 .field-card.system-field {
@@ -372,6 +487,10 @@ class FlansaTableBuilder {
                     font-size: 12px;
                     border-radius: 3px;
                 }
+                
+                .table-builder-container * {
+                    box-sizing: border-box;
+                }
             `;
             document.head.appendChild(style);
         }
@@ -395,7 +514,7 @@ class FlansaTableBuilder {
         const type_color = field_type_colors[field.fieldtype] || '#6c757d';
         
         return `
-            <div class="field-card ${is_system ? 'system-field' : ''}" data-fieldname="${field.fieldname}">
+            <div class="field-card ${is_system ? 'system-field' : ''}" data-fieldname="${field.fieldname}" data-fieldtype="${field.fieldtype}">
                 <div class="field-header">
                     <div>
                         <div class="field-name">${field.fieldname}</div>
@@ -451,6 +570,21 @@ class FlansaTableBuilder {
         });
     }
     
+    filter_by_type(type) {
+        const cards = this.$container.find('.field-card');
+        
+        cards.each(function() {
+            const $card = $(this);
+            const fieldType = $card.data('fieldtype');
+            
+            if (!type || fieldType === type) {
+                $card.show();
+            } else {
+                $card.hide();
+            }
+        });
+    }
+    
     show_add_field_dialog() {
         const dialog = new frappe.ui.Dialog({
             title: 'Add Field',
@@ -482,7 +616,7 @@ class FlansaTableBuilder {
                     label: 'Options',
                     fieldname: 'options',
                     fieldtype: 'Small Text',
-                    description: 'For Select: Option1\\nOption2\\nOption3. For Link: DocType name',
+                    description: 'For Select: Option1\nOption2\nOption3. For Link: DocType name',
                     depends_on: (doc) => ['Select', 'Link', 'Table'].includes(doc.field_type)
                 },
                 {
@@ -626,9 +760,18 @@ class FlansaTableBuilder {
         });
     }
     
-    view_records() {
-        if (this.table_data && this.table_data.doctype_name) {
-            window.location.href = `/app/flansa-record-viewer/${this.table_id}`;
+    view_data() {
+        // Open the default report for this table
+        if (this.table_data) {
+            window.location.href = `/app/flansa-report-viewer/${this.table_id}`;
         }
+    }
+    
+    show_add_gallery_dialog() {
+        frappe.msgprint('Gallery field feature coming soon!');
+    }
+    
+    show_naming_settings() {
+        frappe.msgprint('Naming settings feature coming soon!');
     }
 }

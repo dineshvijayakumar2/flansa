@@ -283,7 +283,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
                 label: 'Open Table Builder',
                 action: () => {
                     // Navigate to table builder for this specific table
-                    window.open(`/app/flansa-visual-builder?table=${this.table_name}`, '_blank');
+                    window.open(`/app/flansa-table-builder?table=${this.table_name}`, '_blank');
                 }
             }
         });
@@ -1079,7 +1079,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
             self.edit_field_layout(index);
         });
         
-        // Edit field properties (redirect to Visual Builder)
+        // Edit field properties (redirect to Table Builder)
         $(document).off('click', '.edit-field-properties').on('click', '.edit-field-properties', function(e) {
             e.stopPropagation();
             const index = parseInt($(this).closest('.form-field').data('field-index'));
@@ -1136,7 +1136,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
     
     edit_field_properties(index) {
         const field = this.current_fields[index];
-        // Redirect to Visual Builder field properties dialog
+        // Redirect to Table Builder field properties dialog
         const urlParams = new URLSearchParams(window.location.search);
         const tableParam = urlParams.get('table');
         
@@ -1146,12 +1146,12 @@ if (typeof FlansaFormBuilder === 'undefined') {
         }
         
         frappe.show_alert({
-            message: `Redirecting to Visual Builder to edit "${field.field_label}" properties...`,
+            message: `Redirecting to Table Builder to edit "${field.field_label}" properties...`,
             indicator: 'blue'
         });
         
-        // Navigate to Visual Builder with field selection
-        window.location.href = `/app/flansa-visual-builder?table=${tableParam}&edit_field=${field.field_name}`;
+        // Navigate to Table Builder with field selection
+        window.location.href = `/app/flansa-table-builder?table=${tableParam}&edit_field=${field.field_name}`;
     }
     
     remove_field(index) {

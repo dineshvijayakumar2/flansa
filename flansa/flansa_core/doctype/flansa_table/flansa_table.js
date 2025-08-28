@@ -35,8 +35,8 @@ function add_enhanced_flansa_buttons(frm) {
     // Clear existing buttons to avoid duplicates
     frm.clear_custom_buttons();
     
-    // Primary Visual Builder button
-    frm.add_custom_button('🎨 Open Visual Builder', function() {
+    // Primary Table Builder button
+    frm.add_custom_button('🎨 Open Table Builder', function() {
         open_visual_builder_with_app_name(frm);
     }).addClass('btn-primary');
     
@@ -149,13 +149,13 @@ function open_visual_builder_with_app_name(frm) {
     
     if (app_name) {
         console.log('Opening visual builder with app name:', app_name);
-        frappe.show_alert('Opening Visual Builder with app: ' + app_name, 'blue');
-        frappe.set_route('flansa-visual-builder', app_name);
+        frappe.show_alert('Opening Table Builder with app: ' + app_name, 'blue');
+        frappe.set_route('flansa-table-builder', app_name);
     } else {
         frappe.msgprint({
-            title: '🎨 Visual Builder Requires Application',
+            title: '🎨 Table Builder Requires Application',
             message: `
-                <p>To use the Visual Builder, this table needs to be linked to an application.</p>
+                <p>To use the Table Builder, this table needs to be linked to an application.</p>
                 <p><strong>Alternative:</strong> To view the data directly, use the "📋 View Data List" button instead.</p>
                 <p><em>Table ID: ${frm.doc.name}</em></p>
             `,
@@ -280,9 +280,9 @@ function show_app_name_debug(frm) {
     debug_html += '<p><strong>Status:</strong> ' + (frm.doc.status || 'Draft') + '</p>';
     debug_html += '<p><strong>Fields Count:</strong> ' + (frm.doc.fields_count || 0) + '</p>';
     debug_html += '<hr>';
-    debug_html += '<p><strong>Visual Builder URL:</strong><br>';
+    debug_html += '<p><strong>Table Builder URL:</strong><br>';
     if (app_name && app_name !== frm.doc.name) {
-        debug_html += '<code>http://localhost:8000/app/flansa-visual-builder/' + app_name + '</code>';
+        debug_html += '<code>http://localhost:8000/app/flansa-table-builder/' + app_name + '</code>';
     } else {
         debug_html += '<code>No application set</code>';
     }

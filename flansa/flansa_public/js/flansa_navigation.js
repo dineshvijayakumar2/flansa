@@ -37,8 +37,8 @@ window.FlansaNavigation = {
         }
         
         if (showVisualBuilder && currentPage !== 'visual-builder') {
-            page.add_menu_item('📋 Visual Builder', () => {
-                window.location.href = `/app/flansa-visual-builder/${app_id}`;
+            page.add_menu_item('📋 Table Builder', () => {
+                window.location.href = `/app/flansa-table-builder/${app_id}`;
             });
         }
         

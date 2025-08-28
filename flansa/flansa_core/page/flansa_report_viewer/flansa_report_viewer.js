@@ -567,7 +567,7 @@ class FlansaReportViewer {
             }
             
             this.page.add_menu_item('🔧 Edit Table Structure', () => {
-                window.location.href = `/app/flansa-visual-builder/${this.table_name}`;
+                window.location.href = `/app/flansa-table-builder/${this.table_name}`;
             });
             
             this.page.add_menu_item('📤 Export Data', () => {
@@ -1545,7 +1545,7 @@ class FlansaReportViewer {
                     // Add table context
                     frappe.breadcrumbs.add(
                         table_data.table_label || report.base_table,
-                        `/app/flansa-visual-builder/${report.base_table}`
+                        `/app/flansa-table-builder/${report.base_table}`
                     );
                     
                     // Add reports context with table filter
@@ -1585,7 +1585,7 @@ class FlansaReportViewer {
         
         if (report && report.base_table) {
             // Add context based on the table
-            breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-visual-builder/${report.base_table}` });
+            breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-table-builder/${report.base_table}` });
             breadcrumbs.push({ text: "📊 Reports", url: `/app/flansa-saved-reports?table=${report.base_table}` });
             
             // Current report
@@ -1684,7 +1684,7 @@ class FlansaReportViewer {
                     
                     // Add Table Settings button
                     this.page.add_button('🔗 Table Settings', () => {
-                        window.location.href = `/app/flansa-visual-builder/${report.base_table}`;
+                        window.location.href = `/app/flansa-table-builder/${report.base_table}`;
                     }, 'btn-default');
                     
                     // Add standard navigation buttons (same as Report Builder)

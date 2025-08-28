@@ -22,8 +22,8 @@ window.FlansaHeaderManager = {
             ],
             show_back: true
         },
-        'flansa-visual-builder': {
-            title: '📋 Visual Builder',
+        'flansa-table-builder': {
+            title: '📋 Table Builder',
             breadcrumbs: [
                 { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
@@ -289,7 +289,7 @@ window.FlansaHeaderManager = {
         const icons = {
             'flansa': 'fa-home',
             'flansa-app-dashboard': 'fa-tachometer-alt',
-            'flansa-visual-builder': 'fa-table',
+            'flansa-table-builder': 'fa-table',
             'flansa-form-builder': 'fa-edit',
             'flansa-record-viewer': 'fa-database',
             'flansa-report-builder': 'fa-chart-bar',
