@@ -145,7 +145,7 @@ window.FlansaBreadcrumbUtils = {
         frappe.breadcrumbs.clear();
         
         // Always start with workspace
-        this.addBreadcrumb("Workspace", "/app/flansa-workspace");
+        this.addBreadcrumb("Workspace", "/app/flansa");
         
         // Add context-specific breadcrumbs
         if (context.application) {

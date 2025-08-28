@@ -47,9 +47,9 @@ class TenantContext:
                 "tenant_name": tenant_doc.tenant_name,
                 "primary_domain": tenant_doc.primary_domain,
                 "status": tenant_doc.status,
-                "type": tenant_doc.tenant_type,
+                "type": "Production",  # Default type since tenant_type field doesn't exist
                 "max_users": tenant_doc.max_users,
-                "max_apps": tenant_doc.max_apps
+                "max_tables": getattr(tenant_doc, 'max_tables', 50)  # Use max_tables instead of max_apps
             }
             
             cls._tenant_cache[tenant_id] = tenant_data
@@ -168,8 +168,26 @@ class TenantContext:
             "status": "Active",
             "type": "Production",
             "max_users": 1000,
-            "max_apps": 100
+            "max_tables": 100
         }
+
+def resolve_tenant_from_request():
+    """Resolve tenant context from current request domain - called on every request"""
+    try:
+        if hasattr(frappe.local, 'request') and frappe.local.request:
+            # Get current tenant from domain
+            tenant_id = TenantContext.get_current_tenant_id()
+            
+            # Set in frappe.local for easy access throughout request
+            frappe.local.tenant_id = tenant_id
+            
+            # Optional: Set in session for persistence
+            if hasattr(frappe.local, 'session') and frappe.local.session:
+                frappe.local.session.tenant_id = tenant_id
+                
+    except Exception as e:
+        # Fail silently to not break requests
+        frappe.local.tenant_id = "default"
 
 
 def get_tenant_filter() -> Dict[str, str]:

@@ -76,6 +76,11 @@ class FlansaDatabaseViewer {
             this.scan_orphaned_tables();
         });
         
+        // Fix Flansa references
+        $(this.wrapper).find('#fixFlansaReferences').click(() => {
+            this.fix_flansa_references();
+        });
+        
         // Tab switching
         $(this.wrapper).find('.nav-link').click((e) => {
             e.preventDefault();
@@ -621,6 +626,9 @@ class FlansaDatabaseViewer {
                         <button class="btn btn-xs btn-outline-primary" onclick="window.dbViewer.viewTableData('${table.table_name}')">
                             <i class="fa fa-eye"></i> View
                         </button>
+                        <button class="btn btn-xs btn-outline-success ml-1" onclick="window.dbViewer.registerOrphanedTable('${table.table_name}', '${table.doctype_name}')">
+                            <i class="fa fa-plus-circle"></i> Register
+                        </button>
                         <button class="btn btn-xs btn-outline-danger ml-1" onclick="window.dbViewer.deleteOrphanedTable('${table.table_name}', ${table.row_count})">
                             <i class="fa fa-trash"></i> Delete
                         </button>
@@ -640,7 +648,9 @@ class FlansaDatabaseViewer {
                     • Leftover from deleted custom DocTypes<br>
                     • Created by third-party apps that were uninstalled<br>
                     • Result of incomplete migrations or manual database operations<br>
-                    <strong class="text-danger">⚠️ Tables with data (highlighted in red) need careful review before deletion!</strong>
+                    • <strong class="text-success">Tables from redeployed sites with preserved databases</strong><br>
+                    <strong class="text-danger">⚠️ Tables with data (highlighted in red) need careful review before deletion!</strong><br>
+                    <strong class="text-success">💡 Use "Register" to restore orphaned tables as DocTypes for continued use!</strong>
                 </div>
             </div>
         `;
@@ -749,6 +759,103 @@ class FlansaDatabaseViewer {
                 });
             }
         );
+    }
+    
+    registerOrphanedTable(tableName, doctypeName) {
+        frappe.confirm(
+            `<div>
+                <h4>🔄 Register Orphaned Table as DocType</h4>
+                <p>This will create a DocType definition for the orphaned table:</p>
+                <p><strong>Table:</strong> <code>${tableName}</code></p>
+                <p><strong>DocType Name:</strong> <strong>${doctypeName}</strong></p>
+                <div class="alert alert-info">
+                    <strong>What this does:</strong>
+                    <ul>
+                        <li>Creates a new DocType definition based on the table structure</li>
+                        <li>Maps database columns to appropriate Frappe field types</li>
+                        <li>Makes the table accessible through Frappe interface</li>
+                        <li>Preserves all existing data in the table</li>
+                    </ul>
+                </div>
+                <div class="alert alert-success">
+                    <strong>✅ Safe Operation:</strong> This will NOT modify the existing table or data.
+                    It only creates the DocType definition to make the table usable.
+                </div>
+            </div>`,
+            () => {
+                // User confirmed, now register
+                frappe.call({
+                    method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.register_orphaned_table_as_doctype',
+                    args: {
+                        table_name: tableName,
+                        doctype_name: doctypeName,
+                        confirm_register: true
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            frappe.msgprint({
+                                title: 'Registration Successful',
+                                message: `${r.message.message}<br><br>
+                                    <strong>DocType:</strong> ${r.message.doctype_name}<br>
+                                    <strong>Fields Created:</strong> ${r.message.fields_count}<br><br>
+                                    You can now access this DocType through the Frappe interface.`,
+                                indicator: 'green'
+                            });
+                            // Refresh the orphaned tables list
+                            this.scan_orphaned_tables();
+                        } else {
+                            frappe.msgprint({
+                                title: 'Registration Failed',
+                                message: r.message?.error || 'Failed to register table as DocType',
+                                indicator: 'red'
+                            });
+                        }
+                    }
+                });
+            }
+        );
+    }
+    
+    fix_flansa_references() {
+        this.update_status('Fixing Flansa Table doctype references...');
+        
+        $(this.wrapper).find('#fixFlansaReferences').prop('disabled', true).html('<i class="fa fa-spinner fa-spin"></i> Fixing...');
+        
+        frappe.call({
+            method: 'flansa.flansa_core.page.flansa_database_viewer.flansa_database_viewer.fix_flansa_table_references',
+            callback: (r) => {
+                $(this.wrapper).find('#fixFlansaReferences').prop('disabled', false).html('<i class="fa fa-wrench"></i> Fix Flansa References');
+                
+                if (r.message && r.message.success) {
+                    const msg = r.message;
+                    
+                    let debugInfo = '';
+                    if (msg.debug_info && msg.debug_info.length > 0) {
+                        debugInfo = '<br><br><strong>Details:</strong><br>' + msg.debug_info.join('<br>');
+                    }
+                    
+                    frappe.msgprint({
+                        title: 'Flansa References Fixed',
+                        message: `${msg.message}<br><br>
+                            <strong>Fixed:</strong> ${msg.fixed_count} references<br>
+                            <strong>Total checked:</strong> ${msg.total_count}<br>
+                            ${msg.remaining > 0 ? `<strong>Still missing:</strong> ${msg.remaining}` : ''}
+                            ${debugInfo}
+                            <br><br>
+                            <em>Tables should now be visible in the visual builder!</em>`,
+                        indicator: msg.fixed_count > 0 ? 'green' : 'orange'
+                    });
+                    this.update_status(msg.message);
+                    
+                    // Refresh orphaned tables list if needed
+                    if (msg.fixed_count > 0) {
+                        this.scan_orphaned_tables();
+                    }
+                } else {
+                    this.show_error('Failed to fix Flansa references: ' + (r.message?.error || 'Unknown error'));
+                }
+            }
+        });
     }
     
     show_error(message) {

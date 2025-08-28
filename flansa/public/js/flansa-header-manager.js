@@ -7,17 +7,17 @@ window.FlansaHeaderManager = {
     
     // Page configurations with proper app context
     PAGE_CONFIG: {
-        'flansa-workspace': {
+        'flansa': {
             title: '🏠 Workspace',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace', current: true }
+                { label: '🏠 Workspace', url: '/app/flansa', current: true }
             ],
             show_back: false
         },
         'flansa-app-dashboard': {
             title: '📱 App Dashboard',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '#', current: true }
             ],
             show_back: true
@@ -25,7 +25,7 @@ window.FlansaHeaderManager = {
         'flansa-visual-builder': {
             title: '📋 Visual Builder',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
                 { label: '📋 {table_name} Builder', url: '#', current: true }
             ],
@@ -34,7 +34,7 @@ window.FlansaHeaderManager = {
         'flansa-form-builder': {
             title: '📝 Form Builder',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
                 { label: '📝 {table_name} Forms', url: '#', current: true }
             ],
@@ -43,7 +43,7 @@ window.FlansaHeaderManager = {
         'flansa-record-viewer': {
             title: '📄 Records',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
                 { label: '📄 {table_name}', url: '#', current: true }
             ],
@@ -52,7 +52,7 @@ window.FlansaHeaderManager = {
         'flansa-report-builder': {
             title: '📊 Report Builder',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
                 { label: '📊 Reports', url: '#', current: true }
             ],
@@ -61,7 +61,7 @@ window.FlansaHeaderManager = {
         'flansa-report-viewer': {
             title: '👁️ Report Viewer',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
                 { label: '👁️ {report_name}', url: '#', current: true }
             ],
@@ -70,7 +70,7 @@ window.FlansaHeaderManager = {
         'flansa-relationship-builder': {
             title: '🔗 Relationship Builder',
             breadcrumbs: [
-                { label: '🏠 Workspace', url: '/app/flansa-workspace' },
+                { label: '🏠 Workspace', url: '/app/flansa' },
                 { label: '📱 {app_name}', url: '/app/flansa-app-dashboard/{app_id}' },
                 { label: '🔗 Relationships', url: '#', current: true }
             ],
@@ -191,7 +191,7 @@ window.FlansaHeaderManager = {
             window.location.href = `/app/flansa-app-dashboard/${context.app_id}`;
         } else {
             // Otherwise go to workspace
-            window.location.href = '/app/flansa-workspace';
+            window.location.href = '/app/flansa';
         }
     },
     
@@ -287,7 +287,7 @@ window.FlansaHeaderManager = {
      */
     getPageIcon(page_name) {
         const icons = {
-            'flansa-workspace': 'fa-home',
+            'flansa': 'fa-home',
             'flansa-app-dashboard': 'fa-tachometer-alt',
             'flansa-visual-builder': 'fa-table',
             'flansa-form-builder': 'fa-edit',

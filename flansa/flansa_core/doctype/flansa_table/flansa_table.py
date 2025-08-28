@@ -1,13 +1,31 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
+from flansa.id_based_utils import generate_id_based_doctype_name, get_tenant_id_from_context, get_tenant_id_from_application
 
 class FlansaTable(Document):
     def validate(self):
         """Validate table configuration"""
         self.validate_naming_convention()
-        self.update_generated_doctype_name()
-        self.auto_generate_doctype_name()
+        self.inherit_tenant_from_application()
+        # Auto-generate DocType name if needed
+        if not self.doctype_name and self.application and self.table_name:
+            self.doctype_name = self.get_generated_doctype_name()
+    
+    def inherit_tenant_from_application(self):
+        """Inherit tenant_id from the parent Application for consistent multi-tenancy"""
+        try:
+            if self.application:
+                # Get the tenant_id from the Application
+                app_tenant_id = get_tenant_id_from_application(self.application)
+                
+                if app_tenant_id and app_tenant_id != "default":
+                    # Set tenant_id if not already set or different
+                    if not self.tenant_id or self.tenant_id != app_tenant_id:
+                        self.tenant_id = app_tenant_id
+                        
+        except Exception as e:
+            frappe.log_error(f"Error inheriting tenant from application: {str(e)}")
     
     def after_insert(self):
         """Auto-trigger DocType creation after table creation"""
@@ -39,58 +57,31 @@ class FlansaTable(Document):
                     "Current value: '{0}'"
                 ).format(self.table_name))
     
-    def update_generated_doctype_name(self):
-        """Update the generated DocType name using new convention"""
-        if self.application and self.table_name:
-            self.doctype_name = self.get_generated_doctype_name()
-    
-    def auto_generate_doctype_name(self):
-        """Auto-generate DocType name - requires application and table_name"""
-        if not self.doctype_name:
-            if self.application and self.table_name:
-                # Use proper app-based naming
-                proper_name = self.get_generated_doctype_name()
-                if proper_name:
-                    self.doctype_name = proper_name
-            else:
-                # No fallback - application and table_name are required
-                frappe.throw(_("Application and Table Name are required for DocType generation"))
+    # Removed redundant DocType naming methods - only get_generated_doctype_name() is needed
     
     def get_generated_doctype_name(self):
-        """Get the generated DocType name using enhanced naming convention"""
+        """Get the generated DocType name using ID-based naming for guaranteed uniqueness"""
         if not self.application or not self.table_name:
             return ""
         
         try:
-            app_doc = frappe.get_doc("Flansa Application", self.application)
+            # IMPORTANT: Get tenant_id from the Application for consistent multi-tenant naming
+            # This ensures all tables in the same application use the same tenant_id
+            tenant_id = get_tenant_id_from_application(self.application)
             
-            # Use app_name and table_name for generation
-            app_name = app_doc.app_name or app_doc.app_title.lower().replace(' ', '_')
-            table_name = self.table_name
+            # Use application and table IDs directly (they're already hashes from autoname)
+            application_id = self.application  # This is the hash ID
+            table_id = self.name              # This is the hash ID
             
-            # Apply new naming convention: {AppName}_{TableName}
-            clean_app = app_name.replace('_', ' ').title().replace(' ', '')
-            clean_table = table_name.replace('_', ' ').title().replace(' ', '')
-            
-            doctype_name = "{0}_{1}".format(clean_app, clean_table)
-            
-            # Ensure length limits (max 60 chars for safety)
-            if len(doctype_name) > 60:
-                max_app = 20
-                max_table = 35
-                
-                if len(clean_app) > max_app:
-                    clean_app = clean_app[:max_app]
-                if len(clean_table) > max_table:
-                    clean_table = clean_table[:max_table]
-                    
-                doctype_name = "{0}_{1}".format(clean_app, clean_table)
+            # Generate ID-based DocType name
+            doctype_name = generate_id_based_doctype_name(tenant_id, application_id, table_id)
             
             return doctype_name
             
         except Exception as e:
-            frappe.log_error("Error generating DocType name: {0}".format(str(e)))
-            return ""
+            frappe.log_error("Error generating ID-based DocType name: {0}".format(str(e)))
+            # Fallback to simple combination
+            return f"T_{self.application[:6]}_{self.name[:6]}"
     
     @frappe.whitelist()
     def regenerate_doctype(self):

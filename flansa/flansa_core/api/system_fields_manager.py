@@ -210,40 +210,40 @@ def add_system_field_to_table(table_name, field_name):
         table_doc = frappe.get_doc("Flansa Table", table_name)
         field_config = FRAPPE_SYSTEM_FIELDS[field_name]
         
-        # Check if field already exists in JSON
-        current_fields = []
-        if table_doc.fields_json:
-            import json
-            current_fields = json.loads(table_doc.fields_json)
-            
-            # Check if system field already added
-            for field in current_fields:
-                if field.get("field_name") == field_name:
-                    return {"success": False, "error": "Field already exists in table"}
+        # Check if a Custom Field already exists for this system field
+        doctype_name = table_doc.doctype_name if hasattr(table_doc, 'doctype_name') and table_doc.doctype_name else table_doc.table_name
         
-        # Add system field to JSON
-        system_field_entry = {
-            "field_name": field_config["fieldname"],
-            "field_label": field_config["label"],
-            "field_type": field_config["fieldtype"],
-            "description": field_config.get("description", ""),
-            "is_system_field": True,
-            "is_readonly": True,
-            "category": field_config.get("category", "system"),
-            "options": field_config.get("options", ""),
-            "in_list_view": field_config.get("in_list_view", 0),
-            "in_standard_filter": field_config.get("in_standard_filter", 0),
-            "depends_on": field_config.get("depends_on", "")
-        }
+        if frappe.db.exists("Custom Field", {"dt": doctype_name, "fieldname": field_name}):
+            return {"success": False, "error": "Field already exists in table"}
         
-        current_fields.append(system_field_entry)
-        table_doc.fields_json = json.dumps(current_fields)
-        table_doc.save()
+        # Create a Custom Field to make the system field visible in the Visual Builder
+        custom_field = frappe.new_doc("Custom Field")
+        custom_field.dt = doctype_name
+        custom_field.fieldname = field_config["fieldname"]
+        custom_field.label = field_config["label"]
+        custom_field.fieldtype = field_config["fieldtype"]
+        custom_field.read_only = 1
+        custom_field.description = field_config.get("description", "")
+        custom_field.options = field_config.get("options", "")
+        custom_field.in_list_view = field_config.get("in_list_view", 0)
+        custom_field.in_standard_filter = field_config.get("in_standard_filter", 0)
+        custom_field.depends_on = field_config.get("depends_on", "")
+        custom_field.insert()
+        
+        # Update the table's field count
+        if hasattr(table_doc, 'field_count'):
+            table_doc.field_count = frappe.db.count("Custom Field", {"dt": doctype_name})
+            table_doc.save()
         
         return {
             "success": True,
             "message": f"System field '{field_config['label']}' added to table",
-            "field": system_field_entry
+            "field": {
+                "fieldname": field_config["fieldname"],
+                "label": field_config["label"],
+                "fieldtype": field_config["fieldtype"],
+                "custom_field_name": custom_field.name
+            }
         }
         
     except Exception as e:

@@ -30,10 +30,12 @@ frappe.pages['flansa-form-builder'].on_page_load = function(wrapper) {
     }
     
     // Initialize custom Flansa form builder
-    new FlansaFormBuilder(page);
+    new window.FlansaFormBuilder(page);
 };
 
-class FlansaFormBuilder {
+// Prevent class redeclaration if already exists
+if (typeof FlansaFormBuilder === 'undefined') {
+    window.FlansaFormBuilder = class FlansaFormBuilder {
     constructor(page) {
         this.page = page;
         this.wrapper = page.wrapper;
@@ -2066,7 +2068,9 @@ class FlansaFormBuilder {
         // You can expand this to show a properties panel
         console.log('Selected section:', section);
     }
-}
+} // End of FlansaFormBuilder class
+} // End of conditional class declaration
+
 // Apply theme on page load
 $(document).ready(function() {
     if (window.page_instance && window.page_instance.apply_theme) {

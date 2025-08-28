@@ -1,0 +1,37 @@
+
+/* Flansa Minimal Navbar - Preserves Frappe Functionality */
+
+/* Reset any aggressive navbar modifications */
+.navbar,
+.navbar-nav,
+.navbar-brand,
+.navbar-home {
+    /* Restore Frappe defaults */
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    min-height: initial !important;
+}
+
+/* Ensure navbar is visible */
+.navbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1030 !important;
+}
+
+/* Ensure body has margin for fixed navbar */
+body {
+    padding-top: 60px !important;
+}
+
+/* Only minimal theme support - no interference */
+.navbar .flansa-theme-toggle {
+    margin-left: 10px;
+}
+
+/* DO NOT modify logo sizes */
+/* DO NOT hide navbar elements */
+/* DO NOT override navbar structure */

@@ -24,20 +24,19 @@ def activate_table(table_name):
                 "error": "Table is already active"
             }
         
-        # Generate DocType name if not exists
+        # Generate DocType name if not exists - use server-side method
         if not table_doc.doctype_name:
-            # Create a cleaner DocType name
-            clean_name = (table_doc.table_label or table_doc.name).replace(" ", "").replace("-", "")
-            base_name = f"FLS{clean_name}"
-            doctype_name = base_name
-            counter = 1
-            
-            while frappe.db.exists("DocType", doctype_name):
-                doctype_name = f"{base_name}{counter}"
-                counter += 1
-            
-            table_doc.doctype_name = doctype_name
-            print(f"Generated DocType name: {doctype_name}")
+            # Let the table's get_generated_doctype_name method handle ID-based naming
+            doctype_name = table_doc.get_generated_doctype_name()
+            if doctype_name:
+                table_doc.doctype_name = doctype_name
+                print(f"Generated ID-based DocType name: {doctype_name}")
+            else:
+                print("❌ Failed to generate DocType name")
+                return {
+                    "success": False,
+                    "error": "Could not generate DocType name"
+                }
         
         # Parse fields from JSON
         fields_data = []
