@@ -187,26 +187,6 @@ class UnifiedReportBuilder {
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Report Preview Section -->
-                    <div class="section-card" id="report-preview-section" style="display: none;">
-                        <div class="section-header">
-                            <h4><i class="fa fa-eye"></i> Report Preview</h4>
-                            <div class="view-controls">
-                                <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-secondary view-mode-btn active" data-view="table">
-                                        <i class="fa fa-table"></i> Table
-                                    </button>
-                                    <button class="btn btn-sm btn-outline-secondary view-mode-btn" data-view="gallery">
-                                        <i class="fa fa-th"></i> Gallery
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="section-body">
-                            <div id="report-preview-container"></div>
-                        </div>
-                    </div>
                 </div>
             </div>
         `);
@@ -561,11 +541,7 @@ class UnifiedReportBuilder {
         $('#add-sort-btn').on('click', () => this.add_sort());
         $('#add-grouping-btn').on('click', () => this.add_grouping());
 
-        // View mode toggle
-        $('.view-mode-btn').on('click', (e) => {
-            const view = $(e.currentTarget).data('view');
-            this.switch_view_mode(view);
-        });
+        // View mode toggle removed - handled in preview dialog
 
         // Inline label editing
         this.save_field_label();
@@ -703,13 +679,7 @@ class UnifiedReportBuilder {
     }
 
     update_preview() {
-        if (this.selected_fields.length > 0) {
-            // Show preview section
-            $('#report-preview-section').show();
-            this.execute_report_preview(this.build_report_config(), '#report-preview-container');
-        } else {
-            $('#report-preview-section').hide();
-        }
+        // Preview removed - use the Preview button dialog instead
     }
 
     execute_report_preview(config, container) {
@@ -1204,18 +1174,41 @@ class UnifiedReportBuilder {
                 this.selected_fields = config.selected_fields;
                 this.render_selected_fields();
                 this.show_action_buttons();
+                
+                // After fields are loaded, restore filters, sorting, and grouping
+                setTimeout(() => {
+                    this.restore_filters_from_config(config.filters || []);
+                    this.restore_sorting_from_config(config.sort || []);
+                    this.restore_grouping_from_config(config.grouping || []);
+                }, 500);
             }, 1000);
         }
-        
-        // Load filters, sort, and grouping
-        this.filters = config.filters || [];
-        this.sort_config = config.sort || [];
-        this.grouping_config = config.grouping || [];
         
         // Update title
         if (this.current_report_title) {
             $('#report-title-input').val(this.current_report_title);
         }
+    }
+    
+    restore_filters_from_config(filters) {
+        console.log('Restoring filters:', filters);
+        filters.forEach(filter => {
+            this.add_filter(filter);
+        });
+    }
+    
+    restore_sorting_from_config(sortConfig) {
+        console.log('Restoring sorting:', sortConfig);
+        sortConfig.forEach(sort => {
+            this.add_sort(sort);
+        });
+    }
+    
+    restore_grouping_from_config(groupingConfig) {
+        console.log('Restoring grouping:', groupingConfig);
+        groupingConfig.forEach(group => {
+            this.add_grouping(group);
+        });
     }
 
     save_report() {
