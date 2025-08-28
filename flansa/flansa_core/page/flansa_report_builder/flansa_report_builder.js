@@ -1157,6 +1157,7 @@ class UnifiedReportBuilder {
                 if (r.message) {
                     const report = r.message;
                     this.current_report_title = report.report_title;
+                    this.current_report_modified = report.modified; // Store modified timestamp
                     
                     // Load the report configuration
                     if (report.report_config) {
@@ -1237,6 +1238,10 @@ class UnifiedReportBuilder {
         
         if (this.current_report_id) {
             report_data.name = this.current_report_id;
+            // Include modified timestamp to prevent conflict errors
+            if (this.current_report_modified) {
+                report_data.modified = this.current_report_modified;
+            }
         }
         
         frappe.call({
@@ -1248,6 +1253,7 @@ class UnifiedReportBuilder {
                 if (r.message) {
                     frappe.msgprint('Report saved successfully');
                     this.current_report_id = r.message.name;
+                    this.current_report_modified = r.message.modified; // Update modified timestamp
                 } else {
                     frappe.msgprint('Failed to save report');
                 }
