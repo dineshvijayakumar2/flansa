@@ -27,47 +27,40 @@ def add_naming_fields_sql():
         existing_fieldnames = {field.fieldname for field in current_fields}
         print(f"✅ Found {len(existing_fieldnames)} existing fields", flush=True)
         
-        # Fields to add with their configurations
+        # Fields to add with their configurations (matching local flansa_table.json)
         naming_fields = [
+            {
+                'fieldname': 'naming_field',
+                'label': 'Field for Dynamic Prefix',
+                'fieldtype': 'Data',
+                'description': 'Field name to use for prefix (for Field Based naming)'
+            },
+            {
+                'fieldname': 'naming_prefix',
+                'label': 'Record Prefix',
+                'fieldtype': 'Data',
+                'description': 'e.g., CUS for Customers, ORD for Orders'
+            },
             {
                 'fieldname': 'naming_type',
                 'label': 'Naming Type',
                 'fieldtype': 'Select',
-                'options': 'Auto Number\nField Based\nExpression Based',
-                'default': 'Auto Number'
-            },
-            {
-                'fieldname': 'naming_prefix',
-                'label': 'Naming Prefix', 
-                'fieldtype': 'Data'
+                'options': 'Naming Series\nAuto Increment\nField Based\nRandom\nPrompt',
+                'default': 'Naming Series'
             },
             {
                 'fieldname': 'naming_digits',
                 'label': 'Number of Digits',
                 'fieldtype': 'Int',
-                'default': '5'
+                'default': '5',
+                'description': 'Number of digits in the counter (e.g., 5 for 00001)'
             },
             {
                 'fieldname': 'naming_start_from',
-                'label': 'Start From',
+                'label': 'Start Counter From',
                 'fieldtype': 'Int', 
-                'default': '1'
-            },
-            {
-                'fieldname': 'naming_field',
-                'label': 'Naming Field',
-                'fieldtype': 'Data'
-            },
-            {
-                'fieldname': 'naming_expression',
-                'label': 'Naming Expression',
-                'fieldtype': 'Small Text'
-            },
-            {
-                'fieldname': 'show_gallery',
-                'label': 'Show Gallery',
-                'fieldtype': 'Check',
-                'default': '0'
+                'default': '1',
+                'depends_on': 'eval:doc.naming_type=="Naming Series" || doc.naming_type=="Auto Increment"'
             }
         ]
         
@@ -107,7 +100,7 @@ def add_naming_fields_sql():
                 INSERT INTO "tabDocField" (
                     name, creation, modified, modified_by, owner, docstatus,
                     parent, parentfield, parenttype, idx, fieldname, label, fieldtype,
-                    options, "default", reqd, hidden, read_only, in_list_view, 
+                    options, "default", description, depends_on, reqd, hidden, read_only, in_list_view, 
                     in_standard_filter, allow_bulk_edit, allow_in_quick_entry,
                     allow_on_submit, bold, collapsible, columns, fetch_if_empty,
                     hide_border, hide_days, hide_seconds, ignore_user_permissions,
@@ -118,7 +111,7 @@ def add_naming_fields_sql():
                 ) VALUES (
                     %s, NOW(), NOW(), %s, %s, 0,
                     'Flansa Table', 'fields', 'DocType', %s, %s, %s, %s,
-                    %s, %s, 0, 0, 0, 0,
+                    %s, %s, %s, %s, 0, 0, 0, 0,
                     0, 0, 0,
                     0, 0, 0, 0, 0,
                     0, 0, 0, 0,
@@ -130,7 +123,8 @@ def add_naming_fields_sql():
             """, (
                 field_name, frappe.session.user, frappe.session.user, idx,
                 field['fieldname'], field['label'], field['fieldtype'],
-                field.get('options', ''), field.get('default', '')
+                field.get('options', ''), field.get('default', ''),
+                field.get('description', ''), field.get('depends_on', '')
             ))
             
             print(f"✅ Added field: {field['fieldname']}", flush=True)
@@ -204,7 +198,7 @@ def verify_fields():
             FROM "tabDocField" 
             WHERE parent = 'Flansa Table' 
             AND fieldname IN ('naming_type', 'naming_prefix', 'naming_digits', 
-                             'naming_start_from', 'naming_field', 'naming_expression', 'show_gallery')
+                             'naming_start_from', 'naming_field')
             ORDER BY fieldname
         """, as_dict=True)
         
@@ -218,7 +212,7 @@ def verify_fields():
             FROM information_schema.columns 
             WHERE table_name = 'tabFlansa Table'
             AND column_name IN ('naming_type', 'naming_prefix', 'naming_digits', 
-                               'naming_start_from', 'naming_field', 'naming_expression', 'show_gallery')
+                               'naming_start_from', 'naming_field')
             ORDER BY column_name
         """, as_dict=True)
         
@@ -226,7 +220,7 @@ def verify_fields():
         for col in columns:
             print(f"   • {col.column_name}", flush=True)
         
-        return len(fields) >= 7 and len(columns) >= 7
+        return len(fields) >= 5 and len(columns) >= 5
         
     except Exception as e:
         print(f"⚠️  Verification error: {str(e)}", flush=True)
