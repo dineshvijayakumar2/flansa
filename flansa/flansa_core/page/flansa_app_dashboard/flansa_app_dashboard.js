@@ -711,7 +711,7 @@ class FlansaApplicationDashboard {
                         'Table created successfully! What would you like to do next?',
                         () => {
                             // Go to Visual Builder to add fields
-                            window.location.href = `/app/flansa-visual-builder?table=${r.message.table_name}`;
+                            window.location.href = `/app/flansa-table-builder?table=${r.message.table_name}`;
                         },
                         () => {
                             // Stay on dashboard and refresh
@@ -749,11 +749,11 @@ class FlansaApplicationDashboard {
     }
     
     open_table_builder() {
-        window.location.href = `/app/flansa-visual-builder?app=${this.app_id}`;
+        window.location.href = `/app/flansa-table-builder?app=${this.app_id}`;
     }
     
     open_table(table_id) {
-        window.location.href = `/app/flansa-visual-builder?table=${table_id}`;
+        window.location.href = `/app/flansa-table-builder?table=${table_id}`;
     }
     
     view_relationships() {
@@ -775,7 +775,7 @@ class FlansaApplicationDashboard {
     // Additional table action methods
     edit_table(table_name) {
         // Navigate to visual builder for this specific table
-        window.location.href = `/app/flansa-visual-builder?table=${table_name}`;
+        window.location.href = `/app/flansa-table-builder?table=${table_name}`;
     }
     
     view_table_data(table_name) {
@@ -930,7 +930,7 @@ class FlansaApplicationDashboard {
         // Quick navigation buttons
         $(document).on('click', '#quick-nav-table-builder', (e) => {
             e.preventDefault();
-            window.location.href = `/app/flansa-visual-builder?app=${this.app_id}`;
+            window.location.href = `/app/flansa-table-builder?app=${this.app_id}`;
         });
         
         $(document).on('click', '#quick-nav-reports', (e) => {

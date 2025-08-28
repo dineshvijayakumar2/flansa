@@ -37,7 +37,7 @@ function add_enhanced_flansa_buttons(frm) {
     
     // Primary Table Builder button
     frm.add_custom_button('🎨 Open Table Builder', function() {
-        open_visual_builder_with_app_name(frm);
+        open_table_builder_with_app_name(frm);
     }).addClass('btn-primary');
     
     // DocType Management Group - Always show Force Generate
@@ -144,11 +144,11 @@ function add_flansa_indicators(frm) {
 
 // Removed generate_doctype_name function - DocType naming now handled server-side with ID-based naming
 
-function open_visual_builder_with_app_name(frm) {
+function open_table_builder_with_app_name(frm) {
     const app_name = frm.doc.application || frm.doc.app_name;
     
     if (app_name) {
-        console.log('Opening visual builder with app name:', app_name);
+        console.log('Opening table builder with app name:', app_name);
         frappe.show_alert('Opening Table Builder with app: ' + app_name, 'blue');
         frappe.set_route('flansa-table-builder', app_name);
     } else {

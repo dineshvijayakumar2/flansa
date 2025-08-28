@@ -851,9 +851,9 @@ show_create_dialog() {
         $(document).on('click', '#quick-nav-table-builder', (e) => {
             e.preventDefault();
             if (this.app_id) {
-                window.location.href = `/app/flansa-visual-builder?app=${this.app_id}`;
+                window.location.href = `/app/flansa-table-builder?app=${this.app_id}`;
             } else {
-                window.location.href = '/app/flansa-visual-builder';
+                window.location.href = '/app/flansa-table-builder';
             }
         });
         
@@ -2296,7 +2296,7 @@ show_create_dialog() {
         }
         
         // Open Visual Builder directly with the table ID
-        const url = `/app/flansa-visual-builder?table=${table_name}`;
+        const url = `/app/flansa-table-builder?table=${table_name}`;
         window.open(url, '_blank');
         
         // Get table label for notification
@@ -2314,7 +2314,7 @@ show_create_dialog() {
         }
         
         // Open Visual Builder directly with the table ID
-        const url = `/app/flansa-visual-builder?table=${table_name}`;
+        const url = `/app/flansa-table-builder?table=${table_name}`;
         window.open(url, '_blank');
         
         // Get table label for notification
