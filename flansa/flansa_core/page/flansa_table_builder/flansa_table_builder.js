@@ -84,7 +84,7 @@ class EnhancedFlansaTableBuilder {
                                 <p class="header-subtitle">${this.table_data.description || 'Manage fields and structure for this table'}</p>
                             </div>
                             
-                            <!-- Counter and Action Buttons -->
+                            <!-- Counter, View Controls and Action Buttons -->
                             <div class="header-actions">
                                 <div class="header-counter">
                                     <span class="counter-text">
@@ -92,6 +92,20 @@ class EnhancedFlansaTableBuilder {
                                         <span class="count-total">of <span id="total-count">0</span> fields</span>
                                     </span>
                                 </div>
+                                
+                                <div class="header-view-controls">
+                                    <div class="view-toggle">
+                                        <button class="view-btn active" data-view="list" title="List View">
+                                            <i class="fa fa-list"></i>
+                                        </button>
+                                        <button class="view-btn" data-view="tile" title="Tile View">
+                                            <i class="fa fa-th"></i>
+                                        </button>
+                                    </div>
+                                    <input type="search" class="search-box" id="field-search" 
+                                           placeholder="Search fields...">
+                                </div>
+                                
                                 <div class="action-dropdown">
                                     <button class="sleek-btn primary split-btn" id="add-field-header">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -166,20 +180,7 @@ class EnhancedFlansaTableBuilder {
                 <div class="container main-content">
                     <!-- Fields Section -->
                     <div class="section-wrapper">
-                        <div class="section-header">
-                            <div class="section-controls">
-                                <div class="view-toggle">
-                                    <button class="view-btn active" data-view="list" title="List View">
-                                        <i class="fa fa-list"></i>
-                                    </button>
-                                    <button class="view-btn" data-view="tile" title="Tile View">
-                                        <i class="fa fa-th"></i>
-                                    </button>
-                                </div>
-                                <input type="search" class="search-box" id="field-search" 
-                                       placeholder="Search fields...">
-                            </div>
-                        </div>
+                        <!-- Section header removed - controls moved to header -->
                         
                         <div class="fields-data-grid" id="fields-container">
                             <!-- Enterprise-grade sortable data grid will be rendered here -->
@@ -321,23 +322,83 @@ class EnhancedFlansaTableBuilder {
                 
                 /* Header Counter */
                 .header-counter {
-                    margin-right: 1rem;
                     padding: 0.5rem 0.75rem;
-                    background: rgba(255, 255, 255, 0.1);
+                    background: rgba(255, 255, 255, 0.15);
                     border-radius: 8px;
-                    border: 1px solid rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.25);
                     backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: center;
                 }
                 
                 .counter-text {
-                    color: rgba(255, 255, 255, 0.9);
+                    color: rgba(255, 255, 255, 0.95);
                     font-size: 0.875rem;
                     font-weight: 500;
+                    white-space: nowrap;
                 }
                 
                 .count-total {
-                    color: rgba(255, 255, 255, 0.7);
+                    color: rgba(255, 255, 255, 0.75);
                     font-weight: 400;
+                }
+                
+                /* Header View Controls */
+                .header-view-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 0.375rem;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    backdrop-filter: blur(8px);
+                }
+                
+                .header-view-controls .view-toggle {
+                    display: flex;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 6px;
+                    padding: 2px;
+                }
+                
+                .header-view-controls .view-btn {
+                    padding: 0.375rem 0.5rem;
+                    border: none;
+                    background: transparent;
+                    color: rgba(255, 255, 255, 0.7);
+                    cursor: pointer;
+                    border-radius: 4px;
+                    transition: all 0.2s ease;
+                    font-size: 0.75rem;
+                }
+                
+                .header-view-controls .view-btn.active,
+                .header-view-controls .view-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    color: rgba(255, 255, 255, 0.95);
+                }
+                
+                .header-view-controls .search-box {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 6px;
+                    padding: 0.375rem 0.75rem;
+                    color: rgba(255, 255, 255, 0.9);
+                    font-size: 0.8125rem;
+                    width: 180px;
+                    transition: all 0.2s ease;
+                }
+                
+                .header-view-controls .search-box::placeholder {
+                    color: rgba(255, 255, 255, 0.5);
+                }
+                
+                .header-view-controls .search-box:focus {
+                    outline: none;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-color: rgba(255, 255, 255, 0.3);
+                    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
                 }
                 
                 /* Modern Action Buttons */
@@ -419,6 +480,15 @@ class EnhancedFlansaTableBuilder {
                     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
                     display: none;
                     z-index: 1000;
+                }
+                
+                /* Specific dropdown positioning */
+                #add-field-dropdown {
+                    z-index: 1002;
+                }
+                
+                #context-dropdown {
+                    z-index: 1001;
                 }
                 
                 .dropdown-panel.show {
@@ -1345,7 +1415,10 @@ class EnhancedFlansaTableBuilder {
         // Add Field dropdown
         $container.on('click', '#add-field-header', (e) => {
             e.stopPropagation();
-            const dropdown = $(e.currentTarget).siblings('.dropdown-panel');
+            // Close other dropdowns first
+            $container.find('#context-dropdown').removeClass('show');
+            // Toggle this dropdown
+            const dropdown = $('#add-field-dropdown');
             dropdown.toggleClass('show');
         });
         
@@ -1371,7 +1444,10 @@ class EnhancedFlansaTableBuilder {
         // Context menu events
         $container.on('click', '#context-menu', (e) => {
             e.stopPropagation();
-            const dropdown = $container.find('.dropdown-panel');
+            // Close other dropdowns first
+            $container.find('#add-field-dropdown').removeClass('show');
+            // Toggle this dropdown
+            const dropdown = $('#context-dropdown');
             dropdown.toggleClass('show');
         });
         

@@ -61,6 +61,20 @@ class FlansaAppBuilder {
                                         <span class="count-total">of <span id="total-count">0</span> tables</span>
                                     </span>
                                 </div>
+                                
+                                <div class="header-view-controls">
+                                    <div class="view-toggle">
+                                        <button class="view-btn active" data-view="grid" title="Grid View">
+                                            <i class="fa fa-th"></i>
+                                        </button>
+                                        <button class="view-btn" data-view="list" title="List View">
+                                            <i class="fa fa-list"></i>
+                                        </button>
+                                    </div>
+                                    <input type="search" class="search-box" id="table-search" 
+                                           placeholder="Search tables...">
+                                </div>
+                                
                                 <button class="header-btn" id="create-table-header">
                                     <i class="fa fa-plus"></i> New Table
                                 </button>
@@ -89,20 +103,7 @@ class FlansaAppBuilder {
                 <div class="container main-content">
                     <!-- Tables Section -->
                     <div class="section-wrapper">
-                        <div class="section-header">
-                            <div class="section-controls">
-                                <div class="view-toggle">
-                                    <button class="view-btn active" data-view="grid" title="Grid View">
-                                        <i class="fa fa-th"></i>
-                                    </button>
-                                    <button class="view-btn" data-view="list" title="List View">
-                                        <i class="fa fa-list"></i>
-                                    </button>
-                                </div>
-                                <input type="search" class="search-box" id="table-search" 
-                                       placeholder="Search tables...">
-                            </div>
-                        </div>
+                        <!-- Section header removed - controls moved to header -->
                         
                         <div class="tables-container grid-view" id="tables-container">
                             <!-- Tables will be loaded here -->
@@ -221,6 +222,64 @@ class FlansaAppBuilder {
                 .count-total {
                     color: rgba(255, 255, 255, 0.75);
                     font-weight: 400;
+                }
+                
+                /* Header View Controls */
+                .header-view-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    padding: 0.375rem;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    backdrop-filter: blur(8px);
+                }
+                
+                .header-view-controls .view-toggle {
+                    display: flex;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 6px;
+                    padding: 2px;
+                }
+                
+                .header-view-controls .view-btn {
+                    padding: 0.375rem 0.5rem;
+                    border: none;
+                    background: transparent;
+                    color: rgba(255, 255, 255, 0.7);
+                    cursor: pointer;
+                    border-radius: 4px;
+                    transition: all 0.2s ease;
+                    font-size: 0.75rem;
+                }
+                
+                .header-view-controls .view-btn.active,
+                .header-view-controls .view-btn:hover {
+                    background: rgba(255, 255, 255, 0.2);
+                    color: rgba(255, 255, 255, 0.95);
+                }
+                
+                .header-view-controls .search-box {
+                    background: rgba(255, 255, 255, 0.1);
+                    border: 1px solid rgba(255, 255, 255, 0.15);
+                    border-radius: 6px;
+                    padding: 0.375rem 0.75rem;
+                    color: rgba(255, 255, 255, 0.9);
+                    font-size: 0.8125rem;
+                    width: 180px;
+                    transition: all 0.2s ease;
+                }
+                
+                .header-view-controls .search-box::placeholder {
+                    color: rgba(255, 255, 255, 0.5);
+                }
+                
+                .header-view-controls .search-box:focus {
+                    outline: none;
+                    background: rgba(255, 255, 255, 0.15);
+                    border-color: rgba(255, 255, 255, 0.3);
+                    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
                 }
                 
                 /* Header Actions */
