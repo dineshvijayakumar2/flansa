@@ -25,6 +25,7 @@ class FlansaAppBuilder {
     init() {
         this.make_layout();
         this.load_data();
+        this.load_tenant_logo();
         this.bind_events();
     }
     
@@ -49,6 +50,11 @@ class FlansaAppBuilder {
                         <!-- Main Header Row -->
                         <div class="header-row">
                             <div class="app-info">
+                                <!-- Optional Tenant Logo -->
+                                <div class="tenant-logo-container" id="tenant-logo-container" style="display: none;">
+                                    <img src="" alt="Tenant Logo" class="tenant-logo" id="tenant-logo" />
+                                </div>
+                                
                                 <div class="app-info-inline">
                                     <h1 class="app-title">Loading...</h1>
                                     <span class="app-separator">•</span>
@@ -197,6 +203,20 @@ class FlansaAppBuilder {
                     display: flex;
                     align-items: center;
                     gap: 1rem;
+                }
+                
+                /* Tenant Logo */
+                .tenant-logo-container {
+                    margin-right: 0.5rem;
+                }
+                
+                .tenant-logo {
+                    height: 36px;
+                    width: auto;
+                    max-width: 100px;
+                    object-fit: contain;
+                    border-radius: 6px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
                 
                 .app-info-inline {
@@ -1324,5 +1344,30 @@ class FlansaAppBuilder {
     
     app_settings() {
         frappe.set_route('Form', 'Flansa Application', this.app_id);
+    }
+    
+    async load_tenant_logo() {
+        try {
+            // Try to get tenant logo if tenant system is available
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_tenant_logo',
+                args: {},
+                freeze: false,
+                quiet: true // Don't show errors if method doesn't exist
+            });
+            
+            if (result.message && result.message.logo) {
+                const logoContainer = document.getElementById('tenant-logo-container');
+                const logoImg = document.getElementById('tenant-logo');
+                
+                if (logoContainer && logoImg) {
+                    logoImg.src = result.message.logo;
+                    logoContainer.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            // Silently fail if tenant system isn't available
+            console.debug('Tenant logo not available:', error);
+        }
     }
 }

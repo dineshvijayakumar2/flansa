@@ -23,8 +23,8 @@ window.FlansaGlobalNav = {
                 <!-- Brand Section -->
                 <div class="sidebar-brand">
                     <div class="flansa-brand">
-                        <img src="/assets/flansa/images/flansa-logo.svg" alt="Flansa" class="brand-logo" />
-                        <span class="brand-text">Flansa</span>
+                        <img src="${this.getAppLogo()}" alt="${this.getAppTitle()}" class="brand-logo" />
+                        <span class="brand-text">${this.getAppTitle()}</span>
                     </div>
                 </div>
                 
@@ -274,6 +274,64 @@ window.FlansaGlobalNav = {
             $('[data-route="app-builder"]').addClass('active');
         } else if (currentPath.includes('flansa-saved-reports') || currentPath.includes('flansa-report-viewer')) {
             $('[data-route="reports"]').addClass('active');
+        }
+    },
+
+    /**
+     * Get configurable app logo from hooks or fallback
+     */
+    getAppLogo() {
+        // Try to get from frappe boot or system settings, fallback to default
+        if (frappe.boot && frappe.boot.website_context && frappe.boot.website_context.app_logo_url) {
+            return frappe.boot.website_context.app_logo_url;
+        }
+        if (frappe.boot && frappe.boot.app_logo_url) {
+            return frappe.boot.app_logo_url;
+        }
+        // Fallback to configured logo
+        return "/assets/flansa/images/flansa-logo.svg";
+    },
+
+    /**
+     * Get configurable app title from hooks or fallback
+     */
+    getAppTitle() {
+        // Try to get from frappe boot, fallback to default
+        if (frappe.boot && frappe.boot.app_title) {
+            return frappe.boot.app_title;
+        }
+        return "Flansa";
+    },
+
+    /**
+     * Get tenant logo if available
+     */
+    async getTenantLogo() {
+        try {
+            // Check if tenant context exists and has logo
+            if (window.flansaTenantContext && window.flansaTenantContext.tenant_logo) {
+                return window.flansaTenantContext.tenant_logo;
+            }
+            
+            // Try to fetch current tenant settings
+            if (frappe.boot && frappe.boot.tenant_id) {
+                const result = await frappe.call({
+                    method: 'flansa.flansa_core.tenant_service.get_tenant_logo',
+                    args: {
+                        tenant_id: frappe.boot.tenant_id
+                    },
+                    freeze: false
+                });
+                
+                if (result.message && result.message.logo) {
+                    return result.message.logo;
+                }
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn('Could not fetch tenant logo:', error);
+            return null;
         }
     }
 };

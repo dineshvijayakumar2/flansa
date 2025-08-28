@@ -38,6 +38,7 @@ class EnhancedFlansaTableBuilder {
         }
         
         this.setup_page_actions();
+        this.load_tenant_logo();
     }
     
     setup_page_actions() {
@@ -77,6 +78,11 @@ class EnhancedFlansaTableBuilder {
                         <!-- Single Row Header Section -->
                         <div class="header-main">
                             <div class="header-left">
+                                <!-- Optional Tenant Logo -->
+                                <div class="tenant-logo-container" id="tenant-logo-container" style="display: none;">
+                                    <img src="" alt="Tenant Logo" class="tenant-logo" id="tenant-logo" />
+                                </div>
+                                
                                 <div class="header-title-inline">
                                     <h1 class="header-title">
                                         <span class="title-text">${this.application_data?.application_title || this.table_data.application || 'Flansa'}</span>
@@ -296,6 +302,20 @@ class EnhancedFlansaTableBuilder {
                 
                 .header-left {
                     flex: 1;
+                }
+                
+                /* Tenant Logo */
+                .tenant-logo-container {
+                    margin-right: 1rem;
+                }
+                
+                .tenant-logo {
+                    height: 40px;
+                    width: auto;
+                    max-width: 120px;
+                    object-fit: contain;
+                    border-radius: 6px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                 }
                 
                 .header-title-inline {
@@ -2609,6 +2629,31 @@ class EnhancedFlansaTableBuilder {
     
     view_table_data() {
         window.location.href = `/app/flansa-report-viewer/${this.table_id}`;
+    }
+    
+    async load_tenant_logo() {
+        try {
+            // Try to get tenant logo if tenant system is available
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_tenant_logo',
+                args: {},
+                freeze: false,
+                quiet: true // Don't show errors if method doesn't exist
+            });
+            
+            if (result.message && result.message.logo) {
+                const logoContainer = document.getElementById('tenant-logo-container');
+                const logoImg = document.getElementById('tenant-logo');
+                
+                if (logoContainer && logoImg) {
+                    logoImg.src = result.message.logo;
+                    logoContainer.style.display = 'block';
+                }
+            }
+        } catch (error) {
+            // Silently fail if tenant system isn't available
+            console.debug('Tenant logo not available:', error);
+        }
     }
     
     async load_table() {
