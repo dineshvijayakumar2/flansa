@@ -768,10 +768,270 @@ class FlansaTableBuilder {
     }
     
     show_add_gallery_dialog() {
-        frappe.msgprint('Gallery field feature coming soon!');
+        const dialog = new frappe.ui.Dialog({
+            title: 'Add Gallery Field',
+            fields: [
+                {
+                    label: 'Field Name',
+                    fieldname: 'field_name',
+                    fieldtype: 'Data',
+                    default: 'gallery_images',
+                    reqd: 1,
+                    description: 'Technical field name (no spaces)'
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    default: 'Gallery Images',
+                    reqd: 1,
+                    description: 'Display label for the field'
+                },
+                {
+                    label: 'Gallery Type',
+                    fieldname: 'gallery_type',
+                    fieldtype: 'Select',
+                    options: 'Image Gallery\nFile Gallery\nMixed Media Gallery',
+                    default: 'Image Gallery',
+                    reqd: 1
+                },
+                {
+                    label: 'Maximum Files',
+                    fieldname: 'max_files',
+                    fieldtype: 'Int',
+                    default: 10,
+                    description: 'Maximum number of files allowed (0 for unlimited)'
+                },
+                {
+                    label: 'Allowed Extensions',
+                    fieldname: 'allowed_extensions',
+                    fieldtype: 'Data',
+                    default: 'jpg,jpeg,png,gif,webp',
+                    description: 'Comma-separated list of allowed file extensions'
+                },
+                {
+                    label: 'Enable Drag & Drop',
+                    fieldname: 'enable_drag_drop',
+                    fieldtype: 'Check',
+                    default: 1
+                },
+                {
+                    label: 'Show Thumbnails',
+                    fieldname: 'show_thumbnails',
+                    fieldtype: 'Check',
+                    default: 1
+                }
+            ],
+            primary_action_label: 'Create Gallery Field',
+            primary_action: async (values) => {
+                try {
+                    const result = await frappe.call({
+                        method: 'flansa.native_fields.add_gallery_field_native',
+                        args: {
+                            table_name: this.table_id,
+                            gallery_config: {
+                                field_name: values.field_name,
+                                field_label: values.field_label,
+                                gallery_type: values.gallery_type,
+                                max_files: values.max_files,
+                                allowed_extensions: values.allowed_extensions,
+                                enable_drag_drop: values.enable_drag_drop,
+                                show_thumbnails: values.show_thumbnails,
+                                required: 0,
+                                hidden: 0,
+                                read_only: 0
+                            }
+                        }
+                    });
+                    
+                    if (result.message && result.message.success) {
+                        frappe.show_alert({
+                            message: 'Gallery field added successfully!',
+                            indicator: 'green'
+                        });
+                        dialog.hide();
+                        this.load_fields();
+                    } else {
+                        frappe.msgprint('Failed to add gallery field');
+                    }
+                } catch (error) {
+                    frappe.msgprint('Failed to add gallery field');
+                    console.error('Error adding gallery field:', error);
+                }
+            }
+        });
+        
+        dialog.show();
     }
     
     show_naming_settings() {
-        frappe.msgprint('Naming settings feature coming soon!');
+        const dialog = new frappe.ui.Dialog({
+            title: 'Naming Settings for ' + (this.table_data.table_label || this.table_data.table_name),
+            size: 'large',
+            fields: [
+                {
+                    fieldname: 'naming_type',
+                    fieldtype: 'Select',
+                    label: 'Naming Type',
+                    options: ['Naming Series', 'Auto Increment', 'Field Based', 'Prompt', 'Random'],
+                    default: 'Naming Series',
+                    description: 'How should new records be named?'
+                },
+                {
+                    fieldname: 'naming_prefix',
+                    fieldtype: 'Data',
+                    label: 'Prefix',
+                    default: 'REC',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    description: 'Text that appears before the number (e.g., EXP for expenses)'
+                },
+                {
+                    fieldname: 'naming_digits',
+                    fieldtype: 'Int',
+                    label: 'Number of Digits',
+                    default: 5,
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    description: 'How many digits for the sequential number (3-10)'
+                },
+                {
+                    fieldname: 'naming_start_from',
+                    fieldtype: 'Int',
+                    label: 'Start Counter From',
+                    default: 1,
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    description: 'Starting number for the sequence (default: 1)'
+                },
+                {
+                    fieldname: 'naming_field',
+                    fieldtype: 'Select',
+                    label: 'Field for Dynamic Prefix',
+                    depends_on: 'eval:doc.naming_type=="Field Based"',
+                    description: 'Field whose value will be used for naming'
+                },
+                {
+                    fieldname: 'naming_separator',
+                    fieldtype: 'Data',
+                    label: 'Separator',
+                    default: '-',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    description: 'Character between prefix and number (default: -)'
+                },
+                {
+                    fieldname: 'preview_section',
+                    fieldtype: 'Section Break',
+                    label: 'Preview'
+                },
+                {
+                    fieldname: 'preview_text',
+                    fieldtype: 'HTML',
+                    label: '',
+                    options: '<div id="naming-preview" style="padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff;"><strong>Record IDs will look like:</strong><br><span id="preview-examples" style="font-family: monospace; color: #495057;">Loading preview...</span></div>'
+                }
+            ],
+            primary_action_label: 'Save & Apply',
+            primary_action: async (values) => {
+                try {
+                    const result = await frappe.call({
+                        method: 'frappe.client.set_value',
+                        args: {
+                            doctype: 'Flansa Table',
+                            name: this.table_id,
+                            fieldname: values
+                        }
+                    });
+                    
+                    if (result.message) {
+                        frappe.show_alert({
+                            message: 'Naming settings saved successfully!',
+                            indicator: 'green'
+                        });
+                        dialog.hide();
+                    }
+                } catch (error) {
+                    console.error('Error saving naming settings:', error);
+                    frappe.show_alert({
+                        message: 'Error saving naming settings',
+                        indicator: 'red'
+                    });
+                }
+            },
+            secondary_action_label: 'Test Pattern',
+            secondary_action: (values) => {
+                this.update_naming_preview(values);
+            }
+        });
+        
+        dialog.show();
+        this.load_current_naming_settings(dialog);
+    }
+    
+    async load_current_naming_settings(dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: 'Flansa Table',
+                    name: this.table_id
+                }
+            });
+            
+            if (result.message) {
+                const table_data = result.message;
+                dialog.set_values({
+                    naming_type: table_data.naming_type || 'Naming Series',
+                    naming_prefix: table_data.naming_prefix || 'REC',
+                    naming_digits: table_data.naming_digits || 5,
+                    naming_start_from: table_data.naming_start_from || 1,
+                    naming_field: table_data.naming_field || '',
+                    naming_separator: '-'
+                });
+                
+                // Update preview on value changes
+                dialog.$wrapper.find('input, select').on('change', () => {
+                    setTimeout(() => {
+                        this.update_naming_preview(dialog.get_values());
+                    }, 100);
+                });
+                
+                // Initial preview
+                this.update_naming_preview(dialog.get_values());
+            }
+        } catch (error) {
+            console.error('Error loading naming settings:', error);
+        }
+    }
+    
+    update_naming_preview(values) {
+        let preview = '';
+        const prefix = values.naming_prefix || 'REC';
+        const separator = values.naming_separator || '-';
+        const digits = parseInt(values.naming_digits) || 5;
+        const start_from = parseInt(values.naming_start_from) || 1;
+        
+        switch (values.naming_type) {
+            case 'Naming Series':
+                const sample_nums = [start_from, start_from + 1, start_from + 2];
+                preview = sample_nums.map(num => 
+                    `${prefix}${separator}${num.toString().padStart(digits, '0')}`
+                ).join(', ');
+                break;
+            case 'Auto Increment':
+                preview = `${start_from.toString().padStart(digits, '0')}, ${(start_from + 1).toString().padStart(digits, '0')}, ${(start_from + 2).toString().padStart(digits, '0')}`;
+                break;
+            case 'Field Based':
+                preview = `[FIELD_VALUE]${separator}${start_from.toString().padStart(digits, '0')}`;
+                break;
+            case 'Prompt':
+                preview = 'User will be prompted to enter ID';
+                break;
+            case 'Random':
+                preview = 'Random IDs like: A1B2C3, X9Y8Z7, M3N4P5';
+                break;
+        }
+        
+        const preview_element = document.getElementById('preview-examples');
+        if (preview_element) {
+            preview_element.textContent = preview;
+        }
     }
 }
