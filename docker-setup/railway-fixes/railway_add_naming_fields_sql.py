@@ -123,15 +123,14 @@ def add_naming_fields_sql():
                     0, 0, 0, 0, 0,
                     0, 0, 0, 0,
                     0, 0, 0, 0,
-                    0, 0, %s, '', 0,
+                    0, 0, 0, '', 0,
                     0, '', '',
                     0, 0, 0, 0, 0, ''
                 )
             """, (
                 field_name, frappe.session.user, frappe.session.user, idx,
                 field['fieldname'], field['label'], field['fieldtype'],
-                field.get('options', ''), field.get('default', ''),
-                precision_param
+                field.get('options', ''), field.get('default', '')
             ))
             
             print(f"✅ Added field: {field['fieldname']}", flush=True)
