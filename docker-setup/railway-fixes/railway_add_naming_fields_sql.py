@@ -110,7 +110,7 @@ def add_naming_fields_sql():
                     ignore_xss_filter, in_global_search, in_preview, is_virtual,
                     no_copy, non_negative, permlevel, precision, print_hide,
                     print_hide_if_no_value, print_width, read_only_depends_on,
-                    report_hide, search_index, sort_options, translatable, unique, width
+                    report_hide, search_index, sort_options, translatable, "unique", width
                 ) VALUES (
                     %s, NOW(), NOW(), %s, %s, 0,
                     'Flansa Table', 'fields', 'DocType', %s, %s, %s, %s,
