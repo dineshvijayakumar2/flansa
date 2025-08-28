@@ -5,27 +5,41 @@ Migrate existing `Trackers_Expenses` and `Trackers_ExpenseCategories` DocTypes t
 
 ## 📦 Migration Scripts Included
 
-### 1. **import_fields_and_recreate.py**
-- **Purpose**: Main migration script that extracts fields from original DocTypes and recreates them with new naming
+### 🎯 **Dynamic Scripts (Recommended)**
+
+### 1. **migrate_doctypes_dynamic.py** ⭐
+- **Purpose**: **DYNAMIC** migration script that automatically finds ALL Flansa Generated DocTypes
 - **What it does**:
-  - Extracts field definitions from `Trackers_Expenses` and `Trackers_ExpenseCategories`  
-  - Creates new DocTypes with ID-based naming (e.g., `tenant_f41h2vd9_fe193klo`)
+  - Automatically discovers DocTypes with module "Flansa Generated"
+  - Maps them to corresponding Flansa Tables
+  - Extracts field definitions and recreates with new ID-based naming
   - Migrates all existing data preserving records
-  - Updates Flansa Table references
+  - **NO HARDCODING** - works with any set of tables
+- **Usage**: `exec(open('docker-setup/railway-fixes/migrate_doctypes_dynamic.py').read())`
+
+### 2. **fix_all_flansa_generated.py** ⭐
+- **Purpose**: **DYNAMIC** fix script for ALL Flansa Generated DocTypes
+- **What it does**:
+  - Finds all DocTypes with module "Flansa Generated"
+  - Fixes permissions, module names, custom fields
+  - Adds tenant_id and flansa_table_id fields where missing
+  - Clears cache and enables list view access
+  - **Works with ANY number of DocTypes**
+- **Usage**: `exec(open('docker-setup/railway-fixes/fix_all_flansa_generated.py').read())`
+
+### 📋 **Legacy Scripts (For Specific Tables)**
+
+### 3. **import_fields_and_recreate.py**
+- **Purpose**: Migration script for specific hardcoded DocTypes (`Trackers_Expenses`, `Trackers_ExpenseCategories`)
 - **Usage**: `exec(open('railway-fixes/import_fields_and_recreate.py').read())`
 
-### 2. **fix_doctype_issues.py** 
-- **Purpose**: Fixes post-migration issues like permissions, module names, custom fields
-- **What it does**:
-  - Changes module from "Flansa Core" to "Flansa Generated"
-  - Adds proper permissions for list view access
-  - Creates custom fields (tenant_id, flansa_table_id)
-  - Clears cache and refreshes DocTypes
+### 4. **fix_doctype_issues.py** 
+- **Purpose**: Fixes for specific hardcoded DocTypes
 - **Usage**: `exec(open('railway-fixes/fix_doctype_issues.py').read())`
 
-### 3. **migrate_doctypes_simple.py**
+### 5. **migrate_doctypes_simple.py**
 - **Purpose**: Alternative simplified migration script (backup option)
-- **Usage**: If the main migration fails, use this as fallback
+- **Usage**: If other migrations fail, use this as fallback
 
 ## 🚀 Railway Deployment Steps
 
@@ -46,11 +60,22 @@ bench --site [your-site-name] console
 ```
 
 ### Step 4: Run Migration Scripts
+
+#### **Option A: Dynamic Migration (Recommended)** ⭐
 ```python
-# Step 1: Main migration (extract fields and recreate DocTypes)
+# Step 1: Dynamic migration - finds ALL Flansa Generated DocTypes automatically
+exec(open('docker-setup/railway-fixes/migrate_doctypes_dynamic.py').read())
+
+# Step 2: Dynamic fixes - fixes ALL Flansa Generated DocTypes
+exec(open('docker-setup/railway-fixes/fix_all_flansa_generated.py').read())
+```
+
+#### **Option B: Specific Table Migration (Legacy)**
+```python  
+# Step 1: Migration for hardcoded DocTypes
 exec(open('docker-setup/railway-fixes/import_fields_and_recreate.py').read())
 
-# Step 2: Fix issues (permissions, module name, custom fields)
+# Step 2: Fixes for hardcoded DocTypes
 exec(open('docker-setup/railway-fixes/fix_doctype_issues.py').read())
 ```
 
