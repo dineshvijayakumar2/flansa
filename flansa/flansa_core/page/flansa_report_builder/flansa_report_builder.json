@@ -9,7 +9,7 @@
  "module": "Flansa Core",
  "name": "flansa-report-builder",
  "owner": "Administrator",
- "page_name": "Flansa Report Builder",
+ "page_name": "Report Builder",
  "roles": [
   {
    "role": "System Manager"
@@ -22,5 +22,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Flansa Report Builder"
+ "title": "Report Builder"
 }

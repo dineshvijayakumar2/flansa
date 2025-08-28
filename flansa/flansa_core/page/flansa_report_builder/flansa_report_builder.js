@@ -1,0 +1,1513 @@
+class UnifiedReportBuilder {
+    constructor(page = null) {
+        this.page = page;
+        this.current_table = null;
+        this.available_fields = {};
+        this.selected_fields = [];
+        this.filters = [];
+        this.sort_config = [];
+        this.grouping_config = [];
+        this.current_report_data = null;
+        this.current_page = 1;
+        this.page_size = 20;
+        this.current_view = 'table';
+        this.preselected_table = null;
+        this.current_report_id = null;
+        this.current_report_title = null;
+        this.modal_dialog = null;
+        this.filter_table = null;
+        
+        this.extract_url_parameters();
+        this.init();
+    }
+
+    extract_url_parameters() {
+        const urlParams = new URLSearchParams(window.location.search);
+        this.filter_table = urlParams.get('table');
+        this.filter_app = urlParams.get('app');
+        
+        // Check for edit mode
+        const editParam = urlParams.get('edit');
+        if (editParam) {
+            this.current_report_id = editParam;
+        }
+        
+        console.log('Unified Report Builder: URL parameters:', {
+            filter_table: this.filter_table,
+            filter_app: this.filter_app,
+            edit_report_id: this.current_report_id
+        });
+    }
+
+    init() {
+        console.log('Unified Report Builder: Initializing...');
+        this.setup_improved_layout();
+        this.auto_select_table();
+        this.bind_events();
+        this.apply_theme();
+        
+        if (this.current_report_id) {
+            this.load_existing_report();
+        }
+    }
+
+    setup_improved_layout() {
+        console.log('Setting up improved single-step layout...');
+        
+        // Modern single-page UI setup
+        const content = $(`
+            <div class="flansa-unified-report-builder">
+                <!-- Ultra-modern sleek header -->
+                <div class="sleek-header">
+                    <div class="header-backdrop"></div>
+                    <div class="header-content">
+                        <!-- Breadcrumb Trail -->
+                        <nav class="breadcrumb-trail">
+                            <a href="/app/flansa-workspace" class="breadcrumb-link">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 10h-1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-6H1a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
+                                </svg>
+                                Workspace
+                            </a>
+                            <svg width="8" height="8" viewBox="0 0 20 20" fill="currentColor" class="breadcrumb-separator">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <a href="/app/flansa-report-builder" class="breadcrumb-link current">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
+                                </svg>
+                                Report Builder
+                            </a>
+                        </nav>
+                        
+                        <!-- Header Main Section -->
+                        <div class="header-main">
+                            <div class="header-left">
+                                <div class="header-title-inline">
+                                    <h1 class="header-title">
+                                        <span class="title-text" id="app-name-display">Report Builder</span>
+                                    </h1>
+                                    <span class="header-separator">•</span>
+                                    <p class="header-subtitle-inline">Build custom reports for your data</p>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="header-actions">
+                                <button class="sleek-btn" id="preview-report-btn" style="display: none;">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Preview
+                                </button>
+                                <button class="sleek-btn primary" id="save-report-btn" style="display: none;">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z"/>
+                                        <path d="M5 3a2 2 0 00-2 2v1a1 1 0 002 0V5a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 102 0V5a2 2 0 00-2-2H5zM5 15a2 2 0 01-2-2v-1a1 1 0 012 0v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 112 0v1a2 2 0 01-2 2H5z"/>
+                                    </svg>
+                                    Save Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Main Content Area with Single-Page Layout -->
+                <div class="container main-content">
+                    <!-- Report Configuration Section -->
+                    <div class="section-card" id="report-config-section">
+                        <div class="section-header">
+                            <h4><i class="fa fa-cog"></i> Report Configuration</h4>
+                            <small>Configure your report in one place</small>
+                        </div>
+                        <div class="section-body">
+                            <div class="row">
+                                <!-- Left Column: Table & Fields -->
+                                <div class="col-md-6">
+                                    <!-- Table Selection -->
+                                    <div class="config-group">
+                                        <label class="config-label">Select Table</label>
+                                        <select class="form-control" id="table-selector">
+                                            <option value="">Choose table...</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <!-- Field Selection -->
+                                    <div class="config-group" id="fields-config" style="display: none;">
+                                        <label class="config-label">Report Fields</label>
+                                        <div class="fields-container">
+                                            <div class="field-categories">
+                                                <!-- Fields will be populated here -->
+                                                <div id="available-fields-list"></div>
+                                            </div>
+                                            <div class="selected-fields-container">
+                                                <h6>Selected Fields:</h6>
+                                                <div id="selected-fields-list"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Right Column: Filters & Sort -->
+                                <div class="col-md-6">
+                                    <!-- Report Details -->
+                                    <div class="config-group" id="report-details" style="display: none;">
+                                        <label class="config-label">Report Title</label>
+                                        <input type="text" class="form-control" id="report-title-input" placeholder="Enter report title...">
+                                    </div>
+                                    
+                                    <!-- Filters -->
+                                    <div class="config-group" id="filters-config" style="display: none;">
+                                        <label class="config-label">Filters</label>
+                                        <button class="btn btn-sm btn-outline-primary" id="add-filter-btn">
+                                            <i class="fa fa-plus"></i> Add Filter
+                                        </button>
+                                        <div id="filters-container"></div>
+                                    </div>
+                                    
+                                    <!-- Sort Configuration -->
+                                    <div class="config-group" id="sort-config" style="display: none;">
+                                        <label class="config-label">Sort Order</label>
+                                        <button class="btn btn-sm btn-outline-primary" id="add-sort-btn">
+                                            <i class="fa fa-plus"></i> Add Sort
+                                        </button>
+                                        <div id="sort-container"></div>
+                                    </div>
+                                    
+                                    <!-- Grouping Configuration -->
+                                    <div class="config-group" id="grouping-config" style="display: none;">
+                                        <label class="config-label">Grouping</label>
+                                        <button class="btn btn-sm btn-outline-primary" id="add-grouping-btn">
+                                            <i class="fa fa-plus"></i> Add Grouping
+                                        </button>
+                                        <div id="grouping-container"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `);
+        
+        if (this.page) {
+            this.page.main.html(content);
+        } else {
+            $('body').html(content);
+        }
+        
+        // Add improved styles
+        this.add_unified_styles();
+        
+        console.log('✅ Improved layout setup complete');
+    }
+
+    auto_select_table() {
+        console.log('Auto-selecting table based on context...');
+        
+        // Context-driven table selection
+        if (this.filter_table) {
+            console.log(`Auto-selecting table: ${this.filter_table}`);
+            setTimeout(() => {
+                $('#table-selector').val(this.filter_table).trigger('change');
+            }, 500);
+        }
+    }
+
+    save_field_label() {
+        // Inline label editing functionality
+        console.log('Implementing inline field label editing...');
+        
+        $(document).on('dblclick', '.field-label', function() {
+            const $label = $(this);
+            const currentText = $label.text();
+            const $input = $(`<input type="text" class="form-control form-control-sm" value="${currentText}">`);
+            
+            $label.replaceWith($input);
+            $input.focus().select();
+            
+            $input.on('blur keypress', function(e) {
+                if (e.type === 'blur' || e.which === 13) {
+                    const newText = $input.val() || currentText;
+                    const $newLabel = $(`<span class="field-label">${newText}</span>`);
+                    $input.replaceWith($newLabel);
+                    
+                    // Update the field configuration
+                    const fieldname = $newLabel.closest('.selected-field-item').data('fieldname');
+                    const field = window.report_builder.selected_fields.find(f => f.fieldname === fieldname);
+                    if (field) {
+                        field.custom_label = newText;
+                    }
+                }
+            });
+        });
+    }
+
+    build_report_config() {
+        // Build filters from UI
+        const filters = [];
+        $('.filter-item').each(function() {
+            const fieldSelect = $(this).find('.field-select');
+            const operatorSelect = $(this).find('.operator-select');
+            const valueInput = $(this).find('.filter-value');
+            const valueDropdown = $(this).find('.filter-dropdown');
+            
+            if (fieldSelect.val()) {
+                const operator = operatorSelect.val();
+                let value = '';
+                
+                // Get value from dropdown or input
+                if (valueDropdown.is(':visible')) {
+                    if (valueDropdown.val() === '__choose__') {
+                        return; // Skip if not selected
+                    }
+                    value = valueDropdown.val() || '';
+                } else if (valueInput.is(':visible')) {
+                    value = valueInput.val() || '';
+                }
+                
+                // Handle empty value checks
+                if (['is', 'is not'].includes(operator)) {
+                    value = 'null';
+                }
+                
+                filters.push({
+                    field: fieldSelect.val(),
+                    operator: operator,
+                    value: value
+                });
+            }
+        });
+        
+        // Build sorting from UI  
+        const sort = [];
+        $('.sort-item').each(function() {
+            const fieldSelect = $(this).find('.sort-field-select');
+            const directionSelect = $(this).find('.sort-direction-select');
+            
+            if (fieldSelect.val()) {
+                sort.push({
+                    field: fieldSelect.val(),
+                    direction: directionSelect.val()
+                });
+            }
+        });
+        
+        // Build grouping from UI
+        const grouping = [];
+        $('.group-item').each(function() {
+            const fieldSelect = $(this).find('.group-field-select');
+            const periodSelect = $(this).find('.group-period-select');
+            const aggregateSelect = $(this).find('.group-aggregate-select');
+            
+            if (fieldSelect.val()) {
+                const group = {
+                    field: fieldSelect.val(),
+                    aggregate: aggregateSelect.val()
+                };
+                
+                // Add period if visible (for date fields)
+                if (periodSelect.is(':visible')) {
+                    group.period = periodSelect.val();
+                }
+                
+                grouping.push(group);
+            }
+        });
+        
+        // Enhanced configuration builder
+        const config = {
+            base_table: this.current_table,
+            selected_fields: this.selected_fields.map(field => ({
+                ...field,
+                custom_label: field.custom_label || field.field_label
+            })),
+            filters: filters,
+            sort: sort,
+            grouping: grouping
+        };
+        
+        console.log('Built enhanced report config:', config);
+        return config;
+    }
+
+    async show_preview_dialog() {
+        const title = $('#report-title-input').val() || 'Report Preview';
+        
+        try {
+            // Execute the report to get data
+            const config = this.build_report_config();
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.report_builder_api.execute_report',
+                args: {
+                    report_config: JSON.stringify(config),
+                    view_options: JSON.stringify({ page_size: 100 })
+                }
+            });
+            
+            if (response.message && response.message.success) {
+                this.display_full_preview_dialog(response.message, title);
+            } else {
+                throw new Error(response.message?.error || 'Failed to execute report');
+            }
+        } catch (error) {
+            console.error('Error loading preview:', error);
+            frappe.msgprint('Error loading preview: ' + error.message);
+        }
+    }
+    
+    display_full_preview_dialog(data, title) {
+        console.log('🔍 FULL PREVIEW DATA:', data);
+        console.log('🔍 IS_GROUPED:', data.is_grouped);
+        console.log('🔍 HAS_GROUPS:', !!data.groups);
+        console.log('🔍 GROUPS_COUNT:', data.groups ? data.groups.length : 0);
+        
+        let contentHtml;
+        
+        // Use shared renderer for consistency if available
+        if (window.FlansaReportRenderer && typeof window.FlansaReportRenderer.render === 'function') {
+            console.log('🔍 USING SHARED RENDERER IN DIALOG');
+            try {
+                contentHtml = window.FlansaReportRenderer.render(data, {
+                    showActions: false,
+                    fields: this.selected_fields,
+                    tableClass: 'table table-striped table-hover'
+                });
+            } catch (error) {
+                console.warn('FlansaReportRenderer failed in dialog:', error);
+                contentHtml = this.build_fallback_preview(data);
+            }
+        } else {
+            console.warn('FlansaReportRenderer not available, using fallback display');
+            contentHtml = this.build_fallback_preview(data);
+        }
+        
+        const dialog = new frappe.ui.Dialog({
+            title: title,
+            size: 'extra-large',
+            fields: [{
+                fieldtype: 'HTML',
+                fieldname: 'preview_content',
+                options: contentHtml
+            }],
+            primary_action_label: 'Save Report',
+            primary_action: () => {
+                this.save_report();
+                dialog.hide();
+            }
+        });
+        
+        dialog.show();
+    }
+    
+    build_fallback_preview(data) {
+        if (data.is_grouped && data.groups) {
+            return this.build_grouped_fallback_view(data);
+        } else {
+            return this.build_simple_fallback_view(data);
+        }
+    }
+    
+    build_grouped_fallback_view(data) {
+        if (!data.groups || !Array.isArray(data.groups)) {
+            return '<p>No grouped data available</p>';
+        }
+        
+        let html = '<div class="grouped-report-fallback">';
+        
+        data.groups.forEach((group) => {
+            const groupLabel = group.group_label || '(Empty)';
+            const count = group.count || 0;
+            const aggregate = group.aggregate ? ` • ${group.aggregate_type}: ${parseFloat(group.aggregate).toFixed(2)}` : '';
+            
+            html += `
+                <div class="group-section" style="margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div class="group-header" style="background: #f8f9fa; padding: 15px; border-radius: 8px 8px 0 0;">
+                        <strong>${groupLabel}</strong> 
+                        <span style="color: #666;">(${count} records${aggregate})</span>
+                    </div>
+                    <div class="group-content" style="padding: 10px;">
+                        ${this.build_simple_fallback_view({ data: group.records || [], fields: this.selected_fields })}
+                    </div>
+                </div>
+            `;
+        });
+        
+        html += '</div>';
+        return html;
+    }
+    
+    build_simple_fallback_view(data) {
+        if (!data.data || !Array.isArray(data.data)) {
+            return '<p>No data available</p>';
+        }
+        
+        const fields = data.fields || this.selected_fields || [];
+        
+        if (fields.length === 0) {
+            return '<p>No fields configured</p>';
+        }
+        
+        let html = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="thead-light">
+                        <tr>
+                            ${fields.map(field => {
+                                const label = field.custom_label || field.field_label || field.label || field.fieldname;
+                                return `<th>${label}</th>`;
+                            }).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.data.forEach(record => {
+            html += '<tr>';
+            fields.forEach(field => {
+                const value = record[field.fieldname] || '';
+                const formattedValue = this.format_fallback_value(value, field.fieldtype);
+                html += `<td>${formattedValue}</td>`;
+            });
+            html += '</tr>';
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    format_fallback_value(value, fieldtype) {
+        if (!value && value !== 0) return '';
+        
+        switch (fieldtype) {
+            case 'Currency':
+                return parseFloat(value).toFixed(2);
+            case 'Date':
+                return new Date(value).toLocaleDateString();
+            case 'Datetime':
+                return new Date(value).toLocaleString();
+            case 'Check':
+                return value ? '✓' : '✗';
+            default:
+                return String(value).length > 50 ? String(value).substring(0, 47) + '...' : String(value);
+        }
+    }
+
+    bind_events() {
+        console.log('Binding events for unified interface...');
+        
+        // Table selection
+        $('#table-selector').on('change', (e) => {
+            const table_name = e.target.value;
+            if (table_name) {
+                this.select_table(table_name);
+            }
+        });
+
+        // Field selection events with improved UX
+        $(document).on('click', '.field-item', (e) => {
+            const $item = $(e.currentTarget);
+            const fieldname = $item.data('fieldname');
+            
+            if ($item.hasClass('selected')) {
+                this.remove_field(fieldname);
+                $item.removeClass('selected');
+            } else {
+                // Reconstruct field object with correct property names
+                const fieldData = {
+                    fieldname: $item.data('fieldname'),
+                    fieldtype: $item.data('fieldtype'), 
+                    field_label: $item.data('fieldLabel'), // jQuery converts kebab-case to camelCase
+                    category: $item.data('category')
+                };
+                this.add_field(fieldData);
+                $item.addClass('selected');
+            }
+            
+            this.update_preview();
+        });
+
+        // Preview button
+        $('#preview-report-btn').on('click', () => {
+            this.show_preview_dialog();
+        });
+
+        // Save button
+        $('#save-report-btn').on('click', () => {
+            this.save_report();
+        });
+
+        // Filter and sort buttons
+        $('#add-filter-btn').on('click', () => this.add_filter());
+        $('#add-sort-btn').on('click', () => this.add_sort());
+        $('#add-grouping-btn').on('click', () => this.add_grouping());
+
+        // View mode toggle removed - handled in preview dialog
+
+        // Inline label editing
+        this.save_field_label();
+    }
+
+    load_tables() {
+        console.log('Loading available tables...');
+        
+        frappe.call({
+            method: 'flansa.flansa_core.api.table_api.get_tables',
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const tables = r.message.tables;
+                    const selector = $('#table-selector');
+                    selector.empty().append('<option value="">Choose table...</option>');
+                    
+                    tables.forEach(table => {
+                        selector.append(`<option value="${table.value}">${table.label}</option>`);
+                    });
+                    
+                    // Auto-select if there's a filter
+                    if (this.filter_table) {
+                        selector.val(this.filter_table);
+                        this.select_table(this.filter_table);
+                    }
+                } else {
+                    frappe.msgprint('Failed to load tables');
+                }
+            }
+        });
+    }
+
+    select_table(table_name) {
+        console.log(`Selecting table: ${table_name}`);
+        this.current_table = table_name;
+        
+        // Show configuration sections
+        $('#fields-config, #report-details, #filters-config, #sort-config, #grouping-config').show();
+        
+        // Load fields for this table
+        this.load_table_fields(table_name);
+    }
+
+    load_table_fields(table_name) {
+        frappe.call({
+            method: 'flansa.flansa_core.api.report_builder_api.get_report_field_options',
+            args: { table_name: table_name },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    this.available_fields = r.message.fields;
+                    this.render_available_fields();
+                } else {
+                    frappe.msgprint('Failed to load table fields');
+                }
+            }
+        });
+    }
+
+    render_available_fields() {
+        const container = $('#available-fields-list');
+        container.empty();
+        
+        ['current', 'system', 'related'].forEach(category => {
+            const fields = this.available_fields[category] || [];
+            if (fields.length === 0) return;
+            
+            const categoryHtml = `
+                <div class="field-category">
+                    <h6>${category.charAt(0).toUpperCase() + category.slice(1)} Fields (${fields.length})</h6>
+                    <div class="field-list">
+                        ${fields.map(field => `
+                            <div class="field-item" data-fieldname="${field.fieldname}" data-fieldtype="${field.fieldtype}" data-field-label="${field.field_label}" data-category="${field.category}">
+                                <span class="field-name">${field.field_label}</span>
+                                <span class="field-type-badge">${field.fieldtype}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+            
+            container.append(categoryHtml);
+        });
+    }
+
+    add_field(field_data) {
+        // Check if field already selected
+        if (this.selected_fields.find(f => f.fieldname === field_data.fieldname)) {
+            return;
+        }
+        
+        this.selected_fields.push(field_data);
+        this.render_selected_fields();
+        this.show_action_buttons();
+    }
+
+    remove_field(fieldname) {
+        this.selected_fields = this.selected_fields.filter(f => f.fieldname !== fieldname);
+        this.render_selected_fields();
+        
+        if (this.selected_fields.length === 0) {
+            this.hide_action_buttons();
+        }
+    }
+
+    render_selected_fields() {
+        const container = $('#selected-fields-list');
+        container.empty();
+        
+        this.selected_fields.forEach(field => {
+            const fieldHtml = `
+                <div class="selected-field-item" data-fieldname="${field.fieldname}">
+                    <span class="field-label">${field.custom_label || field.field_label}</span>
+                    <button class="btn btn-sm btn-link remove-field-btn" data-fieldname="${field.fieldname}">
+                        <i class="fa fa-times"></i>
+                    </button>
+                </div>
+            `;
+            container.append(fieldHtml);
+        });
+        
+        // Bind remove events
+        $('.remove-field-btn').on('click', (e) => {
+            const fieldname = $(e.currentTarget).data('fieldname');
+            this.remove_field(fieldname);
+            $(`.field-item[data-fieldname="${fieldname}"]`).removeClass('selected');
+        });
+    }
+
+    show_action_buttons() {
+        $('#preview-report-btn, #save-report-btn').show();
+    }
+
+    hide_action_buttons() {
+        $('#preview-report-btn, #save-report-btn').hide();
+    }
+
+    update_preview() {
+        // Preview removed - use the Preview button dialog instead
+    }
+
+    execute_report_preview(config, container) {
+        $(container).html('<div class="text-center"><i class="fa fa-spinner fa-spin"></i> Loading preview...</div>');
+        
+        frappe.call({
+            method: 'flansa.flansa_core.api.report_builder_api.execute_report',
+            args: {
+                report_config: JSON.stringify(config),
+                view_options: JSON.stringify({ page_size: 10 })
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    this.current_report_data = r.message; // Store for view switching
+                    this.render_report_data(r.message, container);
+                } else {
+                    $(container).html('<div class="alert alert-danger">Failed to load preview</div>');
+                }
+            }
+        });
+    }
+
+    render_report_data(report_data, container) {
+        console.log('🔍 RENDERING REPORT DATA:', report_data);
+        console.log('🔍 IS_GROUPED:', report_data.is_grouped);
+        console.log('🔍 HAS_GROUPS:', !!report_data.groups);
+        
+        // Use shared FlansaReportRenderer for consistency if available
+        if (window.FlansaReportRenderer && typeof window.FlansaReportRenderer.render === 'function') {
+            console.log('🔍 USING FLANSA REPORT RENDERER');
+            try {
+                const renderedHtml = window.FlansaReportRenderer.render(report_data, {
+                    showActions: false,
+                    fields: this.selected_fields,
+                    tableClass: 'table table-striped table-hover',
+                    view_mode: this.current_view
+                });
+                $(container).html(renderedHtml);
+                return;
+            } catch (error) {
+                console.warn('FlansaReportRenderer failed:', error);
+                // Fall back to local rendering
+            }
+        }
+        
+        // Fallback to local rendering methods
+        if (this.current_view === 'table') {
+            this.render_table_view(report_data, container);
+        } else {
+            this.render_gallery_view(report_data, container);
+        }
+    }
+
+    render_table_view(report_data, container) {
+        const data = report_data.data || [];
+        if (data.length === 0) {
+            $(container).html('<div class="alert alert-info">No data found</div>');
+            return;
+        }
+        
+        const headers = this.selected_fields.map(field => field.custom_label || field.field_label);
+        const tableHtml = `
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover">
+                    <thead class="table-light">
+                        <tr>
+                            ${headers.map(header => `<th>${header}</th>`).join('')}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${data.slice(0, 10).map(row => `
+                            <tr>
+                                ${this.selected_fields.map(field => `
+                                    <td>${row[field.fieldname] || ''}</td>
+                                `).join('')}
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+            <div class="text-muted">Showing first 10 rows of ${report_data.total} total records</div>
+        `;
+        
+        $(container).html(tableHtml);
+    }
+
+    render_gallery_view(report_data, container) {
+        const data = report_data.data || [];
+        if (data.length === 0) {
+            $(container).html('<div class="alert alert-info">No data found</div>');
+            return;
+        }
+
+        // Find gallery/image fields
+        const galleryField = this.selected_fields.find(field => field.is_gallery || 
+            field.fieldtype === 'Attach Image' || field.fieldtype === 'Attach');
+        
+        if (!galleryField) {
+            $(container).html('<div class="alert alert-warning">No image fields selected for gallery view</div>');
+            return;
+        }
+
+        const galleryHtml = `
+            <div class="gallery-container">
+                <div class="row">
+                    ${data.slice(0, 12).map(row => {
+                        const imageUrl = this.process_image_url(row[galleryField.fieldname]);
+                        const title = row[this.selected_fields[0].fieldname] || 'Untitled';
+                        
+                        return `
+                            <div class="col-md-3 col-sm-4 col-6 mb-4">
+                                <div class="gallery-item">
+                                    <div class="gallery-image-container">
+                                        <img src="${imageUrl}" alt="${title}" class="gallery-image" 
+                                             onerror="this.src='/assets/frappe/images/default-avatar.png'">
+                                    </div>
+                                    <div class="gallery-item-details">
+                                        <h6>${title}</h6>
+                                        ${this.selected_fields.slice(1, 3).map(field => 
+                                            `<small class="text-muted">${row[field.fieldname] || ''}</small>`
+                                        ).join('<br>')}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+            <div class="text-muted">Showing first 12 items of ${report_data.total} total records</div>
+        `;
+        
+        $(container).html(galleryHtml);
+    }
+
+    process_image_url(imageValue) {
+        if (!imageValue) return '/assets/frappe/images/default-avatar.png';
+        
+        // Handle JSON strings
+        if (typeof imageValue === 'string' && imageValue.startsWith('[')) {
+            try {
+                const parsed = JSON.parse(imageValue);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    return parsed[0].file_url || parsed[0];
+                }
+            } catch (e) {
+                // Continue with original value
+            }
+        }
+        
+        // Handle direct URLs
+        if (typeof imageValue === 'string') {
+            return imageValue.startsWith('/') ? imageValue : `/files/${imageValue}`;
+        }
+        
+        return '/assets/frappe/images/default-avatar.png';
+    }
+
+    switch_view_mode(view) {
+        this.current_view = view;
+        $('.view-mode-btn').removeClass('active');
+        $(`.view-mode-btn[data-view="${view}"]`).addClass('active');
+        
+        // Re-render current preview
+        if (this.current_report_data) {
+            this.render_report_data(this.current_report_data, '#report-preview-container');
+        }
+    }
+
+    add_unified_styles() {
+        const style = `
+            <style>
+                .flansa-unified-report-builder {
+                    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                }
+                
+                .sleek-header {
+                    background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.95) 100%);
+                    backdrop-filter: blur(20px);
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                }
+                
+                .header-content {
+                    padding: 1rem 2rem;
+                }
+                
+                .breadcrumb-trail {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-bottom: 0.5rem;
+                }
+                
+                .breadcrumb-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    color: rgba(0, 0, 0, 0.6);
+                    text-decoration: none;
+                    font-size: 0.875rem;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 6px;
+                    transition: all 0.2s;
+                }
+                
+                .breadcrumb-link:hover {
+                    background: rgba(0, 0, 0, 0.04);
+                    color: rgba(0, 0, 0, 0.8);
+                    text-decoration: none;
+                }
+                
+                .header-main {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .header-title-inline {
+                    display: flex;
+                    align-items: center;
+                    gap: 1rem;
+                }
+                
+                .header-title {
+                    margin: 0;
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                }
+                
+                .title-text {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+                
+                .header-separator {
+                    color: rgba(0, 0, 0, 0.3);
+                }
+                
+                .header-subtitle-inline {
+                    color: #6b7280;
+                    font-size: 0.875rem;
+                    margin: 0;
+                }
+                
+                .sleek-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.625rem 1rem;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                    border-radius: 8px;
+                    background: rgba(255, 255, 255, 0.8);
+                    color: rgba(0, 0, 0, 0.8);
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    text-decoration: none;
+                    transition: all 0.2s;
+                    cursor: pointer;
+                }
+                
+                .sleek-btn:hover {
+                    background: rgba(255, 255, 255, 0.95);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                }
+                
+                .sleek-btn.primary {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border-color: rgba(102, 126, 234, 0.3);
+                }
+                
+                .main-content {
+                    padding: 2rem;
+                }
+                
+                .section-card {
+                    background: white;
+                    border-radius: 12px;
+                    margin-bottom: 2rem;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                    border: 1px solid rgba(0, 0, 0, 0.06);
+                }
+                
+                .section-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 1.25rem 1.5rem;
+                    border-bottom: 1px solid #e9ecef;
+                }
+                
+                .section-body {
+                    padding: 1.5rem;
+                }
+                
+                .config-group {
+                    margin-bottom: 1.5rem;
+                }
+                
+                .config-label {
+                    display: block;
+                    font-weight: 600;
+                    margin-bottom: 0.5rem;
+                    color: #374151;
+                }
+                
+                .fields-container {
+                    display: flex;
+                    gap: 1rem;
+                    max-height: 300px;
+                }
+                
+                .field-categories {
+                    flex: 1;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    overflow-y: auto;
+                }
+                
+                .field-category {
+                    border-bottom: 1px solid #e9ecef;
+                }
+                
+                .field-category h6 {
+                    background: #f8f9fa;
+                    padding: 0.75rem;
+                    margin: 0;
+                    font-weight: 600;
+                }
+                
+                .field-list {
+                    padding: 0.5rem 0;
+                }
+                
+                .field-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 0.75rem;
+                    cursor: pointer;
+                    transition: background-color 0.2s;
+                }
+                
+                .field-item:hover {
+                    background: #f8f9fa;
+                }
+                
+                .field-item.selected {
+                    background: #e3f2fd;
+                    color: #1976d2;
+                }
+                
+                .field-type-badge {
+                    font-size: 0.75rem;
+                    padding: 2px 6px;
+                    background: #e9ecef;
+                    border-radius: 4px;
+                    color: #6c757d;
+                }
+                
+                .selected-fields-container {
+                    flex: 1;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 1rem;
+                    background: #f8f9fa;
+                    overflow-y: auto;
+                }
+                
+                .selected-field-item {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 0.5rem 0.75rem;
+                    background: white;
+                    border-radius: 6px;
+                    margin-bottom: 0.5rem;
+                    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                }
+                
+                .field-label {
+                    cursor: pointer;
+                    padding: 2px 4px;
+                    border-radius: 4px;
+                    transition: background-color 0.2s;
+                }
+                
+                .field-label:hover {
+                    background: #f0f0f0;
+                }
+                
+                .view-controls {
+                    display: flex;
+                    gap: 0.5rem;
+                }
+                
+                .view-mode-btn.active {
+                    background: #007bff;
+                    color: white;
+                    border-color: #007bff;
+                }
+                
+                /* Gallery Styles */
+                .gallery-container {
+                    margin-top: 1rem;
+                }
+                
+                .gallery-item {
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    overflow: hidden;
+                    transition: transform 0.2s;
+                }
+                
+                .gallery-item:hover {
+                    transform: translateY(-2px);
+                    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+                }
+                
+                .gallery-image-container {
+                    position: relative;
+                    width: 100%;
+                    height: 200px;
+                    overflow: hidden;
+                }
+                
+                .gallery-image {
+                    width: 100%;
+                    height: 100%;
+                    object-fit: cover;
+                }
+                
+                .gallery-item-details {
+                    padding: 1rem;
+                }
+                
+                .gallery-item-details h6 {
+                    margin: 0 0 0.5rem 0;
+                    font-weight: 600;
+                    color: #2d3748;
+                }
+            </style>
+        `;
+        
+        $('head').append(style);
+    }
+
+    apply_theme() {
+        console.log('Applying modern theme...');
+        // Theme application logic here
+    }
+
+    load_existing_report() {
+        if (!this.current_report_id) return;
+        
+        frappe.call({
+            method: 'frappe.client.get',
+            args: {
+                doctype: 'Flansa Saved Report',
+                name: this.current_report_id
+            },
+            callback: (r) => {
+                if (r.message) {
+                    const report = r.message;
+                    this.current_report_title = report.report_title;
+                    
+                    // Load the report configuration
+                    if (report.report_config) {
+                        const config = JSON.parse(report.report_config);
+                        this.load_report_from_config(config);
+                    }
+                }
+            }
+        });
+    }
+
+    load_report_from_config(config) {
+        // Load table
+        if (config.base_table) {
+            $('#table-selector').val(config.base_table);
+            this.select_table(config.base_table);
+        }
+        
+        // Load selected fields
+        if (config.selected_fields) {
+            setTimeout(() => {
+                this.selected_fields = config.selected_fields;
+                this.render_selected_fields();
+                this.show_action_buttons();
+                
+                // After fields are loaded, restore filters, sorting, and grouping
+                setTimeout(() => {
+                    this.restore_filters_from_config(config.filters || []);
+                    this.restore_sorting_from_config(config.sort || []);
+                    this.restore_grouping_from_config(config.grouping || []);
+                }, 500);
+            }, 1000);
+        }
+        
+        // Update title
+        if (this.current_report_title) {
+            $('#report-title-input').val(this.current_report_title);
+        }
+    }
+    
+    restore_filters_from_config(filters) {
+        console.log('Restoring filters:', filters);
+        filters.forEach(filter => {
+            this.add_filter(filter);
+        });
+    }
+    
+    restore_sorting_from_config(sortConfig) {
+        console.log('Restoring sorting:', sortConfig);
+        sortConfig.forEach(sort => {
+            this.add_sort(sort);
+        });
+    }
+    
+    restore_grouping_from_config(groupingConfig) {
+        console.log('Restoring grouping:', groupingConfig);
+        groupingConfig.forEach(group => {
+            this.add_grouping(group);
+        });
+    }
+
+    save_report() {
+        const title = $('#report-title-input').val();
+        if (!title) {
+            frappe.msgprint('Please enter a report title');
+            return;
+        }
+        
+        const config = this.build_report_config();
+        
+        const report_data = {
+            doctype: 'Flansa Saved Report',
+            report_title: title,
+            base_table: this.current_table,
+            report_config: JSON.stringify(config),
+            report_type: 'Table'
+        };
+        
+        if (this.current_report_id) {
+            report_data.name = this.current_report_id;
+        }
+        
+        frappe.call({
+            method: 'frappe.client.save',
+            args: {
+                doc: report_data
+            },
+            callback: (r) => {
+                if (r.message) {
+                    frappe.msgprint('Report saved successfully');
+                    this.current_report_id = r.message.name;
+                } else {
+                    frappe.msgprint('Failed to save report');
+                }
+            }
+        });
+    }
+
+    add_filter(existingFilter = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        const container = $('#filters-container');
+        const filterDiv = $(`
+            <div class="filter-item mb-2" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select class="form-control form-control-sm field-select" style="flex: 1;">
+                    ${this.selected_fields.map(f => `<option value="${f.fieldname}" ${existingFilter && existingFilter.field === f.fieldname ? 'selected' : ''}>${f.custom_label || f.field_label}</option>`).join('')}
+                </select>
+                <select class="form-control form-control-sm operator-select" style="flex: 1;">
+                    <option value="=" ${existingFilter && existingFilter.operator === '=' ? 'selected' : ''}>Equals</option>
+                    <option value="!=" ${existingFilter && existingFilter.operator === '!=' ? 'selected' : ''}>Not Equals</option>
+                    <option value="like" ${existingFilter && existingFilter.operator === 'like' ? 'selected' : ''}>Contains</option>
+                    <option value="not like" ${existingFilter && existingFilter.operator === 'not like' ? 'selected' : ''}>Does Not Contain</option>
+                    <option value=">" ${existingFilter && existingFilter.operator === '>' ? 'selected' : ''}>Greater Than</option>
+                    <option value="<" ${existingFilter && existingFilter.operator === '<' ? 'selected' : ''}>Less Than</option>
+                    <option value=">=" ${existingFilter && existingFilter.operator === '>=' ? 'selected' : ''}>Greater or Equal</option>
+                    <option value="<=" ${existingFilter && existingFilter.operator === '<=' ? 'selected' : ''}>Less or Equal</option>
+                    <option value="is" ${existingFilter && existingFilter.operator === 'is' ? 'selected' : ''}>Is Empty</option>
+                    <option value="is not" ${existingFilter && existingFilter.operator === 'is not' ? 'selected' : ''}>Is Not Empty</option>
+                </select>
+                <div class="filter-value-container" style="flex: 1;">
+                    <input type="text" class="form-control form-control-sm filter-value" placeholder="Value" value="${existingFilter ? existingFilter.value || '' : ''}">
+                    <select class="form-control form-control-sm filter-dropdown" style="display: none;"></select>
+                </div>
+                <button class="btn btn-sm btn-outline-danger remove-filter-btn">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        container.append(filterDiv);
+        
+        // Bind remove event
+        filterDiv.find('.remove-filter-btn').on('click', function() {
+            $(this).closest('.filter-item').remove();
+        });
+        
+        // Handle field-specific value input
+        const fieldSelect = filterDiv.find('.field-select');
+        const operatorSelect = filterDiv.find('.operator-select');
+        const valueInput = filterDiv.find('.filter-value');
+        const valueDropdown = filterDiv.find('.filter-dropdown');
+        
+        const handleFieldChange = async () => {
+            const selectedFieldname = fieldSelect.val();
+            const selectedField = this.selected_fields.find(f => f.fieldname === selectedFieldname);
+            
+            if (selectedField && ['Select', 'Link'].includes(selectedField.fieldtype)) {
+                try {
+                    const options = await this.get_field_options(selectedField);
+                    if (options && options.length > 0) {
+                        valueDropdown.empty();
+                        valueDropdown.append('<option value="__choose__">Choose...</option>');
+                        valueDropdown.append('<option value="">Empty</option>');
+                        options.forEach(option => {
+                            valueDropdown.append(`<option value="${option.value}">${option.label}</option>`);
+                        });
+                        valueInput.hide();
+                        valueDropdown.show();
+                    } else {
+                        valueInput.show();
+                        valueDropdown.hide();
+                    }
+                } catch (error) {
+                    console.warn('Could not load field options:', error);
+                    valueInput.show();
+                    valueDropdown.hide();
+                }
+            } else {
+                valueInput.show();
+                valueDropdown.hide();
+            }
+        };
+        
+        fieldSelect.on('change', handleFieldChange);
+        handleFieldChange(); // Initialize
+    }
+
+    add_sort(existingSort = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        const container = $('#sort-container');
+        const sortDiv = $(`
+            <div class="sort-item mb-2" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select class="form-control form-control-sm sort-field-select" style="flex: 2;">
+                    ${this.selected_fields.map(f => `<option value="${f.fieldname}" ${existingSort && existingSort.field === f.fieldname ? 'selected' : ''}>${f.custom_label || f.field_label}</option>`).join('')}
+                </select>
+                <select class="form-control form-control-sm sort-direction-select" style="flex: 1;">
+                    <option value="asc" ${existingSort && existingSort.direction === 'asc' ? 'selected' : ''}>Ascending</option>
+                    <option value="desc" ${existingSort && existingSort.direction === 'desc' ? 'selected' : ''}>Descending</option>
+                </select>
+                <button class="btn btn-sm btn-outline-danger remove-sort-btn">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        container.append(sortDiv);
+        
+        // Bind remove event
+        sortDiv.find('.remove-sort-btn').on('click', function() {
+            $(this).closest('.sort-item').remove();
+        });
+    }
+
+    add_grouping(existingGroup = null) {
+        if (!this.selected_fields.length) {
+            frappe.msgprint('Please select fields first');
+            return;
+        }
+        
+        // Determine which fields can be grouped
+        const groupableFields = this.selected_fields.filter(f => 
+            ['Data', 'Select', 'Link', 'Date', 'Datetime', 'Text', 'Small Text'].includes(f.fieldtype)
+        );
+        
+        if (groupableFields.length === 0) {
+            frappe.msgprint('No suitable fields for grouping. Select text, select, link or date fields.');
+            return;
+        }
+        
+        const container = $('#grouping-container');
+        const groupDiv = $(`
+            <div class="group-item mb-2" style="display: flex; gap: 0.5rem; align-items: center;">
+                <select class="form-control form-control-sm group-field-select" style="flex: 2;">
+                    ${groupableFields.map(f => `<option value="${f.fieldname}" ${existingGroup && existingGroup.field === f.fieldname ? 'selected' : ''}>${f.custom_label || f.field_label}</option>`).join('')}
+                </select>
+                <select class="form-control form-control-sm group-period-select" style="display: none; flex: 1;">
+                    <option value="exact" ${existingGroup && existingGroup.period === 'exact' ? 'selected' : ''}>Exact Value</option>
+                    <option value="year" ${existingGroup && existingGroup.period === 'year' ? 'selected' : ''}>By Year</option>
+                    <option value="month" ${existingGroup && existingGroup.period === 'month' ? 'selected' : ''}>By Month</option>
+                    <option value="week" ${existingGroup && existingGroup.period === 'week' ? 'selected' : ''}>By Week</option>
+                    <option value="day" ${existingGroup && existingGroup.period === 'day' ? 'selected' : ''}>By Day</option>
+                    <option value="hour" ${existingGroup && existingGroup.period === 'hour' ? 'selected' : ''}>By Hour</option>
+                </select>
+                <select class="form-control form-control-sm group-aggregate-select" style="flex: 1;">
+                    <option value="group" ${existingGroup && existingGroup.aggregate === 'group' ? 'selected' : ''}>Group Only</option>
+                    <option value="count" ${existingGroup && existingGroup.aggregate === 'count' ? 'selected' : ''}>Count Records</option>
+                    <option value="sum" ${existingGroup && existingGroup.aggregate === 'sum' ? 'selected' : ''}>Sum Values</option>
+                    <option value="avg" ${existingGroup && existingGroup.aggregate === 'avg' ? 'selected' : ''}>Average Values</option>
+                    <option value="min" ${existingGroup && existingGroup.aggregate === 'min' ? 'selected' : ''}>Minimum Value</option>
+                    <option value="max" ${existingGroup && existingGroup.aggregate === 'max' ? 'selected' : ''}>Maximum Value</option>
+                </select>
+                <button class="btn btn-sm btn-outline-danger remove-group-btn">
+                    <i class="fa fa-times"></i>
+                </button>
+            </div>
+        `);
+        
+        container.append(groupDiv);
+        
+        // Add event handler to show/hide time period options
+        const fieldSelect = groupDiv.find('.group-field-select');
+        const periodSelect = groupDiv.find('.group-period-select');
+        
+        const updatePeriodVisibility = () => {
+            const selectedField = groupableFields.find(f => f.fieldname === fieldSelect.val());
+            if (selectedField && ['Date', 'Datetime'].includes(selectedField.fieldtype)) {
+                periodSelect.show();
+            } else {
+                periodSelect.hide();
+                periodSelect.val('exact'); // Reset to default
+            }
+        };
+        
+        fieldSelect.on('change', updatePeriodVisibility);
+        updatePeriodVisibility(); // Initialize on creation
+        
+        // Bind remove event
+        groupDiv.find('.remove-group-btn').on('click', function() {
+            $(this).closest('.group-item').remove();
+        });
+    }
+    
+    async get_field_options(field) {
+        // Get dropdown options for Link/Select fields
+        try {
+            if (field.fieldtype === 'Link' && field.options) {
+                const response = await frappe.call({
+                    method: 'frappe.desk.search.search_link',
+                    args: {
+                        doctype: field.options,
+                        txt: '',
+                        page_length: 20
+                    }
+                });
+                
+                if (response.message) {
+                    return response.message.map(item => ({
+                        value: item.value,
+                        label: item.description || item.value
+                    }));
+                }
+            } else if (field.fieldtype === 'Select' && field.options) {
+                return field.options.split('\n').filter(opt => opt.trim()).map(opt => ({
+                    value: opt.trim(),
+                    label: opt.trim()
+                }));
+            }
+        } catch (error) {
+            console.warn('Could not load field options:', error);
+        }
+        
+        return null;
+    }
+}
+
+// Load shared FlansaReportRenderer if not already available
+if (!window.FlansaReportRenderer) {
+    console.log('Loading FlansaReportRenderer in report builder...');
+    try {
+        frappe.require('/assets/flansa/js/flansa_report_renderer.js');
+        console.log('FlansaReportRenderer loaded successfully');
+    } catch (error) {
+        console.warn('Could not load FlansaReportRenderer:', error);
+    }
+}
+
+// Initialize the Report Builder when page loads
+frappe.pages['flansa-report-builder'].on_page_load = function(wrapper) {
+    var page = frappe.ui.make_app_page({
+        parent: wrapper,
+        title: 'Report Builder',
+        single_column: true
+    });
+    
+    // Initialize the report builder
+    window.report_builder = new UnifiedReportBuilder(page);
+    
+    // Load tables after initialization
+    setTimeout(() => {
+        window.report_builder.load_tables();
+    }, 500);
+};
+
+frappe.pages['flansa-report-builder'].on_page_show = function(wrapper) {
+    console.log('Unified Report Builder page shown');
+    
+    if (window.report_builder) {
+        // Handle URL parameters on page show
+        const urlParams = new URLSearchParams(window.location.search);
+        const edit_report_id = urlParams.get('edit');
+        
+        if (edit_report_id && edit_report_id !== window.report_builder.current_report_id) {
+            window.report_builder.current_report_id = edit_report_id;
+            window.report_builder.load_existing_report();
+        }
+    }
+};
