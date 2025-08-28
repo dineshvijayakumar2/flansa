@@ -52,6 +52,74 @@ def get_filtered_table_fields(table_name, field_type=None, search_term=None):
         }
 
 @frappe.whitelist()
+def get_visual_builder_fields(table_name):
+    """Get only user-visible fields for Visual Builder - hide tenant fields"""
+    try:
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        
+        # Check if DocType exists
+        if not table_doc.doctype_name or not frappe.db.exists("DocType", table_doc.doctype_name):
+            return {
+                "success": False,
+                "error": "DocType not found or not generated yet",
+                "fields": []
+            }
+        
+        meta = frappe.get_meta(table_doc.doctype_name)
+        
+        # Define tenant system fields that should be hidden
+        tenant_system_fields = ['tenant_id', 'flansa_table_id', 'application_id']
+        
+        visible_fields = []
+        for field in meta.fields:
+            # Skip tenant system fields
+            if field.fieldname in tenant_system_fields:
+                continue
+                
+            # Skip Frappe internal fields
+            if field.fieldname.startswith('__'):
+                continue
+            
+            # Include user and system fields
+            visible_fields.append({
+                'fieldname': field.fieldname,
+                'fieldtype': field.fieldtype,
+                'label': field.label,
+                'hidden': field.hidden,
+                'read_only': field.read_only,
+                'reqd': field.reqd,
+                'options': field.options,
+                'description': field.description,
+                'in_list_view': field.in_list_view,
+                'category': get_field_category(field.fieldname)
+            })
+        
+        return {
+            'success': True,
+            'fields': visible_fields,
+            'total_visible': len(visible_fields),
+            'table_name': table_name,
+            'doctype_name': table_doc.doctype_name
+        }
+    
+    except Exception as e:
+        frappe.log_error(f"Error getting Visual Builder fields: {str(e)}", "Visual Builder Fields")
+        return {
+            'success': False, 
+            'error': str(e),
+            'fields': []
+        }
+
+def get_field_category(fieldname):
+    """Categorize fields for Visual Builder"""
+    system_fields = ['name', 'owner', 'creation', 'modified', 'modified_by', 'docstatus']
+    
+    if fieldname in system_fields:
+        return 'system'
+    else:
+        return 'user'
+
+@frappe.whitelist()
 def get_table_fields(table_name):
     """Get all fields for a table - now uses native DocType fields"""
     try:

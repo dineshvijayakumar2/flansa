@@ -5787,7 +5787,7 @@ class EnhancedVisualBuilder {
     copy_table_fields(sourceTableId, targetTableId, copyData, dialog) {
         // Get source table fields
         frappe.call({
-            method: 'flansa.flansa_core.api.field_management.get_table_fields',
+            method: 'flansa.flansa_core.api.field_management.get_visual_builder_fields',
             args: {
                 table_name: sourceTableId
             },
@@ -7717,15 +7717,15 @@ class EnhancedVisualBuilder {
     async load_table_fields_for_naming(dialog) {
         try {
             const result = await frappe.call({
-                method: 'flansa.flansa_core.api.field_management.get_table_fields',
+                method: 'flansa.flansa_core.api.field_management.get_visual_builder_fields',
                 args: { table_name: this.single_table_id }
             });
             
             if (result.message && result.message.success) {
                 const fields = result.message.fields || [];
                 const field_options = fields
-                    .filter(field => ['Data', 'Text', 'Small Text'].includes(field.field_type))
-                    .map(field => `${field.field_name}\n${field.field_label}`)
+                    .filter(field => ['Data', 'Text', 'Small Text'].includes(field.fieldtype))
+                    .map(field => `${field.fieldname}\n${field.label}`)
                     .join('\n');
                 
                 dialog.fields_dict.naming_field.df.options = field_options;

@@ -193,6 +193,7 @@ user_data_fields = [
 # Document Events for Logic Field calculations, validation, and tenant context
 doc_events = {
     "*": {
+        "before_insert": "flansa.flansa_core.doctype_hooks.apply_tenant_inheritance",
         "validate": "flansa.flansa_core.doctype_hooks.validate_logic_fields",
         "before_save": "flansa.flansa_core.doctype_hooks.calculate_logic_fields",
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
