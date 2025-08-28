@@ -74,38 +74,20 @@ class EnhancedFlansaTableBuilder {
                             <span class="breadcrumb-current">Table Builder</span>
                         </nav>
                         
-                        <!-- Main Header Section -->
+                        <!-- Single Row Header Section -->
                         <div class="header-main">
                             <div class="header-left">
-                                <h1 class="header-title">
-                                    <span class="title-text">${this.table_data.table_label || this.table_data.table_name}</span>
-                                    <span class="title-badge">Table</span>
-                                </h1>
-                                <p class="header-subtitle">${this.table_data.description || 'Manage fields and structure for this table'}</p>
+                                <div class="header-title-inline">
+                                    <h1 class="header-title">
+                                        <span class="title-text">${this.application_data?.application_title || this.table_data.application || 'Flansa'}</span>
+                                    </h1>
+                                    <span class="header-separator">•</span>
+                                    <p class="header-subtitle-inline">${this.application_data?.application_description || 'Application builder and data management'}</p>
+                                </div>
                             </div>
                             
-                            <!-- Counter, View Controls and Action Buttons -->
+                            <!-- Action Buttons -->
                             <div class="header-actions">
-                                <div class="header-counter">
-                                    <span class="counter-text">
-                                        <span id="displayed-count">0</span> 
-                                        <span class="count-total">of <span id="total-count">0</span> fields</span>
-                                    </span>
-                                </div>
-                                
-                                <div class="header-view-controls">
-                                    <div class="view-toggle">
-                                        <button class="view-btn active" data-view="list" title="List View">
-                                            <i class="fa fa-list"></i>
-                                        </button>
-                                        <button class="view-btn" data-view="tile" title="Tile View">
-                                            <i class="fa fa-th"></i>
-                                        </button>
-                                    </div>
-                                    <input type="search" class="search-box" id="field-search" 
-                                           placeholder="Search fields...">
-                                </div>
-                                
                                 <div class="action-dropdown">
                                     <button class="sleek-btn primary split-btn" id="add-field-header">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -176,6 +158,36 @@ class EnhancedFlansaTableBuilder {
                     </div>
                 </div>
                 
+                <!-- Context Header Area -->
+                <div class="context-header">
+                    <div class="context-container">
+                        <div class="context-info">
+                            <span class="context-label">TABLE:</span>
+                            <span class="context-name">${this.table_data.table_label || this.table_data.table_name}</span>
+                            ${this.table_data.table_description ? `<span class="context-description"> - ${this.table_data.table_description}</span>` : ''}
+                        </div>
+                        
+                        <div class="context-controls">
+                            <div class="view-toggle">
+                                <button class="view-btn active" data-view="list" title="List View">
+                                    <i class="fa fa-list"></i>
+                                </button>
+                                <button class="view-btn" data-view="tile" title="Tile View">
+                                    <i class="fa fa-th"></i>
+                                </button>
+                            </div>
+                            <input type="search" class="search-box" id="field-search" 
+                                   placeholder="Search fields...">
+                            <div class="context-counter">
+                                <span class="counter-text">
+                                    <span id="displayed-count">0</span> 
+                                    <span class="count-total">of <span id="total-count">0</span> fields</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
                 <!-- Main Content Area -->
                 <div class="container main-content">
                     <!-- Fields Section -->
@@ -231,7 +243,7 @@ class EnhancedFlansaTableBuilder {
                 }
                 
                 .header-content {
-                    padding: 0.875rem 1.5rem;
+                    padding: 0.625rem 1.5rem;
                     max-width: 1400px;
                     margin: 0 auto;
                 }
@@ -279,22 +291,45 @@ class EnhancedFlansaTableBuilder {
                     align-items: center;
                     justify-content: space-between;
                     gap: 2rem;
+                    margin-top: 0.5rem;
                 }
                 
                 .header-left {
                     flex: 1;
                 }
                 
-                .header-title {
+                .header-title-inline {
                     display: flex;
                     align-items: center;
                     gap: 0.75rem;
-                    margin: 0 0 0.25rem 0;
+                }
+                
+                .header-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin: 0;
+                }
+                
+                .header-separator {
+                    color: rgba(0, 0, 0, 0.3);
+                    font-weight: 500;
+                }
+                
+                .header-subtitle-inline {
+                    color: #6b7280;
+                    font-size: 0.8125rem;
+                    margin: 0;
+                    line-height: 1.2;
+                    max-width: 300px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
                 }
                 
                 .title-text {
-                    font-size: 1.875rem;
-                    font-weight: 800;
+                    font-size: 1.375rem;
+                    font-weight: 700;
                     color: #111827;
                     letter-spacing: -0.025em;
                     line-height: 1.2;
@@ -343,62 +378,132 @@ class EnhancedFlansaTableBuilder {
                     font-weight: 400;
                 }
                 
-                /* Header View Controls */
-                .header-view-controls {
+                /* Context Header Area */
+                .context-header {
+                    background: #ffffff;
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    padding: 0.875rem 0;
+                    position: sticky;
+                    top: 60px; /* Below global nav if present */
+                    z-index: 99;
+                    backdrop-filter: blur(10px);
+                    background: rgba(255, 255, 255, 0.98);
+                }
+                
+                .context-container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 0 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 2rem;
+                }
+                
+                .context-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .context-label {
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                
+                .context-name {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: #374151;
+                    background: rgba(79, 70, 229, 0.1);
+                    padding: 0.25rem 0.625rem;
+                    border-radius: 6px;
+                    border: 1px solid rgba(79, 70, 229, 0.2);
+                }
+                
+                .context-controls {
                     display: flex;
                     align-items: center;
                     gap: 0.75rem;
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 0.375rem;
-                    border-radius: 8px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    backdrop-filter: blur(8px);
                 }
                 
-                .header-view-controls .view-toggle {
+                .context-controls .view-toggle {
                     display: flex;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 6px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
                     padding: 2px;
                 }
                 
-                .header-view-controls .view-btn {
-                    padding: 0.375rem 0.5rem;
+                .context-controls .view-btn {
+                    padding: 0.375rem 0.625rem;
                     border: none;
                     background: transparent;
-                    color: rgba(255, 255, 255, 0.7);
+                    color: #64748b;
                     cursor: pointer;
-                    border-radius: 4px;
-                    transition: all 0.2s ease;
-                    font-size: 0.75rem;
-                }
-                
-                .header-view-controls .view-btn.active,
-                .header-view-controls .view-btn:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                    color: rgba(255, 255, 255, 0.95);
-                }
-                
-                .header-view-controls .search-box {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 6px;
-                    padding: 0.375rem 0.75rem;
-                    color: rgba(255, 255, 255, 0.9);
+                    transition: all 0.2s ease;
                     font-size: 0.8125rem;
-                    width: 180px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                }
+                
+                .context-controls .view-btn.active {
+                    background: #ffffff;
+                    color: #4f46e5;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                }
+                
+                .context-controls .view-btn:hover:not(.active) {
+                    color: #475569;
+                    background: rgba(248, 250, 252, 0.8);
+                }
+                
+                .context-controls .search-box {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 0.5rem 0.75rem;
+                    color: #374151;
+                    font-size: 0.875rem;
+                    width: 240px;
                     transition: all 0.2s ease;
                 }
                 
-                .header-view-controls .search-box::placeholder {
-                    color: rgba(255, 255, 255, 0.5);
+                .context-controls .search-box::placeholder {
+                    color: #9ca3af;
                 }
                 
-                .header-view-controls .search-box:focus {
+                .context-controls .search-box:focus {
                     outline: none;
-                    background: rgba(255, 255, 255, 0.15);
-                    border-color: rgba(255, 255, 255, 0.3);
-                    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+                    background: #ffffff;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+                
+                .context-counter {
+                    padding: 0.375rem 0.75rem;
+                    background: rgba(79, 70, 229, 0.08);
+                    border: 1px solid rgba(79, 70, 229, 0.15);
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .context-counter .counter-text {
+                    color: #374151;
+                    font-size: 0.8125rem;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+                
+                .context-counter .count-total {
+                    color: #6b7280;
+                    font-weight: 400;
                 }
                 
                 /* Modern Action Buttons */
@@ -1211,12 +1316,6 @@ class EnhancedFlansaTableBuilder {
                                     <i class="fa fa-sort sort-icon" data-sort="none"></i>
                                 </div>
                             </th>
-                            <th class="sortable-header" data-column="description">
-                                <div class="header-content">
-                                    <span class="header-text">Description</span>
-                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
-                                </div>
-                            </th>
                             <th class="actions-header">
                                 <div class="header-content">
                                     <span class="header-text">Actions</span>
@@ -1265,11 +1364,6 @@ class EnhancedFlansaTableBuilder {
                     <td class="field-type-cell">
                         <div class="cell-content">
                             <span class="field-type-badge ${isLogicField ? 'logic-field' : ''}">${fieldTypeLabel}</span>
-                        </div>
-                    </td>
-                    <td class="field-description-cell">
-                        <div class="cell-content">
-                            <span class="field-description">${fieldDescription}</span>
                         </div>
                     </td>
                     <td class="field-actions-cell">
@@ -1323,9 +1417,6 @@ class EnhancedFlansaTableBuilder {
                             <strong>Type:</strong> 
                             <span class="field-type-badge ${isLogicField ? 'logic-field' : ''}">${fieldTypeLabel}</span>
                         </div>
-                        <div class="tile-field-description">
-                            <strong>Description:</strong> ${fieldDescription}
-                        </div>
                     </div>
                 </div>
             `;
@@ -1371,8 +1462,6 @@ class EnhancedFlansaTableBuilder {
                     return (field.fieldname || field.field_name || '').toLowerCase();
                 case 'type':
                     return (field.fieldtype || field.field_type || '').toLowerCase();
-                case 'description':
-                    return (field.description || field.label || field.field_label || '').toLowerCase();
                 default:
                     return '';
             }
@@ -1527,9 +1616,17 @@ class EnhancedFlansaTableBuilder {
     }
     
     update_counters() {
-        const displayedCount = this.$container.find('.field-item:visible').length;
+        let displayedCount = 0;
         const totalCount = this.fields.length;
         
+        // Count visible items based on current view mode
+        if (this.view_mode === 'list') {
+            displayedCount = this.$container.find('.data-grid-row:visible').length;
+        } else {
+            displayedCount = this.$container.find('.field-tile:visible').length;
+        }
+        
+        // Always show in "X of Y" format
         this.$container.find('#displayed-count').text(displayedCount);
         this.$container.find('#total-count').text(totalCount);
     }
@@ -1557,9 +1654,8 @@ class EnhancedFlansaTableBuilder {
                 const fieldLabel = $item.find('.field-label').text().toLowerCase();
                 const fieldName = $item.find('.field-name-code').text().toLowerCase();
                 const fieldType = $item.find('.field-type-badge').text().toLowerCase();
-                const description = $item.find('.field-description').text().toLowerCase();
                 
-                if (fieldLabel.includes(term) || fieldName.includes(term) || fieldType.includes(term) || description.includes(term)) {
+                if (fieldLabel.includes(term) || fieldName.includes(term) || fieldType.includes(term)) {
                     $item.show();
                     visibleCount++;
                 } else {
@@ -1573,9 +1669,8 @@ class EnhancedFlansaTableBuilder {
                 const fieldLabel = $item.find('.tile-label').text().toLowerCase();
                 const fieldName = $item.find('.tile-field-name code').text().toLowerCase();
                 const fieldType = $item.find('.field-type-badge').text().toLowerCase();
-                const description = $item.find('.tile-field-description').text().toLowerCase();
                 
-                if (fieldLabel.includes(term) || fieldName.includes(term) || fieldType.includes(term) || description.includes(term)) {
+                if (fieldLabel.includes(term) || fieldName.includes(term) || fieldType.includes(term)) {
                     $item.show();
                     visibleCount++;
                 } else {
@@ -1584,7 +1679,8 @@ class EnhancedFlansaTableBuilder {
             });
         }
         
-        this.$container.find('#displayed-count').text(visibleCount);
+        // Update counters after filtering
+        this.update_counters();
     }
     
     async load_table() {
@@ -2528,6 +2624,24 @@ class EnhancedFlansaTableBuilder {
             
             if (tableResult.message) {
                 this.table_data = tableResult.message;
+                
+                // Load application data if available
+                if (this.table_data.application) {
+                    try {
+                        const appResult = await frappe.call({
+                            method: 'frappe.client.get',
+                            args: {
+                                doctype: 'Flansa Application',
+                                name: this.table_data.application
+                            }
+                        });
+                        if (appResult.message) {
+                            this.application_data = appResult.message;
+                        }
+                    } catch (appError) {
+                        console.warn('Could not load application data:', appError);
+                    }
+                }
                 
                 // Update page title
                 this.page.set_title(`${this.table_data.table_label || this.table_data.table_name} - Table Builder`);

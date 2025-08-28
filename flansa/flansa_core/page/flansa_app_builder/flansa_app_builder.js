@@ -49,32 +49,15 @@ class FlansaAppBuilder {
                         <!-- Main Header Row -->
                         <div class="header-row">
                             <div class="app-info">
-                                <h1 class="app-title">Loading...</h1>
-                                <span class="app-status"></span>
+                                <div class="app-info-inline">
+                                    <h1 class="app-title">Loading...</h1>
+                                    <span class="app-separator">•</span>
+                                    <span class="app-status-inline"></span>
+                                </div>
                             </div>
                             
                             <!-- Action Buttons -->
                             <div class="header-actions">
-                                <div class="header-counter">
-                                    <span class="counter-text">
-                                        <span id="displayed-count">0</span> 
-                                        <span class="count-total">of <span id="total-count">0</span> tables</span>
-                                    </span>
-                                </div>
-                                
-                                <div class="header-view-controls">
-                                    <div class="view-toggle">
-                                        <button class="view-btn active" data-view="grid" title="Grid View">
-                                            <i class="fa fa-th"></i>
-                                        </button>
-                                        <button class="view-btn" data-view="list" title="List View">
-                                            <i class="fa fa-list"></i>
-                                        </button>
-                                    </div>
-                                    <input type="search" class="search-box" id="table-search" 
-                                           placeholder="Search tables...">
-                                </div>
-                                
                                 <button class="header-btn" id="create-table-header">
                                     <i class="fa fa-plus"></i> New Table
                                 </button>
@@ -94,6 +77,35 @@ class FlansaAppBuilder {
                                         </a>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Context Header Area -->
+                <div class="context-header">
+                    <div class="context-container">
+                        <div class="context-info">
+                            <span class="context-label">APP:</span>
+                            <span class="context-name">${this.current_app ? (this.current_app.title || this.current_app.name) : 'Loading...'}</span>
+                        </div>
+                        
+                        <div class="context-controls">
+                            <div class="view-toggle">
+                                <button class="view-btn active" data-view="grid" title="Grid View">
+                                    <i class="fa fa-th"></i>
+                                </button>
+                                <button class="view-btn" data-view="list" title="List View">
+                                    <i class="fa fa-list"></i>
+                                </button>
+                            </div>
+                            <input type="search" class="search-box" id="table-search" 
+                                   placeholder="Search tables...">
+                            <div class="context-counter">
+                                <span class="counter-text">
+                                    <span id="displayed-count">0</span> 
+                                    <span class="count-total">of <span id="total-count">0</span> tables</span>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -187,10 +199,27 @@ class FlansaAppBuilder {
                     gap: 1rem;
                 }
                 
+                .app-info-inline {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+                
                 .app-title {
-                    font-size: 1.5rem;
-                    font-weight: 600;
+                    font-size: 1.375rem;
+                    font-weight: 700;
                     margin: 0;
+                    text-transform: capitalize;
+                }
+                
+                .app-separator {
+                    color: rgba(0, 0, 0, 0.3);
+                    font-weight: 500;
+                }
+                
+                .app-status-inline {
+                    font-size: 0.8125rem;
+                    color: #6b7280;
                     text-transform: capitalize;
                 }
                 
@@ -224,62 +253,133 @@ class FlansaAppBuilder {
                     font-weight: 400;
                 }
                 
-                /* Header View Controls */
-                .header-view-controls {
+                
+                /* Context Header Area */
+                .context-header {
+                    background: #ffffff;
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    padding: 0.875rem 0;
+                    position: sticky;
+                    top: 60px; /* Below global nav if present */
+                    z-index: 99;
+                    backdrop-filter: blur(10px);
+                    background: rgba(255, 255, 255, 0.98);
+                }
+                
+                .context-container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 0 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 2rem;
+                }
+                
+                .context-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .context-label {
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                
+                .context-name {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: #374151;
+                    background: rgba(79, 70, 229, 0.1);
+                    padding: 0.25rem 0.625rem;
+                    border-radius: 6px;
+                    border: 1px solid rgba(79, 70, 229, 0.2);
+                }
+                
+                .context-controls {
                     display: flex;
                     align-items: center;
                     gap: 0.75rem;
-                    background: rgba(255, 255, 255, 0.1);
-                    padding: 0.375rem;
-                    border-radius: 8px;
-                    border: 1px solid rgba(255, 255, 255, 0.15);
-                    backdrop-filter: blur(8px);
                 }
                 
-                .header-view-controls .view-toggle {
+                .context-controls .view-toggle {
                     display: flex;
-                    background: rgba(255, 255, 255, 0.1);
-                    border-radius: 6px;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
                     padding: 2px;
                 }
                 
-                .header-view-controls .view-btn {
-                    padding: 0.375rem 0.5rem;
+                .context-controls .view-btn {
+                    padding: 0.375rem 0.625rem;
                     border: none;
                     background: transparent;
-                    color: rgba(255, 255, 255, 0.7);
+                    color: #64748b;
                     cursor: pointer;
-                    border-radius: 4px;
-                    transition: all 0.2s ease;
-                    font-size: 0.75rem;
-                }
-                
-                .header-view-controls .view-btn.active,
-                .header-view-controls .view-btn:hover {
-                    background: rgba(255, 255, 255, 0.2);
-                    color: rgba(255, 255, 255, 0.95);
-                }
-                
-                .header-view-controls .search-box {
-                    background: rgba(255, 255, 255, 0.1);
-                    border: 1px solid rgba(255, 255, 255, 0.15);
                     border-radius: 6px;
-                    padding: 0.375rem 0.75rem;
-                    color: rgba(255, 255, 255, 0.9);
+                    transition: all 0.2s ease;
                     font-size: 0.8125rem;
-                    width: 180px;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                }
+                
+                .context-controls .view-btn.active {
+                    background: #ffffff;
+                    color: #4f46e5;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                }
+                
+                .context-controls .view-btn:hover:not(.active) {
+                    color: #475569;
+                    background: rgba(248, 250, 252, 0.8);
+                }
+                
+                .context-controls .search-box {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 0.5rem 0.75rem;
+                    color: #374151;
+                    font-size: 0.875rem;
+                    width: 240px;
                     transition: all 0.2s ease;
                 }
                 
-                .header-view-controls .search-box::placeholder {
-                    color: rgba(255, 255, 255, 0.5);
+                .context-controls .search-box::placeholder {
+                    color: #9ca3af;
                 }
                 
-                .header-view-controls .search-box:focus {
+                .context-controls .search-box:focus {
                     outline: none;
-                    background: rgba(255, 255, 255, 0.15);
-                    border-color: rgba(255, 255, 255, 0.3);
-                    box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.3);
+                    background: #ffffff;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+                
+                .context-counter {
+                    padding: 0.375rem 0.75rem;
+                    background: rgba(79, 70, 229, 0.08);
+                    border: 1px solid rgba(79, 70, 229, 0.15);
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .context-counter .counter-text {
+                    color: #374151;
+                    font-size: 0.8125rem;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+                
+                .context-counter .count-total {
+                    color: #6b7280;
+                    font-weight: 400;
                 }
                 
                 /* Header Actions */
@@ -706,16 +806,13 @@ class FlansaAppBuilder {
         const displayed = filteredTables ? filteredTables.length : this.current_tables.length;
         const total = this.current_tables.length;
         
+        // Always show in "X of Y" format
         this.page.$app_builder.find('#displayed-count').text(displayed);
         this.page.$app_builder.find('#total-count').text(total);
         
-        // Hide "of X" when not filtering
+        // Always show the count total
         const countTotal = this.page.$app_builder.find('.count-total');
-        if (displayed === total) {
-            countTotal.hide();
-        } else {
-            countTotal.show();
-        }
+        countTotal.show();
     }
     
     setupSearch() {

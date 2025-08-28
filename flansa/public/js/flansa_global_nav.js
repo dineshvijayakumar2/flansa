@@ -19,73 +19,92 @@ window.FlansaGlobalNav = {
      */
     createGlobalNavBar() {
         const navBarHtml = `
-            <div class="flansa-global-nav" id="flansa-global-nav">
-                <div class="global-nav-container">
-                    <!-- Left side - Flansa brand -->
-                    <div class="nav-left">
-                        <div class="flansa-brand">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="brand-icon">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
-                            <span class="brand-text">Flansa</span>
-                        </div>
+            <div class="flansa-global-sidebar" id="flansa-global-sidebar">
+                <!-- Brand Section -->
+                <div class="sidebar-brand">
+                    <div class="flansa-brand">
+                        <img src="/assets/flansa/images/flansa-logo.svg" alt="Flansa" class="brand-logo" />
+                        <span class="brand-text">Flansa</span>
                     </div>
-                    
-                    <!-- Right side - Theme toggle and user menu -->
-                    <div class="nav-right">
-                        <!-- Theme Toggle -->
-                        <button class="theme-toggle" id="theme-toggle" title="Toggle dark mode">
-                            <svg class="theme-icon sun-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                </div>
+                
+                <!-- Navigation Menu - Vertical Icons -->
+                <nav class="sidebar-nav vertical-icons">
+                    <div class="nav-icons-stack">
+                        <a href="/app/flansa-workspace" class="nav-icon-item" data-route="workspace" title="Workspace">
+                            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                             </svg>
-                            <svg class="theme-icon moon-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="display: none;">
-                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                        </a>
+                        
+                        <a href="/app/flansa-app-builder" class="nav-icon-item" data-route="app-builder" title="Apps">
+                            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                            </svg>
+                        </a>
+                        
+                        <a href="/app/flansa-saved-reports" class="nav-icon-item" data-route="reports" title="Reports">
+                            <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                            </svg>
+                        </a>
+                    </div>
+                </nav>
+                
+                <!-- Bottom Actions - User Menu Only -->
+                <div class="sidebar-bottom">
+                    <!-- User Menu -->
+                    <div class="user-menu-dropdown">
+                        <button class="sidebar-user-menu" id="user-menu-trigger">
+                            <div class="user-avatar">
+                                <span class="user-initials">${frappe.user.full_name().charAt(0).toUpperCase()}</span>
+                            </div>
+                            <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                             </svg>
                         </button>
                         
-                        <!-- User Menu -->
-                        <div class="user-menu-dropdown">
-                            <button class="user-menu-trigger" id="user-menu-trigger">
-                                <div class="user-avatar">
-                                    <span class="user-initials">${frappe.user.full_name().charAt(0).toUpperCase()}</span>
-                                </div>
-                                <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                            
-                            <div class="user-menu-panel" id="user-menu-panel">
+                        <div class="user-menu-panel" id="user-menu-panel">
+                            <div class="menu-header">
                                 <div class="user-info">
-                                    <div class="user-name">${frappe.user.full_name()}</div>
-                                    <div class="user-email">${frappe.session.user}</div>
+                                    <div class="user-avatar-large">
+                                        <span class="user-initials">${frappe.user.full_name().charAt(0).toUpperCase()}</span>
+                                    </div>
+                                    <div class="user-details">
+                                        <div class="user-name">${frappe.user.full_name()}</div>
+                                        <div class="user-email">${frappe.session.user}</div>
+                                    </div>
                                 </div>
-                                <div class="menu-divider"></div>
-                                <a href="/app/user-profile" class="menu-item">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                                    </svg>
-                                    Profile Settings
-                                </a>
-                                <a href="/app/workspace" class="menu-item">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                                    </svg>
-                                    Workspace
-                                </a>
-                                <div class="menu-divider"></div>
-                                <a href="/app/flansa-help" class="menu-item">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
-                                    </svg>
-                                    Help & Support
-                                </a>
-                                <a href="/api/method/logout" class="menu-item danger">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
-                                    </svg>
-                                    Sign Out
-                                </a>
                             </div>
+                            <div class="menu-divider"></div>
+                            <a href="/app/user-profile" class="menu-item">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                </svg>
+                                Profile Settings
+                            </a>
+                            <button class="menu-item theme-toggle" id="theme-toggle">
+                                <svg class="theme-icon sun-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                                </svg>
+                                <svg class="theme-icon moon-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="display: none;">
+                                    <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                                </svg>
+                                Toggle Dark Mode
+                            </button>
+                            <a href="/app/flansa-help" class="menu-item">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd" />
+                                </svg>
+                                Help & Support
+                            </a>
+                            <div class="menu-divider"></div>
+                            <a href="/api/method/logout" class="menu-item danger">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clip-rule="evenodd" />
+                                </svg>
+                                Sign Out
+                            </a>
                         </div>
                     </div>
                 </div>
@@ -94,6 +113,9 @@ window.FlansaGlobalNav = {
         
         // Insert at the beginning of body
         $('body').prepend(navBarHtml);
+        
+        // Mark active navigation item based on current route
+        this.updateActiveNavigation();
     },
 
     /**
@@ -237,55 +259,121 @@ window.FlansaGlobalNav = {
             notification.removeClass('show');
             setTimeout(() => notification.remove(), 300);
         }, 2000);
+    },
+
+    /**
+     * Update active navigation state for vertical icons
+     */
+    updateActiveNavigation() {
+        const currentPath = window.location.pathname;
+        $('.nav-icon-item').removeClass('active');
+        
+        if (currentPath.includes('flansa-workspace')) {
+            $('[data-route="workspace"]').addClass('active');
+        } else if (currentPath.includes('flansa-app-builder') || currentPath.includes('flansa-table-builder')) {
+            $('[data-route="app-builder"]').addClass('active');
+        } else if (currentPath.includes('flansa-saved-reports') || currentPath.includes('flansa-report-viewer')) {
+            $('[data-route="reports"]').addClass('active');
+        }
     }
 };
 
 // CSS Styles for the global navigation
 const globalNavStyles = `
 <style>
-/* Global Navigation Bar */
-.flansa-global-nav {
+/* Global Sidebar Navigation - Sleek Vertical */
+.flansa-global-sidebar {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
+    height: 100vh;
+    width: 80px;
     z-index: 1000;
-    background: var(--nav-bg, #ffffff);
-    border-bottom: 1px solid var(--border-color, #e2e8f0);
-    backdrop-filter: blur(20px);
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.2s ease;
-}
-
-.global-nav-container {
-    max-width: 1400px;
-    margin: 0 auto;
-    padding: 0 1.5rem;
+    background: var(--nav-bg, #f8fafc);
+    border-right: 1px solid var(--border-color, #e2e8f0);
     display: flex;
-    align-items: center;
-    justify-content: space-between;
-    height: 60px;
+    flex-direction: column;
+    transition: all 0.3s ease;
+    box-shadow: 2px 0 8px rgba(0,0,0,0.1);
 }
 
-/* Brand */
+/* Adjust body for sleek sidebar */
+body {
+    padding-left: 80px !important;
+    padding-top: 0 !important;
+}
+
+.layout-main {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+}
+
+/* Sleek Brand - Just Icon */
+.sidebar-brand {
+    padding: 1rem;
+    display: flex;
+    justify-content: center;
+    border-bottom: 1px solid var(--border-color, #e2e8f0);
+}
+
 .flansa-brand {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    text-decoration: none;
+    justify-content: center;
 }
 
-.brand-icon {
-    color: #4f46e5;
-    width: 24px;
-    height: 24px;
+.brand-logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
 }
 
 .brand-text {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: var(--text-color, #0f172a);
-    letter-spacing: -0.025em;
+    display: none; /* Hide text in sleek mode */
+}
+
+/* Vertical Icon Navigation */
+.sidebar-nav.vertical-icons {
+    flex: 1;
+    padding: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.nav-icons-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    width: 100%;
+    align-items: center;
+}
+
+.nav-icon-item {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    color: var(--text-color, #6b7280);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+    background: transparent;
+}
+
+.nav-icon-item:hover {
+    background: rgba(79, 70, 229, 0.1);
+    color: #4f46e5;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+}
+
+.nav-icon-item.active {
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 /* Navigation sections */
@@ -319,70 +407,120 @@ const globalNavStyles = `
     transition: opacity 0.2s ease;
 }
 
-/* User Menu */
+/* Bottom Section */
+.sidebar-bottom {
+    padding: 1rem;
+    border-top: 1px solid var(--border-color, #e2e8f0);
+    display: flex;
+    justify-content: center;
+}
+
+/* User Menu - Sleek */
 .user-menu-dropdown {
     position: relative;
 }
 
-.user-menu-trigger {
+.sidebar-user-menu {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
-    padding: 0.375rem;
+    justify-content: center;
+    gap: 0.25rem;
+    padding: 0.5rem;
     border: none;
-    border-radius: 8px;
+    border-radius: 12px;
     background: transparent;
     cursor: pointer;
     transition: all 0.2s ease;
+    width: 48px;
+    height: 48px;
+    position: relative;
 }
 
-.user-menu-trigger:hover {
-    background: rgba(107, 114, 128, 0.1);
+.sidebar-user-menu:hover {
+    background: rgba(79, 70, 229, 0.1);
+    transform: translateY(-2px);
 }
 
 .user-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     color: white;
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     font-weight: 600;
 }
 
-.dropdown-arrow {
-    color: var(--text-color, #6b7280);
-    transition: transform 0.2s ease;
+.user-avatar-large {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+    font-weight: 600;
+    margin-right: 0.75rem;
 }
 
-.user-menu-trigger.active .dropdown-arrow {
+.sidebar-user-menu .dropdown-arrow {
+    position: absolute;
+    bottom: 2px;
+    right: 2px;
+    color: var(--text-color, #6b7280);
+    transition: transform 0.2s ease;
+    width: 8px;
+    height: 8px;
+}
+
+.sidebar-user-menu.active .dropdown-arrow {
     transform: rotate(180deg);
 }
 
-/* User Menu Panel */
+/* User Menu Panel - Bottom Positioned */
 .user-menu-panel {
     position: absolute;
-    top: calc(100% + 0.5rem);
-    right: 0;
-    min-width: 240px;
+    bottom: calc(100% + 0.5rem);
+    left: calc(100% + 0.5rem);
+    min-width: 280px;
     background: var(--card-bg, #ffffff);
     border: 1px solid var(--border-color, #e2e8f0);
     border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 8px 25px -8px rgba(0, 0, 0, 0.15), 0 4px 16px -4px rgba(0, 0, 0, 0.1);
     opacity: 0;
     visibility: hidden;
-    transform: translateY(-10px);
-    transition: all 0.2s ease;
-    z-index: 50;
+    transform: translateY(10px) translateX(-10px);
+    transition: all 0.3s ease;
+    z-index: 1001;
+}
+
+.menu-header {
+    padding: 0;
+}
+
+.user-info {
+    padding: 1.25rem;
+    border-bottom: 1px solid var(--border-color, #e5e7eb);
+}
+
+.user-info {
+    display: flex;
+    align-items: center;
+}
+
+.user-details {
+    flex: 1;
 }
 
 .user-menu-panel.show {
     opacity: 1;
     visibility: visible;
-    transform: translateY(0);
+    transform: translateY(0) translateX(0);
 }
 
 .user-info {
