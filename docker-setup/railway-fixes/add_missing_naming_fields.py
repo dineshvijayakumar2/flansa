@@ -7,8 +7,11 @@ Usage: exec(open('/path/to/this/script.py').read())
 
 import frappe
 
+print("🎯 MIGRATION SCRIPT LOADED SUCCESSFULLY", flush=True)
 print("🚀 RAILWAY MIGRATION: ADDING MISSING NAMING FIELDS", flush=True)
 print("=" * 55, flush=True)
+print(f"📍 Current site: {getattr(frappe.local, 'site', 'Unknown')}", flush=True)
+print(f"👤 Current user: {getattr(frappe.session, 'user', 'Unknown')}", flush=True)
 
 def check_current_fields():
     """Check current fields in Flansa Table DocType"""
@@ -256,10 +259,17 @@ def main():
         print(f"🔍 Details: {traceback.format_exc()}", flush=True)
         return False
 
-# Execute the migration
-if __name__ == "__main__":
+# Execute the migration immediately (for exec() usage)
+print("🎬 SCRIPT STARTED - Executing migration...", flush=True)
+try:
     result = main()
     if result:
         print("🚀 Railway naming fields migration completed successfully!", flush=True)
     else:
         print("💥 Railway naming fields migration failed - check logs above", flush=True)
+except Exception as script_error:
+    print(f"💀 SCRIPT EXECUTION ERROR: {str(script_error)}", flush=True)
+    import traceback
+    print(f"🔍 Script traceback: {traceback.format_exc()}", flush=True)
+
+print("🏁 SCRIPT FINISHED", flush=True)
