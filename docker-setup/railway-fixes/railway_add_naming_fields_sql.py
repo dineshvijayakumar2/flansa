@@ -99,6 +99,10 @@ def add_naming_fields_sql():
             idx = max_idx + i + 1
             
             # Insert field record
+            # Prepare values with proper NULL handling
+            precision_val = field.get('precision')
+            precision_param = precision_val if precision_val is not None else None
+            
             frappe.db.sql("""
                 INSERT INTO "tabDocField" (
                     name, creation, modified, modified_by, owner, docstatus,
@@ -127,7 +131,7 @@ def add_naming_fields_sql():
                 field_name, frappe.session.user, frappe.session.user, idx,
                 field['fieldname'], field['label'], field['fieldtype'],
                 field.get('options', ''), field.get('default', ''),
-                '' if field.get('precision') is None else field.get('precision', '')
+                precision_param
             ))
             
             print(f"✅ Added field: {field['fieldname']}", flush=True)
