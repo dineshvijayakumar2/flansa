@@ -131,7 +131,7 @@ def get_lookup_wizard_data(table_name):
         
         # Get available DocTypes for lookup targets
         all_doctypes = frappe.get_all("DocType", 
-                                     filters={"custom": 1, "is_table": 0},
+                                     filters={"custom": 1},
                                      fields=["name"])
         
         # Also get Flansa Tables
