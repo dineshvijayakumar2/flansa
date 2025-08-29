@@ -12,6 +12,34 @@ from datetime import datetime, timedelta
 from frappe.utils import now, cstr, flt, cint
 
 # ==============================================================================
+# HELPER FUNCTIONS
+# ==============================================================================
+
+def create_flansa_field_metadata(field_data):
+    """
+    Create field description/metadata string from field data
+    Used to store field information in DocType field descriptions
+    """
+    metadata_parts = []
+    
+    # Add field description if provided
+    if field_data.get("description"):
+        metadata_parts.append(field_data["description"])
+    
+    # Add metadata about field source
+    if field_data.get("is_logic_field"):
+        metadata_parts.append("Logic Field")
+    
+    # Add any special properties
+    if field_data.get("is_readonly"):
+        metadata_parts.append("Read Only")
+    
+    if field_data.get("is_required"):
+        metadata_parts.append("Required")
+    
+    return " | ".join(metadata_parts) if metadata_parts else ""
+
+# ==============================================================================
 # CORE NATIVE FIELD MANAGEMENT APIS
 # ==============================================================================
 
