@@ -1392,7 +1392,7 @@ class EnhancedFlansaTableBuilder {
             const fieldLabel = field.label || field.field_label;
             const fieldDescription = field.description || fieldLabel || 'No description';
             
-            const isLogicField = field.logic_expression || field.calculation_method || fieldType === 'Link';
+            const isLogicField = field.logic_expression || fieldType === 'Link';
             const fieldTypeLabel = isLogicField ? 
                 `${fieldType} (${this.get_logic_field_type(field)})` : 
                 fieldType;
@@ -1442,7 +1442,7 @@ class EnhancedFlansaTableBuilder {
             const fieldLabel = field.label || field.field_label;
             const fieldDescription = field.description || fieldLabel || 'No description';
             
-            const isLogicField = field.logic_expression || field.calculation_method || fieldType === 'Link';
+            const isLogicField = field.logic_expression || fieldType === 'Link';
             const fieldTypeLabel = isLogicField ? 
                 `${fieldType} (${this.get_logic_field_type(field)})` : 
                 fieldType;
@@ -1544,9 +1544,62 @@ class EnhancedFlansaTableBuilder {
             if (field.logic_expression.includes('ROLLUP(')) return 'Rollup';
             return 'Formula';
         }
-        if (field.calculation_method === 'fetch') return 'Fetch';
-        if (field.calculation_method === 'rollup') return 'Rollup';
-        return 'Formula';
+        // Check if this might be a logic field by checking for fetch_from or other indicators
+        if (field.fetch_from && field.fetch_from.trim()) {
+            return 'Fetch';
+        }
+        // Fallback for fields without logic_expression populated
+        return fieldType === 'Link' ? 'Link' : null;
+    }
+
+    // Enhanced method to check if field is a logic field and get its type
+    async get_enhanced_field_type(field) {
+        const fieldType = field.fieldtype || field.field_type;
+        
+        // Quick checks first
+        if (fieldType === 'Link') {
+            return { isLogic: true, type: 'Link', display: `${fieldType} (Link)` };
+        }
+        
+        if (field.logic_expression) {
+            const logicType = this.get_logic_field_type(field);
+            return { isLogic: true, type: logicType, display: `${fieldType} (${logicType})` };
+        }
+        
+        if (field.fetch_from && field.fetch_from.trim()) {
+            return { isLogic: true, type: 'Fetch', display: `${fieldType} (Fetch)` };
+        }
+        
+        // Check if there's a corresponding Logic Field record
+        try {
+            const result = await new Promise((resolve) => {
+                frappe.call({
+                    method: 'frappe.client.get_value',
+                    args: {
+                        doctype: 'Flansa Logic Field',
+                        fieldname: 'logic_expression',
+                        filters: { 
+                            table_name: this.table_id,
+                            field_name: field.field_name
+                        }
+                    },
+                    callback: (r) => resolve(r)
+                });
+            });
+            
+            if (result.message && result.message.logic_expression) {
+                const expression = result.message.logic_expression;
+                let logicType = 'Formula';
+                if (expression.includes('FETCH(')) logicType = 'Fetch';
+                else if (expression.includes('ROLLUP(')) logicType = 'Rollup';
+                
+                return { isLogic: true, type: logicType, display: `${fieldType} (${logicType})` };
+            }
+        } catch (error) {
+            console.log('No logic field found for:', field.field_name);
+        }
+        
+        return { isLogic: false, type: fieldType, display: fieldType };
     }
     
     setup_event_handlers() {
@@ -2816,9 +2869,27 @@ class EnhancedFlansaTableBuilder {
                                 
                                 if (target_field) {
                                     setTimeout(() => {
-                                        dialog.set_value('fetch_target_field', target_field);
-                                        console.log('✅ Pre-populated fetch target field:', target_field);
-                                    }, 500);
+                                        // Smart target field matching - handle fieldname vs label
+                                        const target_fields_data = dialog._unified_target_fields_data || [];
+                                        
+                                        // Try to find field by fieldname first
+                                        let field_to_set = target_field;
+                                        const target_field_data = target_fields_data.find(f => f.fieldname === target_field);
+                                        
+                                        if (target_field_data && target_field_data.label) {
+                                            // Use label if available (since dropdown shows labels)
+                                            field_to_set = target_field_data.label;
+                                        } else {
+                                            // Fallback: try to find by label
+                                            const label_match = target_fields_data.find(f => f.label === target_field);
+                                            if (label_match) {
+                                                field_to_set = target_field;
+                                            }
+                                        }
+                                        
+                                        dialog.set_value('fetch_target_field', field_to_set);
+                                        console.log('✅ Pre-populated fetch target field:', field_to_set, 'from:', target_field);
+                                    }, 700); // Wait longer for target fields to fully load
                                 }
                             }, 300);
                         }
@@ -3761,34 +3832,47 @@ class EnhancedFlansaTableBuilder {
 
     load_unified_target_fields(dialog, table_id) {
         try {
-            const source_field = dialog.get_value('fetch_source_field');
-            if (!source_field) {
-                console.log('No source field selected for fetch target loading');
+            const source_field_value = dialog.get_value('fetch_source_field');
+            if (!source_field_value) {
+                console.log('No source field selected');
                 return;
             }
-
-            console.log('Loading target fields for source field:', source_field);
             
-            // Load target fields based on source field's target doctype
+            console.log(`Loading target fields for source: ${source_field_value}`);
+            
+            // Find the source field data from stored options to get target doctype
+            const source_fields_data = dialog._unified_source_fields_data || [];
+            const source_field_data = source_fields_data.find(f => f.fieldname === source_field_value);
+            
+            if (!source_field_data || !source_field_data.options) {
+                console.warn('Source field not found or no target doctype specified');
+                return;
+            }
+            
+            const target_doctype = source_field_data.options;
+            console.log(`Target doctype for source field ${source_field_value}: ${target_doctype}`);
+            
+            // Load target fields from the target doctype
             frappe.call({
-                method: 'flansa.logic_templates.get_fetch_target_fields',
-                args: {
-                    table_name: table_id,
-                    source_field: source_field
-                },
+                method: 'flansa.logic_templates.get_target_table_fields',
+                args: { target_doctype: target_doctype },
                 callback: (r) => {
-                    if (r.message && r.message.success) {
-                        const target_fields = r.message.target_fields || [];
-                        const options = target_fields.join('\n');
-                        
-                        const target_field_field = dialog.get_field('fetch_target_field');
-                        if (target_field_field) {
-                            target_field_field.df.options = options;
-                            target_field_field.refresh();
-                            console.log('Loaded target fields:', target_fields);
+                    try {
+                        if (r.message && r.message.success) {
+                            const fields = r.message.fields || [];
+                            dialog._unified_target_fields_data = fields;
+                            
+                            // Show field labels in dropdown (same as existing pattern)
+                            const options = fields.map(f => f.label || f.fieldname).join('\n');
+                            dialog.set_df_property('fetch_target_field', 'options', options);
+                            console.log(`✅ Loaded ${fields.length} target field options`);
+                        } else {
+                            dialog.set_df_property('fetch_target_field', 'options', '');
+                            dialog._unified_target_fields_data = [];
+                            console.warn('No fields found in target DocType');
                         }
-                    } else {
-                        console.error('Failed to load target fields:', r.message);
+                    } catch (error) {
+                        console.error('Error in target fields callback:', error);
                     }
                 }
             });
@@ -3872,19 +3956,22 @@ class EnhancedFlansaTableBuilder {
     // Fetch Logic Field expression from database
     fetch_logic_field_expression(field_name, table_name) {
         return new Promise((resolve) => {
-            const logic_field_name = `LOGIC-${table_name}-${field_name}`;
-            
             frappe.call({
                 method: 'frappe.client.get_value',
                 args: {
                     doctype: 'Flansa Logic Field',
-                    fieldname: 'calculation_method',
-                    filters: { name: logic_field_name }
+                    fieldname: 'logic_expression',
+                    filters: { 
+                        table_name: table_name,
+                        field_name: field_name
+                    }
                 },
                 callback: (r) => {
-                    if (r.message && r.message.calculation_method) {
-                        resolve(r.message.calculation_method);
+                    if (r.message && r.message.logic_expression) {
+                        console.log('✅ Found Logic Field expression for', field_name, ':', r.message.logic_expression);
+                        resolve(r.message.logic_expression);
                     } else {
+                        console.log('⚠️ No Logic Field expression found for field:', field_name, 'in table:', table_name);
                         resolve(null);
                     }
                 }
@@ -3945,13 +4032,17 @@ class EnhancedFlansaTableBuilder {
             callback: (r) => {
                 if (r.message && r.message.success) {
                     const link_fields = r.message.link_fields || [];
+                    
+                    // Store the source fields data for target field loading
+                    dialog._unified_source_fields_data = link_fields;
+                    
                     const options = link_fields.map(f => f.fieldname).join('\n');
                     
                     const source_field = dialog.get_field('fetch_source_field');
                     if (source_field) {
                         source_field.df.options = options;
                         source_field.refresh();
-                        console.log('Loaded fetch source fields:', link_fields);
+                        console.log('✅ Loaded fetch source fields:', link_fields);
                     }
                 } else {
                     console.error('Failed to load fetch source fields:', r.message);
