@@ -132,7 +132,7 @@ def get_lookup_wizard_data(table_name):
         # Get available DocTypes for lookup targets
         all_doctypes = frappe.get_all("DocType", 
                                      filters={"custom": 1, "is_table": 0},
-                                     fields=["name", "title"])
+                                     fields=["name"])
         
         # Also get Flansa Tables
         flansa_tables = frappe.get_all("Flansa Table",
@@ -153,7 +153,7 @@ def get_lookup_wizard_data(table_name):
         for dt in all_doctypes:
             target_tables.append({
                 "value": dt.name,
-                "label": dt.title or dt.name,
+                "label": dt.name,
                 "type": "doctype"
             })
         
