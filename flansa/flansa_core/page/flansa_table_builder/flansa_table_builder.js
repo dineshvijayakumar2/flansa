@@ -3075,7 +3075,9 @@ class EnhancedFlansaTableBuilder {
                     field_updates.formula = values.formula;
                     field_updates.expression = values.formula;
                 } else if (logic_field_template === 'link') {
+                    // For link fields, the target_doctype should be the actual DocType name
                     field_updates.options = values.target_doctype;
+                    console.log('Setting link field target doctype:', values.target_doctype);
                 }
                 
                 // Set result type if provided
@@ -3161,6 +3163,7 @@ class EnhancedFlansaTableBuilder {
     }
     
     async delete_field(fieldName) {
+        // Always show initial confirmation
         const proceed = await frappe.confirm(
             `Are you sure you want to delete the field "${fieldName}"? This action cannot be undone.`
         );
@@ -3168,25 +3171,94 @@ class EnhancedFlansaTableBuilder {
         if (!proceed) return;
         
         try {
+            // First, try smart delete to check for dependencies
             const result = await frappe.call({
-                method: 'flansa.flansa_core.api.table_api.delete_field',
+                method: 'flansa.flansa_core.api.table_api.smart_delete_field',
                 args: {
-                    table_id: this.table_id,
-                    field_name: fieldName
+                    table_name: this.table_id,
+                    field_name: fieldName,
+                    force_cascade: false
+                }
+            });
+            
+            if (result.message && result.message.success) {
+                // Successful deletion
+                frappe.show_alert({
+                    message: '✅ ' + result.message.message,
+                    indicator: 'green'
+                });
+                await this.load_table();
+                this.render_fields();
+            } else if (result.message && result.message.dependencies) {
+                // Field has dependencies, ask for cascade confirmation
+                this.show_cascade_delete_dialog(fieldName, result.message.dependencies);
+            } else {
+                frappe.msgprint('Failed to delete field: ' + (result.message?.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error deleting field:', error);
+            frappe.msgprint('Error deleting field');
+        }
+    }
+
+    show_cascade_delete_dialog(fieldName, dependencies) {
+        let deps_html = '<ul>';
+        dependencies.forEach(dep => {
+            deps_html += `<li><strong>${dep.field_name}</strong> (${dep.type})</li>`;
+        });
+        deps_html += '</ul>';
+        
+        const dialog = new frappe.ui.Dialog({
+            title: '⚠️ Field Dependencies Found',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    options: `
+                        <div style="margin-bottom: 1rem;">
+                            <p><strong>The field "${fieldName}" has dependencies:</strong></p>
+                            ${deps_html}
+                            <p style="color: #d73527; font-weight: bold;">
+                                ⚠️ Deleting this field will also delete all dependent fields. This cannot be undone.
+                            </p>
+                        </div>
+                    `
+                }
+            ],
+            primary_action_label: 'Delete All (Cascade)',
+            primary_action: () => {
+                dialog.hide();
+                this.execute_cascade_delete(fieldName);
+            },
+            secondary_action_label: 'Cancel'
+        });
+        
+        dialog.show();
+    }
+
+    async execute_cascade_delete(fieldName) {
+        try {
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.smart_delete_field',
+                args: {
+                    table_name: this.table_id,
+                    field_name: fieldName,
+                    force_cascade: true
                 }
             });
             
             if (result.message && result.message.success) {
                 frappe.show_alert({
-                    message: 'Field deleted successfully',
+                    message: '✅ ' + result.message.message,
                     indicator: 'green'
                 });
                 await this.load_table();
                 this.render_fields();
+            } else {
+                frappe.msgprint('Failed to delete field: ' + (result.message?.error || 'Unknown error'));
             }
         } catch (error) {
-            console.error('Error deleting field:', error);
-            frappe.msgprint('Error deleting field');
+            console.error('Error executing cascade delete:', error);
+            frappe.msgprint('Error deleting field and dependencies');
         }
     }
     
