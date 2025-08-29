@@ -3038,12 +3038,60 @@ class EnhancedFlansaTableBuilder {
     // Update existing field with unified dialog values
     async update_unified_field(table_id, field_name, values, dialog) {
         try {
+            // Determine if this is a logic field update
+            const logic_field_template = values.logic_field_template;
+            const is_logic_field = logic_field_template && ['link', 'fetch', 'formula', 'rollup'].includes(logic_field_template);
+            
+            let field_updates = {
+                field_label: values.field_label,
+                field_type: values.field_type,
+                description: values.description,
+                is_required: values.reqd || 0,
+                is_readonly: values.read_only || 0,
+                is_hidden: values.hidden || 0,
+                options: values.options || ''
+            };
+            
+            // For logic fields, handle special updates
+            if (is_logic_field) {
+                console.log('Updating logic field with template:', logic_field_template);
+                
+                // Add logic-specific updates based on template
+                if (logic_field_template === 'fetch') {
+                    // Generate new FETCH expression from form values
+                    const source_field = values.fetch_source_field;
+                    const target_field = values.fetch_target_field;
+                    if (source_field && target_field) {
+                        // Convert target field label back to fieldname if needed
+                        const target_fields_data = dialog._unified_target_fields_data || [];
+                        const target_field_data = target_fields_data.find(f => f.label === target_field || f.fieldname === target_field);
+                        const target_fieldname = target_field_data ? target_field_data.fieldname : target_field;
+                        
+                        field_updates.formula = `FETCH(${source_field}, ${target_fieldname})`;
+                        field_updates.expression = field_updates.formula;
+                        console.log('Generated FETCH expression:', field_updates.formula);
+                    }
+                } else if (logic_field_template === 'formula') {
+                    field_updates.formula = values.formula;
+                    field_updates.expression = values.formula;
+                } else if (logic_field_template === 'link') {
+                    field_updates.options = values.target_doctype;
+                }
+                
+                // Set result type if provided
+                if (values.result_type) {
+                    field_updates.field_type = values.result_type;
+                }
+            }
+            
+            console.log('Updating field with data:', field_updates);
+            
             const result = await frappe.call({
-                method: 'flansa.flansa_core.api.field_management.update_field',
+                method: 'flansa.native_fields.update_field_native',
                 args: {
                     table_name: table_id,
                     field_name: field_name,
-                    field_data: values
+                    field_updates: field_updates
                 }
             });
             
@@ -3053,10 +3101,10 @@ class EnhancedFlansaTableBuilder {
                     message: 'Field updated successfully',
                     indicator: 'green'
                 });
-                await this.render_fields();
-                this.update_counters();
+                await this.load_table();
+                this.render_fields();
             } else {
-                frappe.msgprint('Error updating field: ' + (result.message?.error || 'Unknown error'));
+                frappe.msgprint(`Failed to update field: ${result.message?.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error updating field:', error);
