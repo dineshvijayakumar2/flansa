@@ -178,11 +178,40 @@ def get_target_table_fields(target_doctype):
         meta = frappe.get_meta(target_doctype)
         fields = []
         
+        # Include system fields first
+        system_fields = [
+            {"fieldname": "name", "label": "Name", "fieldtype": "Data"},
+            {"fieldname": "creation", "label": "Creation", "fieldtype": "Datetime"},
+            {"fieldname": "modified", "label": "Modified", "fieldtype": "Datetime"},
+            {"fieldname": "modified_by", "label": "Modified By", "fieldtype": "Link"},
+            {"fieldname": "owner", "label": "Owner", "fieldtype": "Link"},
+            {"fieldname": "idx", "label": "Index", "fieldtype": "Int"}
+        ]
+        
+        fields.extend(system_fields)
+        
+        # Include custom fields - expanded to include more useful field types
+        allowed_fieldtypes = [
+            "Data", "Text", "Small Text", "Long Text", "Text Editor",
+            "Int", "Float", "Currency", "Percent",
+            "Date", "Datetime", "Time",
+            "Select", "Check", "Link",
+            "Attach", "Attach Image", "Color", "Rating"
+        ]
+        
         for field in meta.get("fields"):
-            if field.fieldtype in ["Data", "Text", "Int", "Float", "Currency", "Date", "Datetime", "Select", "Check"]:
+            # Skip fields that are tenant-related or internal based on category
+            if hasattr(field, 'category') and field.category in ['tenant', 'internal']:
+                continue
+                
+            # Skip already added system fields
+            if field.fieldname in ["name", "creation", "modified", "modified_by", "owner", "idx"]:
+                continue
+                
+            if field.fieldtype in allowed_fieldtypes:
                 fields.append({
                     "fieldname": field.fieldname,
-                    "label": field.label,
+                    "label": field.label or field.fieldname,
                     "fieldtype": field.fieldtype
                 })
         
@@ -192,6 +221,7 @@ def get_target_table_fields(target_doctype):
         }
         
     except Exception as e:
+        frappe.log_error(f"Error getting target table fields: {str(e)}", "Logic Templates")
         return {
             "success": False,
             "error": str(e)
