@@ -2938,13 +2938,41 @@ class EnhancedFlansaTableBuilder {
     // Create new field with unified dialog values
     async create_unified_field(table_id, values, dialog) {
         try {
-            const result = await frappe.call({
-                method: 'flansa.flansa_core.api.field_management.create_field',
-                args: {
-                    table_name: table_id,
-                    field_data: values
-                }
-            });
+            // Determine if this is a logic field or standard field
+            const logic_field_template = values.logic_field_template;
+            const is_logic_field = logic_field_template && ['link', 'fetch', 'formula', 'rollup'].includes(logic_field_template);
+            
+            let result;
+            
+            if (is_logic_field) {
+                // Create logic field using template system
+                console.log('Creating logic field with template:', logic_field_template);
+                result = await frappe.call({
+                    method: 'flansa.logic_templates.create_field_from_template',
+                    args: {
+                        table_name: table_id,
+                        template_id: logic_field_template,
+                        template_data: this.prepare_template_data(logic_field_template, values)
+                    }
+                });
+            } else {
+                // Create standard field using table API
+                console.log('Creating standard field');
+                result = await frappe.call({
+                    method: 'flansa.flansa_core.api.table_api.add_field_to_table',
+                    args: {
+                        table_id: table_id,
+                        field_name: values.field_name,
+                        field_type: values.field_type,
+                        label: values.field_label,
+                        description: values.description,
+                        options: values.options || '',
+                        required: values.reqd || 0,
+                        read_only: values.read_only || 0,
+                        hidden: values.hidden || 0
+                    }
+                });
+            }
             
             if (result.message && result.message.success) {
                 dialog.hide();
@@ -2952,14 +2980,58 @@ class EnhancedFlansaTableBuilder {
                     message: 'Field created successfully',
                     indicator: 'green'
                 });
-                await this.render_fields();
-                this.update_counters();
+                await this.load_table();
+                this.render_fields();
             } else {
-                frappe.msgprint('Error creating field: ' + (result.message?.error || 'Unknown error'));
+                frappe.msgprint(`Failed to create field: ${result.message?.error || 'Unknown error'}`);
             }
         } catch (error) {
             console.error('Error creating field:', error);
             frappe.msgprint('Error creating field');
+        }
+    }
+
+    // Prepare template data based on logic field type
+    prepare_template_data(template_id, values) {
+        const base_data = {
+            field_name: values.field_name,
+            field_label: values.field_label,
+            description: values.description
+        };
+
+        switch (template_id) {
+            case 'link':
+                return {
+                    ...base_data,
+                    target_doctype: values.target_doctype,
+                    link_scope: values.link_scope
+                };
+            
+            case 'fetch':
+                return {
+                    ...base_data,
+                    source_link_field: values.fetch_source_field,
+                    target_field: values.fetch_target_field
+                };
+            
+            case 'formula':
+                return {
+                    ...base_data,
+                    formula: values.formula,
+                    result_type: values.result_type
+                };
+            
+            case 'rollup':
+                return {
+                    ...base_data,
+                    child_table: values.child_table,
+                    rollup_field: values.rollup_field,
+                    rollup_function: values.rollup_function,
+                    result_type: values.result_type
+                };
+            
+            default:
+                return base_data;
         }
     }
 
