@@ -976,3 +976,4 @@ def is_float(value):
     except ValueError:
         return False
 
+

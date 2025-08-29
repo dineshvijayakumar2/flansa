@@ -209,12 +209,22 @@ def get_tenant_details(tenant_id):
             "tenant_name": tenant_doc.tenant_name,
             "admin_email": tenant_doc.admin_email or "",
             "primary_domain": tenant_doc.primary_domain or "",
+            "status": tenant_doc.status or "Active",
+            "created_date": tenant_doc.created_date,
             "max_users": tenant_doc.max_users or 100,
             "max_tables": tenant_doc.max_tables or 50,
             "storage_limit_gb": tenant_doc.storage_limit_gb or 10.0,
+            "features_enabled": tenant_doc.features_enabled or 1,
             "custom_branding": tenant_doc.custom_branding or 0,
+            "workspace_logo": tenant_doc.workspace_logo or "",
+            "api_access_enabled": tenant_doc.api_access_enabled or 1,
             "custom_domains": custom_domains,
-            "status": tenant_doc.status
+            "total_applications": tenant_doc.total_applications or 0,
+            "total_tables": tenant_doc.total_tables or 0,
+            "total_relationships": tenant_doc.total_relationships or 0,
+            "total_reports": tenant_doc.total_reports or 0,
+            "total_form_configs": tenant_doc.total_form_configs or 0,
+            "last_activity": tenant_doc.last_activity
         }
         
     except Exception as e:

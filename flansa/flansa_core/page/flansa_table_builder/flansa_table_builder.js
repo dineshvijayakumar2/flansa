@@ -35,7 +35,11 @@ class EnhancedFlansaTableBuilder {
         } else {
             await this.load_table();
             this.render_table_builder();
-            this.update_banner_info(); // Update banner with loaded data
+            
+            // Give DOM time to render before updating banner
+            setTimeout(() => {
+                this.update_banner_info(); // Update banner with loaded data
+            }, 100);
         }
         
         this.setup_page_actions();
@@ -73,92 +77,103 @@ class EnhancedFlansaTableBuilder {
                             <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                             </svg>
-                            <span class="breadcrumb-current">Table Builder</span>
+                            <a href="#" class="breadcrumb-link" id="table-breadcrumb-link">
+                                <span>Table</span>
+                            </a>
+                            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="breadcrumb-current">📋 Table Builder</span>
                         </nav>
-                        
-                        <!-- Single Row Header Section -->
-                        <div class="header-main">
-                            <div class="header-left">
-                                <!-- Optional Workspace Logo -->
-                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
-                                    <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
-                                </div>
-                                
-                                <div class="header-title-inline">
-                                    <h1 class="header-title">
-                                        <span class="title-text">Loading...</span>
-                                    </h1>
-                                    <span class="header-separator">•</span>
-                                    <p class="header-subtitle-inline">Loading application information...</p>
+                    </div>
+                    
+                    <!-- Application Banner below breadcrumbs -->
+                    <div class="app-banner">
+                        <div class="banner-left">
+                            <!-- Optional Workspace Logo -->
+                            <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
+                                <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                            </div>
+                            <!-- App Info Section -->
+                            <div class="app-info">
+                                <div class="app-details">
+                                    <h1 class="app-name title-text">Loading...</h1>
+                                    <div class="app-type">
+                                        <div class="counter-pill">
+                                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                            </svg>
+                                            <span class="counter-text">Table Builder</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <!-- Action Buttons -->
-                            <div class="header-actions">
-                                <div class="action-dropdown">
-                                    <button class="sleek-btn primary split-btn" id="add-field-header">
+                        </div>
+                        <!-- Action Buttons -->
+                        <div class="banner-right">
+                            <div class="action-dropdown">
+                                <button class="sleek-btn primary split-btn" id="add-field-header">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Add Field</span>
+                                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div class="dropdown-panel" id="add-field-dropdown">
+                                    <a href="#" class="dropdown-option" id="add-standard-field">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                             <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                                         </svg>
-                                        <span>Add Field</span>
-                                        <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                        </svg>
-                                    </button>
-                                    <div class="dropdown-panel" id="add-field-dropdown">
-                                        <a href="#" class="dropdown-option" id="add-standard-field">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span>Standard Field</span>
-                                        </a>
-                                        <a href="#" class="dropdown-option" id="add-logic-field">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
-                                            </svg>
-                                            <span>Logic Field</span>
-                                        </a>
-                                        <a href="#" class="dropdown-option" id="add-gallery-field">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span>Gallery Field</span>
-                                        </a>
-                                    </div>
-                                </div>
-                                
-                                <div class="action-dropdown">
-                                    <button class="sleek-btn secondary" id="context-menu">
+                                        <span>Standard Field</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="add-logic-field">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                            <path d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" />
                                         </svg>
-                                    </button>
-                                    <div class="dropdown-panel" id="context-dropdown">
-                                        <a href="#" class="dropdown-option" id="view-data-menu">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span>View Data</span>
-                                        </a>
-                                        <a href="#" class="dropdown-option" id="naming-settings-menu">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span>Naming Settings</span>
-                                        </a>
-                                        <a href="#" class="dropdown-option" id="gallery-settings-menu">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span>Gallery Settings</span>
-                                        </a>
-                                        <a href="#" class="dropdown-option" id="form-builder-menu">
-                                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                                            </svg>
-                                            <span>Form Builder</span>
-                                        </a>
-                                    </div>
+                                        <span>Logic Field</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="add-gallery-field">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Gallery Field</span>
+                                    </a>
+                                </div>
+                            </div>
+                            
+                            <div class="action-dropdown">
+                                <button class="sleek-btn secondary" id="context-menu">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                    </svg>
+                                </button>
+                                <div class="dropdown-panel" id="context-dropdown">
+                                    <a href="#" class="dropdown-option" id="view-data-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>View Data</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="naming-settings-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Naming Settings</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="gallery-settings-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Gallery Settings</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="form-builder-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                        </svg>
+                                        <span>Form Builder</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -292,61 +307,76 @@ class EnhancedFlansaTableBuilder {
                     font-weight: 600;
                 }
                 
-                /* Header Main Section */
-                .header-main {
+                /* Application Banner */
+                .app-banner {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 12px;
+                }
+
+                .banner-left {
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
-                    gap: 2rem;
-                    margin-top: 0.5rem;
+                    gap: 16px;
                 }
-                
-                .header-left {
-                    flex: 1;
-                }
-                
-                /* Workspace Logo */
+
                 .workspace-logo-container {
-                    margin-right: 1rem;
+                    display: none;
                 }
-                
+
                 .workspace-logo {
                     height: 40px;
                     width: auto;
                     max-width: 120px;
                     object-fit: contain;
-                    border-radius: 6px;
-                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
                 }
-                
-                .header-title-inline {
+
+                .app-info {
                     display: flex;
                     align-items: center;
-                    gap: 0.75rem;
+                    gap: 12px;
                 }
-                
-                .header-title {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.5rem;
+
+                .app-details h1.app-name {
                     margin: 0;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #111827;
+                    line-height: 1.2;
                 }
-                
-                .header-separator {
-                    color: rgba(0, 0, 0, 0.3);
+
+                .app-type {
+                    margin-top: 2px;
+                }
+
+                .counter-pill {
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    padding: 4px 12px;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
                     font-weight: 500;
                 }
-                
-                .header-subtitle-inline {
-                    color: #6b7280;
-                    font-size: 0.8125rem;
-                    margin: 0;
-                    line-height: 1.2;
-                    max-width: 300px;
-                    white-space: nowrap;
-                    overflow: hidden;
-                    text-overflow: ellipsis;
+
+                .counter-text {
+                    font-weight: 500;
+                    color: #374151;
                 }
+
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
                 
                 .title-text {
                     font-size: 1.375rem;
@@ -1286,8 +1316,8 @@ class EnhancedFlansaTableBuilder {
         // Setup event handlers
         this.setup_event_handlers();
         
-        // Load and render fields
-        this.load_fields();
+        // Render fields (already loaded in load_table)
+        this.render_fields();
     }
     
     render_fields() {
@@ -1536,13 +1566,13 @@ class EnhancedFlansaTableBuilder {
         $container.on('click', '#add-standard-field', (e) => {
             e.preventDefault();
             $container.find('#add-field-dropdown').removeClass('show');
-            this.show_add_field_wizard();
+            this.show_unified_field_dialog(this.table_id, null);
         });
         
         $container.on('click', '#add-logic-field', (e) => {
             e.preventDefault();
             $container.find('#add-field-dropdown').removeClass('show');
-            this.show_link_field_dialog();
+            this.show_unified_field_dialog(this.table_id, null);
         });
         
         $container.on('click', '#add-gallery-field', (e) => {
@@ -1733,6 +1763,11 @@ class EnhancedFlansaTableBuilder {
     }
     
     show_add_field_wizard() {
+        // Use the unified dialog for adding new fields
+        this.show_unified_field_dialog(this.table_id, null);
+    }
+    
+    show_add_field_wizard_old() {
         const dialog = new frappe.ui.Dialog({
             title: 'Add Field - Choose Type',
             size: 'large',
@@ -2271,61 +2306,614 @@ class EnhancedFlansaTableBuilder {
         button.find('.hidden-xs').text(this.view_mode === 'list' ? 'Tile View' : 'List View');
     }
     
-    async edit_field(fieldName) {
-        const field = this.fields.find(f => (f.fieldname || f.field_name) === fieldName);
-        if (!field) {
-            frappe.msgprint(`Field ${fieldName} not found`);
-            return;
-        }
+    edit_field(fieldName) {
+        // Get current field data using native API
+        frappe.call({
+            method: 'flansa.native_fields.get_table_fields_native',
+            args: { table_name: this.table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    // Find the field in native format
+                    const native_field = r.message.fields.find(f => f.fieldname === fieldName);
+                    
+                    if (native_field) {
+                        // Convert to expected format
+                        const field = {
+                            field_name: native_field.fieldname,
+                            field_label: native_field.label,
+                            field_type: native_field.fieldtype,
+                            is_required: native_field.reqd || 0,
+                            is_readonly: native_field.read_only || 0,
+                            options: native_field.options || '',
+                            fetch_from: native_field.fetch_from || '',
+                            depends_on: native_field.depends_on || ''
+                        };
+                        this.show_unified_field_dialog(this.table_id, field);
+                    } else {
+                        frappe.msgprint('Field not found: ' + fieldName);
+                    }
+                } else {
+                    frappe.msgprint('Error loading field data');
+                }
+            }
+        });
+    }
+    
+    show_unified_field_dialog(table_id, field = null, template_hint = null) {
+        const is_edit_mode = !!field;
         
-        // Check if it's a Logic Field
-        const isLogicField = field.logic_expression || field.calculation_method || field.field_type === 'Link';
-        
-        if (isLogicField) {
-            this.show_logic_field_edit_dialog(field);
+        if (is_edit_mode) {
+            // For edit mode, first detect if it's a Logic Field and then create appropriate dialog
+            this.detect_and_show_field_dialog(table_id, field);
         } else {
-            this.show_standard_field_edit_dialog(field);
+            // For create mode, check if we have a template hint for Logic Fields
+            const is_logic_field = template_hint && ['link', 'fetch', 'formula', 'rollup'].includes(template_hint);
+            this.create_unified_dialog(table_id, field, is_logic_field, template_hint);
         }
     }
     
-    show_standard_field_edit_dialog(field) {
+    detect_and_show_field_dialog(table_id, field) {
+        // Check if this field has a corresponding Logic Field record using table_name and field_name
+        frappe.call({
+            method: 'frappe.client.get_value',
+            args: {
+                doctype: 'Flansa Logic Field',
+                filters: { 
+                    table_name: table_id || this.table_id,
+                    field_name: field.field_name
+                },
+                fieldname: ['name', 'logic_expression', 'logic_type', 'result_type']
+            },
+            callback: (r) => {
+                let is_logic_field = false;
+                let logic_field_template = null;
+                
+                if (r.message && (r.message.logic_expression || r.message.logic_type)) {
+                    is_logic_field = true;
+                    field.expression = r.message.logic_expression;
+                    field.result_type = r.message.result_type;
+                    
+                    // Map logic_type to template_type for consistent routing
+                    const logic_type = r.message.logic_type || 'Calculation';
+                    logic_field_template = this.map_logic_type_to_template(logic_type, field);
+                    
+                    console.log(`Detected Logic Field: ${field.field_name} (${logic_type} → ${logic_field_template})`);
+                }
+                
+                // Now create the dialog with proper context
+                this.create_unified_dialog(table_id, field, is_logic_field, logic_field_template);
+            }
+        });
+    }
+    
+    // Helper function for consistent ID generation
+    generate_field_id(base_name) {
+        // Keep it simple - just use the field name with basic cleanup
+        return base_name.toLowerCase()
+            .replace(/[^a-zA-Z0-9]/g, '_')  // Replace non-alphanumeric with underscore
+            .replace(/_+/g, '_')            // Remove multiple underscores
+            .replace(/^_|_$/g, '');         // Remove leading/trailing underscores
+    }
+
+    create_unified_dialog(table_id, field, is_logic_field, logic_field_template) {
+        const is_edit_mode = !!field;
+        const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
+        
+        // Enhanced Link field detection for edit mode
+        const is_link_field = is_edit_mode && (
+            field.field_type === 'Link' || 
+            field.fieldtype === 'Link' ||
+            (field.options && field.options.trim() && !field.options.includes('\n'))
+        );
+        
+        // Ensure logic_field_template is set to 'link' for any Link field
+        if (is_link_field && !logic_field_template) {
+            logic_field_template = 'link';
+        }
+        
+        const show_link_controls = (is_logic_field && logic_field_template === 'link') || is_link_field;
+        
+        // Debug logging for Link field detection
+        if (is_edit_mode) {
+            console.log('🔍 Field Detection Debug:', {
+                field_name: field.field_name,
+                field_type: field.field_type,
+                is_logic_field: is_logic_field,
+                logic_field_template: logic_field_template,
+                is_link_field: is_link_field,
+                show_link_controls: show_link_controls
+            });
+        }
+        
         const dialog = new frappe.ui.Dialog({
-            title: `Edit ${field.field_type} Field`,
+            title: dialog_title,
             fields: [
+                // Hidden fields for depends_on conditions
                 {
-                    fieldname: 'field_name',
+                    fieldname: 'logic_field_template',
+                    fieldtype: 'Data',
+                    hidden: 1,
+                    default: logic_field_template || ''
+                },
+                {
+                    fieldname: 'is_link_field',
+                    fieldtype: 'Check', 
+                    hidden: 1,
+                    default: is_link_field ? 1 : 0
+                },
+                {
+                    label: 'Field Label',
+                    fieldname: 'field_label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    default: is_edit_mode ? field.field_label : '',
+                    description: 'Display name for users',
+                    change: () => {
+                        if (!is_edit_mode) {
+                            // Auto-generate field name from label for new fields
+                            const label = dialog.get_value('field_label');
+                            if (label) {
+                                const normalized_name = this.normalize_field_name(label);
+                                const current_field_name = dialog.get_value('field_name');
+                                if (!current_field_name || current_field_name === this.last_auto_generated_name) {
+                                    dialog.set_value('field_name', normalized_name);
+                                    this.last_auto_generated_name = normalized_name;
+                                }
+                            }
+                        }
+                    }
+                },
+                {
                     label: 'Field Name',
+                    fieldname: 'field_name',
                     fieldtype: 'Data',
-                    default: field.field_name,
-                    read_only: 1
+                    reqd: 1,
+                    default: is_edit_mode ? field.field_name : '',
+                    read_only: is_edit_mode ? 1 : 0,
+                    description: is_edit_mode ? 'Field name cannot be changed after creation' : 'Internal name (lowercase, underscores only)'
                 },
                 {
-                    fieldname: 'label',
-                    label: 'Label',
-                    fieldtype: 'Data',
-                    default: field.label,
-                    reqd: 1
+                    fieldtype: 'Column Break'
                 },
                 {
-                    fieldname: 'description',
-                    label: 'Help Text',
-                    fieldtype: 'Text',
-                    default: field.description
+                    label: 'Field Type',
+                    fieldname: 'field_type',
+                    fieldtype: 'Select',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach',
+                    default: is_edit_mode ? field.field_type : (logic_field_template === 'link' ? 'Link' : 'Data'),
+                    reqd: 1,
+                    read_only: (logic_field_template === 'link' || (is_edit_mode && is_link_field)) ? 1 : 0
                 },
                 {
-                    fieldname: 'reqd',
-                    label: 'Required',
+                    fieldtype: 'Section Break',
+                    label: 'System Fields',
+                    depends_on: `eval:!${is_edit_mode ? 'true' : 'false'} && !doc.logic_field_template`
+                },
+                {
+                    label: 'Add System Field',
+                    fieldname: 'system_field_selector',
+                    fieldtype: 'Select',
+                    options: '', // Will be populated dynamically
+                    depends_on: `eval:!${is_edit_mode ? 'true' : 'false'} && !doc.logic_field_template`,
+                    description: 'Add built-in Frappe fields (read-only)',
+                    change: () => {
+                        const selected_system_field = dialog.get_value('system_field_selector');
+                        if (selected_system_field) {
+                            this.populate_system_field_details(dialog, selected_system_field);
+                        }
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Conversion Options',
+                    depends_on: `eval:${is_edit_mode ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Convert to Link Field',
+                    fieldname: 'convert_to_link',
                     fieldtype: 'Check',
-                    default: field.reqd || 0
+                    default: 0,
+                    description: 'Convert this field to a Link field for relationships',
+                    depends_on: `eval:${is_edit_mode && !is_link_field ? 'true' : 'false'}`,
+                    change: () => {
+                        const convert_checked = dialog.get_value('convert_to_link');
+                        if (convert_checked) {
+                            dialog.set_value('field_type', 'Link');
+                            // Set default link scope
+                            dialog.set_value('link_scope', 'Current App');
+                            // Load target tables for the default scope
+                            this.load_target_tables(dialog, table_id);
+                            frappe.msgprint({
+                                title: 'Convert to Link Field',
+                                message: 'This will convert the field to a Link field for creating relationships with other tables.',
+                                indicator: 'blue'
+                            });
+                        }
+                        dialog.refresh();
+                    }
+                },
+                {
+                    label: 'Add Logic',
+                    fieldname: 'add_logic',
+                    fieldtype: 'Check',
+                    default: 0,
+                    description: 'Add formula-based calculations to this field',
+                    depends_on: `eval:${is_edit_mode && !is_logic_field ? 'true' : 'false'}`,
+                    change: () => {
+                        const add_logic_checked = dialog.get_value('add_logic');
+                        const formula_field = dialog.get_field('formula');
+                        
+                        if (add_logic_checked) {
+                            frappe.msgprint({
+                                title: 'Add Logic to Field',
+                                message: 'This will add formula-based calculations to the field. The field will become read-only and calculated.',
+                                indicator: 'blue'
+                            });
+                            
+                            // Make formula field editable when add_logic is checked
+                            if (formula_field) {
+                                formula_field.df.read_only = 0;
+                                formula_field.refresh();
+                            }
+                        } else {
+                            // Make formula field read-only when add_logic is unchecked (for Link fields)
+                            if (formula_field && is_link_field) {
+                                formula_field.df.read_only = 1;
+                                formula_field.refresh();
+                            }
+                        }
+                        dialog.refresh();
+                    }
+                },
+                {
+                    label: 'Remove Logic',
+                    fieldname: 'remove_logic',
+                    fieldtype: 'Check',
+                    default: 0,
+                    description: '⚠️ Remove formula calculations and make field editable again',
+                    depends_on: `eval:${is_edit_mode && is_logic_field ? 'true' : 'false'}`,
+                    change: () => {
+                        const remove_logic_checked = dialog.get_value('remove_logic');
+                        if (remove_logic_checked) {
+                            // Just show a simple alert, no confirmation (main handler will confirm)
+                            frappe.show_alert({
+                                message: '⚠️ Click Update Field to remove logic from this field',
+                                indicator: 'orange'
+                            });
+                        }
+                    }
+                },
+                
+                {
+                    label: 'Options',
+                    fieldname: 'options',
+                    fieldtype: 'Small Text',
+                    default: is_edit_mode ? (field.options || '') : '',
+                    description: 'For Select: Option1\\nOption2\\nOption3',
+                    depends_on: 'eval:doc.field_type === "Select"'
+                },
+                {
+                    label: 'Link Target',
+                    fieldname: 'options',
+                    fieldtype: 'Data',
+                    default: is_edit_mode ? (field.options || '') : '',
+                    description: 'DocType to link to (e.g., Customer, Item)',
+                    depends_on: `eval:doc.field_type === "Link" && ${logic_field_template !== 'link' && !is_link_field ? 'true' : 'false'}`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Logic Configuration',
+                    depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
+                },
+                {
+                    label: 'Logic Type',
+                    fieldname: 'logic_type_display',
+                    fieldtype: 'Data',
+                    read_only: 1,
+                    default: is_logic_field ? (logic_field_template || (is_link_field ? 'link' : 'formula')) : '',
+                    description: 'Type of logic field',
+                    depends_on: `eval:${is_logic_field ? 'true' : 'false'}`
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Link Field Configuration',
+                    description: 'Configure relationship to other tables',
+                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'"
+                },
+                {
+                    label: 'Link Scope',
+                    fieldname: 'link_scope',
+                    fieldtype: 'Select',
+                    options: 'Current App\nOther Flansa Apps\nSystem Tables',
+                    default: 'Current App',
+                    description: 'Choose the scope of tables to link to',
+                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'",
+                    change: () => {
+                        this.load_target_tables(dialog, table_id);
+                    }
+                },
+                {
+                    label: 'Select App',
+                    fieldname: 'target_app',
+                    fieldtype: 'Select',
+                    description: 'Choose the Flansa app to select tables from',
+                    depends_on: "eval:(doc.logic_field_template == 'link' || doc.field_type == 'Link') && doc.link_scope == 'Other Flansa Apps'",
+                    change: () => {
+                        this.handle_app_selection_change(dialog);
+                    }
+                },
+                {
+                    label: 'Target Table',
+                    fieldname: 'target_doctype',
+                    fieldtype: 'Select',
+                    description: 'Table/DocType to link to',
+                    default: (logic_field_template === 'link' || is_link_field) && field ? (field.options || '') : '',
+                    depends_on: "eval:doc.logic_field_template == 'link' || doc.field_type == 'Link'"
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Fetch Field Configuration', 
+                    description: 'Configure which field to fetch from linked records',
+                    depends_on: "eval:doc.logic_field_template == 'fetch'"
+                },
+                {
+                    label: 'Source Link Field',
+                    fieldname: 'fetch_source_field',
+                    fieldtype: 'Select',
+                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_source_field(field.logic_expression) : '',
+                    description: 'Link field to fetch data from',
+                    depends_on: "eval:doc.logic_field_template == 'fetch'",
+                    change: () => {
+                        // Load target fields for the selected source
+                        this.load_unified_target_fields(dialog, table_id);
+                        // Update FETCH expression when source field changes
+                        this.update_fetch_expression(dialog);
+                    }
+                },
+                {
+                    label: 'Target Field',
+                    fieldname: 'fetch_target_field', 
+                    fieldtype: 'Select',
+                    default: logic_field_template === 'fetch' && field ? this.parse_fetch_target_field(field.logic_expression) : '',
+                    description: 'Field to fetch from the linked record',
+                    depends_on: "eval:doc.logic_field_template == 'fetch'",
+                    change: () => {
+                        // Update FETCH expression when target field changes
+                        this.update_fetch_expression(dialog);
+                    }
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Formula Configuration',
+                    depends_on: `eval:${is_logic_field ? 'true' : 'false'} || doc.add_logic`
+                },
+                {
+                    label: 'Result Type',
+                    fieldname: 'result_type',
+                    fieldtype: 'Select',
+                    options: 'Data\nInt\nFloat\nCurrency\nDate\nDatetime\nCheck',
+                    default: is_edit_mode && is_logic_field ? (field.result_type || 'Data') : 'Data',
+                    description: 'Expected data type that the formula will return',
+                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'}) || doc.add_logic`,
+                    change: () => {
+                        const result_type = dialog.get_value('result_type');
+                        const formula = dialog.get_value('formula');
+                        
+                        // Immediate validation when result type changes
+                        this.validate_formula_result_type(formula || '', result_type, dialog);
+                    }
+                },
+                {
+                    label: 'Formula',
+                    fieldname: 'formula',
+                    fieldtype: 'Code',
+                    default: is_edit_mode && is_logic_field ? (field.expression || field.logic_expression || '') : '',
+                    description: 'Add formula to make this a calculated field (e.g., price * quantity, today(), field1 + field2)',
+                    language: 'javascript',
+                    depends_on: `eval:(${is_logic_field ? 'true' : 'false'}) || doc.add_logic`,
+                    change: () => {
+                        const formula = dialog.get_value('formula');
+                        const result_type = dialog.get_value('result_type') || 'Data';
+                        
+                        // Immediate validation with visual feedback
+                        const validation_result = this.validate_formula_result_type(formula, result_type, dialog);
+                        
+                        // Update primary action based on validation
+                        if (validation_result && !validation_result.valid) {
+                            dialog.set_primary_action('⚠️ Create with Issues', 
+                                (values) => this.handle_unified_field_action(table_id, values, is_edit_mode, field, dialog));
+                        } else {
+                            dialog.set_primary_action(is_edit_mode ? 'Update Field' : 'Create Field', 
+                                (values) => this.handle_unified_field_action(table_id, values, is_edit_mode, field, dialog));
+                        }
+                    }
+                },
+                
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Field Properties'
+                },
+                {
+                    label: 'Required',
+                    fieldname: 'reqd',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.is_required || 0) : 0
+                },
+                {
+                    label: 'Read Only',
+                    fieldname: 'read_only',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.read_only || 0) : 0,
+                    description: 'Calculated fields are automatically read-only'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    label: 'Hidden',
+                    fieldname: 'hidden',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.hidden || 0) : 0
+                },
+                {
+                    label: 'In List View',
+                    fieldname: 'in_list_view',
+                    fieldtype: 'Check',
+                    default: is_edit_mode ? (field.in_list_view || 0) : 0
                 }
             ],
-            primary_action_label: 'Update Field',
+            primary_action_label: is_edit_mode ? 'Update Field' : 'Create Field',
             primary_action: (values) => {
-                this.update_field(field.field_name, values, dialog);
+                this.handle_unified_field_action(table_id, values, is_edit_mode, field, dialog);
             }
         });
         
         dialog.show();
+
+        // Load system fields dynamically for the system field selector
+        this.load_system_fields_for_dialog(table_id, dialog);
+        
+        // Simple Link field loading - always load for all fields
+        setTimeout(() => {
+            console.log('🔍 Loading target tables for all fields');
+            
+            // Always load target tables - let user decide if they need Link functionality
+            this.load_target_tables(dialog, table_id);
+            
+            // Set default values for Link fields
+            if (is_edit_mode && (logic_field_template === 'link' || is_link_field)) {
+                dialog.set_value('link_scope', 'Current App');
+                if (field && field.options) {
+                    // Pre-populate target doctype for existing Link fields
+                    setTimeout(() => {
+                        dialog.set_value('target_doctype', field.options);
+                        console.log('Pre-populated target doctype:', field.options);
+                    }, 500);
+                }
+            }
+        }, 300);
+
+        // Load fetch source fields if template is fetch
+        if (logic_field_template === 'fetch') {
+            setTimeout(async () => {
+                console.log('🔍 Loading fetch source fields for fetch template');
+                this.load_fetch_source_fields(dialog, table_id);
+                
+                if (is_edit_mode && field) {
+                    // Fetch the Logic Field expression from database
+                    const expression = await this.fetch_logic_field_expression(field.field_name, table_id);
+                    
+                    if (expression) {
+                        console.log('✅ Found Logic Field expression:', expression);
+                        const source_field = this.parse_fetch_source_field(expression);
+                        const target_field = this.parse_fetch_target_field(expression);
+                        
+                        if (source_field) {
+                            setTimeout(() => {
+                                dialog.set_value('fetch_source_field', source_field);
+                                console.log('✅ Pre-populated fetch source field:', source_field);
+                                this.load_unified_target_fields(dialog, table_id);
+                                
+                                if (target_field) {
+                                    setTimeout(() => {
+                                        dialog.set_value('fetch_target_field', target_field);
+                                        console.log('✅ Pre-populated fetch target field:', target_field);
+                                    }, 500);
+                                }
+                            }, 300);
+                        }
+                    } else {
+                        console.log('⚠️ No Logic Field expression found for field:', field.field_name);
+                    }
+                }
+            }, 100);
+        }
+    }
+
+    // Helper function to normalize field names
+    normalize_field_name(label) {
+        return label.toLowerCase()
+            .replace(/[^a-zA-Z0-9]/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_|_$/g, '');
+    }
+
+    // Map logic type to template for consistency
+    map_logic_type_to_template(logic_type, field) {
+        const mapping = {
+            'Link': 'link',
+            'Fetch': 'fetch', 
+            'Formula': 'formula',
+            'Rollup': 'rollup',
+            'Calculation': 'formula'
+        };
+        return mapping[logic_type] || 'formula';
+    }
+
+    // Handle unified field action (create or update)
+    handle_unified_field_action(table_id, values, is_edit_mode, existing_field, dialog) {
+        if (is_edit_mode) {
+            this.update_unified_field(table_id, existing_field.field_name, values, dialog);
+        } else {
+            this.create_unified_field(table_id, values, dialog);
+        }
+    }
+
+    // Create new field with unified dialog values
+    async create_unified_field(table_id, values, dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.field_management.create_field',
+                args: {
+                    table_name: table_id,
+                    field_data: values
+                }
+            });
+            
+            if (result.message && result.message.success) {
+                dialog.hide();
+                frappe.show_alert({
+                    message: 'Field created successfully',
+                    indicator: 'green'
+                });
+                await this.render_fields();
+                this.update_counters();
+            } else {
+                frappe.msgprint('Error creating field: ' + (result.message?.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error creating field:', error);
+            frappe.msgprint('Error creating field');
+        }
+    }
+
+    // Update existing field with unified dialog values
+    async update_unified_field(table_id, field_name, values, dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.field_management.update_field',
+                args: {
+                    table_name: table_id,
+                    field_name: field_name,
+                    field_data: values
+                }
+            });
+            
+            if (result.message && result.message.success) {
+                dialog.hide();
+                frappe.show_alert({
+                    message: 'Field updated successfully',
+                    indicator: 'green'
+                });
+                await this.render_fields();
+                this.update_counters();
+            } else {
+                frappe.msgprint('Error updating field: ' + (result.message?.error || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error updating field:', error);
+            frappe.msgprint('Error updating field');
+        }
     }
     
     show_logic_field_edit_dialog(field) {
@@ -2633,71 +3221,115 @@ class EnhancedFlansaTableBuilder {
     }
     
     async load_workspace_logo() {
+        console.log('🔍 Table Builder: Loading workspace logo...');
         try {
-            // Try to get workspace logo if workspace system is available
+            // Get workspace logo from Flansa Tenant Registry
             const result = await frappe.call({
                 method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
                 args: {},
                 freeze: false,
-                quiet: true // Don't show errors if method doesn't exist
+                quiet: false // Show errors for debugging
             });
+            
+            console.log('🔍 Table Builder: API response:', result);
             
             if (result.message && result.message.logo) {
                 const logoContainer = document.getElementById('workspace-logo-container');
                 const logoImg = document.getElementById('workspace-logo');
                 
+                console.log('🔍 Table Builder: DOM elements found:', {
+                    logoContainer: !!logoContainer,
+                    logoImg: !!logoImg
+                });
+                
                 if (logoContainer && logoImg) {
                     logoImg.src = result.message.logo;
-                    logoContainer.style.display = 'block';
+                    logoContainer.style.display = 'flex';
+                    console.log('✅ Table Builder: Workspace logo loaded:', result.message.logo);
+                } else {
+                    console.log('❌ Table Builder: Logo DOM elements not found');
                 }
+            } else {
+                console.log('⚠️ Table Builder: No workspace logo in API response');
             }
         } catch (error) {
-            // Silently fail if workspace system isn't available
-            console.debug('Workspace logo not available:', error);
+            console.log('❌ Table Builder: Workspace logo error:', error);
         }
     }
     
     getApplicationTitle() {
-        // Priority: application_title > application_name > fallback (never show table name in app banner)
-        if (this.application_data?.application_title) {
-            return this.application_data.application_title;
+        // Show app title, not table name
+        if (this.application_data?.app_title) {
+            return this.application_data.app_title;
         }
-        if (this.application_data?.application_name) {
-            return this.application_data.application_name;
+        if (this.application_data?.app_name) {
+            return this.application_data.app_name;
         }
-        // Try to get application name from table data if available
-        if (this.table_data?.application && this.table_data.application !== this.table_data.table_name) {
-            return this.table_data.application;
+        // Fallback to table info if no app data
+        if (this.table_data?.table_label) {
+            return this.table_data.table_label;
         }
-        return 'Flansa Application';
+        if (this.table_data?.table_name) {
+            return this.table_data.table_name;
+        }
+        return 'Table Builder';
     }
     
     getApplicationDescription() {
-        if (this.application_data?.application_description) {
-            return this.application_data.application_description;
+        // Show app description first, then table description
+        if (this.application_data?.description) {
+            return this.application_data.description;
         }
         if (this.table_data?.table_description) {
             return this.table_data.table_description;
         }
-        return 'Data management application';
+        // Show table name as context since header shows app name
+        if (this.table_data?.table_label) {
+            return `Managing ${this.table_data.table_label}`;
+        }
+        return 'Build and manage your table structure';
     }
     
     update_banner_info() {
         // Update banner title and description with loaded data
-        const titleElement = document.querySelector('.title-text');
-        const descriptionElement = document.querySelector('.header-subtitle-inline');
+        const titleElements = document.querySelectorAll('.title-text');
+        const descriptionElements = document.querySelectorAll('.header-subtitle');
         
         const appTitle = this.getApplicationTitle();
         const appDescription = this.getApplicationDescription();
         
-        console.log('Updating banner with:', { appTitle, appDescription, application_data: this.application_data, table_data: this.table_data });
+        console.log('🔍 Updating banner with:', { appTitle, appDescription, application_data: this.application_data, table_data: this.table_data });
+        console.log('🔍 Found elements:', { 
+            titleElements: titleElements.length,
+            descriptionElements: descriptionElements.length
+        });
         
-        if (titleElement) {
-            titleElement.textContent = appTitle;
+        // Update ALL title elements found
+        if (titleElements.length > 0) {
+            titleElements.forEach((titleElement, index) => {
+                console.log(`📝 Title element ${index + 1}: updating from "${titleElement.textContent}" to "${appTitle}"`);
+                titleElement.textContent = appTitle;
+                console.log(`✅ Title element ${index + 1} updated, now shows: "${titleElement.textContent}"`);
+            });
+        } else {
+            console.log('❌ No title elements (.title-text) found in DOM');
         }
         
-        if (descriptionElement) {
-            descriptionElement.textContent = appDescription;
+        // Update ALL description elements found
+        if (descriptionElements.length > 0) {
+            descriptionElements.forEach((descElement, index) => {
+                console.log(`📝 Description element ${index + 1}: updating from "${descElement.textContent}" to "${appDescription}"`);
+                descElement.textContent = appDescription;
+                console.log(`✅ Description element ${index + 1} updated, now shows: "${descElement.textContent}"`);
+            });
+        } else {
+            console.log('❌ No description elements (.header-subtitle) found in DOM');
+        }
+        
+        // Also check if Frappe's page title is interfering
+        if (this.page && this.page.set_title) {
+            console.log('🔧 Also updating Frappe page title');
+            this.page.set_title(appTitle);
         }
     }
     
@@ -3097,5 +3729,229 @@ class EnhancedFlansaTableBuilder {
             console.error('Error testing formula:', error);
             frappe.msgprint('Error testing formula');
         }
+    }
+
+    // === MISSING HELPER FUNCTIONS FROM VISUAL BUILDER ===
+    
+    parse_fetch_source_field(expression) {
+        const match = expression?.match(/FETCH\(\s*(\w+)\s*,/);
+        return match ? match[1] : '';
+    }
+
+    parse_fetch_target_field(expression) {
+        const match = expression?.match(/FETCH\(\s*\w+\s*,\s*(\w+)\s*\)/);
+        return match ? match[1] : '';
+    }
+
+    update_fetch_expression(dialog) {
+        const source_field = dialog.get_value('fetch_source_field');
+        const target_field = dialog.get_value('fetch_target_field');
+        
+        if (source_field && target_field) {
+            const expression = `FETCH(${source_field}, ${target_field})`;
+            dialog.set_value('formula', expression);
+            console.log('Updated FETCH expression:', expression);
+        }
+    }
+
+    load_unified_target_fields(dialog, table_id) {
+        try {
+            const source_field = dialog.get_value('fetch_source_field');
+            if (!source_field) {
+                console.log('No source field selected for fetch target loading');
+                return;
+            }
+
+            console.log('Loading target fields for source field:', source_field);
+            
+            // Load target fields based on source field's target doctype
+            frappe.call({
+                method: 'flansa.logic_templates.get_fetch_target_fields',
+                args: {
+                    table_name: table_id,
+                    source_field: source_field
+                },
+                callback: (r) => {
+                    if (r.message && r.message.success) {
+                        const target_fields = r.message.target_fields || [];
+                        const options = target_fields.join('\n');
+                        
+                        const target_field_field = dialog.get_field('fetch_target_field');
+                        if (target_field_field) {
+                            target_field_field.df.options = options;
+                            target_field_field.refresh();
+                            console.log('Loaded target fields:', target_fields);
+                        }
+                    } else {
+                        console.error('Failed to load target fields:', r.message);
+                    }
+                }
+            });
+        } catch (error) {
+            console.error('Error in load_unified_target_fields:', error);
+        }
+    }
+
+    validate_formula_result_type(formula, result_type, dialog) {
+        if (!formula || !formula.trim()) {
+            return { valid: true };
+        }
+
+        // Simple validation patterns
+        const validation_patterns = {
+            'Int': /^\s*(SUM|COUNT|AVG|\d+|\w+\s*[\+\-\*\/]\s*\w+)/i,
+            'Float': /^\s*(SUM|COUNT|AVG|ROUND|\d*\.\d+|\w+\s*[\+\-\*\/]\s*\w+)/i,
+            'Currency': /^\s*(SUM|AVG|ROUND|\d+(\.\d+)?|\w+\s*[\+\-\*\/]\s*\w+)/i,
+            'Date': /^\s*(TODAY|DATE|ADDDAYS|DATEVALUE)/i,
+            'Datetime': /^\s*(NOW|DATETIME|ADDDAYS)/i,
+            'Check': /^\s*(IF|AND|OR|NOT|==|!=|>|<)/i,
+            'Data': /.*/  // Data accepts anything
+        };
+
+        const pattern = validation_patterns[result_type];
+        const is_valid = pattern ? pattern.test(formula) : true;
+
+        if (!is_valid && dialog) {
+            // Show validation message
+            const formula_field = dialog.get_field('formula');
+            if (formula_field) {
+                formula_field.df.description = `⚠️ Formula may not match result type '${result_type}'. Please verify.`;
+                formula_field.refresh();
+            }
+        }
+
+        return { valid: is_valid };
+    }
+
+    load_target_tables(dialog, table_id) {
+        frappe.call({
+            method: 'flansa.logic_templates.get_lookup_wizard_data',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const data = r.message;
+                    
+                    // Populate target tables with proper labels
+                    const target_table_field = dialog.get_field('target_doctype');
+                    if (target_table_field) {
+                        const table_options = data.target_tables.map(t => ({
+                            label: t.label,
+                            value: t.value
+                        }));
+                        target_table_field.df.options = table_options;
+                        target_table_field.refresh();
+                        console.log('Loaded target tables with labels:', table_options.length);
+                    }
+                } else {
+                    console.error('Failed to load target tables:', r.message);
+                }
+            }
+        });
+    }
+
+    // Helper functions to parse Logic Field expressions
+    parse_fetch_source_field(expression) {
+        if (!expression) return '';
+        // Parse FETCH(source_field, target_field) pattern
+        const match = expression.match(/FETCH\s*\(\s*([^,]+)\s*,/);
+        return match ? match[1].trim() : '';
+    }
+    
+    parse_fetch_target_field(expression) {
+        if (!expression) return '';
+        // Parse FETCH(source_field, target_field) pattern
+        const match = expression.match(/FETCH\s*\([^,]+,\s*([^)]+)\s*\)/);
+        return match ? match[1].trim() : '';
+    }
+
+    // Fetch Logic Field expression from database
+    fetch_logic_field_expression(field_name, table_name) {
+        return new Promise((resolve) => {
+            const logic_field_name = `LOGIC-${table_name}-${field_name}`;
+            
+            frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: 'Flansa Logic Field',
+                    fieldname: 'calculation_method',
+                    filters: { name: logic_field_name }
+                },
+                callback: (r) => {
+                    if (r.message && r.message.calculation_method) {
+                        resolve(r.message.calculation_method);
+                    } else {
+                        resolve(null);
+                    }
+                }
+            });
+        });
+    }
+
+    handle_app_selection_change(dialog) {
+        const selected_app = dialog.get_value('target_app');
+        if (selected_app) {
+            // Reload target tables for the selected app
+            this.load_target_tables(dialog, this.table_id);
+        }
+    }
+
+    populate_system_field_details(dialog, system_field_name) {
+        // Map of system field configurations
+        const system_fields = {
+            'name': { label: 'Name', type: 'Data', description: 'Unique identifier' },
+            'creation': { label: 'Creation', type: 'Datetime', description: 'Record creation time' },
+            'modified': { label: 'Modified', type: 'Datetime', description: 'Last modification time' },
+            'modified_by': { label: 'Modified By', type: 'Link', description: 'User who last modified' },
+            'owner': { label: 'Owner', type: 'Link', description: 'User who created the record' },
+            'docstatus': { label: 'Document Status', type: 'Int', description: 'Document status (0=Draft, 1=Submitted, 2=Cancelled)' },
+            'idx': { label: 'Index', type: 'Int', description: 'Sort order' }
+        };
+
+        const field_config = system_fields[system_field_name];
+        if (field_config) {
+            dialog.set_value('field_label', field_config.label);
+            dialog.set_value('field_name', system_field_name);
+            dialog.set_value('field_type', field_config.type);
+            dialog.set_value('read_only', 1);  // System fields are typically read-only
+            
+            frappe.show_alert({
+                message: `Added system field: ${field_config.label}`,
+                indicator: 'blue'
+            });
+        }
+    }
+
+    load_system_fields_for_dialog(table_id, dialog) {
+        const system_field_options = 'name\ncreation\nmodified\nmodified_by\nowner\ndocstatus\nidx';
+        
+        const system_field_field = dialog.get_field('system_field_selector');
+        if (system_field_field) {
+            system_field_field.df.options = system_field_options;
+            system_field_field.refresh();
+        }
+    }
+
+    load_fetch_source_fields(dialog, table_id) {
+        console.log('Loading fetch source fields for table:', table_id);
+        
+        frappe.call({
+            method: 'flansa.logic_templates.get_link_fields',
+            args: { table_name: table_id },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const link_fields = r.message.link_fields || [];
+                    const options = link_fields.join('\n');
+                    
+                    const source_field = dialog.get_field('fetch_source_field');
+                    if (source_field) {
+                        source_field.df.options = options;
+                        source_field.refresh();
+                        console.log('Loaded fetch source fields:', link_fields);
+                    }
+                } else {
+                    console.error('Failed to load fetch source fields:', r.message);
+                }
+            }
+        });
     }
 }

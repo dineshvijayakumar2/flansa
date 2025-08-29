@@ -414,13 +414,12 @@ class TenantSwitcher {
         
         const dialog = new frappe.ui.Dialog({
             title: title,
+            size: 'large', // Make dialog larger to accommodate all fields
             fields: [
+                // Tenant Details Section
                 {
-                    fieldtype: 'Data',
-                    fieldname: 'tenant_name',
-                    label: 'Tenant Name',
-                    reqd: 1,
-                    default: tenantData?.tenant_name || ''
+                    fieldtype: 'Section Break',
+                    label: 'Tenant Details'
                 },
                 {
                     fieldtype: 'Data',
@@ -432,10 +431,20 @@ class TenantSwitcher {
                 },
                 {
                     fieldtype: 'Data',
-                    fieldname: 'admin_email',
-                    label: 'Admin Email',
+                    fieldname: 'tenant_name',
+                    label: 'Tenant Name',
                     reqd: 1,
-                    default: tenantData?.admin_email || ''
+                    default: tenantData?.tenant_name || ''
+                },
+                {
+                    fieldtype: 'Select',
+                    fieldname: 'status',
+                    label: 'Status',
+                    options: 'Active\nInactive\nSuspended\nPending',
+                    default: tenantData?.status || 'Active'
+                },
+                {
+                    fieldtype: 'Column Break'
                 },
                 {
                     fieldtype: 'Data',
@@ -444,41 +453,155 @@ class TenantSwitcher {
                     default: tenantData?.primary_domain || ''
                 },
                 {
-                    fieldtype: 'Select',
-                    fieldname: 'max_users',
-                    label: 'Max Users',
-                    options: '10\n25\n50\n100\n250\n500\n1000',
-                    default: tenantData?.max_users || 100
+                    fieldtype: 'Data',
+                    fieldname: 'admin_email',
+                    label: 'Admin Email',
+                    reqd: 1,
+                    default: tenantData?.admin_email || ''
                 },
                 {
-                    fieldtype: 'Select',
-                    fieldname: 'max_tables',
-                    label: 'Max Tables',
-                    options: '5\n10\n25\n50\n100\n200',
-                    default: tenantData?.max_tables || 50
+                    fieldtype: 'Datetime',
+                    fieldname: 'created_date',
+                    label: 'Created Date',
+                    default: tenantData?.created_date || frappe.datetime.now_datetime(),
+                    read_only: isEdit ? 1 : 0
                 },
+                
+                // Domain Configuration Section
                 {
-                    fieldtype: 'Select',
-                    fieldname: 'storage_limit_gb',
-                    label: 'Storage Limit (GB)',
-                    options: '1\n5\n10\n25\n50\n100',
-                    default: tenantData?.storage_limit_gb || 10
-                },
-                {
-                    fieldtype: 'Check',
-                    fieldname: 'custom_branding',
-                    label: 'Enable Custom Branding',
-                    default: tenantData?.custom_branding || 0
+                    fieldtype: 'Section Break',
+                    label: 'Domain Configuration'
                 },
                 {
                     fieldtype: 'Small Text',
                     fieldname: 'custom_domains',
                     label: 'Custom Domains (one per line)',
                     default: tenantData?.custom_domains ? tenantData.custom_domains.map(d => d.domain).join('\n') : ''
-                }
+                },
+                
+                // Limits and Configuration Section
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Limits and Configuration'
+                },
+                {
+                    fieldtype: 'Int',
+                    fieldname: 'max_users',
+                    label: 'Max Users',
+                    default: tenantData?.max_users || 100
+                },
+                {
+                    fieldtype: 'Int',
+                    fieldname: 'max_tables',
+                    label: 'Max Tables',
+                    default: tenantData?.max_tables || 50
+                },
+                {
+                    fieldtype: 'Float',
+                    fieldname: 'storage_limit_gb',
+                    label: 'Storage Limit (GB)',
+                    default: tenantData?.storage_limit_gb || 10
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldtype: 'Check',
+                    fieldname: 'features_enabled',
+                    label: 'Features Enabled',
+                    default: tenantData?.features_enabled || 1
+                },
+                {
+                    fieldtype: 'Check',
+                    fieldname: 'custom_branding',
+                    label: 'Custom Branding',
+                    default: tenantData?.custom_branding || 0
+                },
+                {
+                    fieldtype: 'Check',
+                    fieldname: 'api_access_enabled',
+                    label: 'API Access Enabled',
+                    default: tenantData?.api_access_enabled || 1
+                },
+                
+                // Branding Section
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Branding'
+                },
+                {
+                    fieldtype: 'Attach Image',
+                    fieldname: 'workspace_logo',
+                    label: 'Workspace Logo',
+                    description: 'Logo to display in the workspace header',
+                    default: tenantData?.workspace_logo || ''
+                },
+                
+                // Usage Statistics Section (Read-only for edit)
+                ...(isEdit ? [
+                    {
+                        fieldtype: 'Section Break',
+                        label: 'Usage Statistics',
+                        collapsible: 1
+                    },
+                    {
+                        fieldtype: 'Int',
+                        fieldname: 'total_applications',
+                        label: 'Total Applications',
+                        default: tenantData?.total_applications || 0,
+                        read_only: 1
+                    },
+                    {
+                        fieldtype: 'Int',
+                        fieldname: 'total_tables',
+                        label: 'Total Tables',
+                        default: tenantData?.total_tables || 0,
+                        read_only: 1
+                    },
+                    {
+                        fieldtype: 'Int',
+                        fieldname: 'total_relationships',
+                        label: 'Total Relationships',
+                        default: tenantData?.total_relationships || 0,
+                        read_only: 1
+                    },
+                    {
+                        fieldtype: 'Column Break'
+                    },
+                    {
+                        fieldtype: 'Int',
+                        fieldname: 'total_reports',
+                        label: 'Total Reports',
+                        default: tenantData?.total_reports || 0,
+                        read_only: 1
+                    },
+                    {
+                        fieldtype: 'Int',
+                        fieldname: 'total_form_configs',
+                        label: 'Total Form Configs',
+                        default: tenantData?.total_form_configs || 0,
+                        read_only: 1
+                    },
+                    {
+                        fieldtype: 'Datetime',
+                        fieldname: 'last_activity',
+                        label: 'Last Activity',
+                        default: tenantData?.last_activity || '',
+                        read_only: 1
+                    }
+                ] : [])
             ],
             primary_action_label: primaryAction,
             primary_action: (values) => {
+                // Ensure workspace_logo is included even if hidden
+                if (dialog.fields_dict.workspace_logo) {
+                    values.workspace_logo = dialog.fields_dict.workspace_logo.get_value() || '';
+                    console.log('Workspace logo value:', values.workspace_logo);
+                }
+                
+                // Debug: log all values being sent
+                console.log('Form values being submitted:', values);
+                
                 if (isEdit) {
                     this.updateTenant(tenantData.tenant_id, values, dialog);
                 } else {
@@ -498,6 +621,29 @@ class TenantSwitcher {
                 }
             });
         }
+        
+        // Show/hide workspace logo field based on custom_branding checkbox
+        setTimeout(() => {
+            if (dialog.fields_dict.custom_branding && dialog.fields_dict.workspace_logo) {
+                const toggleLogoVisibility = () => {
+                    const customBrandingEnabled = dialog.get_value('custom_branding');
+                    const logoWrapper = dialog.fields_dict.workspace_logo.wrapper;
+                    if (logoWrapper) {
+                        if (customBrandingEnabled) {
+                            logoWrapper.style.display = 'block';
+                        } else {
+                            logoWrapper.style.display = 'none';
+                        }
+                    }
+                };
+                
+                // Set up event listener
+                dialog.fields_dict.custom_branding.$input.on('change', toggleLogoVisibility);
+                
+                // Initialize visibility
+                toggleLogoVisibility();
+            }
+        }, 100);
         
         dialog.show();
     }

@@ -305,14 +305,28 @@ def get_workspace_logo(tenant_id=None):
     """Get workspace logo configuration"""
     try:
         if not tenant_id:
-            tenant_id = get_current_tenant_id()
+            # Try to get tenant_id from session first
+            tenant_id = frappe.session.get('tenant_id')
+            if not tenant_id:
+                # Try to get from TenantContext if available
+                try:
+                    tenant_id = TenantContext.get_current_tenant_id()
+                except:
+                    # Fallback: get the first active tenant
+                    first_tenant = frappe.db.get_value(
+                        "Flansa Tenant Registry", 
+                        {"status": "Active"}, 
+                        "tenant_id", 
+                        order_by="creation"
+                    )
+                    tenant_id = first_tenant
             
         if not tenant_id:
-            return {"logo": None, "workspace_name": None}
+            return {"logo": None, "workspace_name": None, "error": "No tenant context found"}
         
         # Check if tenant has custom workspace logo configured
         tenant_settings = frappe.db.get_value(
-            "Flansa Tenant", 
+            "Flansa Tenant Registry", 
             tenant_id, 
             ["workspace_logo", "tenant_name"], 
             as_dict=True
@@ -341,12 +355,27 @@ def get_tenant_logo(tenant_id=None):
 def set_workspace_logo(workspace_logo=None):
     """Set workspace logo for current workspace"""
     try:
-        tenant_id = get_current_tenant_id()
+        # Try to get tenant_id from session first
+        tenant_id = frappe.session.get('tenant_id')
+        if not tenant_id:
+            # Try to get from TenantContext if available
+            try:
+                tenant_id = TenantContext.get_current_tenant_id()
+            except:
+                # Fallback: get the first active tenant
+                first_tenant = frappe.db.get_value(
+                    "Flansa Tenant Registry", 
+                    {"status": "Active"}, 
+                    "tenant_id", 
+                    order_by="creation"
+                )
+                tenant_id = first_tenant
+        
         if not tenant_id:
             return {"success": False, "message": "No active workspace"}
             
         # Update workspace logo
-        frappe.db.set_value("Flansa Tenant", tenant_id, "workspace_logo", workspace_logo)
+        frappe.db.set_value("Flansa Tenant Registry", tenant_id, "workspace_logo", workspace_logo)
         frappe.db.commit()
         
         return {"success": True, "message": "Workspace logo updated successfully"}

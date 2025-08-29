@@ -30,6 +30,7 @@
   "column_break_14",
   "features_enabled",
   "custom_branding",
+  "workspace_logo",
   "api_access_enabled",
   "metadata_section",
   "total_applications",
@@ -141,6 +142,12 @@
    "label": "Custom Branding"
   },
   {
+   "fieldname": "workspace_logo",
+   "fieldtype": "Attach Image",
+   "label": "Workspace Logo",
+   "description": "Logo to display in the workspace header"
+  },
+  {
    "default": "1",
    "fieldname": "api_access_enabled",
    "fieldtype": "Check",
@@ -223,6 +230,18 @@
    "read": 1,
    "report": 1,
    "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 0,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "All",
    "share": 1,
    "write": 1
   }

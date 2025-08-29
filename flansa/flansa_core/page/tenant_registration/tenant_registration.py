@@ -186,12 +186,22 @@ def get_tenant_details(tenant_id):
             "tenant_name": tenant_doc.tenant_name,
             "admin_email": tenant_doc.admin_email or "",
             "primary_domain": tenant_doc.primary_domain or "",
+            "status": tenant_doc.status or "Active",
+            "created_date": tenant_doc.created_date,
             "max_users": tenant_doc.max_users or 100,
             "max_tables": tenant_doc.max_tables or 50,
             "storage_limit_gb": tenant_doc.storage_limit_gb or 10.0,
+            "features_enabled": tenant_doc.features_enabled or 1,
             "custom_branding": tenant_doc.custom_branding or 0,
+            "workspace_logo": tenant_doc.workspace_logo or "",
+            "api_access_enabled": tenant_doc.api_access_enabled or 1,
             "custom_domains": custom_domains,
-            "status": tenant_doc.status
+            "total_applications": tenant_doc.total_applications or 0,
+            "total_tables": tenant_doc.total_tables or 0,
+            "total_relationships": tenant_doc.total_relationships or 0,
+            "total_reports": tenant_doc.total_reports or 0,
+            "total_form_configs": tenant_doc.total_form_configs or 0,
+            "last_activity": tenant_doc.last_activity
         }
         
     except Exception as e:
@@ -218,14 +228,31 @@ def update_tenant(**kwargs):
         # Reload to get the latest version and avoid conflicts
         tenant_doc.reload()
         
-        # Update fields
-        tenant_doc.tenant_name = kwargs.get('tenant_name', tenant_doc.tenant_name)
-        tenant_doc.admin_email = kwargs.get('admin_email', tenant_doc.admin_email)
-        tenant_doc.primary_domain = kwargs.get('primary_domain', tenant_doc.primary_domain)
-        tenant_doc.max_users = int(kwargs.get('max_users', tenant_doc.max_users))
-        tenant_doc.max_tables = int(kwargs.get('max_tables', tenant_doc.max_tables))
-        tenant_doc.storage_limit_gb = float(kwargs.get('storage_limit_gb', tenant_doc.storage_limit_gb))
-        tenant_doc.custom_branding = int(kwargs.get('custom_branding', tenant_doc.custom_branding))
+        # Update editable fields only (read-only fields like created_date, total_* are not updated)
+        if 'tenant_name' in kwargs:
+            tenant_doc.tenant_name = kwargs.get('tenant_name')
+        if 'admin_email' in kwargs:
+            tenant_doc.admin_email = kwargs.get('admin_email')
+        if 'primary_domain' in kwargs:
+            tenant_doc.primary_domain = kwargs.get('primary_domain')
+        if 'status' in kwargs:
+            tenant_doc.status = kwargs.get('status')
+        if 'max_users' in kwargs:
+            tenant_doc.max_users = int(kwargs.get('max_users'))
+        if 'max_tables' in kwargs:
+            tenant_doc.max_tables = int(kwargs.get('max_tables'))
+        if 'storage_limit_gb' in kwargs:
+            tenant_doc.storage_limit_gb = float(kwargs.get('storage_limit_gb'))
+        if 'features_enabled' in kwargs:
+            tenant_doc.features_enabled = int(kwargs.get('features_enabled'))
+        if 'custom_branding' in kwargs:
+            tenant_doc.custom_branding = int(kwargs.get('custom_branding'))
+        if 'workspace_logo' in kwargs:
+            tenant_doc.workspace_logo = kwargs.get('workspace_logo')
+        if 'api_access_enabled' in kwargs:
+            tenant_doc.api_access_enabled = int(kwargs.get('api_access_enabled'))
+        
+        # Note: created_date and total_* fields are read-only and not updated
         
         # Handle custom domains
         custom_domains = kwargs.get('custom_domains')
