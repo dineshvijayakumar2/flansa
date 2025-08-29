@@ -2840,6 +2840,11 @@ class EnhancedFlansaTableBuilder {
 
     // Map logic type to template for consistency
     map_logic_type_to_template(logic_type, field) {
+        // Check if field expression contains FETCH pattern to properly detect fetch fields
+        if (field.expression && field.expression.includes('FETCH(')) {
+            return 'fetch';
+        }
+        
         const mapping = {
             'Link': 'link',
             'Fetch': 'fetch', 
@@ -3935,12 +3940,12 @@ class EnhancedFlansaTableBuilder {
         console.log('Loading fetch source fields for table:', table_id);
         
         frappe.call({
-            method: 'flansa.logic_templates.get_link_fields',
+            method: 'flansa.logic_templates.get_fetch_wizard_data',
             args: { table_name: table_id },
             callback: (r) => {
                 if (r.message && r.message.success) {
                     const link_fields = r.message.link_fields || [];
-                    const options = link_fields.join('\n');
+                    const options = link_fields.map(f => f.fieldname).join('\n');
                     
                     const source_field = dialog.get_field('fetch_source_field');
                     if (source_field) {
