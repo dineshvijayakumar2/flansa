@@ -1619,13 +1619,13 @@ class EnhancedFlansaTableBuilder {
         $container.on('click', '#add-standard-field', (e) => {
             e.preventDefault();
             $container.find('#add-field-dropdown').removeClass('show');
-            this.show_unified_field_dialog(this.table_id, null);
+            this.show_standard_field_creation_dialog();
         });
         
         $container.on('click', '#add-logic-field', (e) => {
             e.preventDefault();
             $container.find('#add-field-dropdown').removeClass('show');
-            this.show_unified_field_dialog(this.table_id, null);
+            this.show_logic_field_template_selection();
         });
         
         $container.on('click', '#add-gallery-field', (e) => {
@@ -3238,6 +3238,237 @@ class EnhancedFlansaTableBuilder {
         });
         
         dialog.show();
+    }
+
+    // Show Logic Field Template Selection Dialog
+    show_logic_field_template_selection() {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Choose Logic Field Type',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'template_description',
+                    options: `
+                        <div style="margin-bottom: 20px; color: #666;">
+                            <p>Logic Fields add dynamic behavior to your table. Choose a template to get started:</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'templates_html',
+                    options: `
+                        <div class="logic-template-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 20px 0;">
+                            
+                            <div class="template-card" data-template="link" style="
+                                border: 2px solid #e9ecef; 
+                                border-radius: 8px; 
+                                padding: 20px; 
+                                cursor: pointer;
+                                transition: all 0.2s;
+                                text-align: center;
+                            ">
+                                <div style="font-size: 24px; margin-bottom: 10px;">🔗</div>
+                                <h4 style="margin: 0 0 8px 0; color: #333;">Link Field</h4>
+                                <p style="margin: 0; color: #666; font-size: 13px;">
+                                    Create relationships to other tables<br>
+                                    <small>(e.g., Customer, Product)</small>
+                                </p>
+                            </div>
+
+                            <div class="template-card" data-template="fetch" style="
+                                border: 2px solid #e9ecef; 
+                                border-radius: 8px; 
+                                padding: 20px; 
+                                cursor: pointer;
+                                transition: all 0.2s;
+                                text-align: center;
+                            ">
+                                <div style="font-size: 24px; margin-bottom: 10px;">📥</div>
+                                <h4 style="margin: 0 0 8px 0; color: #333;">Fetch Field</h4>
+                                <p style="margin: 0; color: #666; font-size: 13px;">
+                                    Automatically pull data from linked records<br>
+                                    <small>(e.g., Customer Name from Customer)</small>
+                                </p>
+                            </div>
+
+                            <div class="template-card" data-template="formula" style="
+                                border: 2px solid #e9ecef; 
+                                border-radius: 8px; 
+                                padding: 20px; 
+                                cursor: pointer;
+                                transition: all 0.2s;
+                                text-align: center;
+                            ">
+                                <div style="font-size: 24px; margin-bottom: 10px;">🧮</div>
+                                <h4 style="margin: 0 0 8px 0; color: #333;">Formula Field</h4>
+                                <p style="margin: 0; color: #666; font-size: 13px;">
+                                    Calculate values using expressions<br>
+                                    <small>(e.g., Total = Quantity * Price)</small>
+                                </p>
+                            </div>
+
+                            <div class="template-card" data-template="rollup" style="
+                                border: 2px solid #e9ecef; 
+                                border-radius: 8px; 
+                                padding: 20px; 
+                                cursor: pointer;
+                                transition: all 0.2s;
+                                text-align: center;
+                            ">
+                                <div style="font-size: 24px; margin-bottom: 10px;">📊</div>
+                                <h4 style="margin: 0 0 8px 0; color: #333;">Rollup Field</h4>
+                                <p style="margin: 0; color: #666; font-size: 13px;">
+                                    Summarize data from related records<br>
+                                    <small>(e.g., Total Order Value)</small>
+                                </p>
+                            </div>
+
+                        </div>
+
+                        <style>
+                            .template-card:hover {
+                                border-color: var(--primary-color, #007bff) !important;
+                                box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+                                transform: translateY(-2px) !important;
+                            }
+                        </style>
+                    `
+                }
+            ]
+        });
+
+        dialog.show();
+
+        // Handle template selection
+        setTimeout(() => {
+            const self = this;
+            $(dialog.$wrapper).on('click', '.template-card', function(e) {
+                e.preventDefault();
+                const templateId = $(this).data('template');
+                console.log("Logic template selected:", templateId);
+                dialog.hide();
+                self.show_unified_field_dialog(self.table_id, null, templateId);
+            });
+        }, 100);
+    }
+
+    // Show Standard Field Creation Dialog  
+    show_standard_field_creation_dialog() {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Add Standard Field',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'standard_field_description',
+                    options: `
+                        <div style="margin-bottom: 20px; color: #666;">
+                            <p>Standard fields store simple data values. Choose the appropriate field type:</p>
+                        </div>
+                    `
+                },
+                {
+                    fieldname: 'field_name',
+                    label: 'Field Name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Internal field name (lowercase, no spaces)',
+                    placeholder: 'e.g., customer_name'
+                },
+                {
+                    fieldname: 'field_label',
+                    label: 'Field Label',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Display label for users',
+                    placeholder: 'e.g., Customer Name'
+                },
+                {
+                    fieldname: 'field_type',
+                    label: 'Field Type',
+                    fieldtype: 'Select',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach',
+                    default: 'Data',
+                    reqd: 1,
+                    description: 'Type of data this field will store'
+                },
+                {
+                    fieldname: 'description',
+                    label: 'Description',
+                    fieldtype: 'Small Text',
+                    description: 'Optional help text for users'
+                },
+                {
+                    fieldname: 'options',
+                    label: 'Options',
+                    fieldtype: 'Small Text',
+                    depends_on: 'eval:doc.field_type=="Select"',
+                    description: 'For Select fields, enter options separated by new lines'
+                },
+                {
+                    fieldtype: 'Column Break'
+                },
+                {
+                    fieldname: 'reqd',
+                    label: 'Required',
+                    fieldtype: 'Check',
+                    description: 'Make this field mandatory'
+                },
+                {
+                    fieldname: 'read_only',
+                    label: 'Read Only',
+                    fieldtype: 'Check',
+                    description: 'Users cannot edit this field'
+                },
+                {
+                    fieldname: 'hidden',
+                    label: 'Hidden',
+                    fieldtype: 'Check',
+                    description: 'Hide this field from users'
+                }
+            ],
+            primary_action_label: 'Add Field',
+            primary_action: (values) => {
+                this.create_standard_field_from_dialog(values, dialog);
+            }
+        });
+
+        dialog.show();
+    }
+
+    // Create standard field from dialog values
+    async create_standard_field_from_dialog(values, dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.add_field_to_table',
+                args: {
+                    table_id: this.table_id,
+                    field_name: values.field_name,
+                    field_type: values.field_type,
+                    label: values.field_label,
+                    description: values.description,
+                    options: values.options || '',
+                    required: values.reqd || 0,
+                    read_only: values.read_only || 0,
+                    hidden: values.hidden || 0
+                }
+            });
+
+            if (result.message && result.message.success) {
+                frappe.show_alert({
+                    message: `Field "${values.field_label}" added successfully`,
+                    indicator: 'green'
+                });
+                dialog.hide();
+                await this.load_table();
+                this.render_fields();
+            } else {
+                frappe.msgprint('Failed to add field');
+            }
+        } catch (error) {
+            console.error('Error adding standard field:', error);
+            frappe.msgprint('Error adding field');
+        }
     }
     
     show_conditional_field_dialog() {
