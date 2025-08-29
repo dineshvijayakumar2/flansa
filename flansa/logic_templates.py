@@ -140,7 +140,8 @@ def get_lookup_wizard_data(table_name):
         
         target_tables = []
         
-        # Add Flansa Tables
+        # Add Flansa Tables first
+        flansa_doctype_names = set()
         for ft in flansa_tables:
             if ft.doctype_name:
                 target_tables.append({
@@ -148,14 +149,16 @@ def get_lookup_wizard_data(table_name):
                     "label": ft.table_label or ft.name,
                     "type": "flansa_table"
                 })
+                flansa_doctype_names.add(ft.doctype_name)
         
-        # Add other DocTypes
+        # Add other DocTypes (excluding those already added as Flansa Tables)
         for dt in all_doctypes:
-            target_tables.append({
-                "value": dt.name,
-                "label": dt.name,
-                "type": "doctype"
-            })
+            if dt.name not in flansa_doctype_names:
+                target_tables.append({
+                    "value": dt.name,
+                    "label": dt.name,
+                    "type": "doctype"
+                })
         
         return {
             "success": True,
