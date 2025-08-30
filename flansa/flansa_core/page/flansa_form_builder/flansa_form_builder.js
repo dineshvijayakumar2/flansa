@@ -192,7 +192,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         // Filter out fields that are already in the form
         const fieldsInForm = this.current_fields
             .filter(f => f.field_type !== 'Section Break' && f.field_type !== 'Column Break')
-            .map(f => f.field_name);
+            .map(f => f.fieldname || f.field_name);
 
         const availableFields = this.table_fields.filter(field => 
             !fieldsInForm.includes(field.fieldname || field.field_name)
@@ -300,7 +300,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         
         // Check if field already exists
         const fieldExists = this.current_fields.some(field => 
-            field.field_name === fieldName && !field.is_layout_element
+            (field.fieldname || field.field_name) === fieldName && !field.is_layout_element
         );
         
         if (fieldExists) {
@@ -313,7 +313,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         }
         
         // Find the field in table_fields
-        const field = this.table_fields.find(f => f.field_name === fieldName);
+        const field = this.table_fields.find(f => (f.fieldname || f.field_name) === fieldName);
         if (!field) {
             frappe.show_alert('Field not found', 'red');
             this._adding_field = false;
@@ -569,7 +569,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
     
     add_field_to_section(fieldName, targetSectionIndex) {
         // Add field from palette to specific section
-        const field = this.table_fields.find(f => f.field_name === fieldName);
+        const field = this.table_fields.find(f => (f.fieldname || f.field_name) === fieldName);
         if (!field) return;
         
         // Find the target section
@@ -644,7 +644,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         }
 
         // Add field from palette to specific section by section field index
-        const field = this.table_fields.find(f => f.field_name === fieldName);
+        const field = this.table_fields.find(f => (f.fieldname || f.field_name) === fieldName);
         if (!field) return;
         
         // Insert right after the section header
@@ -1031,10 +1031,10 @@ if (typeof FlansaFormBuilder === 'undefined') {
         const readonly_indicator = field.is_readonly ? '<i class="fa fa-lock text-muted"></i>' : '';
         
         let field_html = `
-            <div class="form-field" data-field-index="${index}" data-field-name="${field.field_name}" draggable="true" style="margin-bottom: 16px; padding: 12px; border: 1px solid transparent; border-radius: 4px; transition: all 0.2s; cursor: move;">
+            <div class="form-field" data-field-index="${index}" data-field-name="${field.fieldname || field.field_name}" draggable="true" style="margin-bottom: 16px; padding: 12px; border: 1px solid transparent; border-radius: 4px; transition: all 0.2s; cursor: move;">
                 <div class="field-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <label class="field-label" style="font-weight: 600; margin: 0; color: var(--flansa-text-primary, #495057);">
-                        ${field.field_label || field.field_name} ${required_indicator} ${readonly_indicator}
+                        ${field.label || field.field_label || field.fieldname || field.field_name} ${required_indicator} ${readonly_indicator}
                     </label>
                     <div class="field-actions" style="display: none;">
                         <button class="btn btn-xs btn-light edit-field-layout" title="Edit Field Layout" style="margin-right: 4px;"><i class="fa fa-edit"></i></button>
@@ -1053,24 +1053,27 @@ if (typeof FlansaFormBuilder === 'undefined') {
     }
     
     render_field_input_preview(field) {
-        switch (field.field_type) {
+        const fieldType = field.fieldtype || field.field_type;
+        const fieldLabel = field.label || field.field_label || field.fieldname || field.field_name;
+        
+        switch (fieldType) {
             case 'Data':
-                return `<input type="text" class="form-control" placeholder="${field.field_label}" disabled>`;
+                return `<input type="text" class="form-control" placeholder="${fieldLabel}" disabled>`;
             case 'Text':
-                return `<textarea class="form-control" rows="3" placeholder="${field.field_label}" disabled></textarea>`;
+                return `<textarea class="form-control" rows="3" placeholder="${fieldLabel}" disabled></textarea>`;
             case 'Int':
             case 'Float':
-                return `<input type="number" class="form-control" placeholder="${field.field_label}" disabled>`;
+                return `<input type="number" class="form-control" placeholder="${fieldLabel}" disabled>`;
             case 'Date':
                 return `<input type="date" class="form-control" disabled>`;
             case 'Check':
-                return `<div class="checkbox"><label><input type="checkbox" disabled> ${field.field_label}</label></div>`;
+                return `<div class="checkbox"><label><input type="checkbox" disabled> ${fieldLabel}</label></div>`;
             case 'Select':
-                return `<select class="form-control" disabled><option>Select ${field.field_label}</option></select>`;
+                return `<select class="form-control" disabled><option>Select ${fieldLabel}</option></select>`;
             case 'Gallery':
                 return `<div class="gallery-field-preview"><i class="fa fa-images"></i> Gallery Field</div>`;
             default:
-                return `<input type="text" class="form-control" placeholder="${field.field_label}" disabled>`;
+                return `<input type="text" class="form-control" placeholder="${fieldLabel}" disabled>`;
         }
     }
     
