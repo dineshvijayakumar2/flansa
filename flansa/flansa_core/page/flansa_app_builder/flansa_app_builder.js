@@ -58,20 +58,26 @@ class FlansaAppBuilder {
     
     update_banner_info() {
         const titleElement = document.querySelector('.title-text');
+        const contextElement = document.querySelector('.context-name');
+        
+        const title = this.current_app ? this.getApplicationTitle() : 'App Builder';
         
         if (titleElement) {
-            const title = this.current_app ? this.getApplicationTitle() : 'App Builder';
             titleElement.textContent = title;
-            
-            console.log('🔍 Banner info updated:', { 
-                title: title,
-                hasApp: !!this.current_app,
-                appId: this.app_id,
-                app: this.current_app 
-            });
-        } else {
-            console.warn('⚠️ Title element not found');
         }
+        
+        if (contextElement) {
+            contextElement.textContent = title;
+        }
+        
+        console.log('🔍 Banner info updated:', { 
+            title: title,
+            hasApp: !!this.current_app,
+            appId: this.app_id,
+            app: this.current_app,
+            titleUpdated: !!titleElement,
+            contextUpdated: !!contextElement
+        });
     }
     
     setup_header() {
