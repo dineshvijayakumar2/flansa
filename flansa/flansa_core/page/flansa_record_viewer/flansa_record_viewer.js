@@ -22,7 +22,7 @@ frappe.pages['flansa-record-viewer'].on_page_load = function(wrapper) {
         }
     }, 100);
     
-    new FlansaRecordViewer(wrapper);
+    window.recordViewer = new FlansaRecordViewer(wrapper);
 };
 
 class FlansaRecordViewer {
@@ -1052,7 +1052,7 @@ class FlansaRecordViewer {
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             onclick="window.open('${this.escapeJsString(imageUrl)}', '_blank')"
+                             onclick="window.recordViewer && window.recordViewer.show_image_lightbox('${this.escapeJsString(imageUrl)}')"
                              title="Click to view full size"
                              onerror="this.src='/assets/frappe/images/default-avatar.png'">
                     </div>
@@ -1694,7 +1694,7 @@ class FlansaRecordViewer {
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             onclick="window.open('${this.escapeJsString(imageUrl)}', '_blank')"
+                             onclick="window.recordViewer && window.recordViewer.show_image_lightbox('${this.escapeJsString(imageUrl)}')"
                              title="Click to view full size"
                              onerror="this.src='/assets/frappe/images/default-avatar.png'">
                         <div class="gallery-item-actions" style="position: absolute; top: 5px; right: 5px;">
