@@ -58,21 +58,82 @@ class SavedReportsPage {
     setup_inline_html() {
         // Inline HTML for saved reports page
         this.$container.html(`
-            <div class="page-header-reports">
+            <!-- Ultra-modern sleek header -->
+            <div class="sleek-header">
+                <div class="header-backdrop"></div>
                 <div class="header-content">
-                    <h2 class="page-title-reports">
-                        <i class="fa fa-chart-line" style="color: #007bff;"></i>
-                        <span id="page-title-text">Saved Reports</span>
-                    </h2>
-                    <p class="page-subtitle-reports" id="page-subtitle-text">Manage and view your saved reports</p>
+                    <!-- Breadcrumb Trail -->
+                    <nav class="breadcrumb-trail">
+                        <a href="/app/flansa-workspace" class="breadcrumb-link">
+                            <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                            </svg>
+                            <span>Workspace</span>
+                        </a>
+                        <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                        </svg>
+                        <span class="breadcrumb-current">📊 Saved Reports</span>
+                    </nav>
                 </div>
-                <div class="header-actions">
-                    <button class="btn btn-secondary btn-sm" id="back-to-table-btn" style="display: none;">
-                        <i class="fa fa-arrow-left"></i> Back to Table
-                    </button>
-                    <button class="btn btn-primary btn-sm" id="create-new-report-btn">
-                        <i class="fa fa-plus"></i> Create New Report
-                    </button>
+                
+                <!-- Application Banner below breadcrumbs -->
+                <div class="app-banner">
+                    <div class="banner-left">
+                        <!-- Optional Workspace Logo -->
+                        <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
+                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                        </div>
+                        <!-- App Info Section -->
+                        <div class="app-info">
+                            <div class="app-details">
+                                <h1 class="app-name title-text">Saved Reports</h1>
+                                <div class="app-type">
+                                    <div class="counter-pill">
+                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                        </svg>
+                                        <span class="counter-text">Report Manager</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Action Buttons -->
+                    <div class="banner-right">
+                        <button class="sleek-btn secondary" id="back-to-table-btn" style="display: none;">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Back to Table</span>
+                        </button>
+                        
+                        <div class="action-dropdown">
+                            <button class="sleek-btn primary split-btn" id="create-new-report-btn">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Create Report</span>
+                                <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
+                            </button>
+                            <div class="dropdown-panel" id="create-report-dropdown">
+                                <a href="#" class="dropdown-option" id="create-table-report">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Table Report</span>
+                                </a>
+                                <a href="#" class="dropdown-option" id="create-chart-report">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
+                                    </svg>
+                                    <span>Chart Report</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -143,26 +204,264 @@ class SavedReportsPage {
             </div>
 
             <style>
-                .page-header-reports {
+                /* Ultra-modern sleek header */
+                .sleek-header {
+                    position: sticky;
+                    top: 0;
+                    z-index: 1000;
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+                    padding: 16px 24px;
+                    transition: all 0.3s ease;
+                }
+                
+                .header-backdrop {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+                    opacity: 0.4;
+                    z-index: -1;
+                }
+                
+                .header-content {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    position: relative;
+                    z-index: 2;
+                }
+                
+                /* Breadcrumb Trail */
+                .breadcrumb-trail {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    margin-bottom: 0.25rem;
+                    font-size: 13px;
+                }
+                
+                .breadcrumb-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    color: #6b7280;
+                    text-decoration: none;
+                    transition: color 0.2s;
+                    font-weight: 500;
+                }
+                
+                .breadcrumb-link:hover {
+                    color: #4f46e5;
+                }
+                
+                .breadcrumb-link svg {
+                    opacity: 0.7;
+                }
+                
+                .breadcrumb-divider {
+                    color: #d1d5db;
+                    flex-shrink: 0;
+                }
+                
+                .breadcrumb-current {
+                    color: #111827;
+                    font-weight: 600;
+                }
+                
+                /* Application Banner */
+                .app-banner {
                     display: flex;
                     justify-content: space-between;
                     align-items: center;
-                    padding: 20px 0;
-                    border-bottom: 1px solid #eee;
-                    margin-bottom: 20px;
+                    margin-top: 12px;
                 }
 
-                .header-content h2.page-title-reports {
-                    margin: 0;
-                    font-size: 1.8rem;
+                .banner-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .workspace-logo-container {
+                    display: none;
+                }
+
+                .workspace-logo {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    object-fit: contain;
+                    background: white;
+                    padding: 2px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+
+                .app-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .app-details {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+
+                .counter-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 12px;
                     font-weight: 600;
-                    color: #333;
+                    border: 1px solid rgba(102, 126, 234, 0.2);
                 }
 
-                .page-subtitle-reports {
-                    margin: 5px 0 0 0;
-                    color: #666;
-                    font-size: 0.9rem;
+                .counter-pill svg {
+                    opacity: 0.8;
+                }
+
+                .counter-pill .counter-text {
+                    color: #667eea;
+                    font-weight: 600;
+                }
+
+                .app-type {
+                    margin-top: 2px;
+                    margin-bottom: 16px;
+                }
+
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                .title-text {
+                    font-size: 1.375rem;
+                    font-weight: 700;
+                    color: #111827;
+                    margin: 0;
+                    line-height: 1.2;
+                }
+                
+                /* Sleek Button Styles */
+                .sleek-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.625rem 1rem;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    text-decoration: none;
+                }
+                
+                .sleek-btn.primary {
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                    color: white;
+                    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+                }
+                
+                .sleek-btn.primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+                }
+                
+                .sleek-btn.split-btn {
+                    padding-right: 2.5rem;
+                    position: relative;
+                }
+                
+                .sleek-btn.split-btn .dropdown-arrow {
+                    position: absolute;
+                    right: 0.75rem;
+                    opacity: 0.8;
+                }
+                
+                .sleek-btn.secondary {
+                    background: white;
+                    color: #6b7280;
+                    border: 1px solid #e5e7eb;
+                }
+                
+                .sleek-btn.secondary:hover {
+                    background: #f9fafb;
+                    color: #4f46e5;
+                    border-color: #4f46e5;
+                }
+                
+                .sleek-btn svg {
+                    flex-shrink: 0;
+                }
+                
+                /* Modern Dropdown */
+                .action-dropdown {
+                    position: relative;
+                }
+                
+                .dropdown-panel {
+                    position: absolute;
+                    top: calc(100% + 8px);
+                    right: 0;
+                    background: white;
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                    border-radius: 12px;
+                    padding: 0.5rem;
+                    min-width: 200px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                    display: none;
+                    z-index: 1000;
+                }
+                
+                .dropdown-option {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.75rem;
+                    color: #374151;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    transition: all 0.15s ease;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                }
+                
+                .dropdown-option:hover {
+                    background: #f3f4f6;
+                    color: #1f2937;
+                }
+                
+                .dropdown-option svg {
+                    opacity: 0.7;
+                    flex-shrink: 0;
+                }
+                
+                .dropdown-panel.show {
+                    display: block;
+                    animation: dropdownFade 0.2s ease;
+                }
+                
+                @keyframes dropdownFade {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
                 }
 
                 .filter-section {

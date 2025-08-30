@@ -53,16 +53,16 @@ class FlansaAppBuilder {
     }
     
     update_banner_info() {
-        const titleElement = document.querySelector('.app-title');
-        const statusElement = document.querySelector('.app-status-inline');
+        const titleElement = document.querySelector('.title-text');
         
         if (titleElement && this.current_app) {
             titleElement.textContent = this.getApplicationTitle();
         }
         
-        if (statusElement && this.current_app) {
-            statusElement.textContent = this.getApplicationDescription();
-        }
+        console.log('🔍 Banner info updated:', { 
+            title: this.getApplicationTitle(), 
+            app: this.current_app 
+        });
     }
     
     setup_header() {
@@ -73,51 +73,95 @@ class FlansaAppBuilder {
     make_layout() {
         this.page.$app_builder = $(`
             <div class="flansa-app-builder">
-                <!-- Functional frozen header -->
-                <div class="app-header">
-                    <div class="container">
-                        <!-- Breadcrumb -->
-                        <div class="breadcrumb-section">
-                            <a href="/app/flansa-workspace" class="breadcrumb-item">🏠 Workspace</a>
-                            <span class="breadcrumb-separator">›</span>
-                            <span class="breadcrumb-current">App Builder</span>
-                        </div>
-                        
-                        <!-- Main Header Row -->
-                        <div class="header-row">
+                <!-- Ultra-modern sleek header -->
+                <div class="sleek-header">
+                    <div class="header-backdrop"></div>
+                    <div class="header-content">
+                        <!-- Breadcrumb Trail -->
+                        <nav class="breadcrumb-trail">
+                            <a href="/app/flansa-workspace" class="breadcrumb-link">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                                </svg>
+                                <span>Workspace</span>
+                            </a>
+                            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                            </svg>
+                            <span class="breadcrumb-current">🏗️ App Builder</span>
+                        </nav>
+                    </div>
+                    
+                    <!-- Application Banner below breadcrumbs -->
+                    <div class="app-banner">
+                        <div class="banner-left">
+                            <!-- Optional Workspace Logo -->
+                            <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
+                                <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                            </div>
+                            <!-- App Info Section -->
                             <div class="app-info">
-                                <!-- Optional Workspace Logo -->
-                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
-                                    <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                                <div class="app-details">
+                                    <h1 class="app-name title-text">Loading...</h1>
+                                    <div class="app-type">
+                                        <div class="counter-pill">
+                                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                            </svg>
+                                            <span class="counter-text">App Builder</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                
-                                <div class="app-info-inline">
-                                    <h1 class="app-title">Loading...</h1>
-                                    <span class="app-separator">•</span>
-                                    <span class="app-status-inline"></span>
+                            </div>
+                        </div>
+                        <!-- Action Buttons -->
+                        <div class="banner-right">
+                            <div class="action-dropdown">
+                                <button class="sleek-btn primary split-btn" id="create-table-header">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>New Table</span>
+                                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <div class="dropdown-panel" id="table-options-dropdown">
+                                    <a href="#" class="dropdown-option" id="create-blank-table">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Blank Table</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="import-table">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Import Data</span>
+                                    </a>
                                 </div>
                             </div>
                             
-                            <!-- Action Buttons -->
-                            <div class="header-actions">
-                                <button class="header-btn" id="create-table-header">
-                                    <i class="fa fa-plus"></i> New Table
+                            <!-- Context Menu -->
+                            <div class="action-dropdown">
+                                <button class="sleek-btn secondary" id="context-menu">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                                    </svg>
                                 </button>
-                                <div class="dropdown">
-                                    <button class="header-btn secondary dropdown-toggle" id="context-menu">
-                                        <i class="fa fa-ellipsis-v"></i>
-                                    </button>
-                                    <div class="dropdown-menu" id="context-dropdown">
-                                        <a href="#" class="dropdown-item" id="app-settings-menu">
-                                            <i class="fa fa-cog"></i> App Settings
-                                        </a>
-                                        <a href="#" class="dropdown-item" id="import-data-menu">
-                                            <i class="fa fa-upload"></i> Import Data
-                                        </a>
-                                        <a href="#" class="dropdown-item" id="relationships-menu">
-                                            <i class="fa fa-link"></i> Relationships
-                                        </a>
-                                    </div>
+                                <div class="dropdown-panel" id="context-dropdown">
+                                    <a href="#" class="dropdown-option" id="app-settings-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>App Settings</span>
+                                    </a>
+                                    <a href="#" class="dropdown-option" id="relationships-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M12.586 4.586a2 2 0 112.828 2.828l-3 3a2 2 0 01-2.828 0 1 1 0 00-1.414 1.414 4 4 0 005.656 0l3-3a4 4 0 00-5.656-5.656l-1.5 1.5a1 1 0 101.414 1.414l1.5-1.5zm-5 5a2 2 0 012.828 0 1 1 0 101.414-1.414 4 4 0 00-5.656 0l-3 3a4 4 0 105.656 5.656l1.5-1.5a1 1 0 10-1.414-1.414l-1.5 1.5a2 2 0 11-2.828-2.828l3-3z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Relationships</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -183,48 +227,153 @@ class FlansaAppBuilder {
                     min-height: calc(100vh - 60px);
                 }
                 
-                /* Frozen functional header */
-                .app-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 1rem 0;
+                /* Ultra-modern sleek header */
+                .sleek-header {
                     position: sticky;
                     top: 0;
-                    z-index: 100;
-                    border-bottom: 1px solid rgba(255,255,255,0.1);
+                    z-index: 1000;
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(12px);
+                    -webkit-backdrop-filter: blur(12px);
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+                    padding: 16px 24px;
+                    transition: all 0.3s ease;
                 }
                 
-                .app-header .container {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
+                .header-backdrop {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+                    opacity: 0.4;
+                    z-index: -1;
                 }
                 
-                /* Breadcrumb */
-                .breadcrumb-section {
+                .header-content {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    position: relative;
+                    z-index: 2;
+                }
+                
+                /* Breadcrumb Trail */
+                .breadcrumb-trail {
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
-                    font-size: 0.875rem;
+                    margin-bottom: 0.25rem;
+                    font-size: 13px;
                 }
                 
-                .breadcrumb-item {
-                    color: rgba(255,255,255,0.8);
+                .breadcrumb-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    color: #6b7280;
                     text-decoration: none;
                     transition: color 0.2s;
+                    font-weight: 500;
                 }
                 
-                .breadcrumb-item:hover {
-                    color: white;
+                .breadcrumb-link:hover {
+                    color: #4f46e5;
                 }
                 
-                .breadcrumb-separator {
-                    opacity: 0.6;
+                .breadcrumb-link svg {
+                    opacity: 0.7;
+                }
+                
+                .breadcrumb-divider {
+                    color: #d1d5db;
+                    flex-shrink: 0;
                 }
                 
                 .breadcrumb-current {
-                    color: white;
-                    font-weight: 500;
+                    color: #111827;
+                    font-weight: 600;
+                }
+                
+                /* Application Banner */
+                .app-banner {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 12px;
+                }
+
+                .banner-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .workspace-logo-container {
+                    display: none;
+                }
+
+                .workspace-logo {
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 6px;
+                    object-fit: contain;
+                    background: white;
+                    padding: 2px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+
+                .app-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .app-details {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                }
+
+                .counter-pill {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    border: 1px solid rgba(102, 126, 234, 0.2);
+                }
+
+                .counter-pill svg {
+                    opacity: 0.8;
+                }
+
+                .counter-pill .counter-text {
+                    color: #667eea;
+                    font-weight: 600;
+                }
+
+                .app-type {
+                    margin-top: 2px;
+                    margin-bottom: 16px;
+                }
+
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                .title-text {
+                    font-size: 1.375rem;
+                    font-weight: 700;
+                    color: #111827;
+                    margin: 0;
+                    line-height: 1.2;
                 }
                 
                 /* Header Row */
@@ -797,6 +946,120 @@ class FlansaAppBuilder {
                     color: #6c757d;
                     margin-bottom: 1.5rem;
                 }
+                
+                /* Sleek Button Styles */
+                .sleek-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.625rem 1rem;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    text-decoration: none;
+                }
+                
+                .sleek-btn.primary {
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                    color: white;
+                    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+                }
+                
+                .sleek-btn.primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+                }
+                
+                .sleek-btn.split-btn {
+                    padding-right: 2.5rem;
+                    position: relative;
+                }
+                
+                .sleek-btn.split-btn .dropdown-arrow {
+                    position: absolute;
+                    right: 0.75rem;
+                    opacity: 0.8;
+                }
+                
+                .sleek-btn.secondary {
+                    background: white;
+                    color: #6b7280;
+                    border: 1px solid #e5e7eb;
+                    padding: 0.5rem;
+                    min-width: 36px;
+                    justify-content: center;
+                }
+                
+                .sleek-btn.secondary:hover {
+                    background: #f9fafb;
+                    color: #4f46e5;
+                    border-color: #4f46e5;
+                }
+                
+                .sleek-btn svg {
+                    flex-shrink: 0;
+                }
+                
+                /* Modern Dropdown */
+                .action-dropdown {
+                    position: relative;
+                }
+                
+                .dropdown-panel {
+                    position: absolute;
+                    top: calc(100% + 8px);
+                    right: 0;
+                    background: white;
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                    border-radius: 12px;
+                    padding: 0.5rem;
+                    min-width: 200px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                    display: none;
+                    z-index: 1000;
+                }
+                
+                .dropdown-option {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.75rem;
+                    color: #374151;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    transition: all 0.15s ease;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                }
+                
+                .dropdown-option:hover {
+                    background: #f3f4f6;
+                    color: #1f2937;
+                }
+                
+                .dropdown-option svg {
+                    opacity: 0.7;
+                    flex-shrink: 0;
+                }
+                
+                .dropdown-panel.show {
+                    display: block;
+                    animation: dropdownFade 0.2s ease;
+                }
+                
+                @keyframes dropdownFade {
+                    from {
+                        opacity: 0;
+                        transform: translateY(-10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
             </style>
         `).appendTo(this.page.main);
     }
@@ -1112,9 +1375,11 @@ class FlansaAppBuilder {
     bind_events() {
         const $builder = this.page.$app_builder;
         
-        // Header action buttons
-        $builder.on('click', '#create-table-header', () => {
-            this.show_table_creation_dialog();
+        // Header action buttons - New dropdown structure
+        $builder.on('click', '#create-table-header', (e) => {
+            e.stopPropagation();
+            const dropdown = $builder.find('#table-options-dropdown');
+            dropdown.toggleClass('show');
         });
         
         $builder.on('click', '#context-menu', (e) => {
@@ -1124,8 +1389,21 @@ class FlansaAppBuilder {
         });
         
         // Close dropdown when clicking outside
-        $(document).on('click', () => {
-            $builder.find('#context-dropdown').removeClass('show');
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('.action-dropdown').length) {
+                $builder.find('.dropdown-panel').removeClass('show');
+            }
+        });
+        
+        // Table creation options
+        $builder.on('click', '#create-blank-table', (e) => {
+            e.preventDefault();
+            this.show_table_creation_dialog();
+        });
+        
+        $builder.on('click', '#import-table', (e) => {
+            e.preventDefault();
+            this.show_import_dialog();
         });
         
         // Context menu actions
@@ -1134,10 +1412,6 @@ class FlansaAppBuilder {
             frappe.set_route('Form', 'Flansa Application', this.app_id);
         });
         
-        $builder.on('click', '#import-data-menu', (e) => {
-            e.preventDefault();
-            this.show_import_dialog();
-        });
         
         $builder.on('click', '#relationships-menu', (e) => {
             e.preventDefault();
