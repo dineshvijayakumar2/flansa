@@ -583,7 +583,17 @@ def update_field_native(table_name, field_name, field_updates):
                 if "field_type" in field_updates:
                     logic_field_doc.result_type = field_updates["field_type"]
                 if "formula" in field_updates or "expression" in field_updates:
-                    logic_field_doc.logic_expression = field_updates.get("formula") or field_updates.get("expression")
+                    new_expression = field_updates.get("formula") or field_updates.get("expression")
+                    logic_field_doc.logic_expression = new_expression
+                    
+                    # Update logic_type based on the expression
+                    if new_expression and new_expression.strip().upper().startswith("FETCH("):
+                        logic_field_doc.logic_type = "fetch"
+                    elif new_expression and new_expression.strip().upper().startswith("ROLLUP("):
+                        logic_field_doc.logic_type = "rollup"
+                    elif new_expression:
+                        logic_field_doc.logic_type = "formula"
+                        
                 logic_field_doc.save()
             
             # Clear cache

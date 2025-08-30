@@ -2939,6 +2939,18 @@ class EnhancedFlansaTableBuilder {
 
     // Handle unified field action (create or update)
     handle_unified_field_action(table_id, values, is_edit_mode, existing_field, dialog) {
+        // Convert target_doctype label to actual doctype value before processing
+        if ((values.field_type === 'Link' || values.logic_field_template === 'link') && values.target_doctype) {
+            const table_data = dialog._table_data || [];
+            const table_info = table_data.find(t => t.label === values.target_doctype);
+            
+            if (table_info) {
+                // Replace the label with the actual doctype value
+                values.target_doctype = table_info.value;
+                console.log("Converted target_doctype label to value:", table_info.label, "→", table_info.value);
+            }
+        }
+        
         if (is_edit_mode) {
             this.update_unified_field(table_id, existing_field.field_name, values, dialog);
         } else {
@@ -3012,19 +3024,10 @@ class EnhancedFlansaTableBuilder {
 
         switch (template_id) {
             case 'link':
-                // Convert label to actual doctype (like Visual Builder)
-                let target_doctype = values.target_doctype;
-                if (dialog && dialog._table_data) {
-                    const table_info = dialog._table_data.find(t => t.label === values.target_doctype);
-                    if (table_info) {
-                        target_doctype = table_info.value;
-                        console.log("Converting target label:", values.target_doctype, "→ doctype:", target_doctype);
-                    }
-                }
-                
+                // target_doctype already converted in handle_unified_field_action
                 return {
                     ...base_data,
-                    target_doctype: target_doctype,
+                    target_doctype: values.target_doctype,
                     link_scope: values.link_scope
                 };
             
@@ -3073,26 +3076,15 @@ class EnhancedFlansaTableBuilder {
                 options: values.options || ''
             };
             
-            // For Link fields, ensure field_type stays as "Link" and convert label to doctype
+            // For Link fields, ensure field_type stays as "Link" and set options
             if (logic_field_template === 'link' || values.field_type === 'Link') {
                 field_updates.field_type = 'Link';
                 
-                // Determine which field contains the target table value
+                // Use target_doctype (already converted in handle_unified_field_action) or options
                 const target_value = values.target_doctype || values.options;
-                
-                // Convert target label to actual doctype (like Visual Builder)
-                if (target_value && dialog && dialog._table_data) {
-                    const table_info = dialog._table_data.find(t => t.label === target_value);
-                    if (table_info) {
-                        field_updates.options = table_info.value;
-                        console.log("Update - Converting target label:", target_value, "→ doctype:", table_info.value);
-                    } else {
-                        // If not found in table_data, it might already be a doctype value
-                        field_updates.options = target_value;
-                        console.log("Update - Using target value as-is:", target_value);
-                    }
-                } else if (target_value) {
+                if (target_value) {
                     field_updates.options = target_value;
+                    console.log("Setting Link field options to:", target_value);
                 }
             }
             
