@@ -538,8 +538,12 @@ def update_field_native(table_name, field_name, field_updates):
     Works for both UI and CLI usage
     """
     try:
+        frappe.log_error(f"update_field_native called: table={table_name}, field={field_name}, updates={field_updates}", "Update Call")
+        
         if isinstance(field_updates, str):
             field_updates = json.loads(field_updates)
+            
+        frappe.log_error(f"Parsed updates: {field_updates}", "Update Call")
             
         table_doc = frappe.get_doc("Flansa Table", table_name)
         if not table_doc.doctype_name:
@@ -578,12 +582,12 @@ def update_field_native(table_name, field_name, field_updates):
             })
             
             if logic_field:
-                frappe.log_error(f"Found Logic Field: {logic_field} for field {field_name}", "Logic Field Update Debug")
+                frappe.log_error(f"Found Logic Field: {logic_field} for field {field_name}", "Logic Update")
                 logic_field_doc = frappe.get_doc("Flansa Logic Field", logic_field)
                 
                 # Log current state
-                frappe.log_error(f"Current logic_expression: {logic_field_doc.logic_expression}", "Logic Field Update Debug")
-                frappe.log_error(f"Field updates received: {field_updates}", "Logic Field Update Debug")
+                frappe.log_error(f"Current: {logic_field_doc.logic_expression}", "Logic Update")
+                frappe.log_error(f"Updates: {field_updates}", "Logic Update")
                 
                 updated = False
                 if "field_label" in field_updates:
@@ -595,13 +599,13 @@ def update_field_native(table_name, field_name, field_updates):
                 # Use logic_expression field directly
                 if "logic_expression" in field_updates:
                     new_expression = field_updates["logic_expression"]
-                    frappe.log_error(f"Setting new logic_expression: {new_expression}", "Logic Field Update Debug")
+                    frappe.log_error(f"Setting new: {new_expression}", "Logic Update")
                     logic_field_doc.logic_expression = new_expression
                     
                     # Update logic_type based on the expression
                     if new_expression and new_expression.strip().upper().startswith("FETCH("):
                         logic_field_doc.logic_type = "fetch"
-                        frappe.log_error(f"Set logic_type to: fetch", "Logic Field Update Debug")
+                        frappe.log_error(f"Set type to: fetch", "Logic Update")
                     elif new_expression and new_expression.strip().upper().startswith("ROLLUP("):
                         logic_field_doc.logic_type = "rollup"
                     elif new_expression:
@@ -611,11 +615,11 @@ def update_field_native(table_name, field_name, field_updates):
                 
                 if updated:
                     logic_field_doc.save()
-                    frappe.log_error(f"Saved Logic Field. New expression: {logic_field_doc.logic_expression}", "Logic Field Update Debug")
+                    frappe.log_error(f"Saved. New: {logic_field_doc.logic_expression}", "Logic Update")
                 else:
-                    frappe.log_error(f"No Logic Field updates to save", "Logic Field Update Debug")
+                    frappe.log_error(f"No updates to save", "Logic Update")
             else:
-                frappe.log_error(f"No Logic Field found for {field_name} in table {table_name}", "Logic Field Update Debug")
+                frappe.log_error(f"No Logic Field found: {field_name} in {table_name}", "Logic Update")
             
             # Clear cache
             frappe.clear_cache(doctype=doctype_name)
