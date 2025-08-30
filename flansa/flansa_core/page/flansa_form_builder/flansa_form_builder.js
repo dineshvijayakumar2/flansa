@@ -813,7 +813,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
                         console.log('📋 Loading saved form sections:', this.form_config.sections);
                         
                         // Validate saved fields - remove any that no longer exist in table
-                        const validFieldNames = (r.message.fields || []).map(f => f.field_name);
+                        const validFieldNames = (r.message.fields || []).map(f => f.fieldname || f.field_name);
                         const validatedSections = this.form_config.sections.filter(field => {
                             // Keep layout elements
                             if (field.is_layout_element) {
@@ -1556,9 +1556,9 @@ if (typeof FlansaFormBuilder === 'undefined') {
             },
             callback: (r) => {
                 if (r.message && r.message.success) {
-                    const oldFieldNames = this.table_fields.map(f => f.field_name);
+                    const oldFieldNames = this.table_fields.map(f => f.fieldname || f.field_name);
                     const newTableFields = r.message.fields || [];
-                    const newFieldNames = newTableFields.map(f => f.field_name);
+                    const newFieldNames = newTableFields.map(f => f.fieldname || f.field_name);
                     
                     console.log('🔄 Sync Debug:', {
                         oldFields: oldFieldNames,
@@ -1686,7 +1686,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
                                 }));
                                 
                                 // Compare with current fields
-                                const oldFieldNames = this.table_fields.map(f => f.field_name);
+                                const oldFieldNames = this.table_fields.map(f => f.fieldname || f.field_name);
                                 const newFieldNames = formatted_fields.map(f => f.field_name);
                                 
                                 console.log('🔥 Force Reload Comparison:', {
