@@ -449,23 +449,34 @@ class FlansaAppBuilder {
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
-                    padding: 0.5rem 1rem;
+                    padding: 0.625rem 1.25rem;
                     background: rgba(255, 255, 255, 0.15);
                     color: white;
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    border-radius: 0.5rem;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    border-radius: 0.75rem;
                     font-size: 0.875rem;
+                    font-weight: 500;
                     cursor: pointer;
-                    transition: all 0.2s;
+                    transition: all 0.2s ease;
+                    backdrop-filter: blur(10px);
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
                 }
                 
                 .header-btn:hover {
                     background: rgba(255, 255, 255, 0.25);
-                    border-color: rgba(255, 255, 255, 0.5);
+                    border-color: rgba(255, 255, 255, 0.4);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
                 }
                 
                 .header-btn.secondary {
                     background: transparent;
+                    border: 1px solid rgba(255, 255, 255, 0.2);
+                }
+                
+                .header-btn.secondary:hover {
+                    background: rgba(255, 255, 255, 0.1);
+                    border-color: rgba(255, 255, 255, 0.3);
                 }
                 
                 /* Dropdown */
@@ -828,18 +839,106 @@ class FlansaAppBuilder {
                 filters: {
                     application: this.app_id
                 },
-                fields: ['name', 'table_name', 'table_label', 'description']
+                fields: ['name', 'table_name', 'table_label', 'description', 'doctype_name']
             },
             callback: (r) => {
                 if (r.message) {
                     this.current_tables = r.message;
-                    this.render_app_data();
+                    this.fetch_dynamic_counts();
                 } else {
                     this.current_tables = [];
                     this.render_app_data();
                 }
             }
         });
+    }
+    
+    async fetch_dynamic_counts() {
+        // Fetch both record counts and field counts for each table dynamically
+        if (!this.current_tables || this.current_tables.length === 0) {
+            this.render_app_data();
+            return;
+        }
+        
+        try {
+            // Create promises for all count requests
+            const countPromises = this.current_tables.map(async (table) => {
+                if (table.doctype_name) {
+                    try {
+                        // Get record count
+                        const recordCountResult = await frappe.call({
+                            method: 'frappe.client.get_count',
+                            args: {
+                                doctype: table.doctype_name
+                            }
+                        });
+                        table.record_count = recordCountResult.message || 0;
+
+                        // Get actual field count from DocType meta
+                        const metaResult = await frappe.call({
+                            method: 'frappe.client.get',
+                            args: {
+                                doctype: 'DocType',
+                                name: table.doctype_name
+                            }
+                        });
+                        
+                        if (metaResult.message && metaResult.message.fields) {
+                            // Count only user-created fields (exclude standard/system/flansa fields)
+                            const userFields = metaResult.message.fields.filter(field => {
+                                // Standard system fields to exclude
+                                const systemFields = [
+                                    'name', 'owner', 'creation', 'modified', 'modified_by', 'docstatus',
+                                    'parent', 'parentfield', 'parenttype', 'idx', '_user_tags', '_comments',
+                                    '_assign', '_liked_by', 'title', 'naming_series'
+                                ];
+                                
+                                // Flansa-specific system fields to exclude
+                                const flansaFields = [
+                                    'tenant', 'application', 'application_id', 'table_id', 'tenant_id'
+                                ];
+                                
+                                // Exclude system fields, flansa fields, and fields marked as standard
+                                return !systemFields.includes(field.fieldname) && 
+                                       !flansaFields.includes(field.fieldname) && 
+                                       !field.is_standard;
+                            });
+                            
+                            table.fields_count = userFields.length;
+                        } else {
+                            // Fallback to the stored value or 0
+                            table.fields_count = table.fields_count || 0;
+                        }
+                        
+                    } catch (error) {
+                        console.warn(`Failed to get counts for ${table.doctype_name}:`, error);
+                        table.record_count = 0;
+                        table.fields_count = table.fields_count || 0;
+                    }
+                } else {
+                    table.record_count = 0;
+                    table.fields_count = 0;
+                }
+            });
+            
+            // Wait for all count requests to complete
+            await Promise.all(countPromises);
+            
+        } catch (error) {
+            console.warn('Error fetching counts:', error);
+            // Set default counts
+            this.current_tables.forEach(table => {
+                if (table.record_count === undefined) {
+                    table.record_count = 0;
+                }
+                if (table.fields_count === undefined) {
+                    table.fields_count = 0;
+                }
+            });
+        }
+        
+        // Now render with complete data
+        this.render_app_data();
     }
     
     render_app_data() {

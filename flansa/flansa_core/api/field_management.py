@@ -564,7 +564,7 @@ def save_table_fields_seamless(table_name, fields_data):
         # Use native field management instead of fields_json
         from flansa.native_fields import save_fields_to_doctype_native
         
-        # Update field count for tracking
+        # Initial field count (will be updated after DocType creation with actual count)
         table_doc.fields_count = len(fields_data)
         
         # Generate DocType name if not exists
@@ -609,8 +609,18 @@ def save_table_fields_seamless(table_name, fields_data):
         
         # Auto-activate table if DocType creation successful
         if doctype_result["success"]:
-            # Update status directly in DB to avoid timestamp conflicts
+            # Get actual field count from the created/updated DocType
+            actual_fields_count = len(fields_data)  # Default to custom fields count
+            try:
+                if table_doc.doctype_name:
+                    doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
+                    actual_fields_count = len(doctype_doc.fields)
+            except Exception as e:
+                frappe.logger().warning(f"Could not get actual field count for {table_doc.doctype_name}: {str(e)}")
+            
+            # Update status and field count directly in DB to avoid timestamp conflicts
             frappe.db.set_value("Flansa Table", table_name, "status", "Active")
+            frappe.db.set_value("Flansa Table", table_name, "fields_count", actual_fields_count)
             frappe.db.commit()
             
             return {
@@ -618,11 +628,11 @@ def save_table_fields_seamless(table_name, fields_data):
                 "message": f"Fields saved and table activated! DocType '{table_doc.doctype_name}' is ready.",
                 "doctype_name": table_doc.doctype_name,
                 "doctype_url": f"/app/{table_doc.doctype_name.lower().replace(' ', '-')}",
-                "fields_count": len(fields_data),
+                "fields_count": actual_fields_count,
                 "auto_activated": True,
                 "feedback": {
                     "title": "✅ Table Ready!",
-                    "message": f"Created DocType with {len(fields_data)} fields",
+                    "message": f"Created DocType with {actual_fields_count} fields",
                     "indicator": "green",
                     "show_link": True,
                     "link_text": "Open Data Table",

@@ -297,7 +297,7 @@ class EnhancedFlansaTableBuilder {
                     display: flex;
                     align-items: center;
                     gap: 0.5rem;
-                    margin-bottom: 1rem;
+                    margin-bottom: 0.25rem;
                     font-size: 13px;
                 }
                 
