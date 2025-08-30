@@ -476,7 +476,7 @@ class FlansaReportViewer {
         // Set up the edit button click handler
         $('#edit-report-btn').off('click').on('click', () => {
             // Use unified report builder for editing
-            const url = `/app/flansa-unified-report-builder?edit=${this.report_id}&table=${report.base_table}&source=report_viewer`;
+            const url = `/app/flansa-report-builder?edit=${this.report_id}&table=${report.base_table}&source=report_viewer`;
             window.location.href = url;
         });
         
@@ -506,7 +506,7 @@ class FlansaReportViewer {
                 this.page.add_action_button('📊 Create Report', () => {
                     // Open unified report builder to create a proper report
                     // Use direct URL navigation to preserve query parameters
-                    const url = `/app/flansa-unified-report-builder?table=${encodeURIComponent(this.table_name)}&source=report_viewer`;
+                    const url = `/app/flansa-report-builder?table=${encodeURIComponent(this.table_name)}&source=report_viewer`;
                     window.location.href = url;
                 });
             }
@@ -522,7 +522,7 @@ class FlansaReportViewer {
         } else if (this.page && this.page.add_button) {
             if (isTemporaryView) {
                 this.page.add_button('📊 Create Report', () => {
-                    const url = `/app/flansa-unified-report-builder?table=${this.table_name}&source=report_viewer`;
+                    const url = `/app/flansa-report-builder?table=${this.table_name}&source=report_viewer`;
                     window.location.href = url;
                 }, 'btn-primary');
             }
@@ -540,7 +540,7 @@ class FlansaReportViewer {
         $('#edit-report-btn').off('click').on('click', () => {
             if (isTemporaryView) {
                 // Open unified report builder to create proper report
-                const url = `/app/flansa-unified-report-builder?table=${this.table_name}&source=report_viewer`;
+                const url = `/app/flansa-report-builder?table=${this.table_name}&source=report_viewer`;
                 window.location.href = url;
             } else {
                 // Should not reach here for temporary views
@@ -557,7 +557,7 @@ class FlansaReportViewer {
         if (this.page && this.page.add_menu_item) {
             if (isTemporaryView) {
                 this.page.add_menu_item('📊 Create Report', () => {
-                    const url = `/app/flansa-unified-report-builder?table=${this.table_name}&source=report_viewer`;
+                    const url = `/app/flansa-report-builder?table=${this.table_name}&source=report_viewer`;
                     window.location.href = url;
                 });
                 

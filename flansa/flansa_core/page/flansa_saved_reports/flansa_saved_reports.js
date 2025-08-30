@@ -343,7 +343,7 @@ class SavedReportsPage {
         
         const createReportHandler = () => {
             // Build URL with proper encoding
-            let url = '/app/flansa-unified-report-builder?source=saved_reports';
+            let url = '/app/flansa-report-builder?source=saved_reports';
             
             if (this.filter_table) {
                 url += `&table=${encodeURIComponent(this.filter_table)}`;
@@ -647,7 +647,7 @@ class SavedReportsPage {
         
         if (reportId) {
             // Build URL with proper encoding
-            let url = `/app/flansa-unified-report-builder?edit=${encodeURIComponent(reportId)}&source=saved_reports`;
+            let url = `/app/flansa-report-builder?edit=${encodeURIComponent(reportId)}&source=saved_reports`;
             
             if (this.filter_table) {
                 url += `&table=${encodeURIComponent(this.filter_table)}`;

@@ -1052,7 +1052,7 @@ class FlansaRecordViewer {
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             onclick="frappe.utils.preview_image('${this.escapeJsString(imageUrl)}')"
+                             onclick="window.open('${this.escapeJsString(imageUrl)}', '_blank')"
                              title="Click to view full size"
                              onerror="this.src='/assets/frappe/images/default-avatar.png'">
                     </div>
@@ -1694,7 +1694,7 @@ class FlansaRecordViewer {
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             onclick="frappe.utils.preview_image('${this.escapeJsString(imageUrl)}')"
+                             onclick="window.open('${this.escapeJsString(imageUrl)}', '_blank')"
                              title="Click to view full size"
                              onerror="this.src='/assets/frappe/images/default-avatar.png'">
                         <div class="gallery-item-actions" style="position: absolute; top: 5px; right: 5px;">
