@@ -29,6 +29,7 @@ class FlansaReportViewer {
     
     init() {
         this.extract_url_parameters();
+        this.setup_ui();
         this.bind_events();
         this.setup_navigation();
         this.apply_theme();

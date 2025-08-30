@@ -24,6 +24,10 @@ class FlansaAppBuilder {
     
     init() {
         this.make_layout();
+        // Set initial title after DOM is ready
+        setTimeout(() => {
+            this.update_banner_info();
+        }, 10);
         this.load_data();
         this.load_workspace_logo();
         this.bind_events();
@@ -55,14 +59,19 @@ class FlansaAppBuilder {
     update_banner_info() {
         const titleElement = document.querySelector('.title-text');
         
-        if (titleElement && this.current_app) {
-            titleElement.textContent = this.getApplicationTitle();
+        if (titleElement) {
+            const title = this.current_app ? this.getApplicationTitle() : 'App Builder';
+            titleElement.textContent = title;
+            
+            console.log('🔍 Banner info updated:', { 
+                title: title,
+                hasApp: !!this.current_app,
+                appId: this.app_id,
+                app: this.current_app 
+            });
+        } else {
+            console.warn('⚠️ Title element not found');
         }
-        
-        console.log('🔍 Banner info updated:', { 
-            title: this.getApplicationTitle(), 
-            app: this.current_app 
-        });
     }
     
     setup_header() {
@@ -102,7 +111,7 @@ class FlansaAppBuilder {
                             <!-- App Info Section -->
                             <div class="app-info">
                                 <div class="app-details">
-                                    <h1 class="app-name title-text">Loading...</h1>
+                                    <h1 class="app-name title-text">App Builder</h1>
                                     <div class="app-type">
                                         <div class="counter-pill">
                                             <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -173,7 +182,7 @@ class FlansaAppBuilder {
                     <div class="context-container">
                         <div class="context-info">
                             <span class="context-label">APP:</span>
-                            <span class="context-name">${this.current_app ? (this.current_app.title || this.current_app.name) : 'Loading...'}</span>
+                            <span class="context-name">${this.current_app ? (this.current_app.title || this.current_app.name) : 'App Builder'}</span>
                         </div>
                         
                         <div class="context-controls">

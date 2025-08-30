@@ -64,36 +64,43 @@ class UnifiedReportBuilder {
                         <!-- Breadcrumb Trail -->
                         <nav class="breadcrumb-trail">
                             <a href="/app/flansa-workspace" class="breadcrumb-link">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 10h-1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-6H1a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                                 </svg>
-                                Workspace
+                                <span>Workspace</span>
                             </a>
-                            <svg width="8" height="8" viewBox="0 0 20 20" fill="currentColor" class="breadcrumb-separator">
+                            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                             </svg>
-                            <a href="/app/flansa-report-builder" class="breadcrumb-link current">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M3 3a1 1 0 000 2v8a2 2 0 002 2h2.586l-1.293 1.293a1 1 0 101.414 1.414L10 15.414l2.293 2.293a1 1 0 001.414-1.414L12.414 15H15a2 2 0 002-2V5a1 1 0 100-2H3zm11.707 4.707a1 1 0 00-1.414-1.414L10 9.586 8.707 8.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" />
-                                </svg>
-                                Report Builder
-                            </a>
+                            <span class="breadcrumb-current">📊 Report Builder</span>
                         </nav>
-                        
-                        <!-- Header Main Section -->
-                        <div class="header-main">
-                            <div class="header-left">
-                                <div class="header-title-inline">
-                                    <h1 class="header-title">
-                                        <span class="title-text" id="app-name-display">Report Builder</span>
-                                    </h1>
-                                    <span class="header-separator">•</span>
-                                    <p class="header-subtitle-inline">Build custom reports for your data</p>
+                    </div>
+                    
+                    <!-- Application Banner below breadcrumbs -->
+                    <div class="app-banner">
+                        <div class="banner-left">
+                            <!-- Optional Workspace Logo -->
+                            <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
+                                <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                            </div>
+                            <!-- App Info Section -->
+                            <div class="app-info">
+                                <div class="app-details">
+                                    <h1 class="app-name title-text">Report Builder</h1>
+                                    <div class="app-type">
+                                        <div class="counter-pill">
+                                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                            </svg>
+                                            <span class="counter-text">Report Builder</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            
-                            <!-- Action Buttons -->
-                            <div class="header-actions">
+                        </div>
+                        <!-- Action Buttons -->
+                        <div class="banner-right">
+                            <div class="action-dropdown">
                                 <button class="sleek-btn" id="preview-report-btn" style="display: none;">
                                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
