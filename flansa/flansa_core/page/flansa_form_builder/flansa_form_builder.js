@@ -320,8 +320,21 @@ if (typeof FlansaFormBuilder === 'undefined') {
             return;
         }
 
-        // Add the field to current_fields
-        this.current_fields.push(field);
+        // Normalize field structure for consistent saving/loading
+        const normalizedField = {
+            field_name: field.fieldname || field.field_name,
+            field_label: field.label || field.field_label,
+            field_type: field.fieldtype || field.field_type,
+            is_required: field.reqd || field.is_required || 0,
+            is_readonly: field.read_only || field.is_readonly || 0,
+            description: field.description || '',
+            options: field.options || '',
+            // Keep original properties as fallback
+            ...field
+        };
+
+        // Add the normalized field to current_fields
+        this.current_fields.push(normalizedField);
 
         // Re-render the form canvas
         this.render_form_canvas();
@@ -330,7 +343,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         this.load_available_fields();
 
         frappe.show_alert({
-            message: `"${field.field_label}" added to form`,
+            message: `"${normalizedField.field_label}" added to form`,
             indicator: 'green'
         });
         
