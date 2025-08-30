@@ -2208,21 +2208,32 @@ def smart_delete_field(table_name, field_name, force_cascade=False):
         # Step 2: Find dependent fields
         dependents = _find_dependent_fields(table_name, field_name)
         
-        # Step 3: Check for dependents and get user confirmation if needed
-        if dependents and not force_cascade:
-            return {
-                "success": False,
-                "requires_confirmation": True,
-                "message": f"Field '{field_name}' has {len(dependents)} dependent field(s) that will also be deleted",
-                "dependents": [
-                    {
-                        "field_name": dep["field_name"],
-                        "logic_type": dep["logic_type"],
-                        "expression": dep["logic_expression"]
-                    } for dep in dependents
-                ],
-                "field_type": field_info['type']
-            }
+        # Step 3: Check for user confirmation if needed (ALWAYS when force_cascade=false)
+        if not force_cascade:
+            if dependents:
+                # Field has dependencies
+                return {
+                    "success": False,
+                    "requires_confirmation": True,
+                    "message": f"Field '{field_name}' has {len(dependents)} dependent field(s) that will also be deleted",
+                    "dependents": [
+                        {
+                            "field_name": dep["field_name"],
+                            "logic_type": dep["logic_type"],
+                            "expression": dep["logic_expression"]
+                        } for dep in dependents
+                    ],
+                    "field_type": field_info['type']
+                }
+            else:
+                # Standard field without dependencies - still require confirmation
+                return {
+                    "success": False,
+                    "requires_confirmation": True,
+                    "message": f"Are you sure you want to delete the field '{field_name}'? This action cannot be undone.",
+                    "dependents": [],
+                    "field_type": field_info['type']
+                }
         
         # Step 4: Perform the deletion
         deleted_fields = []

@@ -107,6 +107,16 @@ def get_table_fields_native(table_name):
             
             fields.append(field_data)
         
+        # Get all Logic Fields for this table to enrich field data
+        logic_fields_map = {}
+        try:
+            logic_fields = frappe.get_all("Flansa Logic Field",
+                                        filters={"table_name": table_name},
+                                        fields=["field_name", "logic_expression", "logic_type", "field_type"])
+            logic_fields_map = {lf.field_name: lf for lf in logic_fields}
+        except Exception as e:
+            frappe.log_error(f"Error loading Logic Fields for enrichment: {str(e)}", "Logic Field Enrichment")
+            
         # Then add user-defined fields from DocType
         for field in meta.get("fields"):
             field_data = {
@@ -122,6 +132,19 @@ def get_table_fields_native(table_name):
                 "depends_on": getattr(field, "depends_on", ""),
                 "description": getattr(field, "description", "")
             }
+            
+            # Enrich with Logic Field data if available
+            logic_field = logic_fields_map.get(field.fieldname)
+            if logic_field:
+                field_data["logic_expression"] = logic_field.logic_expression
+                field_data["logic_type"] = logic_field.logic_type
+                field_data["field_type"] = logic_field.field_type  # Alternative field_type key
+                # Mark as Logic Field for UI distinction
+                field_data["is_logic_field"] = True
+            else:
+                field_data["logic_expression"] = None
+                field_data["logic_type"] = None
+                field_data["is_logic_field"] = False
             
             # Check if field was created by Flansa (from description metadata)
             field_data["created_by_flansa"] = is_flansa_created_field(field)
@@ -565,7 +588,12 @@ def update_field_native(table_name, field_name, field_updates):
             if "field_label" in field_updates:
                 custom_field_doc.label = field_updates["field_label"]
             if "field_type" in field_updates:
-                custom_field_doc.fieldtype = field_updates["field_type"]
+                # Protect Link fields from being converted to Data
+                if custom_field_doc.fieldtype == "Link" and field_updates["field_type"] == "Data":
+                    frappe.log_error(f"Preventing Link->Data conversion for {field_name}. Keeping as Link.", "Link Protection")
+                    # Don't update fieldtype, keep it as Link
+                else:
+                    custom_field_doc.fieldtype = field_updates["field_type"]
             if "options" in field_updates:
                 custom_field_doc.options = field_updates["options"]
             if "is_required" in field_updates:
@@ -1718,4 +1746,175 @@ def test_singular_conversion():
         }
         
     except Exception as e:
+        return {"success": False, "error": str(e)}
+
+# ==============================================================================
+# DOCTYPE FIELD MANAGEMENT (Correct Architecture for Flansa)
+# ==============================================================================
+
+@frappe.whitelist()
+def update_doctype_field_native(table_name, field_name, field_updates):
+    """
+    Update field properties in DocType.fields directly (correct for Flansa DocTypes)
+    Replaces Custom Field approach with direct DocType field management
+    """
+    try:
+        if isinstance(field_updates, str):
+            field_updates = json.loads(field_updates)
+            
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        if not table_doc.doctype_name:
+            return {"success": False, "error": "DocType not generated"}
+        
+        doctype_name = table_doc.doctype_name
+        
+        # Get the DocType document
+        doctype_doc = frappe.get_doc("DocType", doctype_name)
+        
+        # Find the field in DocType.fields
+        field_to_update = None
+        for field in doctype_doc.fields:
+            if field.fieldname == field_name:
+                field_to_update = field
+                break
+        
+        if not field_to_update:
+            return {"success": False, "error": f"Field {field_name} not found in DocType {doctype_name}"}
+        
+        # Update field properties
+        changes_made = False
+        
+        if "field_label" in field_updates and field_to_update.label != field_updates["field_label"]:
+            field_to_update.label = field_updates["field_label"]
+            changes_made = True
+            
+        if "field_type" in field_updates and field_to_update.fieldtype != field_updates["field_type"]:
+            # Protect Link fields from being converted to Data
+            if field_to_update.fieldtype == "Link" and field_updates["field_type"] == "Data":
+                print(f"🔒 Preventing Link->Data conversion for {field_name}. Keeping as Link.", flush=True)
+            else:
+                field_to_update.fieldtype = field_updates["field_type"]
+                changes_made = True
+                
+        if "options" in field_updates and field_to_update.options != field_updates["options"]:
+            field_to_update.options = field_updates["options"]
+            changes_made = True
+            
+        if "is_required" in field_updates:
+            new_reqd = 1 if field_updates["is_required"] else 0
+            if field_to_update.reqd != new_reqd:
+                field_to_update.reqd = new_reqd
+                changes_made = True
+                
+        if "is_readonly" in field_updates:
+            new_readonly = 1 if field_updates["is_readonly"] else 0
+            if field_to_update.read_only != new_readonly:
+                field_to_update.read_only = new_readonly
+                changes_made = True
+        
+        if changes_made:
+            # Save the DocType (this will update the database schema)
+            doctype_doc.save()
+            frappe.db.commit()
+            
+            # Clear cache to ensure changes are reflected
+            frappe.clear_cache(doctype=doctype_name)
+            
+            print(f"✅ DocType field {field_name} updated successfully", flush=True)
+        
+        # Also update Logic Field metadata if it exists
+        logic_field = frappe.db.exists("Flansa Logic Field", {
+            "table_name": table_name,
+            "field_name": field_name
+        })
+        
+        if logic_field:
+            logic_field_doc = frappe.get_doc("Flansa Logic Field", logic_field)
+            
+            # Update Logic Field metadata
+            if "field_label" in field_updates:
+                logic_field_doc.field_label = field_updates["field_label"]
+            if "field_type" in field_updates:
+                logic_field_doc.field_type = field_updates["field_type"]
+            if "logic_expression" in field_updates:
+                logic_field_doc.logic_expression = field_updates["logic_expression"]
+                
+                # Update logic_type based on expression
+                new_expression = field_updates["logic_expression"]
+                if new_expression and new_expression.strip().upper().startswith("FETCH("):
+                    logic_field_doc.logic_type = "fetch"
+                elif new_expression and new_expression.strip().upper().startswith("ROLLUP("):
+                    logic_field_doc.logic_type = "rollup"
+                elif new_expression:
+                    logic_field_doc.logic_type = "formula"
+                    
+            logic_field_doc.save()
+            
+        return {
+            "success": True,
+            "message": f"Field {field_name} updated successfully",
+            "method": "doctype_fields",
+            "changes_made": changes_made
+        }
+        
+    except Exception as e:
+        print(f"❌ Error updating DocType field: {str(e)}", flush=True)
+        return {"success": False, "error": str(e)}
+
+@frappe.whitelist()
+def migrate_custom_fields_to_doctype(table_name):
+    """
+    Migrate any existing Custom Fields to DocType.fields for proper architecture
+    """
+    try:
+        table_doc = frappe.get_doc("Flansa Table", table_name)
+        doctype_name = table_doc.doctype_name
+        
+        # Find Custom Fields for this DocType
+        custom_fields = frappe.get_all("Custom Field", 
+                                     filters={"dt": doctype_name},
+                                     fields=["name", "fieldname", "label", "fieldtype", "options", "reqd", "read_only"])
+        
+        if not custom_fields:
+            return {"success": True, "message": "No Custom Fields to migrate", "migrated": 0}
+            
+        doctype_doc = frappe.get_doc("DocType", doctype_name)
+        migrated_count = 0
+        
+        for cf in custom_fields:
+            # Check if field already exists in DocType
+            exists_in_doctype = any(f.fieldname == cf.fieldname for f in doctype_doc.fields)
+            
+            if not exists_in_doctype:
+                # Add field to DocType
+                new_field = doctype_doc.append("fields", {})
+                new_field.fieldname = cf.fieldname
+                new_field.label = cf.label
+                new_field.fieldtype = cf.fieldtype
+                new_field.options = cf.options or ""
+                new_field.reqd = cf.reqd or 0
+                new_field.read_only = cf.read_only or 0
+                
+                migrated_count += 1
+                
+        if migrated_count > 0:
+            doctype_doc.save()
+            frappe.db.commit()
+            frappe.clear_cache(doctype=doctype_name)
+            
+        # Clean up Custom Fields after migration
+        for cf in custom_fields:
+            frappe.delete_doc("Custom Field", cf.name)
+            
+        frappe.db.commit()
+        
+        return {
+            "success": True,
+            "message": f"Migrated {migrated_count} Custom Fields to DocType fields",
+            "migrated": migrated_count,
+            "cleaned_up": len(custom_fields)
+        }
+        
+    except Exception as e:
+        print(f"❌ Error migrating Custom Fields: {str(e)}", flush=True)
         return {"success": False, "error": str(e)}

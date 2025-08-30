@@ -31,21 +31,22 @@ window.FlansaGlobalNav = {
                 <!-- Navigation Menu - Vertical Icons -->
                 <nav class="sidebar-nav vertical-icons">
                     <div class="nav-icons-stack">
-                        <a href="/app/flansa-workspace" class="nav-icon-item" data-route="workspace" title="Workspace">
+                        <a href="/app/flansa-workspace" class="nav-icon-item" data-route="workspace" title="Home">
                             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                             </svg>
                         </a>
                         
-                        <a href="/app/flansa-app-builder" class="nav-icon-item" data-route="app-builder" title="Apps">
+                        <a href="/app/tenant-switcher" class="nav-icon-item" data-route="tenant-switcher" title="Tenant Switcher">
                             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
+                                <path fill-rule="evenodd" d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
                             </svg>
                         </a>
                         
-                        <a href="/app/flansa-saved-reports" class="nav-icon-item" data-route="reports" title="Reports">
+                        <a href="/app/flansa-database-viewer" class="nav-icon-item" data-route="database-viewer" title="Database Viewer">
                             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M2 6a2 2 0 012-2h5l2 2h5a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" />
+                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z"/>
                             </svg>
                         </a>
                     </div>
@@ -90,7 +91,7 @@ window.FlansaGlobalNav = {
                                 <svg class="theme-icon moon-icon" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" style="display: none;">
                                     <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
                                 </svg>
-                                Toggle Dark Mode
+                                <span class="theme-toggle-text">Toggle Dark Mode</span>
                             </button>
                             <a href="/app/flansa-help" class="menu-item">
                                 <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -125,13 +126,14 @@ window.FlansaGlobalNav = {
         const themeToggle = $('#theme-toggle');
         const sunIcon = themeToggle.find('.sun-icon');
         const moonIcon = themeToggle.find('.moon-icon');
+        const toggleText = themeToggle.find('.theme-toggle-text');
         
         themeToggle.on('click', () => {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             
             this.setTheme(newTheme);
-            this.updateThemeToggleIcons(newTheme, sunIcon, moonIcon);
+            this.updateThemeToggleIcons(newTheme, sunIcon, moonIcon, toggleText);
             
             // Store preference
             localStorage.setItem('flansa-theme', newTheme);
@@ -206,13 +208,15 @@ window.FlansaGlobalNav = {
     /**
      * Update theme toggle icons
      */
-    updateThemeToggleIcons(theme, sunIcon, moonIcon) {
+    updateThemeToggleIcons(theme, sunIcon, moonIcon, toggleText = null) {
         if (theme === 'dark') {
             sunIcon.hide();
             moonIcon.show();
+            if (toggleText) toggleText.text('Toggle Light Mode');
         } else {
             sunIcon.show();
             moonIcon.hide();
+            if (toggleText) toggleText.text('Toggle Dark Mode');
         }
     },
 

@@ -30,6 +30,9 @@ class EnhancedFlansaTableBuilder {
         const urlParams = new URLSearchParams(window.location.search);
         this.table_id = urlParams.get('table');
         
+        // Load all tables data for label resolution
+        await this.load_all_tables();
+        
         if (!this.table_id) {
             this.show_table_selector();
         } else {
@@ -46,6 +49,25 @@ class EnhancedFlansaTableBuilder {
         this.load_workspace_logo();
     }
     
+    async load_all_tables() {
+        try {
+            const result = await frappe.call({
+                method: 'frappe.client.get_list',
+                args: {
+                    doctype: 'Flansa Table',
+                    fields: ['name', 'table_name', 'table_label', 'doctype_name'],
+                    limit_page_length: 1000
+                }
+            });
+            
+            this.all_tables = result.message || [];
+            console.log('📊 Loaded all tables for label resolution:', this.all_tables.length);
+        } catch (error) {
+            console.error('Error loading all tables:', error);
+            this.all_tables = [];
+        }
+    }
+
     setup_page_actions() {
         // Modern header actions are now handled in the custom header HTML
         // No need for additional page buttons
@@ -350,6 +372,7 @@ class EnhancedFlansaTableBuilder {
 
                 .app-type {
                     margin-top: 2px;
+                    margin-bottom: 16px;
                 }
 
                 .counter-pill {
@@ -369,6 +392,11 @@ class EnhancedFlansaTableBuilder {
                 .counter-text {
                     font-weight: 500;
                     color: #374151;
+                }
+
+                .counter-pill .counter-text {
+                    color: #667eea;
+                    font-weight: 600;
                 }
 
                 .banner-right {
@@ -957,7 +985,7 @@ class EnhancedFlansaTableBuilder {
                     border-bottom: 2px solid #e2e8f0;
                 }
                 
-                .sortable-header, .actions-header {
+                .sortable-header, .actions-header, .logic-info-header {
                     padding: 0;
                     border: none;
                     text-align: left;
@@ -1101,6 +1129,79 @@ class EnhancedFlansaTableBuilder {
                 .field-actions-cell {
                     width: 10%;
                     min-width: 100px;
+                }
+
+                /* Logic Info Column Styles */
+                .logic-info-cell {
+                    width: 25%;
+                    max-width: 300px;
+                    min-width: 200px;
+                }
+                
+                .logic-info-empty {
+                    color: #a0aec0;
+                    font-style: italic;
+                    font-size: 0.875rem;
+                }
+                
+                .logic-info-badge {
+                    font-size: 0.8125rem;
+                    line-height: 1.4;
+                }
+                
+                .logic-type-link {
+                    color: #2563eb;
+                    background: #dbeafe;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    display: inline-block;
+                    margin: 2px 0;
+                    font-weight: 500;
+                    font-size: 0.75rem;
+                }
+                
+                .logic-type-fetch {
+                    color: #059669;
+                    background: #d1fae5;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    display: inline-block;
+                    margin: 2px 0;
+                    font-weight: 500;
+                    font-size: 0.75rem;
+                }
+                
+                .logic-type-rollup {
+                    color: #7c3aed;
+                    background: #ede9fe;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    display: inline-block;
+                    margin: 2px 0;
+                    font-weight: 500;
+                    font-size: 0.75rem;
+                }
+                
+                .logic-type-formula {
+                    color: #dc2626;
+                    background: #fef2f2;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    display: inline-block;
+                    margin: 2px 0;
+                    font-weight: 500;
+                    font-size: 0.75rem;
+                }
+                
+                .logic-type-expression {
+                    color: #b45309;
+                    background: #fef3c7;
+                    padding: 3px 8px;
+                    border-radius: 12px;
+                    display: inline-block;
+                    margin: 2px 0;
+                    font-weight: 500;
+                    font-size: 0.75rem;
                 }
                 
                 .action-buttons {
@@ -1367,6 +1468,11 @@ class EnhancedFlansaTableBuilder {
                                     <i class="fa fa-sort sort-icon" data-sort="none"></i>
                                 </div>
                             </th>
+                            <th class="logic-info-header">
+                                <div class="header-content">
+                                    <span class="header-text">Logic Info</span>
+                                </div>
+                            </th>
                             <th class="actions-header">
                                 <div class="header-content">
                                     <span class="header-text">Actions</span>
@@ -1417,6 +1523,11 @@ class EnhancedFlansaTableBuilder {
                             <span class="field-type-badge ${isLogicField ? 'logic-field' : ''}">${fieldTypeLabel}</span>
                         </div>
                     </td>
+                    <td class="logic-info-cell">
+                        <div class="cell-content">
+                            ${this.render_logic_info(field)}
+                        </div>
+                    </td>
                     <td class="field-actions-cell">
                         <div class="cell-content action-buttons">
                             <button class="action-btn edit-btn" onclick="window.table_builder.edit_field('${fieldName}')" title="Edit Field">
@@ -1430,6 +1541,129 @@ class EnhancedFlansaTableBuilder {
                 </tr>
             `;
         }).join('');
+    }
+
+    render_logic_info(field) {
+        const fieldType = field.fieldtype || field.field_type;
+        const isLogicField = field.logic_expression || fieldType === 'Link';
+        
+        if (!isLogicField) {
+            return '<span class="logic-info-empty">—</span>';
+        }
+        
+        let logicInfo = [];
+        let cssClass = 'logic-info-badge';
+        
+        // Handle Link fields
+        if (fieldType === 'Link') {
+            const targetDoctype = field.options;
+            if (targetDoctype) {
+                // Get readable table label for the target doctype
+                const readableName = this.get_readable_doctype_name(targetDoctype);
+                logicInfo.push(`<span class="logic-type-link">🔗 Links to: ${readableName}</span>`);
+                cssClass += ' logic-link';
+                
+                // Debug logging for table label resolution
+                console.log(`🏷️ Link field ${field.fieldname || field.field_name}: ${targetDoctype} → ${readableName}`);
+            } else {
+                logicInfo.push(`<span class="logic-type-link">🔗 Link Field (No Target)</span>`);
+                cssClass += ' logic-link';
+            }
+        }
+        
+        // Handle Logic expressions
+        if (field.logic_expression) {
+            const expression = field.logic_expression.trim();
+            
+            if (expression.startsWith('FETCH(')) {
+                // Parse FETCH expression: FETCH(source_field, target_field)
+                const fetchMatch = expression.match(/FETCH\(([^,]+),\s*([^)]+)\)/);
+                if (fetchMatch) {
+                    const sourceField = fetchMatch[1].trim();
+                    const targetField = fetchMatch[2].trim();
+                    logicInfo.push(`<span class="logic-type-fetch">📥 FETCH: ${sourceField} → ${targetField}</span>`);
+                    cssClass += ' logic-fetch';
+                }
+            } else if (expression.startsWith('ROLLUP(')) {
+                // Parse ROLLUP expression
+                logicInfo.push(`<span class="logic-type-rollup">📊 ROLLUP: ${expression.substring(0, 30)}...</span>`);
+                cssClass += ' logic-rollup';
+            } else if (expression.includes('+') || expression.includes('-') || expression.includes('*') || expression.includes('/')) {
+                // Mathematical formula
+                logicInfo.push(`<span class="logic-type-formula">🧮 Formula: ${expression.substring(0, 30)}...</span>`);
+                cssClass += ' logic-formula';
+            } else {
+                // Generic expression
+                logicInfo.push(`<span class="logic-type-expression">⚡ Logic: ${expression.substring(0, 30)}...</span>`);
+                cssClass += ' logic-expression';
+            }
+        }
+        
+        if (logicInfo.length === 0) {
+            return '<span class="logic-info-empty">—</span>';
+        }
+        
+        return `<div class="${cssClass}">${logicInfo.join('<br>')}</div>`;
+    }
+    
+    get_readable_doctype_name(doctype) {
+        // Convert generated DocType names to readable table labels
+        if (doctype.startsWith('FLS_')) {
+            // First priority: Find in loaded all_tables data
+            if (this.all_tables && this.all_tables.length > 0) {
+                const table = this.all_tables.find(t => t.doctype_name === doctype);
+                if (table) {
+                    // Prefer table_label over table_name
+                    return table.table_label || table.table_name || table.name;
+                }
+            }
+            
+            // Second priority: Check if it's the current table
+            if (this.table_data && this.table_data.doctype_name === doctype) {
+                return this.table_data.table_label || this.table_data.table_name || this.table_data.name;
+            }
+            
+            // Third priority: Try to extract meaningful name from DocType ID
+            // Pattern: FLS_[tenant]_[table_id]_[suffix] -> try to get readable name
+            const parts = doctype.split('_');
+            if (parts.length >= 3) {
+                // Try to find a table with matching table_name (often the table_id part)
+                const tableId = parts[2]; // Usually the table identifier
+                if (this.all_tables && this.all_tables.length > 0) {
+                    const matchingTable = this.all_tables.find(t => 
+                        t.name === tableId || 
+                        t.table_name === tableId ||
+                        t.doctype_name === doctype
+                    );
+                    if (matchingTable) {
+                        return matchingTable.table_label || matchingTable.table_name || matchingTable.name;
+                    }
+                }
+            }
+        }
+        
+        // Handle common system DocTypes with proper labels
+        const systemDocTypes = {
+            'User': 'Users',
+            'File': 'Files',
+            'Role': 'Roles',
+            'DocType': 'Document Types',
+            'Custom Field': 'Custom Fields',
+            'Print Format': 'Print Formats',
+            'Website Settings': 'Website Settings',
+            'System Settings': 'System Settings'
+        };
+        
+        if (systemDocTypes[doctype]) {
+            return systemDocTypes[doctype];
+        }
+        
+        // Fallback: Clean up and format the doctype name
+        return doctype
+            .replace(/^FLS_[^_]+_[^_]+_/, '') // Remove FLS prefix
+            .replace(/_/g, ' ') // Replace underscores with spaces  
+            .replace(/\b\w/g, l => l.toUpperCase()) // Title case
+            .trim() || doctype; // Fallback to original if empty
     }
     
     render_tile_view() {
@@ -2381,6 +2615,13 @@ class EnhancedFlansaTableBuilder {
                             fetch_from: native_field.fetch_from || '',
                             depends_on: native_field.depends_on || ''
                         };
+                        
+                        // Ensure Link fields stay as Link type even if they have Logic Field records
+                        if (native_field.fieldtype === 'Link' || (native_field.options && native_field.fieldtype === 'Data')) {
+                            // If it has options and is marked as Data, it might be a virtual Link field
+                            field.field_type = 'Link';
+                        }
+                        
                         this.show_unified_field_dialog(this.table_id, field);
                     } else {
                         frappe.msgprint('Field not found: ' + fieldName);
@@ -2692,7 +2933,8 @@ class EnhancedFlansaTableBuilder {
                     description: 'Choose the Flansa app to select tables from',
                     depends_on: "eval:(doc.logic_field_template == 'link' || doc.field_type == 'Link') && doc.link_scope == 'Other Flansa Apps'",
                     change: () => {
-                        this.handle_app_selection_change(dialog);
+                        // Reload target tables when app changes
+                        this.load_target_tables(dialog, table_id);
                     }
                 },
                 {
@@ -2835,7 +3077,11 @@ class EnhancedFlansaTableBuilder {
             
             // Set default values for Link fields
             if (is_edit_mode && (logic_field_template === 'link' || is_link_field)) {
-                dialog.set_value('link_scope', 'Current App');
+                // Use centralized scope detection
+                const proper_scope = this.determine_link_scope(field?.options, field?.fieldname);
+                dialog.set_value('link_scope', proper_scope);
+                console.log('Set link scope for edit mode:', proper_scope);
+                
                 if (field && field.options) {
                     // Pre-populate target doctype for existing Link fields
                     setTimeout(() => {
@@ -3077,8 +3323,10 @@ class EnhancedFlansaTableBuilder {
             };
             
             // For Link fields, ensure field_type stays as "Link" and set options
-            if (logic_field_template === 'link' || values.field_type === 'Link') {
-                field_updates.field_type = 'Link';
+            // Also check if field has options which indicates it's a Link field
+            if (logic_field_template === 'link' || values.field_type === 'Link' || 
+                (values.options && values.target_doctype)) {
+                field_updates.field_type = 'Link';  // Force Link type
                 
                 // Use target_doctype (already converted in handle_unified_field_action) or options
                 const target_value = values.target_doctype || values.options;
@@ -3130,7 +3378,7 @@ class EnhancedFlansaTableBuilder {
             });
             
             const result = await frappe.call({
-                method: 'flansa.native_fields.update_field_native',
+                method: 'flansa.native_fields.update_doctype_field_native',
                 args: {
                     table_name: table_id,
                     field_name: field_name,
@@ -3206,12 +3454,8 @@ class EnhancedFlansaTableBuilder {
     }
     
     async delete_field(fieldName) {
-        // Always show initial confirmation
-        const proceed = await frappe.confirm(
-            `Are you sure you want to delete the field "${fieldName}"? This action cannot be undone.`
-        );
-        
-        if (!proceed) return;
+        // Skip initial confirmation - let the backend API handle all confirmation logic
+        console.log('🗑️ Initiating delete for field:', fieldName);
         
         try {
             // First, try smart delete to check for dependencies
@@ -3224,19 +3468,28 @@ class EnhancedFlansaTableBuilder {
                 }
             });
             
+            console.log('🔍 Delete result:', result.message);
+            
             if (result.message && result.message.success) {
                 // Successful deletion
+                console.log('✅ Field deleted successfully');
                 frappe.show_alert({
                     message: '✅ ' + result.message.message,
                     indicator: 'green'
                 });
                 await this.load_table();
                 this.render_fields();
-            } else if (result.message && result.message.dependencies) {
+            } else if (result.message && result.message.dependents && result.message.dependents.length > 0) {
                 // Field has dependencies, ask for cascade confirmation
-                this.show_cascade_delete_dialog(fieldName, result.message.dependencies);
+                console.log('⚠️ Field has dependencies, showing cascade dialog');
+                this.show_cascade_delete_dialog(fieldName, result.message.dependents);
+            } else if (result.message && result.message.requires_confirmation) {
+                // Standard field without dependencies - show simple confirmation
+                console.log('⚠️ Standard field requires confirmation');
+                this.show_simple_delete_confirmation(fieldName, result.message.message);
             } else {
-                frappe.msgprint('Failed to delete field: ' + (result.message?.error || 'Unknown error'));
+                console.log('❌ Delete failed:', result.message);
+                frappe.msgprint('Failed to delete field: ' + (result.message?.error || result.message?.message || 'Unknown error'));
             }
         } catch (error) {
             console.error('Error deleting field:', error);
@@ -3244,10 +3497,69 @@ class EnhancedFlansaTableBuilder {
         }
     }
 
+    show_simple_delete_confirmation(fieldName, message) {
+        const dialog = new frappe.ui.Dialog({
+            title: '🗑️ Confirm Field Deletion',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    options: `
+                        <div style="margin-bottom: 1rem;">
+                            <p><strong>Delete field "${fieldName}"?</strong></p>
+                            <p style="color: #6c757d;">
+                                ${message}
+                            </p>
+                            <p style="color: #d73527; font-weight: bold;">
+                                ⚠️ This action cannot be undone.
+                            </p>
+                        </div>
+                    `
+                }
+            ],
+            primary_action_label: 'Delete Field',
+            primary_action: () => {
+                dialog.hide();
+                this.execute_confirmed_delete(fieldName);
+            },
+            secondary_action_label: 'Cancel'
+        });
+        
+        dialog.show();
+    }
+
+    async execute_confirmed_delete(fieldName) {
+        try {
+            console.log('🗑️ Executing confirmed delete for field:', fieldName);
+            
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.smart_delete_field',
+                args: {
+                    table_name: this.table_id,
+                    field_name: fieldName,
+                    force_cascade: true  // Now we force the deletion after confirmation
+                }
+            });
+            
+            if (result.message && result.message.success) {
+                frappe.show_alert({
+                    message: '✅ ' + result.message.message,
+                    indicator: 'green'
+                });
+                await this.load_table();
+                this.render_fields();
+            } else {
+                frappe.msgprint('Failed to delete field: ' + (result.message?.error || result.message?.message || 'Unknown error'));
+            }
+        } catch (error) {
+            console.error('Error executing confirmed delete:', error);
+            frappe.msgprint('Error deleting field');
+        }
+    }
+
     show_cascade_delete_dialog(fieldName, dependencies) {
         let deps_html = '<ul>';
         dependencies.forEach(dep => {
-            deps_html += `<li><strong>${dep.field_name}</strong> (${dep.type})</li>`;
+            deps_html += `<li><strong>${dep.field_name}</strong> (${dep.logic_type})</li>`;
         });
         deps_html += '</ul>';
         
@@ -4154,6 +4466,18 @@ class EnhancedFlansaTableBuilder {
     
     // === HELPER METHODS ===
     
+    // Determine proper scope for a Link field based on target doctype and field name
+    determine_link_scope(target_doctype, fieldname) {
+        // System fields that link to User should use System Tables
+        if (target_doctype === 'User' || fieldname === 'owner' || fieldname === 'modified_by') {
+            return 'System Tables';
+        }
+        
+        // TODO: Add logic to detect Other Flansa Apps
+        // For now, default to Current App
+        return 'Current App';
+    }
+    
     // Parse FETCH expression to get source field
     parse_fetch_source_field(expression) {
         if (!expression) return '';
@@ -4402,29 +4726,68 @@ class EnhancedFlansaTableBuilder {
     }
 
     load_target_tables(dialog, table_id) {
+        const scope = dialog.get_value('link_scope') || 'Current App';
+        const target_app = dialog.get_value('target_app');
+        
+        console.log('Loading target tables for scope:', scope, 'app:', target_app);
+        
         frappe.call({
-            method: 'flansa.logic_templates.get_lookup_wizard_data',
-            args: { table_name: table_id },
+            method: 'flansa.logic_templates.get_link_wizard_data',
+            args: { 
+                table_name: table_id,
+                scope: scope,
+                target_app: target_app
+            },
             callback: (r) => {
                 if (r.message && r.message.success) {
-                    const data = r.message;
+                    let target_tables = [];
+                    
+                    // Select tables based on scope
+                    switch (scope) {
+                        case 'Current App':
+                            target_tables = r.message.current_app_tables || [];
+                            break;
+                        case 'Other Flansa Apps':
+                            if (target_app && r.message.other_apps) {
+                                const selected_app = r.message.other_apps.find(app => app.app_name === target_app);
+                                target_tables = selected_app ? selected_app.tables || [] : [];
+                            }
+                            // Also populate the app selector
+                            this.populate_app_selector(dialog, r.message.other_apps || []);
+                            break;
+                        case 'System Tables':
+                            target_tables = r.message.system_tables || [];
+                            break;
+                    }
                     
                     // Populate target tables with proper labels
                     const target_table_field = dialog.get_field('target_doctype');
                     if (target_table_field) {
                         // Store table data for later lookup (like Visual Builder)
-                        dialog._table_data = data.target_tables;
+                        dialog._table_data = target_tables;
                         // Show only labels to user (like Visual Builder)
-                        const options = data.target_tables.map(t => t.label).join('\n');
+                        const options = target_tables.map(t => t.label).join('\n');
                         target_table_field.df.options = options;
                         target_table_field.refresh();
-                        console.log('Loaded target tables with labels:', data.target_tables.length);
+                        console.log(`Loaded ${target_tables.length} tables for scope: ${scope}`);
                     }
                 } else {
                     console.error('Failed to load target tables:', r.message);
                 }
             }
         });
+    }
+
+    populate_app_selector(dialog, apps_data) {
+        const target_app_field = dialog.get_field('target_app');
+        if (target_app_field && apps_data.length > 0) {
+            const app_options = apps_data.map(app => app.app_name).join('\n');
+            target_app_field.df.options = app_options;
+            target_app_field.refresh();
+            console.log('Populated app selector with', apps_data.length, 'apps');
+        } else {
+            console.log('No apps available for Other Flansa Apps scope');
+        }
     }
 
     // Helper functions to parse Logic Field expressions (duplicates removed - using main functions above)
@@ -4464,37 +4827,80 @@ class EnhancedFlansaTableBuilder {
     }
 
     populate_system_field_details(dialog, system_field_name) {
-        // Map of system field configurations
-        const system_fields = {
-            'name': { label: 'Name', type: 'Data', description: 'Unique identifier' },
-            'creation': { label: 'Creation', type: 'Datetime', description: 'Record creation time' },
-            'modified': { label: 'Modified', type: 'Datetime', description: 'Last modification time' },
-            'modified_by': { label: 'Modified By', type: 'Link', description: 'User who last modified' },
-            'owner': { label: 'Owner', type: 'Link', description: 'User who created the record' },
-            'docstatus': { label: 'Document Status', type: 'Int', description: 'Document status (0=Draft, 1=Submitted, 2=Cancelled)' },
-            'idx': { label: 'Index', type: 'Int', description: 'Sort order' }
-        };
-
-        const field_config = system_fields[system_field_name];
-        if (field_config) {
-            dialog.set_value('field_label', field_config.label);
-            dialog.set_value('field_name', system_field_name);
-            dialog.set_value('field_type', field_config.type);
+        // Use dynamically loaded system fields data if available
+        const system_fields_data = dialog._system_fields_data || [];
+        let field_info = system_fields_data.find(f => f.fieldname === system_field_name);
+        
+        // Fallback to hardcoded if not found in dynamic data
+        if (!field_info) {
+            const fallback_fields = {
+                'name': { fieldname: 'name', label: 'Name', fieldtype: 'Data', description: 'Unique identifier' },
+                'creation': { fieldname: 'creation', label: 'Creation', fieldtype: 'Datetime', description: 'Record creation time' },
+                'modified': { fieldname: 'modified', label: 'Modified', fieldtype: 'Datetime', description: 'Last modification time' },
+                'modified_by': { fieldname: 'modified_by', label: 'Modified By', fieldtype: 'Link', options: 'User', description: 'User who last modified' },
+                'owner': { fieldname: 'owner', label: 'Owner', fieldtype: 'Link', options: 'User', description: 'User who created the record' },
+                'docstatus': { fieldname: 'docstatus', label: 'Document Status', fieldtype: 'Int', description: 'Document status (0=Draft, 1=Submitted, 2=Cancelled)' },
+                'idx': { fieldname: 'idx', label: 'Index', fieldtype: 'Int', description: 'Sort order' }
+            };
+            field_info = fallback_fields[system_field_name];
+        }
+        
+        if (field_info) {
+            dialog.set_value('field_label', field_info.label);
+            dialog.set_value('field_name', field_info.fieldname);
+            dialog.set_value('field_type', field_info.fieldtype);
             dialog.set_value('read_only', 1);  // System fields are typically read-only
+            dialog.set_value('description', field_info.description || `System field: ${field_info.label}`);
+            
+            // Handle Link field options (like User for owner/modified_by)
+            if (field_info.fieldtype === 'Link' && field_info.options) {
+                // Use centralized scope detection
+                const proper_scope = this.determine_link_scope(field_info.options, field_info.fieldname);
+                dialog.set_value('link_scope', proper_scope);
+                
+                // Load tables for the detected scope
+                this.load_target_tables(dialog, this.table_id);
+                
+                // Set target after a delay to ensure tables are loaded
+                setTimeout(() => {
+                    dialog.set_value('target_doctype', field_info.options);
+                    console.log(`Set system field: scope=${proper_scope}, target=${field_info.options}`);
+                }, 500);
+            }
             
             frappe.show_alert({
-                message: `Added system field: ${field_config.label}`,
+                message: `Added system field: ${field_info.label}`,
                 indicator: 'blue'
             });
         }
     }
 
     load_system_fields_for_dialog(table_id, dialog) {
-        const system_field_options = 'name\ncreation\nmodified\nmodified_by\nowner\ndocstatus\nidx';
+        // Load system fields from backend API
+        frappe.call({
+            method: 'flansa.flansa_core.api.system_fields_manager.get_all_system_fields',
+            callback: (r) => {
+                if (r.message && r.message.fields) {
+                    // Store system fields data for later use
+                    dialog._system_fields_data = r.message.fields;
+                    
+                    // Create options string from the fields
+                    const options = r.message.fields.map(f => f.fieldname).join('\n');
+                    
+                    const system_field_field = dialog.get_field('system_field_selector');
+                    if (system_field_field) {
+                        system_field_field.df.options = options;
+                        system_field_field.refresh();
+                    }
+                }
+            }
+        });
         
+        // Fallback to hardcoded options if API fails
+        const fallback_options = 'name\ncreation\nmodified\nmodified_by\nowner\ndocstatus\nidx';
         const system_field_field = dialog.get_field('system_field_selector');
-        if (system_field_field) {
-            system_field_field.df.options = system_field_options;
+        if (system_field_field && !system_field_field.df.options) {
+            system_field_field.df.options = fallback_options;
             system_field_field.refresh();
         }
     }
