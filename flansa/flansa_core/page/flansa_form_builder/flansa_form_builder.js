@@ -846,9 +846,9 @@ if (typeof FlansaFormBuilder === 'undefined') {
                     this.table_fields = r.message.fields || [];
                     
                     // Update header with table name using the new header manager
-                    const table_display_name = r.message.table_label || r.message.table_name || this.table_name;
+                    this.table_display_name = r.message.table_label || r.message.table_name || this.table_name;
                     if (window.FlansaHeaderManager) {
-                        window.FlansaHeaderManager.updateTitle(`📝 ${table_display_name} Forms`);
+                        window.FlansaHeaderManager.updateTitle(`📝 ${this.table_display_name} Forms`);
                     }
                     
                     this.render_form_canvas();
