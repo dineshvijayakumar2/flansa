@@ -195,7 +195,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
             .map(f => f.field_name);
 
         const availableFields = this.table_fields.filter(field => 
-            !fieldsInForm.includes(field.field_name)
+            !fieldsInForm.includes(field.fieldname || field.field_name)
         );
 
         let fields_html = '';
@@ -209,9 +209,9 @@ if (typeof FlansaFormBuilder === 'undefined') {
             `;
         } else {
             availableFields.forEach(field => {
-                const icon = this.get_field_icon(field.field_type);
+                const icon = this.get_field_icon(field.fieldtype || field.field_type);
                 fields_html += `
-                    <div class="field-item available-field" data-field-name="${field.field_name}" draggable="true"
+                    <div class="field-item available-field" data-field-name="${field.fieldname || field.field_name}" draggable="true"
                          style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: white; transition: all 0.2s ease;"
                          onmouseover="this.style.borderColor='var(--flansa-success, #28a745)'; this.style.backgroundColor='var(--flansa-background, #f8f9fa)';"
                          onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='white';">
@@ -219,8 +219,8 @@ if (typeof FlansaFormBuilder === 'undefined') {
                             <div style="display: flex; align-items: center;">
                                 <i class="${icon}" style="margin-right: 8px; color: var(--flansa-success, #28a745); width: 16px;"></i>
                                 <div>
-                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">${field.field_label}</div>
-                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">${field.field_type}</div>
+                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">${field.label || field.field_label}</div>
+                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">${field.fieldtype || field.field_type}</div>
                                 </div>
                             </div>
                             <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
@@ -276,7 +276,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
             title: 'Add New Field',
             message: `
                 <p>To add new fields to this table, you'll be redirected to the Table Builder.</p>
-                <p><strong>Table:</strong> ${this.table_name}</p>
+                <p><strong>Table:</strong> ${this.table_display_name || this.table_name}</p>
                 <p>After adding fields, return here to organize your form layout.</p>
             `,
             primary_action: {
