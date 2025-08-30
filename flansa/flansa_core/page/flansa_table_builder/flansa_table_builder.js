@@ -2839,8 +2839,19 @@ class EnhancedFlansaTableBuilder {
                 if (field && field.options) {
                     // Pre-populate target doctype for existing Link fields
                     setTimeout(() => {
-                        dialog.set_value('target_doctype', field.options);
-                        console.log('Pre-populated target doctype:', field.options);
+                        // Convert doctype to label for display (since dropdown shows labels)
+                        const table_data = dialog._table_data || [];
+                        const table_info = table_data.find(t => t.value === field.options);
+                        
+                        if (table_info) {
+                            // Set the label in the dropdown
+                            dialog.set_value('target_doctype', table_info.label);
+                            console.log('Pre-populated target doctype - label:', table_info.label, 'from doctype:', field.options);
+                        } else {
+                            // Fallback to doctype if label not found
+                            dialog.set_value('target_doctype', field.options);
+                            console.log('Pre-populated target doctype (no label found):', field.options);
+                        }
                     }, 500);
                 }
             }
@@ -3066,17 +3077,22 @@ class EnhancedFlansaTableBuilder {
             if (logic_field_template === 'link' || values.field_type === 'Link') {
                 field_updates.field_type = 'Link';
                 
+                // Determine which field contains the target table value
+                const target_value = values.target_doctype || values.options;
+                
                 // Convert target label to actual doctype (like Visual Builder)
-                if (values.target_doctype && dialog && dialog._table_data) {
-                    const table_info = dialog._table_data.find(t => t.label === values.target_doctype);
+                if (target_value && dialog && dialog._table_data) {
+                    const table_info = dialog._table_data.find(t => t.label === target_value);
                     if (table_info) {
                         field_updates.options = table_info.value;
-                        console.log("Update - Converting target label:", values.target_doctype, "→ doctype:", table_info.value);
+                        console.log("Update - Converting target label:", target_value, "→ doctype:", table_info.value);
                     } else {
-                        field_updates.options = values.target_doctype;
+                        // If not found in table_data, it might already be a doctype value
+                        field_updates.options = target_value;
+                        console.log("Update - Using target value as-is:", target_value);
                     }
-                } else if (values.target_doctype) {
-                    field_updates.options = values.target_doctype;
+                } else if (target_value) {
+                    field_updates.options = target_value;
                 }
             }
             
