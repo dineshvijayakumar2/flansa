@@ -159,8 +159,8 @@ def add_basic_field_native(table_name, field_config):
         # Get DocType document
         doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
         
-        # Check if this is a calculated field (has formula)
-        has_formula = field_config.get("formula") or field_config.get("expression")
+        # Check if this is a calculated field (has logic_expression)
+        has_formula = field_config.get("logic_expression")
         is_calculated = bool(has_formula)
         is_link_field = field_config["field_type"] == "Link"
         
@@ -176,10 +176,11 @@ def add_basic_field_native(table_name, field_config):
             "description": create_flansa_field_description("basic" if not is_calculated else "calculated", field_config)
         }
         
-        # Create Logic Field record for calculated fields only (fields with formulas)
+        # Create Logic Field record for calculated fields only (fields with logic_expression)
         logic_field_name = None
         if is_calculated:
-            formula = field_config.get("formula") or field_config.get("expression")
+            # Get the logic expression
+            formula = field_config.get("logic_expression")
             
             # Create Logic Field document for editing capability
             logic_field = frappe.new_doc("Flansa Logic Field")
@@ -582,8 +583,9 @@ def update_field_native(table_name, field_name, field_updates):
                     logic_field_doc.label = field_updates["field_label"]
                 if "field_type" in field_updates:
                     logic_field_doc.result_type = field_updates["field_type"]
-                if "formula" in field_updates or "expression" in field_updates:
-                    new_expression = field_updates.get("formula") or field_updates.get("expression")
+                # Use logic_expression field directly
+                if "logic_expression" in field_updates:
+                    new_expression = field_updates["logic_expression"]
                     logic_field_doc.logic_expression = new_expression
                     
                     # Update logic_type based on the expression

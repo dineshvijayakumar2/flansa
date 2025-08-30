@@ -3041,7 +3041,7 @@ class EnhancedFlansaTableBuilder {
             case 'formula':
                 return {
                     ...base_data,
-                    formula: values.formula,
+                    logic_expression: values.formula,
                     result_type: values.result_type
                 };
             
@@ -3103,13 +3103,13 @@ class EnhancedFlansaTableBuilder {
                         const target_field_data = target_fields_data.find(f => f.label === target_field || f.fieldname === target_field);
                         const target_fieldname = target_field_data ? target_field_data.fieldname : target_field;
                         
-                        field_updates.formula = `FETCH(${source_field}, ${target_fieldname})`;
-                        field_updates.expression = field_updates.formula;
-                        console.log('Generated FETCH expression:', field_updates.formula);
+                        // Use 'logic_expression' to match DocType field name
+                        field_updates.logic_expression = `FETCH(${source_field}, ${target_fieldname})`;
+                        console.log('Generated FETCH logic_expression:', field_updates.logic_expression);
                     }
                 } else if (logic_field_template === 'formula') {
-                    field_updates.formula = values.formula;
-                    field_updates.expression = values.formula;
+                    // Use 'logic_expression' to match DocType field name
+                    field_updates.logic_expression = values.formula;
                 } else if (logic_field_template === 'link') {
                     // For link fields, the target_doctype should be the actual DocType name
                     field_updates.options = values.target_doctype;
@@ -4032,7 +4032,7 @@ class EnhancedFlansaTableBuilder {
                         field_name: values.field_name,
                         label: values.label,
                         description: values.description,
-                        formula: values.formula,
+                        logic_expression: values.formula,
                         result_type: values.result_type
                     }
                 }

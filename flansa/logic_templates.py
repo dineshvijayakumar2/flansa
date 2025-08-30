@@ -917,12 +917,12 @@ def create_field_from_template(table_name, template_id, template_data):
             "description": f"Generated from {template['name']} template"
         }
         
-        # Generate formula for calculated fields (non-Link templates)
+        # Generate logic_expression for calculated fields (non-Link templates)
         formula = None
         if template_id != "link":
             formula = generate_formula_from_template(template, template_data)
             field_config.update({
-                "formula": formula,
+                "logic_expression": formula,
                 "read_only": 1  # Template fields are calculated
             })
         else:
