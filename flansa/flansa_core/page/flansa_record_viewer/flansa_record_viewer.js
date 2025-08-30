@@ -1052,7 +1052,7 @@ class FlansaRecordViewer {
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             onclick="window.recordViewer && window.recordViewer.show_image_lightbox('${this.escapeJsString(imageUrl)}')"
+                             onclick="window.recordViewer && window.recordViewer.show_image_lightbox(${index})"
                              title="Click to view full size"
                              onerror="this.src='/assets/frappe/images/default-avatar.png'">
                     </div>
@@ -1694,7 +1694,7 @@ class FlansaRecordViewer {
                         <img src="${imageUrl}" 
                              style="width: 100%; height: 100%; object-fit: cover; cursor: pointer;" 
                              alt="Gallery image ${index + 1}"
-                             onclick="window.recordViewer && window.recordViewer.show_image_lightbox('${this.escapeJsString(imageUrl)}')"
+                             onclick="window.recordViewer && window.recordViewer.show_image_lightbox(${index})"
                              title="Click to view full size"
                              onerror="this.src='/assets/frappe/images/default-avatar.png'">
                         <div class="gallery-item-actions" style="position: absolute; top: 5px; right: 5px;">
@@ -1847,89 +1847,276 @@ class FlansaRecordViewer {
         }
     }
     
-    show_image_lightbox(imageUrl) {
-        console.log('📷 Showing lightbox for:', imageUrl);
-        
-        // Create lightbox overlay
-        const lightbox = document.createElement('div');
-        lightbox.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            cursor: pointer;
-        `;
-        
-        // Create image element
-        const img = document.createElement('img');
-        img.src = imageUrl;
-        img.style.cssText = `
-            max-width: 90%;
-            max-height: 90%;
-            object-fit: contain;
-            border-radius: 8px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-        `;
-        
-        // Create close button
-        const closeBtn = document.createElement('div');
-        closeBtn.innerHTML = '×';
-        closeBtn.style.cssText = `
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 40px;
-            font-weight: bold;
-            cursor: pointer;
-            z-index: 10001;
-        `;
-        
-        // Add elements to lightbox safely
-        try {
-            lightbox.appendChild(img);
-            lightbox.appendChild(closeBtn);
-        } catch (error) {
-            console.error('Error adding elements to lightbox:', error);
+    show_image_lightbox(startingIndex = 0) {
+        const allImages = this.getAllImagesFromCurrentRecord();
+        if (!allImages || allImages.length === 0) {
+            console.log('No images found for lightbox');
             return;
         }
         
-        // Add event listeners
-        const closeLightbox = () => {
-            document.body.removeChild(lightbox);
-            document.body.style.overflow = '';
-        };
+        console.log('📷 Showing advanced lightbox, starting at index:', startingIndex);
         
-        lightbox.addEventListener('click', closeLightbox);
-        closeBtn.addEventListener('click', closeLightbox);
+        // Create lightbox HTML
+        const lightboxHtml = `
+            <div class="image-lightbox-overlay" id="record-image-lightbox" style="
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.95);
+                display: flex;
+                flex-direction: column;
+                z-index: 10000;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            ">
+                <div class="lightbox-content" style="
+                    display: flex;
+                    flex-direction: column;
+                    height: 100%;
+                ">
+                    <div class="lightbox-header" style="
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 15px 20px;
+                        background: rgba(0, 0, 0, 0.8);
+                        color: white;
+                    ">
+                        <span class="lightbox-title" style="font-weight: 600; font-size: 16px;">${this.record_name || 'Image Gallery'}</span>
+                        <div style="display: flex; align-items: center; gap: 20px;">
+                            <span class="lightbox-counter" style="font-size: 14px; color: rgba(255,255,255,0.8);">
+                                <span class="current-img">1</span> / <span class="total-imgs">${allImages.length}</span>
+                            </span>
+                            <button class="lightbox-close" title="Close (Esc)" style="
+                                background: none;
+                                border: none;
+                                color: white;
+                                font-size: 20px;
+                                cursor: pointer;
+                                padding: 5px;
+                            ">
+                                <i class="fa fa-times"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="lightbox-body" style="
+                        flex: 1;
+                        display: flex;
+                        justify-content: center;
+                        align-items: center;
+                        position: relative;
+                        padding: 20px;
+                    ">
+                        <div class="lightbox-image-container" style="
+                            position: relative;
+                            display: flex;
+                            justify-content: center;
+                            align-items: center;
+                            max-width: 100%;
+                            max-height: 100%;
+                        ">
+                            <img src="" alt="Image" class="lightbox-image" id="record-lightbox-img" style="
+                                max-width: 100%;
+                                max-height: 100%;
+                                object-fit: contain;
+                                border-radius: 8px;
+                                box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+                                transition: opacity 0.1s ease;
+                            ">
+                            ${allImages.length > 1 ? `
+                                <button class="lightbox-nav lightbox-prev" title="Previous (←)" style="
+                                    position: absolute;
+                                    left: -60px;
+                                    top: 50%;
+                                    transform: translateY(-50%);
+                                    background: rgba(255, 255, 255, 0.9);
+                                    border: none;
+                                    border-radius: 50%;
+                                    width: 50px;
+                                    height: 50px;
+                                    cursor: pointer;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 18px;
+                                    color: #333;
+                                    transition: all 0.2s ease;
+                                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                                ">
+                                    <i class="fa fa-chevron-left"></i>
+                                </button>
+                                <button class="lightbox-nav lightbox-next" title="Next (→)" style="
+                                    position: absolute;
+                                    right: -60px;
+                                    top: 50%;
+                                    transform: translateY(-50%);
+                                    background: rgba(255, 255, 255, 0.9);
+                                    border: none;
+                                    border-radius: 50%;
+                                    width: 50px;
+                                    height: 50px;
+                                    cursor: pointer;
+                                    display: flex;
+                                    align-items: center;
+                                    justify-content: center;
+                                    font-size: 18px;
+                                    color: #333;
+                                    transition: all 0.2s ease;
+                                    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+                                ">
+                                    <i class="fa fa-chevron-right"></i>
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
         
-        // Prevent closing when clicking on image
-        img.addEventListener('click', (e) => e.stopPropagation());
+        // Remove any existing lightbox
+        const existing = document.getElementById('record-image-lightbox');
+        if (existing) {
+            existing.remove();
+        }
         
         // Add to DOM
-        // Add to DOM safely
-        try {
-            document.body.appendChild(lightbox);
+        document.body.insertAdjacentHTML('beforeend', lightboxHtml);
+        const lightbox = document.getElementById('record-image-lightbox');
+        
+        // Store current state
+        this.lightbox_images = allImages;
+        this.lightbox_current_index = startingIndex;
+        
+        // Bind events
+        this.bind_lightbox_events();
+        
+        // Show lightbox and load starting image
+        setTimeout(() => {
+            lightbox.style.opacity = '1';
+            document.getElementById('record-lightbox-img').src = allImages[startingIndex];
+            document.querySelector('#record-image-lightbox .current-img').textContent = startingIndex + 1;
             document.body.style.overflow = 'hidden';
-        } catch (error) {
-            console.error('Error adding lightbox to DOM:', error);
-            return;
+        }, 10);
+    }
+    
+    getAllImagesFromCurrentRecord() {
+        const images = [];
+        
+        // Get all image fields from current record
+        if (this.record_data) {
+            Object.keys(this.record_data).forEach(fieldName => {
+                const value = this.record_data[fieldName];
+                if (value && typeof value === 'string') {
+                    // Check if it's an attachment field with images
+                    if (value.includes('[') || value.includes('http') || value.includes('/files/')) {
+                        const fieldImages = this.parseGalleryData(value);
+                        fieldImages.forEach(img => {
+                            const imageUrl = this.safeImageUrl(img);
+                            if (imageUrl && imageUrl !== '/assets/frappe/images/default-avatar.png' && !images.includes(imageUrl)) {
+                                images.push(imageUrl);
+                            }
+                        });
+                    }
+                }
+            });
         }
         
-        // ESC key to close
-        const handleEscape = (e) => {
-            if (e.key === 'Escape') {
-                closeLightbox();
-                document.removeEventListener('keydown', handleEscape);
+        return images;
+    }
+    
+    bind_lightbox_events() {
+        const lightbox = document.getElementById('record-image-lightbox');
+        if (!lightbox) return;
+        
+        // Close events
+        lightbox.querySelector('.lightbox-close').addEventListener('click', () => this.close_lightbox());
+        
+        // Click outside to close (but not on image)
+        lightbox.addEventListener('click', (e) => {
+            if (e.target === lightbox || e.target.classList.contains('lightbox-body') || e.target.classList.contains('lightbox-image-container')) {
+                this.close_lightbox();
+            }
+        });
+        
+        // Navigation events
+        const prevBtn = lightbox.querySelector('.lightbox-prev');
+        const nextBtn = lightbox.querySelector('.lightbox-next');
+        
+        if (prevBtn) {
+            prevBtn.addEventListener('click', () => this.navigate_lightbox(-1));
+        }
+        if (nextBtn) {
+            nextBtn.addEventListener('click', () => this.navigate_lightbox(1));
+        }
+        
+        // Keyboard events
+        this.lightbox_keydown_handler = (e) => {
+            switch(e.key) {
+                case 'Escape':
+                    this.close_lightbox();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    this.navigate_lightbox(-1);
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    this.navigate_lightbox(1);
+                    break;
             }
         };
-        document.addEventListener('keydown', handleEscape);
+        
+        document.addEventListener('keydown', this.lightbox_keydown_handler);
+    }
+    
+    navigate_lightbox(direction) {
+        if (!this.lightbox_images || this.lightbox_images.length <= 1) return;
+        
+        let newIndex = this.lightbox_current_index + direction;
+        
+        // Handle wraparound
+        if (newIndex < 0) {
+            newIndex = this.lightbox_images.length - 1;
+        } else if (newIndex >= this.lightbox_images.length) {
+            newIndex = 0;
+        }
+        
+        this.lightbox_current_index = newIndex;
+        
+        // Update image with fade effect
+        const img = document.getElementById('record-lightbox-img');
+        if (img) {
+            img.style.opacity = '0';
+            setTimeout(() => {
+                img.src = this.lightbox_images[newIndex];
+                img.style.opacity = '1';
+            }, 100);
+        }
+        
+        // Update counter
+        const currentImg = document.querySelector('#record-image-lightbox .current-img');
+        if (currentImg) {
+            currentImg.textContent = newIndex + 1;
+        }
+    }
+    
+    close_lightbox() {
+        const lightbox = document.getElementById('record-image-lightbox');
+        if (lightbox) {
+            lightbox.style.opacity = '0';
+            setTimeout(() => {
+                lightbox.remove();
+                document.body.style.overflow = '';
+            }, 200);
+        }
+        
+        // Clean up event handlers
+        if (this.lightbox_keydown_handler) {
+            document.removeEventListener('keydown', this.lightbox_keydown_handler);
+            this.lightbox_keydown_handler = null;
+        }
     }
 
     // Apply custom CSS from form builder configuration
