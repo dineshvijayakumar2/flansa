@@ -2952,7 +2952,7 @@ class EnhancedFlansaTableBuilder {
                     args: {
                         table_name: table_id,
                         template_id: logic_field_template,
-                        template_data: this.prepare_template_data(logic_field_template, values)
+                        template_data: this.prepare_template_data(logic_field_template, values, dialog)
                     }
                 });
             } else {
@@ -2992,7 +2992,7 @@ class EnhancedFlansaTableBuilder {
     }
 
     // Prepare template data based on logic field type
-    prepare_template_data(template_id, values) {
+    prepare_template_data(template_id, values, dialog = null) {
         const base_data = {
             field_name: values.field_name,
             field_label: values.field_label,
@@ -3001,9 +3001,19 @@ class EnhancedFlansaTableBuilder {
 
         switch (template_id) {
             case 'link':
+                // Convert label to actual doctype (like Visual Builder)
+                let target_doctype = values.target_doctype;
+                if (dialog && dialog._table_data) {
+                    const table_info = dialog._table_data.find(t => t.label === values.target_doctype);
+                    if (table_info) {
+                        target_doctype = table_info.value;
+                        console.log("Converting target label:", values.target_doctype, "→ doctype:", target_doctype);
+                    }
+                }
+                
                 return {
                     ...base_data,
-                    target_doctype: values.target_doctype,
+                    target_doctype: target_doctype,
                     link_scope: values.link_scope
                 };
             
@@ -3052,6 +3062,24 @@ class EnhancedFlansaTableBuilder {
                 options: values.options || ''
             };
             
+            // For Link fields, ensure field_type stays as "Link" and convert label to doctype
+            if (logic_field_template === 'link' || values.field_type === 'Link') {
+                field_updates.field_type = 'Link';
+                
+                // Convert target label to actual doctype (like Visual Builder)
+                if (values.target_doctype && dialog && dialog._table_data) {
+                    const table_info = dialog._table_data.find(t => t.label === values.target_doctype);
+                    if (table_info) {
+                        field_updates.options = table_info.value;
+                        console.log("Update - Converting target label:", values.target_doctype, "→ doctype:", table_info.value);
+                    } else {
+                        field_updates.options = values.target_doctype;
+                    }
+                } else if (values.target_doctype) {
+                    field_updates.options = values.target_doctype;
+                }
+            }
+            
             // For logic fields, handle special updates
             if (is_logic_field) {
                 console.log('Updating logic field with template:', logic_field_template);
@@ -3086,7 +3114,12 @@ class EnhancedFlansaTableBuilder {
                 }
             }
             
-            console.log('Updating field with data:', field_updates);
+            console.log('🔧 Updating field with data:', field_updates);
+            console.log('🔧 API call parameters:', {
+                table_name: table_id,
+                field_name: field_name,
+                field_updates: field_updates
+            });
             
             const result = await frappe.call({
                 method: 'flansa.native_fields.update_field_native',
@@ -3096,6 +3129,8 @@ class EnhancedFlansaTableBuilder {
                     field_updates: field_updates
                 }
             });
+            
+            console.log('🔧 Update API result:', result);
             
             if (result.message && result.message.success) {
                 dialog.hide();
@@ -3894,6 +3929,23 @@ class EnhancedFlansaTableBuilder {
     
     async create_link_field(values, dialog) {
         try {
+            // Get actual doctype from stored data using the label (like Visual Builder)
+            const target_label = values.target_doctype;
+            const table_data = dialog._table_data || [];
+            
+            const table_info = table_data.find(t => t.label === target_label);
+            if (!table_info) {
+                frappe.msgprint({
+                    title: 'Error',
+                    indicator: 'red',
+                    message: 'Target table not found. Please reselect.'
+                });
+                return;
+            }
+            
+            const actual_doctype = table_info.value;
+            console.log("Creating link field - Target label:", target_label, "→ doctype:", actual_doctype);
+            
             const result = await frappe.call({
                 method: 'flansa.logic_templates.create_field_from_template',
                 args: {
@@ -3903,7 +3955,7 @@ class EnhancedFlansaTableBuilder {
                         field_name: values.field_name,
                         label: values.label,
                         description: values.description,
-                        target_doctype: values.target_doctype,
+                        target_doctype: actual_doctype, // Use actual doctype, not label
                         link_scope: values.link_scope
                     }
                 }
@@ -4094,6 +4146,22 @@ class EnhancedFlansaTableBuilder {
     
     // === HELPER METHODS ===
     
+    // Parse FETCH expression to get source field
+    parse_fetch_source_field(expression) {
+        if (!expression) return '';
+        // Parse FETCH(source_field, target_field) pattern
+        const match = expression.match(/FETCH\s*\(\s*([^,]+)\s*,/);
+        return match ? match[1].trim() : '';
+    }
+    
+    // Parse FETCH expression to get target field
+    parse_fetch_target_field(expression) {
+        if (!expression) return '';
+        // Parse FETCH(source_field, target_field) pattern
+        const match = expression.match(/FETCH\s*\([^,]+,\s*([^)]+)\s*\)/);
+        return match ? match[1].trim() : '';
+    }
+    
     async load_link_targets(dialog) {
         try {
             const scope = dialog.get_value('link_scope');
@@ -4231,16 +4299,6 @@ class EnhancedFlansaTableBuilder {
     }
 
     // === MISSING HELPER FUNCTIONS FROM VISUAL BUILDER ===
-    
-    parse_fetch_source_field(expression) {
-        const match = expression?.match(/FETCH\(\s*(\w+)\s*,/);
-        return match ? match[1] : '';
-    }
-
-    parse_fetch_target_field(expression) {
-        const match = expression?.match(/FETCH\(\s*\w+\s*,\s*(\w+)\s*\)/);
-        return match ? match[1] : '';
-    }
 
     update_fetch_expression(dialog) {
         const source_field = dialog.get_value('fetch_source_field');
@@ -4346,13 +4404,13 @@ class EnhancedFlansaTableBuilder {
                     // Populate target tables with proper labels
                     const target_table_field = dialog.get_field('target_doctype');
                     if (target_table_field) {
-                        const table_options = data.target_tables.map(t => ({
-                            label: t.label,
-                            value: t.value
-                        }));
-                        target_table_field.df.options = table_options;
+                        // Store table data for later lookup (like Visual Builder)
+                        dialog._table_data = data.target_tables;
+                        // Show only labels to user (like Visual Builder)
+                        const options = data.target_tables.map(t => t.label).join('\n');
+                        target_table_field.df.options = options;
                         target_table_field.refresh();
-                        console.log('Loaded target tables with labels:', table_options.length);
+                        console.log('Loaded target tables with labels:', data.target_tables.length);
                     }
                 } else {
                     console.error('Failed to load target tables:', r.message);
@@ -4361,20 +4419,7 @@ class EnhancedFlansaTableBuilder {
         });
     }
 
-    // Helper functions to parse Logic Field expressions
-    parse_fetch_source_field(expression) {
-        if (!expression) return '';
-        // Parse FETCH(source_field, target_field) pattern
-        const match = expression.match(/FETCH\s*\(\s*([^,]+)\s*,/);
-        return match ? match[1].trim() : '';
-    }
-    
-    parse_fetch_target_field(expression) {
-        if (!expression) return '';
-        // Parse FETCH(source_field, target_field) pattern
-        const match = expression.match(/FETCH\s*\([^,]+,\s*([^)]+)\s*\)/);
-        return match ? match[1].trim() : '';
-    }
+    // Helper functions to parse Logic Field expressions (duplicates removed - using main functions above)
 
     // Fetch Logic Field expression from database
     fetch_logic_field_expression(field_name, table_name) {
