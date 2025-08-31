@@ -1932,7 +1932,7 @@ class FlansaAppBuilder {
     
     create_table_dialog() {
         const dialog = new frappe.ui.Dialog({
-            title: 'Create Add Table',
+            title: 'Add Table',
             size: 'large',
             fields: [
                 {
@@ -2067,9 +2067,7 @@ class FlansaAppBuilder {
             originalAction.call(dialog, values);
         };
         
-        dialog.show();
-        
-        // Setup event handlers after dialog is shown - use onshow callback
+        // Setup event handlers before showing dialog
         dialog.onshow = function() {
             // Auto-populate table name from label with validation
             dialog.fields_dict.table_label.$input.on('input', function() {
@@ -2134,6 +2132,8 @@ class FlansaAppBuilder {
                 }
             });
         };
+        
+        dialog.show();
     }
     
     show_app_selector() {
