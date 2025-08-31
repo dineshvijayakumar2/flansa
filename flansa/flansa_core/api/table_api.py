@@ -83,33 +83,40 @@ def get_table_info(table_name):
 
 @frappe.whitelist()
 def get_table_fields(table_name):
-    """Get fields for a specific table"""
+    """Get fields for a specific table (Flansa Table or system DocType)"""
     
     try:
-        if not frappe.db.exists("Flansa Table", table_name):
+        fields = []
+        doctype_name = None
+        
+        # First, check if it's a Flansa Table
+        if frappe.db.exists("Flansa Table", table_name):
+            table_doc = frappe.get_doc("Flansa Table", table_name)
+            doctype_name = table_doc.doctype_name if hasattr(table_doc, "doctype_name") else None
+        
+        # If not a Flansa Table, check if it's a system DocType
+        elif frappe.db.exists("DocType", table_name):
+            doctype_name = table_name  # For system DocTypes, the table_name IS the DocType name
+        
+        else:
             return {
                 "success": False,
-                "error": "Table not found"
+                "error": "Table not found (not a Flansa Table or system DocType)"
             }
         
-        table_doc = frappe.get_doc("Flansa Table", table_name)
-        
-        # Get fields from DocType only - legacy JSON removed
-        fields = []
-        if hasattr(table_doc, "doctype_name") and table_doc.doctype_name:
-            if frappe.db.exists("DocType", table_doc.doctype_name):
-                doctype_meta = frappe.get_meta(table_doc.doctype_name)
-                fields = []
-                for field in doctype_meta.fields:
-                    if field.fieldtype not in ["Section Break", "Column Break", "Tab Break"]:
-                        fields.append({
-                            "fieldname": field.fieldname,
-                            "label": field.label,
-                            "fieldtype": field.fieldtype,
-                            "options": field.options,
-                            "reqd": field.reqd,
-                            "read_only": field.read_only
-                        })
+        # Get fields from the DocType
+        if doctype_name and frappe.db.exists("DocType", doctype_name):
+            doctype_meta = frappe.get_meta(doctype_name)
+            for field in doctype_meta.fields:
+                if field.fieldtype not in ["Section Break", "Column Break", "Tab Break"]:
+                    fields.append({
+                        "fieldname": field.fieldname,
+                        "label": field.label,
+                        "fieldtype": field.fieldtype,
+                        "options": field.options,
+                        "reqd": field.reqd,
+                        "read_only": field.read_only
+                    })
         
         return {
             "success": True,

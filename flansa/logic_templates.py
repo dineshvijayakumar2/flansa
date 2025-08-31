@@ -701,9 +701,10 @@ def get_link_wizard_data(table_name=None):
                         ft_app_name = ft_label
                     
                     table_info = {
-                        "value": ft.doctype_name,
+                        "value": ft.name,  # Use Flansa Table ID instead of DocType name
                         "label": ft_label,
                         "type": "flansa_table",
+                        "doctype_name": ft.doctype_name,  # Keep DocType name for reference
                         "app_name": ft_app_name,  # Keep raw app name for comparison
                         "app_name_friendly": get_friendly_app_name(ft_app_name)  # Add friendly name
                     }
@@ -720,9 +721,10 @@ def get_link_wizard_data(table_name=None):
                     print(f"Error processing table {ft.name}: {e}", flush=True)
                     # Add to other_app_tables as fallback
                     table_info = {
-                        "value": ft.doctype_name,
+                        "value": ft.name,  # Use Flansa Table ID instead of DocType name
                         "label": ft_label,
-                        "type": "flansa_table"
+                        "type": "flansa_table",
+                        "doctype_name": ft.doctype_name  # Keep DocType name for reference
                     }
                     other_app_tables.append(table_info)
         

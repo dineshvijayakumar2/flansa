@@ -583,7 +583,7 @@ class FlansaRecordViewer {
         }
         
         this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name })
-        .then(metaResponse => {
+        .then(async (metaResponse) => {
             if (metaResponse.success) {
                 this.table_fields = metaResponse.fields || [];
                 this.doctype_name = metaResponse.doctype_name;
@@ -594,7 +594,7 @@ class FlansaRecordViewer {
                     application: this.application
                 });
                 this.update_dashboard_link();
-                this.render_new_record_form();
+                await this.render_new_record_form();
             } else {
                 this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
             }
@@ -609,14 +609,14 @@ class FlansaRecordViewer {
             table_name: this.table_name, 
             record_id: this.record_id 
         })
-        .then(recordResponse => {
+        .then(async (recordResponse) => {
             if (recordResponse.success) {
                 this.record_data = recordResponse.record || {};
                 this.table_fields = recordResponse.fields || [];
                 this.doctype_name = recordResponse.doctype_name;
                 this.application = recordResponse.application;
                 this.update_dashboard_link();
-                this.render_record();
+                await this.render_record();
             } else {
                 this.show_error('Record not found: ' + (recordResponse.error || 'Unknown error'));
             }
@@ -626,7 +626,7 @@ class FlansaRecordViewer {
         });
     }
     
-    render_record() {
+    async render_record() {
         const content = document.getElementById('record-content');
         const actionsContainer = document.getElementById('record-actions');
         if (!content) return;
@@ -698,7 +698,7 @@ class FlansaRecordViewer {
                 </div>
                 
                 <div class="record-fields" style="padding: 24px;">
-                    ${this.render_form_header()}
+                    ${await this.render_form_header()}
                 </div>
             </div>
         `;
@@ -713,7 +713,7 @@ class FlansaRecordViewer {
     }
     
 
-    render_form_header() {
+    async render_form_header() {
         // Add form title and description from form builder config
         if (this.form_config && (this.form_config.form_title || this.form_config.form_description)) {
             let headerHtml = '';
@@ -745,7 +745,8 @@ class FlansaRecordViewer {
             const sections = this.organize_fields_into_sections(this.table_fields);
             
             let fieldsHtml = '';
-            sections.forEach((section, sectionIndex) => {
+            for (let sectionIndex = 0; sectionIndex < sections.length; sectionIndex++) {
+                const section = sections[sectionIndex];
                 fieldsHtml += `
                     <div class="field-section" style="margin-bottom: ${sectionIndex < sections.length - 1 ? '32px' : '0'};">
                         ${section.title ? `<h5 class="section-title-enhanced" style="
@@ -779,9 +780,9 @@ class FlansaRecordViewer {
                         <div class="fields-grid" style="display: grid; grid-template-columns: ${section.columns || 'repeat(auto-fit, minmax(300px, 1fr))'}; gap: 20px;">
                 `;
                 
-                section.fields.forEach(field => {
-                    fieldsHtml += this.render_field(field);
-                });
+                for (const field of section.fields) {
+                    fieldsHtml += await this.render_field(field);
+                }
                 
                 fieldsHtml += `
                         </div>
@@ -791,7 +792,7 @@ class FlansaRecordViewer {
                              </div>` : ''}
                     </div>
                 `;
-            });
+            }
             
             return fieldsHtml;
         } else {
@@ -855,15 +856,15 @@ class FlansaRecordViewer {
         }
     }
     
-    render_new_record_form() {
+    async render_new_record_form() {
         // Use the same render_record method but with empty data
         // Only clear record data, but keep table_fields and doctype_name for rendering
         console.log('🆕 Rendering new record form');
         this.record_data = {}; // Clear only record data for empty form
-        this.render_record();
+        await this.render_record();
     }
     
-    render_field(field, value = null, isEdit = false) {
+    async render_field(field, value = null, isEdit = false) {
         if (!field) return '';
         
         const fieldName = field.fieldname || 'unnamed_field';
@@ -925,7 +926,7 @@ class FlansaRecordViewer {
                     html += `<input type="date" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
                     break;
                 case 'Link':
-                    html += this.render_link_field(field, fieldValue, fieldName);
+                    html += await this.render_link_field(field, fieldValue, fieldName);
                     break;
                 case 'Int':
                 case 'Float':
@@ -1004,7 +1005,7 @@ class FlansaRecordViewer {
     }
     
 
-    render_link_field(field, fieldValue, fieldName) {
+    async render_link_field(field, fieldValue, fieldName) {
         const linkDoctype = field.options || field.link_doctype || '';
         const uniqueId = `link_field_${fieldName}_${Date.now()}`;
         
@@ -1012,6 +1013,13 @@ class FlansaRecordViewer {
             // Fallback to text input if no link doctype specified
             return `<input type="text" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}" placeholder="Link target not specified">`;
         }
+        
+        // Get display value for this link field
+        const displayValue = await this.getDisplayValueForLinkField(field, fieldValue, linkDoctype);
+        const showDisplayValue = displayValue !== fieldValue; // Only show display format if different from raw value
+        
+        // Get table label for better user experience
+        const tableLabel = await this.getTableLabelForDoctype(linkDoctype);
         
         // Create a container for Frappe's native link field
         return `
@@ -1021,14 +1029,140 @@ class FlansaRecordViewer {
                        id="${uniqueId}"
                        name="${fieldName}" 
                        value="${this.escapeHtml(fieldValue)}" 
-                       placeholder="Search ${linkDoctype}..."
+                       data-display-value="${this.escapeHtml(displayValue)}"
+                       placeholder="${showDisplayValue ? `${displayValue} (${fieldValue})` : `Search ${tableLabel}...`}"
                        data-field-name="${fieldName}"
                        data-link-doctype="${linkDoctype}"
                        data-fieldtype="Link"
                        data-options="${linkDoctype}">
-                <small class="text-muted">Search and select from ${linkDoctype} records</small>
+                ${showDisplayValue ? 
+                    `<small class="text-success">Showing: ${this.escapeHtml(displayValue)}</small>` :
+                    `<small class="text-muted">Search and select from ${tableLabel} records</small>`
+                }
             </div>
         `;
+    }
+    
+    async getDisplayValueForLinkField(field, fieldValue, linkDoctype) {
+        if (!fieldValue) return '';
+        
+        // Try to get display field configuration from Flansa Logic Field
+        try {
+            const logicFields = await frappe.call({
+                method: 'frappe.client.get_list',
+                args: {
+                    doctype: 'Flansa Logic Field',
+                    filters: {
+                        table_name: this.table_name,
+                        field_name: field.fieldname,
+                        logic_type: 'link'
+                    },
+                    fields: ['link_display_field'],
+                    limit_page_length: 1
+                }
+            });
+            
+            if (logicFields.message && logicFields.message.length > 0) {
+                const logicField = logicFields.message[0];
+                if (logicField.link_display_field) {
+                    // Fetch the display value from the linked record
+                    const displayValue = await this.fetchDisplayValue(fieldValue, linkDoctype, logicField.link_display_field);
+                    return displayValue || fieldValue; // Fallback to raw value if display value not found
+                }
+            }
+        } catch (error) {
+            console.error('Error loading display field configuration:', error);
+        }
+        
+        // No display field configured or error, return raw value
+        return fieldValue;
+    }
+    
+    async fetchDisplayValue(recordId, linkDoctype, displayField) {
+        try {
+            const result = await frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: linkDoctype,
+                    name: recordId,
+                    fieldname: displayField
+                }
+            });
+            
+            if (result.message && result.message[displayField]) {
+                return result.message[displayField];
+            }
+        } catch (error) {
+            console.error(`Error fetching display value for ${recordId}:`, error);
+        }
+        
+        return null;
+    }
+    
+    async getTableLabelForDoctype(linkDoctype) {
+        try {
+            // First check if it's a Flansa Table by looking for a table with this DocType name
+            const flansaTable = await frappe.call({
+                method: 'frappe.client.get_list',
+                args: {
+                    doctype: 'Flansa Table',
+                    filters: { doctype_name: linkDoctype },
+                    fields: ['table_label', 'name']
+                }
+            });
+            
+            if (flansaTable.message && flansaTable.message.length > 0) {
+                const tableLabel = flansaTable.message[0].table_label;
+                return tableLabel || linkDoctype; // Use table label if available
+            }
+            
+            // If not a Flansa Table, try to get a more user-friendly name
+            // For system DocTypes, just use the DocType name as is
+            return linkDoctype;
+            
+        } catch (error) {
+            console.error(`Error getting table label for ${linkDoctype}:`, error);
+            return linkDoctype; // Fallback to DocType name
+        }
+    }
+    
+    async loadDisplayValueAsync(fieldName, recordId, linkDoctype, displayField) {
+        try {
+            // Fetch the linked record to get the display field value
+            const result = await frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: linkDoctype,
+                    name: recordId,
+                    fieldname: displayField
+                }
+            });
+            
+            if (result.message && result.message[displayField]) {
+                const displayValue = result.message[displayField];
+                
+                // Update the input field to show the display value
+                const input = document.querySelector(`input[data-field-name="${fieldName}"][value="${recordId}"]`);
+                if (input) {
+                    input.setAttribute('data-display-value', displayValue);
+                    // Show display value in the field but keep raw ID as the actual value
+                    input.setAttribute('placeholder', `${displayValue} (${recordId})`);
+                    
+                    // If this is view mode, show the display value directly
+                    if (this.mode === 'view') {
+                        const container = input.closest('.form-group');
+                        if (container) {
+                            const displaySpan = container.querySelector('.field-value-display');
+                            if (displaySpan) {
+                                displaySpan.innerHTML = `${this.escapeHtml(displayValue)} <small class="text-muted">(${recordId})</small>`;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (error) {
+            console.error(`Error loading display value for ${fieldName}:`, error);
+        }
     }
     
     // Gallery rendering methods
