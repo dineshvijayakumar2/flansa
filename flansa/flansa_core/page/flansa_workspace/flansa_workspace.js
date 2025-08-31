@@ -704,6 +704,11 @@ class FlansaApplicationsWorkspace {
                 .data-grid-body td:nth-child(3) { width: 30%; } /* Description */
                 .data-grid-body td:nth-child(4) { width: 10%; } /* Tables */
                 .data-grid-body td:nth-child(5) { width: 15%; } /* Actions - expanded for buttons */
+                
+                /* Ensure table stretches to full container width */
+                .applications-container, .section-wrapper {
+                    width: 100%;
+                }
 
                 .data-grid-body td:last-child {
                     border-right: none;
@@ -807,7 +812,7 @@ class FlansaApplicationsWorkspace {
                     font-weight: 700;
                     line-height: 1.2;
                     margin-bottom: 8px;
-                    color: white;
+                    color: #1f2937;
                 }
 
                 .tile-field-name {
@@ -819,27 +824,28 @@ class FlansaApplicationsWorkspace {
                     gap: 8px;
                     flex-shrink: 0;
                 }
-
+                
                 .tile-action-btn {
-                    background: rgba(255, 255, 255, 0.2);
-                    border: 1px solid rgba(255, 255, 255, 0.3);
-                    color: white;
-                    padding: 8px;
+                    width: 32px;
+                    height: 32px;
+                    border: 1px solid #d1d5db;
+                    background: white;
                     border-radius: 8px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    width: 32px;
-                    height: 32px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    color: #6b7280;
+                }
+                
+                .tile-action-btn:hover {
+                    border-color: #667eea;
+                    background: #667eea;
+                    color: white;
+                    transform: translateY(-1px);
                 }
 
-                .tile-action-btn:hover {
-                    background: rgba(255, 255, 255, 0.3);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-                }
 
                 .tile-body {
                     padding: 20px;
@@ -1196,6 +1202,9 @@ class FlansaApplicationsWorkspace {
                     </td>
                     <td class="app-actions-cell">
                         <div class="cell-content action-buttons">
+                            <button class="action-btn edit-btn" onclick="event.stopPropagation(); window.flansa_workspace.edit_application('${appName}')" title="Edit Application">
+                                <i class="fa fa-edit"></i>
+                            </button>
                             <button class="action-btn open-btn" onclick="event.stopPropagation(); window.location.href='/app/flansa-app-builder?app=${appName}'" title="Open Application">
                                 <i class="fa fa-arrow-right"></i>
                             </button>
@@ -1223,6 +1232,13 @@ class FlansaApplicationsWorkspace {
                             <div class="tile-field-name">
                                 <code style="font-size: 0.75rem; color: #6b7280; background: rgba(107, 114, 128, 0.1); padding: 2px 6px; border-radius: 4px;">${app.name}</code>
                             </div>
+                        </div>
+                        <div class="tile-actions">
+                            <button class="tile-action-btn" onclick="event.stopPropagation(); window.flansa_workspace.edit_application('${app.name}')" title="Edit Application">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                </svg>
+                            </button>
                         </div>
                     </div>
                     <div class="tile-body">
