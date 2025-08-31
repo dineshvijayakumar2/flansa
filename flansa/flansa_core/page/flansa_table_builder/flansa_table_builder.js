@@ -1408,17 +1408,6 @@ class EnhancedFlansaTableBuilder {
         // Set global reference
         window.table_builder = this;
         
-        // Fix breadcrumb link to include application parameter (after HTML is rendered)
-        if (this.table_data && this.table_data.application) {
-            const appBuilderLink = this.$container.find('a[href*="flansa-app-builder"]');
-            if (appBuilderLink.length) {
-                appBuilderLink.attr('href', `/app/flansa-app-builder?app=${this.table_data.application}`);
-                console.log('✅ Table Builder: Fixed breadcrumb link with app parameter:', this.table_data.application);
-            } else {
-                console.log('⚠️ Table Builder: App Builder breadcrumb link not found');
-            }
-        }
-        
         // Setup event handlers
         this.setup_event_handlers();
         
@@ -3151,7 +3140,7 @@ class EnhancedFlansaTableBuilder {
         if (logic_field_template === 'fetch') {
             setTimeout(async () => {
                 console.log('🔍 Loading fetch source fields for fetch template');
-                this.load_fetch_source_fields(dialog, table_id);
+                this.load_unified_fetch_source_fields(dialog, table_id);
                 
                 if (is_edit_mode && field) {
                     // Fetch the Logic Field expression from database
@@ -4315,6 +4304,17 @@ class EnhancedFlansaTableBuilder {
                 
                 // Update page title
                 this.page.set_title(`${this.table_data.table_label || this.table_data.table_name} - Table Builder`);
+                
+                // Fix breadcrumb link to include application parameter (now that table_data is loaded)
+                if (this.table_data && this.table_data.application) {
+                    const appBuilderLink = this.$container.find('a[href*="flansa-app-builder"]');
+                    if (appBuilderLink.length) {
+                        appBuilderLink.attr('href', `/app/flansa-app-builder?app=${this.table_data.application}`);
+                        console.log('✅ Table Builder: Fixed breadcrumb link with app parameter:', this.table_data.application);
+                    } else {
+                        console.log('⚠️ Table Builder: App Builder breadcrumb link not found');
+                    }
+                }
             }
             
             // Then get fields using the correct native API
@@ -5044,8 +5044,8 @@ class EnhancedFlansaTableBuilder {
         }
     }
 
-    load_fetch_source_fields(dialog, table_id) {
-        console.log('Loading fetch source fields for table:', table_id);
+    load_unified_fetch_source_fields(dialog, table_id) {
+        console.log('Loading unified fetch source fields for table:', table_id);
         
         frappe.call({
             method: 'flansa.logic_templates.get_fetch_wizard_data',
