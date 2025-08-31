@@ -1982,33 +1982,108 @@ class FlansaAppBuilder {
             title: 'Add Table',
             size: 'large',
             onshow: function() {
+                console.log('🎭 Dialog onshow triggered');
                 // Auto-populate table name from label with validation  
                 setTimeout(() => {
-                    dialog.fields_dict.table_label.$input.on('input', function() {
-                        const label = $(this).val();
-                        if (label) {
-                            // Convert to lowercase, replace spaces with underscores, remove special characters
-                            let tableName = label.toLowerCase()
-                                .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-                                .trim()
-                                .replace(/\s+/g, '_'); // Replace spaces with underscores
-                            
-                            // Ensure it starts with a letter
-                            if (tableName && !tableName.match(/^[a-z]/)) {
-                                tableName = 't_' + tableName;
-                            }
-                            
-                            // Truncate if too long (Frappe DocType names should be <= 61 characters)
-                            if (tableName.length > 61) {
-                                tableName = tableName.substring(0, 61);
-                            }
-                            
-                            dialog.set_value('table_name', tableName);
-                        } else {
-                            dialog.set_value('table_name', '');
+                    console.log('⏰ Setting up table name auto-population...');
+                    console.log('🔧 Fields dict:', dialog.fields_dict);
+                    console.log('🔧 Table label field:', dialog.fields_dict.table_label);
+                    
+                    if (dialog.fields_dict.table_label && dialog.fields_dict.table_label.$input) {
+                        console.log('✅ Found table_label field input element');
+                        
+                        const setupAutoPopulation = () => {
+                            dialog.fields_dict.table_label.$input.off('input.auto_populate').on('input.auto_populate', function() {
+                                const label = $(this).val();
+                                console.log('📝 Table label changed:', label);
+                                
+                                if (label) {
+                                    // Convert to lowercase, replace spaces with underscores, remove special characters
+                                    let tableName = label.toLowerCase()
+                                        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                                        .trim()
+                                        .replace(/\s+/g, '_'); // Replace spaces with underscores
+                                    
+                                    // Ensure it starts with a letter
+                                    if (tableName && !tableName.match(/^[a-z]/)) {
+                                        tableName = 't_' + tableName;
+                                    }
+                                    
+                                    // Truncate if too long (Frappe DocType names should be <= 61 characters)
+                                    if (tableName.length > 61) {
+                                        tableName = tableName.substring(0, 61);
+                                    }
+                                    
+                                    console.log('🎯 Generated table name:', tableName);
+                                    dialog.set_value('table_name', tableName);
+                                } else {
+                                    dialog.set_value('table_name', '');
+                                }
+                            });
+                        };
+                        
+                        setupAutoPopulation();
+                        
+                        // Also try binding to keyup for more responsive updates
+                        dialog.fields_dict.table_label.$input.off('keyup.auto_populate').on('keyup.auto_populate', function() {
+                            $(this).trigger('input.auto_populate');
+                        });
+                        
+                        // Make table name field appear readonly but allow programmatic updates
+                        if (dialog.fields_dict.table_name && dialog.fields_dict.table_name.$input) {
+                            dialog.fields_dict.table_name.$input.attr('readonly', true);
+                            dialog.fields_dict.table_name.$input.css({
+                                'background-color': '#f8f9fa',
+                                'color': '#6c757d'
+                            });
+                            console.log('✅ Made table_name field visually readonly');
                         }
-                    });
-                }, 100);
+                        
+                    } else {
+                        console.error('❌ Could not find table_label field or input element');
+                        
+                        // Try alternative approach with more delay
+                        setTimeout(() => {
+                            console.log('🔄 Retrying field binding...');
+                            if (dialog.fields_dict.table_label && dialog.fields_dict.table_label.$input) {
+                                console.log('✅ Found table_label field on retry');
+                                dialog.fields_dict.table_label.$input.on('input', function() {
+                                    const label = $(this).val();
+                                    if (label) {
+                                        let tableName = label.toLowerCase()
+                                            .replace(/[^a-z0-9\s]/g, '')
+                                            .trim()
+                                            .replace(/\s+/g, '_');
+                                        
+                                        if (tableName && !tableName.match(/^[a-z]/)) {
+                                            tableName = 't_' + tableName;
+                                        }
+                                        
+                                        if (tableName.length > 61) {
+                                            tableName = tableName.substring(0, 61);
+                                        }
+                                        
+                                        dialog.set_value('table_name', tableName);
+                                    } else {
+                                        dialog.set_value('table_name', '');
+                                    }
+                                });
+                                
+                                // Apply readonly styling on retry too
+                                if (dialog.fields_dict.table_name && dialog.fields_dict.table_name.$input) {
+                                    dialog.fields_dict.table_name.$input.attr('readonly', true);
+                                    dialog.fields_dict.table_name.$input.css({
+                                        'background-color': '#f8f9fa',
+                                        'color': '#6c757d'
+                                    });
+                                    console.log('✅ Made table_name field visually readonly (retry)');
+                                }
+                            } else {
+                                console.error('❌ Still could not find table_label field after retry');
+                            }
+                        }, 500);
+                    }
+                }, 200);
             },
             fields: [
                 {
@@ -2023,7 +2098,6 @@ class FlansaAppBuilder {
                     label: 'Table Name',
                     fieldtype: 'Data',
                     reqd: 1,
-                    read_only: 1,
                     description: 'Auto-generated from display label (e.g., customer_orders)'
                 },
                 {
