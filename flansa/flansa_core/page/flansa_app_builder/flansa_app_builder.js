@@ -2133,15 +2133,15 @@ class FlansaAppBuilder {
                     fieldname: 'naming_type',
                     label: 'Naming Type',
                     fieldtype: 'Select',
-                    options: 'Auto Number\nPrefix + Auto Number\nField Based\nManual',
-                    default: 'Auto Number',
+                    options: 'Naming Series\nAuto Increment\nField Based\nPrompt\nRandom',
+                    default: 'Auto Increment',
                     description: 'How records will be named automatically'
                 },
                 {
                     fieldname: 'naming_prefix',
                     label: 'Prefix',
                     fieldtype: 'Data',
-                    depends_on: 'eval:doc.naming_type === "Prefix + Auto Number"',
+                    depends_on: 'eval:doc.naming_type === "Naming Series"',
                     description: 'Prefix for auto-generated names (e.g., "ORD" for ORD-001)'
                 },
                 {
@@ -2149,7 +2149,7 @@ class FlansaAppBuilder {
                     label: 'Number of Digits',
                     fieldtype: 'Int',
                     default: 5,
-                    depends_on: 'eval:["Auto Number", "Prefix + Auto Number"].includes(doc.naming_type)',
+                    depends_on: 'eval:["Auto Increment", "Naming Series"].includes(doc.naming_type)',
                     description: 'Number of digits for auto numbering (e.g., 5 for 00001)'
                 },
                 {
@@ -2157,7 +2157,7 @@ class FlansaAppBuilder {
                     label: 'Start From',
                     fieldtype: 'Int',
                     default: 1,
-                    depends_on: 'eval:["Auto Number", "Prefix + Auto Number"].includes(doc.naming_type)',
+                    depends_on: 'eval:["Auto Increment", "Naming Series"].includes(doc.naming_type)',
                     description: 'Starting number for auto numbering'
                 },
                 {
@@ -2222,8 +2222,8 @@ class FlansaAppBuilder {
             }
             
             // Check for naming configuration completeness
-            if (values.naming_type === 'Prefix + Auto Number' && !values.naming_prefix) {
-                frappe.msgprint('Prefix is required for Prefix + Auto Number naming type');
+            if (values.naming_type === 'Naming Series' && !values.naming_prefix) {
+                frappe.msgprint('Prefix is required for Naming Series naming type');
                 return;
             }
             
