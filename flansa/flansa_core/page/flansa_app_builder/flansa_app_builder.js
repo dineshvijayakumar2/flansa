@@ -1983,107 +1983,146 @@ class FlansaAppBuilder {
             size: 'large',
             onshow: function() {
                 console.log('🎭 Dialog onshow triggered');
-                // Auto-populate table name from label with validation  
-                setTimeout(() => {
-                    console.log('⏰ Setting up table name auto-population...');
-                    console.log('🔧 Fields dict:', dialog.fields_dict);
-                    console.log('🔧 Table label field:', dialog.fields_dict.table_label);
+                
+                // Try multiple approaches for auto-population
+                const generateTableName = (label) => {
+                    if (!label) return '';
                     
-                    if (dialog.fields_dict.table_label && dialog.fields_dict.table_label.$input) {
-                        console.log('✅ Found table_label field input element');
-                        
-                        const setupAutoPopulation = () => {
-                            dialog.fields_dict.table_label.$input.off('input.auto_populate').on('input.auto_populate', function() {
-                                const label = $(this).val();
-                                console.log('📝 Table label changed:', label);
-                                
-                                if (label) {
-                                    // Convert to lowercase, replace spaces with underscores, remove special characters
-                                    let tableName = label.toLowerCase()
-                                        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-                                        .trim()
-                                        .replace(/\s+/g, '_'); // Replace spaces with underscores
-                                    
-                                    // Ensure it starts with a letter
-                                    if (tableName && !tableName.match(/^[a-z]/)) {
-                                        tableName = 't_' + tableName;
-                                    }
-                                    
-                                    // Truncate if too long (Frappe DocType names should be <= 61 characters)
-                                    if (tableName.length > 61) {
-                                        tableName = tableName.substring(0, 61);
-                                    }
-                                    
-                                    console.log('🎯 Generated table name:', tableName);
-                                    dialog.set_value('table_name', tableName);
-                                } else {
-                                    dialog.set_value('table_name', '');
-                                }
-                            });
-                        };
-                        
-                        setupAutoPopulation();
-                        
-                        // Also try binding to keyup for more responsive updates
-                        dialog.fields_dict.table_label.$input.off('keyup.auto_populate').on('keyup.auto_populate', function() {
-                            $(this).trigger('input.auto_populate');
-                        });
-                        
-                        // Make table name field appear readonly but allow programmatic updates
-                        if (dialog.fields_dict.table_name && dialog.fields_dict.table_name.$input) {
-                            dialog.fields_dict.table_name.$input.attr('readonly', true);
-                            dialog.fields_dict.table_name.$input.css({
-                                'background-color': '#f8f9fa',
-                                'color': '#6c757d'
-                            });
-                            console.log('✅ Made table_name field visually readonly');
-                        }
-                        
-                    } else {
-                        console.error('❌ Could not find table_label field or input element');
-                        
-                        // Try alternative approach with more delay
-                        setTimeout(() => {
-                            console.log('🔄 Retrying field binding...');
-                            if (dialog.fields_dict.table_label && dialog.fields_dict.table_label.$input) {
-                                console.log('✅ Found table_label field on retry');
-                                dialog.fields_dict.table_label.$input.on('input', function() {
-                                    const label = $(this).val();
-                                    if (label) {
-                                        let tableName = label.toLowerCase()
-                                            .replace(/[^a-z0-9\s]/g, '')
-                                            .trim()
-                                            .replace(/\s+/g, '_');
-                                        
-                                        if (tableName && !tableName.match(/^[a-z]/)) {
-                                            tableName = 't_' + tableName;
-                                        }
-                                        
-                                        if (tableName.length > 61) {
-                                            tableName = tableName.substring(0, 61);
-                                        }
-                                        
-                                        dialog.set_value('table_name', tableName);
-                                    } else {
-                                        dialog.set_value('table_name', '');
-                                    }
-                                });
-                                
-                                // Apply readonly styling on retry too
-                                if (dialog.fields_dict.table_name && dialog.fields_dict.table_name.$input) {
-                                    dialog.fields_dict.table_name.$input.attr('readonly', true);
-                                    dialog.fields_dict.table_name.$input.css({
-                                        'background-color': '#f8f9fa',
-                                        'color': '#6c757d'
-                                    });
-                                    console.log('✅ Made table_name field visually readonly (retry)');
-                                }
-                            } else {
-                                console.error('❌ Still could not find table_label field after retry');
-                            }
-                        }, 500);
+                    // Convert to lowercase, replace spaces with underscores, remove special characters
+                    let tableName = label.toLowerCase()
+                        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                        .trim()
+                        .replace(/\s+/g, '_'); // Replace spaces with underscores
+                    
+                    // Ensure it starts with a letter
+                    if (tableName && !tableName.match(/^[a-z]/)) {
+                        tableName = 't_' + tableName;
                     }
-                }, 200);
+                    
+                    // Truncate if too long (Frappe DocType names should be <= 61 characters)
+                    if (tableName.length > 61) {
+                        tableName = tableName.substring(0, 61);
+                    }
+                    
+                    return tableName;
+                };
+                
+                // Approach 1: Use Frappe's field change mechanism
+                const setupFrappeFieldChange = () => {
+                    console.log('🔧 Approach 1: Setting up Frappe field change listener');
+                    
+                    // Override the field's set_input method to detect changes
+                    if (dialog.fields_dict.table_label) {
+                        const originalSetInput = dialog.fields_dict.table_label.set_input;
+                        dialog.fields_dict.table_label.set_input = function(value) {
+                            const result = originalSetInput.call(this, value);
+                            console.log('📝 Frappe field change detected:', value);
+                            
+                            const tableName = generateTableName(value);
+                            console.log('🎯 Generated table name via Frappe:', tableName);
+                            dialog.set_value('table_name', tableName);
+                            
+                            return result;
+                        };
+                    }
+                };
+                
+                // Approach 2: Monitor dialog values with polling
+                const setupPollingMonitor = () => {
+                    console.log('🔧 Approach 2: Setting up polling monitor');
+                    let lastLabel = '';
+                    
+                    const pollInterval = setInterval(() => {
+                        try {
+                            const currentLabel = dialog.get_value('table_label') || '';
+                            if (currentLabel !== lastLabel) {
+                                console.log('📊 Polling detected label change:', currentLabel);
+                                lastLabel = currentLabel;
+                                
+                                const tableName = generateTableName(currentLabel);
+                                console.log('🎯 Generated table name via polling:', tableName);
+                                dialog.set_value('table_name', tableName);
+                            }
+                        } catch (error) {
+                            console.error('❌ Polling error:', error);
+                        }
+                    }, 250); // Poll every 250ms
+                    
+                    // Clear polling when dialog closes
+                    const originalHide = dialog.hide;
+                    dialog.hide = function() {
+                        clearInterval(pollInterval);
+                        return originalHide.call(this);
+                    };
+                };
+                
+                // Approach 3: DOM event binding with extended delays
+                const setupDOMEventBinding = () => {
+                    setTimeout(() => {
+                        console.log('🔧 Approach 3: Setting up DOM event binding');
+                        console.log('⏰ Fields dict:', dialog.fields_dict);
+                        console.log('🔧 Table label field:', dialog.fields_dict.table_label);
+                        
+                        if (dialog.fields_dict.table_label && dialog.fields_dict.table_label.$input) {
+                            console.log('✅ Found table_label field input element');
+                            
+                            const bindEvents = () => {
+                                dialog.fields_dict.table_label.$input.off('.auto_populate').on('input.auto_populate keyup.auto_populate change.auto_populate', function() {
+                                    const label = $(this).val();
+                                    console.log('📝 DOM event - Table label changed:', label);
+                                    
+                                    const tableName = generateTableName(label);
+                                    console.log('🎯 Generated table name via DOM:', tableName);
+                                    dialog.set_value('table_name', tableName);
+                                });
+                            };
+                            
+                            bindEvents();
+                            
+                            // Make table name field appear readonly but allow programmatic updates
+                            if (dialog.fields_dict.table_name && dialog.fields_dict.table_name.$input) {
+                                dialog.fields_dict.table_name.$input.attr('readonly', true);
+                                dialog.fields_dict.table_name.$input.css({
+                                    'background-color': '#f8f9fa',
+                                    'color': '#6c757d'
+                                });
+                                console.log('✅ Made table_name field visually readonly');
+                            }
+                            
+                        } else {
+                            console.error('❌ Could not find table_label field or input element');
+                            
+                            // Final retry with even longer delay
+                            setTimeout(() => {
+                                console.log('🔄 Final retry for DOM binding...');
+                                if (dialog.fields_dict.table_label && dialog.fields_dict.table_label.$input) {
+                                    console.log('✅ Found table_label field on final retry');
+                                    dialog.fields_dict.table_label.$input.on('input keyup change', function() {
+                                        const label = $(this).val();
+                                        const tableName = generateTableName(label);
+                                        dialog.set_value('table_name', tableName);
+                                    });
+                                    
+                                    // Apply readonly styling
+                                    if (dialog.fields_dict.table_name && dialog.fields_dict.table_name.$input) {
+                                        dialog.fields_dict.table_name.$input.attr('readonly', true);
+                                        dialog.fields_dict.table_name.$input.css({
+                                            'background-color': '#f8f9fa',
+                                            'color': '#6c757d'
+                                        });
+                                    }
+                                }
+                            }, 1000);
+                        }
+                    }, 300);
+                };
+                
+                // Execute all approaches
+                setTimeout(() => {
+                    setupFrappeFieldChange();
+                    setupPollingMonitor();
+                    setupDOMEventBinding();
+                }, 100);
             },
             fields: [
                 {
