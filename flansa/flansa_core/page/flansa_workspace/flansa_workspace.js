@@ -89,7 +89,7 @@ class FlansaApplicationsWorkspace {
     setup_layout() {
         const html = `
             <div class="flansa-workspace">
-                <!-- Ultra-modern sleek header - Match App Builder and Table Builder -->
+                <!-- Ultra-modern sleek header - Exactly match Table Builder -->
                 <div class="sleek-header">
                     <div class="header-backdrop"></div>
                     <div class="header-content">
@@ -100,88 +100,86 @@ class FlansaApplicationsWorkspace {
                     </div>
                     
                     <!-- Application Banner below breadcrumbs -->
-                <div class="app-banner">
-                    <div class="banner-left">
-                        <!-- Optional Workspace Logo -->
-                        <div class="workspace-logo-container" id="workspace-logo-container" style="margin-right: 8px;">
-                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" style="display: none;" />
-                            <div class="logo-placeholder" id="logo-placeholder" style="display: block;">
-                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="#667eea" stroke-width="2" fill="#f7fafc"/>
-                                    <path d="M8 12h8M8 8h8M8 16h5" stroke="#667eea" stroke-width="1.5" stroke-linecap="round"/>
-                                </svg>
+                    <div class="app-banner">
+                        <div class="banner-left">
+                            <!-- Optional Workspace Logo -->
+                            <div class="workspace-logo-container" id="workspace-logo-container" style="margin-right: 8px;">
+                                <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" style="display: none;" />
+                                <div class="logo-placeholder" id="logo-placeholder" style="display: block;">
+                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="#667eea" stroke-width="2" fill="#f7fafc"/>
+                                        <path d="M8 12h8M8 8h8M8 16h5" stroke="#667eea" stroke-width="1.5" stroke-linecap="round"/>
+                                    </svg>
+                                </div>
                             </div>
-                        </div>
-                        <!-- App Info Section -->
-                        <div class="app-info">
-                            <div class="app-details">
-                                <h1 class="app-name title-text" id="workspace-title">Flansa Platform</h1>
-                                <div class="app-type">
-                                    <div class="counter-pill">
-                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
-                                        </svg>
-                                        <span class="counter-text">Applications</span>
-                                    </div>
-                                    <div class="tenant-badge" id="current-tenant-badge">
-                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                                        </svg>
-                                        <span id="tenant-name-display">Loading...</span>
+                            <!-- App Info Section -->
+                            <div class="app-info">
+                                <div class="app-details">
+                                    <h1 class="app-name title-text" id="workspace-title">Flansa Platform</h1>
+                                    <div class="app-type">
+                                        <div class="counter-pill">
+                                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                            </svg>
+                                            <span class="counter-text">Applications</span>
+                                        </div>
+                                        <div class="tenant-badge" id="current-tenant-badge">
+                                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                            </svg>
+                                            <span id="tenant-name-display">Loading...</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                    <!-- Action Buttons -->
-                    <div class="banner-right">
-                        <div class="action-dropdown">
-                            <button class="sleek-btn primary split-btn" id="context-menu">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                                </svg>
-                                <span>Add Application</span>
-                                <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                            <div class="dropdown-panel" id="context-dropdown">
-                                <div class="dropdown-item" data-action="create-app">
+                        <!-- Action Buttons -->
+                        <div class="banner-right">
+                            <div class="action-dropdown">
+                                <button class="sleek-btn primary split-btn" id="context-menu">
                                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                                     </svg>
                                     <span>Add Application</span>
-                                </div>
-                                <div class="dropdown-separator"></div>
-                                <div class="dropdown-item" data-action="tenant-switcher">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                     </svg>
-                                    <span>Switch Workspace</span>
-                                </div>
-                                <div class="dropdown-item" data-action="refresh-cache">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                </button>
+                                <div class="dropdown-panel" id="context-dropdown">
+                                    <div class="dropdown-item" data-action="create-app">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                                         </svg>
-                                    <span>Refresh Cache</span>
+                                        <span>Add Application</span>
+                                    </div>
+                                    <div class="dropdown-separator"></div>
+                                    <div class="dropdown-item" data-action="tenant-switcher">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                                        </svg>
+                                        <span>Switch Workspace</span>
+                                    </div>
+                                    <div class="dropdown-item" data-action="refresh-cache">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Refresh Cache</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                </div>
                 
-                <!-- Main Content Area -->
-                <div class="main-content">
-                    <!-- Section Header with Controls -->
-                    <div class="section-header">
-                        <div class="section-title">
-                            <div class="context-info">
-                                <span class="context-label">WORKSPACE:</span>
-                                <span class="context-name" id="workspace-context-name">Loading...</span>
-                            </div>
+                <!-- Context Header - Match Table Builder exactly -->
+                <div class="context-header">
+                    <div class="context-container">
+                        <div class="context-info">
+                            <span class="context-label">WORKSPACE:</span>
+                            <span class="context-name" id="workspace-context-name">Loading...</span>
                         </div>
-                        <div class="section-controls">
+                        
+                        <div class="context-controls">
                             <div class="view-toggle">
                                 <button class="view-btn active" data-view="tile" title="Tile View">
                                     <i class="fa fa-th"></i>
@@ -190,7 +188,7 @@ class FlansaApplicationsWorkspace {
                                     <i class="fa fa-list"></i>
                                 </button>
                             </div>
-                            <input type="search" class="search-input" id="app-search" 
+                            <input type="search" class="search-box" id="app-search" 
                                    placeholder="Search applications...">
                             <div class="context-counter">
                                 <span class="counter-text">
@@ -200,10 +198,11 @@ class FlansaApplicationsWorkspace {
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Applications Section -->
-                    <div class="section-wrapper">
-                        <div class="applications-container tile-view" id="applications-container">
+                </div>
+                
+                <!-- Main Content Area -->
+                <div class="main-content">
+                    <div class="applications-container" id="applications-container">
                             <!-- Loading State -->
                             <div class="loading-placeholder" id="loading-state">
                                 <i class="fa fa-spinner fa-spin"></i>
@@ -448,33 +447,106 @@ class FlansaApplicationsWorkspace {
                     width: 100%;
                 }
 
-                /* Section Header */
-                .section-header {
+                /* Context Header - Match Table Builder exactly */
+                .context-header {
+                    background: #ffffff;
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    padding: 0.875rem 0;
+                    position: sticky;
+                    top: 60px; /* Below global nav if present */
+                    z-index: 99;
+                    backdrop-filter: blur(10px);
+                    background: rgba(255, 255, 255, 0.98);
+                }
+                
+                .context-container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 0 1.5rem;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
-                    margin-bottom: 24px;
-                    padding-bottom: 16px;
-                    border-bottom: 1px solid #e2e8f0;
-                    gap: 24px;
+                    gap: 2rem;
                 }
-
-                .section-title {
+                
+                .context-info {
                     display: flex;
                     align-items: center;
-                    gap: 16px;
+                    gap: 0.5rem;
                 }
-
-                .section-title h2 {
-                    font-size: 18px;
+                
+                .context-label {
+                    font-size: 0.75rem;
                     font-weight: 600;
-                    color: #1f2937;
-                    margin: 0;
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
                 }
-
-
-                .count-total {
-                    opacity: 0.8;
+                
+                .context-name {
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    color: #374151;
+                    background: rgba(79, 70, 229, 0.1);
+                    padding: 0.25rem 0.625rem;
+                    border-radius: 6px;
+                    border: 1px solid rgba(79, 70, 229, 0.2);
+                }
+                
+                .context-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+                
+                .context-controls .view-toggle {
+                    display: flex;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 2px;
+                }
+                
+                .context-controls .view-btn {
+                    padding: 0.375rem 0.625rem;
+                    border: none;
+                    background: transparent;
+                    color: #64748b;
+                    cursor: pointer;
+                    border-radius: 6px;
+                    transition: all 0.2s ease;
+                    font-size: 0.8125rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                }
+                
+                .context-controls .view-btn.active {
+                    background: #ffffff;
+                    color: #4f46e5;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                }
+                
+                .context-controls .view-btn:hover:not(.active) {
+                    background: rgba(255, 255, 255, 0.7);
+                    color: #374151;
+                }
+                
+                .context-controls .search-box {
+                    padding: 0.375rem 0.75rem;
+                    border: 1px solid #d1d5db;
+                    border-radius: 6px;
+                    font-size: 0.8125rem;
+                    color: #374151;
+                    background: #ffffff;
+                    min-width: 200px;
+                    transition: all 0.2s ease;
+                }
+                
+                .context-controls .search-box:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
                 }
                 
                 .context-counter {
@@ -498,101 +570,6 @@ class FlansaApplicationsWorkspace {
                     font-weight: 400;
                 }
 
-                .section-controls {
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    flex-wrap: wrap;
-                }
-                
-                .context-info {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.375rem;
-                    padding: 0.375rem 0.75rem;
-                    background: #f8fafc;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 6px;
-                    font-size: 0.8125rem;
-                    font-weight: 500;
-                }
-                
-                .context-label {
-                    color: #6b7280;
-                    text-transform: uppercase;
-                    letter-spacing: 0.05em;
-                }
-                
-                .context-name {
-                    color: #374151;
-                    font-weight: 600;
-                }
-
-                .search-input {
-                    border: 1px solid #d1d5db;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                    font-size: 14px;
-                    color: #374151;
-                    background: white;
-                    min-width: 200px;
-                    transition: border-color 0.2s ease;
-                }
-
-                .search-input:focus {
-                    outline: none;
-                    border-color: #4f46e5;
-                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-                }
-
-                .filter-select {
-                    border: 1px solid #d1d5db;
-                    border-radius: 8px;
-                    padding: 8px 12px;
-                    font-size: 14px;
-                    color: #374151;
-                    background: white;
-                    cursor: pointer;
-                    transition: border-color 0.2s ease;
-                }
-
-                .filter-select:focus {
-                    outline: none;
-                    border-color: #4f46e5;
-                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-                }
-
-                .view-toggle {
-                    display: flex;
-                    border: 1px solid #d1d5db;
-                    border-radius: 8px;
-                    overflow: hidden;
-                    background: white;
-                }
-
-                .view-btn {
-                    background: white;
-                    border: none;
-                    color: #6b7280;
-                    padding: 8px 12px;
-                    cursor: pointer;
-                    transition: all 0.2s ease;
-                    font-size: 14px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    min-width: 40px;
-                }
-
-                .view-btn.active {
-                    background: #4f46e5;
-                    color: white;
-                }
-
-                .view-btn:hover:not(.active) {
-                    background: #f3f4f6;
-                    color: #374151;
-                }
 
                 /* Dropdown Panel */
                 .dropdown-panel {
@@ -1143,7 +1120,7 @@ class FlansaApplicationsWorkspace {
                     $('#empty-state').show();
                 }
             },
-            error: (r) => {
+            error: (error) => {
                 $('#loading-state').hide();
                 $('#empty-state').show();
                 frappe.msgprint({
@@ -1151,6 +1128,7 @@ class FlansaApplicationsWorkspace {
                     indicator: 'red',
                     message: 'Failed to load applications. Please try again.'
                 });
+                console.error('Application loading error:', error);
             }
         });
     }
