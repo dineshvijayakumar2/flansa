@@ -18,6 +18,9 @@
   "tenant_id",
   "logic_configuration_section",
   "logic_expression",
+  "link_target_doctype",
+  "link_display_field", 
+  "link_filters",
   "field_dependencies",
   "column_break_9",
   "calculation_type",
@@ -95,6 +98,28 @@
    "fieldtype": "Code",
    "label": "Logic Expression",
    "reqd": 1
+  },
+  {
+   "depends_on": "eval:doc.logic_type=='link'",
+   "description": "The target table for link fields",
+   "fieldname": "link_target_doctype",
+   "fieldtype": "Data",
+   "label": "Link Target Table"
+  },
+  {
+   "depends_on": "eval:doc.logic_type=='link'", 
+   "description": "Field from linked table to show in dropdown (e.g., title, name, label)",
+   "fieldname": "link_display_field",
+   "fieldtype": "Data",
+   "label": "Display Field"
+  },
+  {
+   "depends_on": "eval:doc.logic_type=='link'",
+   "description": "JSON filters to apply when fetching link options",
+   "fieldname": "link_filters",
+   "fieldtype": "Code",
+   "label": "Link Filters",
+   "options": "JSON"
   },
   {
    "fieldname": "field_dependencies",
@@ -181,7 +206,7 @@
   }
  ],
  "links": [],
- "modified": "2025-08-20 01:51:29.106047",
+ "modified": "2025-08-31 18:11:45.783358",
  "modified_by": "Administrator",
  "module": "Flansa Core",
  "name": "Flansa Logic Field",

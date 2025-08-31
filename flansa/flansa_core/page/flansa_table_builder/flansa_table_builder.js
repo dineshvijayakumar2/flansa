@@ -2324,6 +2324,25 @@ class EnhancedFlansaTableBuilder {
                     fieldtype: 'Select',
                     reqd: 1,
                     description: 'Table to link to'
+                },
+                {
+                    fieldtype: 'Section Break',
+                    label: 'Display Configuration'
+                },
+                {
+                    fieldname: 'display_field',
+                    label: 'Display Field',
+                    fieldtype: 'Select',
+                    description: 'Field from linked table to show in dropdown (leave empty to use table name)',
+                    depends_on: 'target_doctype'
+                },
+                {
+                    fieldname: 'link_filters',
+                    label: 'Link Filters',
+                    fieldtype: 'Code',
+                    options: 'JSON',
+                    description: 'JSON filters to apply when fetching options (optional)',
+                    depends_on: 'target_doctype'
                 }
             ],
             primary_action_label: 'Create Link Field',
@@ -2335,6 +2354,11 @@ class EnhancedFlansaTableBuilder {
         // Load target tables when scope changes
         dialog.fields_dict.link_scope.df.change = () => {
             this.load_link_targets(dialog);
+        };
+        
+        // Load display fields when target doctype changes
+        dialog.fields_dict.target_doctype.df.change = () => {
+            this.load_display_fields(dialog);
         };
         
         dialog.show();
@@ -4331,7 +4355,9 @@ class EnhancedFlansaTableBuilder {
                         label: values.label,
                         description: values.description,
                         target_doctype: actual_doctype, // Use actual doctype, not label
-                        link_scope: values.link_scope
+                        link_scope: values.link_scope,
+                        display_field: values.display_field || '',
+                        link_filters: values.link_filters || ''
                     }
                 }
             });
@@ -4567,6 +4593,37 @@ class EnhancedFlansaTableBuilder {
             }
         } catch (error) {
             console.error('Error loading link targets:', error);
+        }
+    }
+    
+    async load_display_fields(dialog) {
+        try {
+            const target_doctype = dialog.get_value('target_doctype');
+            if (!target_doctype) return;
+            
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.table_api.get_table_fields',
+                args: {
+                    table_name: target_doctype
+                }
+            });
+            
+            if (result.message && result.message.success) {
+                // Add empty option and common display fields
+                let options = ['', 'name', 'title', 'label', 'display_name'];
+                
+                // Add fields from the table
+                result.message.fields.forEach(field => {
+                    if (['Data', 'Text'].includes(field.field_type) && !options.includes(field.field_name)) {
+                        options.push(field.field_name);
+                    }
+                });
+                
+                dialog.set_df_property('display_field', 'options', options.join('\n'));
+                dialog.fields_dict.display_field.refresh();
+            }
+        } catch (error) {
+            console.error('Error loading display fields:', error);
         }
     }
     

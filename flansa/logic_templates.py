@@ -926,8 +926,12 @@ def create_field_from_template(table_name, template_id, template_data):
                 "read_only": 1  # Template fields are calculated
             })
         else:
-            # For Link fields, add target DocType to options
+            # For Link fields, add target DocType to options and store link configuration
             field_config["options"] = template_data.get("target_doctype", "")
+            field_config["logic_type"] = "link"
+            field_config["link_target_doctype"] = template_data.get("target_doctype", "")
+            field_config["link_display_field"] = template_data.get("display_field", "")
+            field_config["link_filters"] = template_data.get("link_filters", "")
         
         # Use the unified field creation system
         from flansa.native_fields import add_basic_field_native
