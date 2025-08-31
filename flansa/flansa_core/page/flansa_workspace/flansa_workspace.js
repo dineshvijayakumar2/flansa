@@ -22,6 +22,7 @@ class FlansaApplicationsWorkspace {
         
         this.applications = [];
         this.filtered_apps = [];
+        this.view_mode = 'tile'; // 'list' or 'tile' - default to tile
         
         this.setup_page_header();
         this.setup_layout();
@@ -87,143 +88,889 @@ class FlansaApplicationsWorkspace {
     
     setup_layout() {
         const html = `
-            <div class="flansa-applications-workspace">
-                <!-- Compact Modern Header -->
-                <div class="flansa-compact-header" style="background: var(--flansa-gradient-primary); color: var(--flansa-white); padding: 16px 20px; margin: 0 -20px 0 -20px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; min-height: 56px; position: sticky; top: 0; z-index: 100;">
-                    <div class="header-left" style="display: flex; align-items: center; gap: 12px;">
+            <div class="flansa-workspace">
+                <!-- Clean Breadcrumb Header - Match Table Builder -->
+                <div class="breadcrumb-header">
+                    <div class="container">
+                        <nav class="breadcrumb-nav">
+                            <span class="breadcrumb-current">Workspace</span>
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- Application Banner below breadcrumbs -->
+                <div class="app-banner">
+                    <div class="banner-left">
                         <!-- Optional Workspace Logo -->
                         <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
-                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" style="height: 32px; width: auto; max-width: 100px; object-fit: contain; border-radius: 4px;" />
+                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
                         </div>
-                        <i class="fa fa-cubes" style="font-size: 18px; opacity: 0.9;"></i>
-                        <span style="font-size: 16px; font-weight: 600;" id="workspace-title">Flansa Platform</span>
-                        <div class="tenant-info-badge" style="background: rgba(255,255,255,0.2); padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 4px;" id="current-tenant-badge">
-                            <i class="fa fa-user" style="font-size: 10px;"></i>
-                            <span id="tenant-name-display">Loading...</span>
+                        <!-- App Info Section -->
+                        <div class="app-info">
+                            <div class="app-details">
+                                <h1 class="app-name title-text" id="workspace-title">Flansa Platform</h1>
+                                <div class="app-type">
+                                    <div class="counter-pill">
+                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                        </svg>
+                                        <span class="counter-text">Applications</span>
+                                    </div>
+                                    <div class="tenant-badge" id="current-tenant-badge">
+                                        <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span id="tenant-name-display">Loading...</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="header-right" style="display: flex; align-items: center; gap: 12px;">
-                        <h3 style="margin: 0; font-size: 18px; font-weight: 600; line-height: 1.2;">Flansa Workspace</h3>
-                        <div class="context-menu-wrapper" style="position: relative;">
-                            <button id="context-menu-btn" style="background: rgba(255,255,255,0.2); border: none; color: white; width: 32px; height: 32px; border-radius: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 16px; transition: background-color 0.2s;" title="More options">
-                                ⋯
+                    <!-- Action Buttons -->
+                    <div class="banner-right">
+                        <div class="action-dropdown">
+                            <button class="sleek-btn primary split-btn" id="context-menu">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span>Add Application</span>
+                                <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </svg>
                             </button>
-                            <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
-                                <div class="context-menu-item" data-action="tenant-switcher" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-users" style="width: 16px;"></i>
+                            <div class="dropdown-panel" id="context-dropdown">
+                                <div class="dropdown-item" data-action="create-app">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>Add Application</span>
+                                </div>
+                                <div class="dropdown-separator"></div>
+                                <div class="dropdown-item" data-action="tenant-switcher">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                                    </svg>
                                     <span>Switch Tenant</span>
                                 </div>
-                                <div class="context-menu-item" data-action="register-tenant" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-plus-circle" style="width: 16px;"></i>
-                                    <span>Register New Tenant</span>
-                                </div>
-                                <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-paint-brush" style="width: 16px;"></i>
-                                    <span>Theme Settings</span>
-                                </div>
-                                <div class="context-menu-item" data-action="refresh-cache" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-refresh" style="width: 16px;"></i>
-                                    <span>Clear Cache</span>
-                                </div>
-                                <div class="context-menu-item" data-action="backup-apps" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-download" style="width: 16px;"></i>
-                                    <span>Backup All Apps</span>
-                                </div>
-                                <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
-                                    <i class="fa fa-keyboard-o" style="width: 16px;"></i>
-                                    <span>Keyboard Shortcuts</span>
+                                <div class="dropdown-item" data-action="refresh-cache">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clip-rule="evenodd" />
+                                        </svg>
+                                    <span>Refresh Cache</span>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Modern Breadcrumb Navigation -->
-                <div class="flansa-breadcrumb-bar" style="background: rgba(255,255,255,0.95); padding: 8px 20px; margin: 0 -20px 16px -20px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; font-size: 14px;" id="breadcrumb-container">
-                    <a href="/app/flansa-workspace" style="color: #2d3748; text-decoration: none; font-weight: 600; font-weight: 500;">🏠 Workspace</a>
-                </div>
-                
-                <!-- Content Area -->
-                <div class="flansa-workspace-content">
-                    <!-- Stats Section -->
-                    <div class="section-header" style="border-bottom: 1px solid var(--flansa-border, var(--flansa-gray-200)); padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
-                        <h4 style="margin: 0; font-weight: normal;">Applications</h4>
-                        <small style="color: var(--flansa-text-secondary, var(--flansa-gray-600));"><span id="total-apps-count">-</span> application<span id="apps-plural">s</span></small>
-                    </div>
-                    
-                    <!-- Toolbar -->
-                    <div class="applications-toolbar">
-                        <div class="toolbar-left">
-                            <div class="flansa-quick-actions">
-                                <button class="btn btn-flansa-primary" id="create-new-app">
-                                    <i class="fa fa-plus"></i> New Application
-                                </button>
-                                <button class="btn btn-flansa-secondary" id="refresh-apps">
-                                    <i class="fa fa-refresh"></i> Refresh
-                                </button>
-                            </div>
+                <!-- Main Content Area -->
+                <div class="container main-content">
+                    <!-- Section Header with Controls -->
+                    <div class="section-header">
+                        <div class="section-title">
+                            <h2>Applications</h2>
                         </div>
-                        <div class="toolbar-center">
-                            <div class="search-wrapper">
-                                <input type="text" class="form-control search-input" 
-                                    id="app-search" placeholder="Search applications..." />
-                                <i class="fa fa-search search-icon"></i>
-                            </div>
-                        </div>
-                        <div class="toolbar-right">
-                            <select class="form-control filter-select" id="app-status-filter">
-                                <option value="all">All Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Draft">Draft</option>
-                                <option value="Archived">Archived</option>
-                            </select>
-                            <div class="view-toggle" style="display: flex; border: var(--flansa-border-width-sm) solid var(--flansa-border, var(--flansa-gray-300)); border-radius: var(--flansa-radius-md); overflow: hidden;">
-                                <button class="btn btn-default btn-sm view-btn active" data-view="grid" style="border: none; border-radius: 0; padding: 6px 12px;">
+                        <div class="section-controls">
+                            <div class="view-toggle">
+                                <button class="view-btn active" data-view="tile" title="Tile View">
                                     <i class="fa fa-th"></i>
                                 </button>
-                                <button class="btn btn-default btn-sm view-btn" data-view="list" style="border: none; border-radius: 0; padding: 6px 12px;">
+                                <button class="view-btn" data-view="list" title="List View">
                                     <i class="fa fa-list"></i>
                                 </button>
                             </div>
+                            <input type="search" class="search-input" id="app-search" 
+                                   placeholder="Search applications...">
+                            <div class="context-counter">
+                                <span class="counter-text">
+                                    <span id="displayed-count">0</span> 
+                                    <span class="count-total">of <span id="total-count">0</span> applications</span>
+                                </span>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Applications Container -->
-                    <div class="applications-container">
-                        <!-- Loading State -->
-                        <div class="loading-placeholder" id="loading-state">
-                            <i class="fa fa-spinner fa-spin"></i>
-                            <p>Loading applications...</p>
-                        </div>
-                        
-                        <!-- Applications Grid -->
-                        <div class="applications-grid view-grid" id="applications-grid" style="display: none;">
-                            <!-- Application cards will be rendered here -->
-                        </div>
-                        
-                        <!-- Empty State -->
-                        <div class="empty-state" id="empty-state" style="display: none;">
-                            <div class="empty-state-icon">
-                                <i class="fa fa-cubes"></i>
+                    <!-- Applications Section -->
+                    <div class="section-wrapper">
+                        <div class="applications-container tile-view" id="applications-container">
+                            <!-- Loading State -->
+                            <div class="loading-placeholder" id="loading-state">
+                                <i class="fa fa-spinner fa-spin"></i>
+                                <p>Loading applications...</p>
                             </div>
-                            <div class="empty-state-title">No Applications Yet</div>
-                            <div class="empty-state-description">Create your first application to start building powerful solutions</div>
-                            <button class="btn btn-flansa-primary mt-3" id="create-first-app">
-                                <i class="fa fa-plus"></i> Create Your First Application
-                            </button>
-                        </div>
-                        
-                        <!-- No Results State -->
-                        <div class="empty-state" id="no-results-state" style="display: none;">
-                            <div class="empty-state-icon">
-                                <i class="fa fa-search"></i>
+                            
+                            <!-- Applications Grid -->
+                            <div class="applications-grid view-tile" id="applications-grid" style="display: none;">
+                                <!-- Application cards will be rendered here -->
                             </div>
-                            <div class="empty-state-title">No applications found</div>
-                            <div class="empty-state-description">Try adjusting your search or filters</div>
+                            
+                            <!-- Empty State -->
+                            <div class="empty-state" id="empty-state" style="display: none;">
+                                <div class="empty-state-icon">
+                                    <i class="fa fa-cubes"></i>
+                                </div>
+                                <div class="empty-state-title">No Applications Yet</div>
+                                <div class="empty-state-description">Create your first application to start building powerful solutions</div>
+                                <button class="btn btn-flansa-primary mt-3" id="create-first-app">
+                                    <i class="fa fa-plus"></i> Create Your First Application
+                                </button>
+                            </div>
+                            
+                            <!-- No Results State -->
+                            <div class="empty-state" id="no-results-state" style="display: none;">
+                                <div class="empty-state-icon">
+                                    <i class="fa fa-search"></i>
+                                </div>
+                                <div class="empty-state-title">No applications found</div>
+                                <div class="empty-state-description">Try adjusting your search or filters</div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <style>
+                /* Clean Header Styles - Match Table Builder Design */
+                .breadcrumb-header {
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding: 12px 0;
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                }
+
+                .breadcrumb-header .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 0 24px;
+                }
+
+                .breadcrumb-nav {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    font-size: 14px;
+                }
+
+                .breadcrumb-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    color: #6b7280;
+                    text-decoration: none;
+                    font-weight: 500;
+                    transition: color 0.2s ease;
+                }
+
+                .breadcrumb-link:hover {
+                    color: #4f46e5;
+                }
+
+                .breadcrumb-divider {
+                    color: #9ca3af;
+                }
+
+                .breadcrumb-current {
+                    color: #374151;
+                    font-weight: 600;
+                }
+
+                /* App Banner */
+                .app-banner {
+                    background: white;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding: 20px 0;
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 20px 24px;
+                }
+
+                .banner-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+                
+                .workspace-logo-container {
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .workspace-logo {
+                    height: 40px;
+                    width: auto;
+                    max-width: 100px;
+                    object-fit: contain;
+                    border-radius: 8px;
+                }
+
+                .app-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .app-details {
+                    min-width: 0;
+                }
+
+                .app-name {
+                    font-size: 24px;
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin: 0;
+                    line-height: 1.2;
+                }
+
+                .app-type {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-top: 8px;
+                }
+
+                .counter-pill {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: #f3f4f6;
+                    color: #6b7280;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.025em;
+                }
+
+                .tenant-badge {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    background: #e0f2fe;
+                    color: #0369a1;
+                    padding: 6px 12px;
+                    border-radius: 20px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .sleek-btn {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 10px 16px;
+                    border: 1px solid #d1d5db;
+                    background: white;
+                    color: #374151;
+                    border-radius: 8px;
+                    font-size: 14px;
+                    font-weight: 500;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    text-decoration: none;
+                }
+
+                .sleek-btn.primary {
+                    background: #4f46e5;
+                    color: white;
+                    border-color: #4f46e5;
+                }
+
+                .sleek-btn:hover {
+                    border-color: #4f46e5;
+                    color: #4f46e5;
+                }
+
+                .sleek-btn.primary:hover {
+                    background: #4338ca;
+                    border-color: #4338ca;
+                }
+
+                .dropdown-arrow {
+                    transition: transform 0.2s ease;
+                }
+
+                .sleek-btn.active .dropdown-arrow {
+                    transform: rotate(180deg);
+                }
+
+                /* Main Content Area */
+                .main-content {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 24px;
+                }
+
+                /* Section Header */
+                .section-header {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    margin-bottom: 24px;
+                    padding-bottom: 16px;
+                    border-bottom: 1px solid #e2e8f0;
+                    gap: 24px;
+                }
+
+                .section-title {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .section-title h2 {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin: 0;
+                }
+
+
+                .count-total {
+                    opacity: 0.8;
+                }
+                
+                .context-counter {
+                    padding: 0.375rem 0.75rem;
+                    background: rgba(79, 70, 229, 0.08);
+                    border: 1px solid rgba(79, 70, 229, 0.15);
+                    border-radius: 6px;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .context-counter .counter-text {
+                    color: #374151;
+                    font-size: 0.8125rem;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+                
+                .context-counter .count-total {
+                    color: #6b7280;
+                    font-weight: 400;
+                }
+
+                .section-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    flex-wrap: wrap;
+                }
+
+                .search-input {
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    font-size: 14px;
+                    color: #374151;
+                    background: white;
+                    min-width: 200px;
+                    transition: border-color 0.2s ease;
+                }
+
+                .search-input:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+
+                .filter-select {
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    padding: 8px 12px;
+                    font-size: 14px;
+                    color: #374151;
+                    background: white;
+                    cursor: pointer;
+                    transition: border-color 0.2s ease;
+                }
+
+                .filter-select:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+
+                .view-toggle {
+                    display: flex;
+                    border: 1px solid #d1d5db;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    background: white;
+                }
+
+                .view-btn {
+                    background: white;
+                    border: none;
+                    color: #6b7280;
+                    padding: 8px 12px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-size: 14px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    min-width: 40px;
+                }
+
+                .view-btn.active {
+                    background: #4f46e5;
+                    color: white;
+                }
+
+                .view-btn:hover:not(.active) {
+                    background: #f3f4f6;
+                    color: #374151;
+                }
+
+                /* Dropdown Panel */
+                .dropdown-panel {
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    margin-top: 8px;
+                    background: white;
+                    border-radius: 8px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                    border: 1px solid #e2e8f0;
+                    min-width: 200px;
+                    z-index: 1000;
+                    display: none;
+                }
+
+                .dropdown-panel.show {
+                    display: block;
+                }
+
+                .dropdown-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    padding: 12px 16px;
+                    color: #374151;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    font-size: 14px;
+                    font-weight: 500;
+                }
+
+                .dropdown-item:first-child {
+                    border-radius: 8px 8px 0 0;
+                }
+
+                .dropdown-item:last-child {
+                    border-radius: 0 0 8px 8px;
+                }
+
+                .dropdown-item:hover {
+                    background: #f8fafc;
+                    color: #4f46e5;
+                }
+
+                .dropdown-separator {
+                    height: 1px;
+                    background: #e5e7eb;
+                    margin: 4px 0;
+                }
+
+                /* Applications Container */
+                .applications-container.tile-view .applications-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+                    gap: 24px;
+                    padding: 20px 0;
+                }
+
+                .applications-container.list-view .applications-grid {
+                    display: block;
+                    padding: 20px 0;
+                }
+
+                /* Enterprise Data Grid for List View */
+                .enterprise-data-grid {
+                    background: white;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    border: 1px solid #e2e8f0;
+                }
+
+                .data-grid-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 14px;
+                }
+
+                .data-grid-header {
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border-bottom: 2px solid #e2e8f0;
+                }
+
+                .data-grid-header th {
+                    padding: 16px 20px;
+                    text-align: left;
+                    font-weight: 600;
+                    color: #374151;
+                    font-size: 13px;
+                    letter-spacing: 0.025em;
+                    text-transform: uppercase;
+                    border-right: 1px solid #e5e7eb;
+                    position: relative;
+                    user-select: none;
+                }
+
+                .data-grid-header th:last-child {
+                    border-right: none;
+                }
+
+                .sortable-header {
+                    cursor: pointer;
+                    transition: background-color 0.2s ease;
+                }
+
+                .sortable-header:hover {
+                    background-color: rgba(79, 70, 229, 0.05);
+                }
+
+                .header-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                }
+
+                .sort-icon {
+                    color: #9ca3af;
+                    font-size: 12px;
+                    transition: color 0.2s ease;
+                }
+
+                .sortable-header:hover .sort-icon {
+                    color: #6b7280;
+                }
+
+                .data-grid-body tr {
+                    border-bottom: 1px solid #f1f5f9;
+                    transition: background-color 0.2s ease;
+                }
+
+                .data-grid-body tr:hover {
+                    background-color: #f8fafc;
+                }
+
+                .data-grid-body tr:last-child {
+                    border-bottom: none;
+                }
+
+                .data-grid-body td {
+                    padding: 16px 20px;
+                    color: #374151;
+                    border-right: 1px solid #f1f5f9;
+                    vertical-align: middle;
+                }
+
+                .data-grid-body td:last-child {
+                    border-right: none;
+                }
+
+                .cell-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .app-title {
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .app-name-code {
+                    background: #f3f4f6;
+                    color: #4b5563;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+
+                .app-description {
+                    color: #6b7280;
+                    font-size: 13px;
+                    max-width: 300px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .tables-count {
+                    color: #6b7280;
+                    font-size: 13px;
+                    font-weight: 500;
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 8px;
+                }
+
+                .action-btn {
+                    padding: 6px 8px;
+                    background: #f8fafc;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    color: #6b7280;
+                    font-size: 12px;
+                }
+
+                .action-btn:hover {
+                    background: #4f46e5;
+                    border-color: #4f46e5;
+                    color: white;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+                }
+
+                .action-btn.delete-btn:hover {
+                    background: #ef4444;
+                    border-color: #ef4444;
+                }
+
+                /* App Tiles for Tile View - Match App Builder Style */
+                .app-tile {
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    overflow: hidden;
+                    cursor: pointer;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                }
+
+                .app-tile:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                    border-color: #667eea;
+                }
+
+                .tile-header {
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    padding: 20px;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    min-height: 80px;
+                }
+
+                .tile-label {
+                    font-size: 18px;
+                    font-weight: 700;
+                    line-height: 1.2;
+                    margin-bottom: 8px;
+                    color: white;
+                }
+
+                .tile-field-name {
+                    margin-top: 4px;
+                }
+
+                .tile-actions {
+                    display: flex;
+                    gap: 8px;
+                    flex-shrink: 0;
+                }
+
+                .tile-action-btn {
+                    background: rgba(255, 255, 255, 0.2);
+                    border: 1px solid rgba(255, 255, 255, 0.3);
+                    color: white;
+                    padding: 8px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 32px;
+                    height: 32px;
+                }
+
+                .tile-action-btn:hover {
+                    background: rgba(255, 255, 255, 0.3);
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+                }
+
+                .tile-body {
+                    padding: 20px;
+                }
+
+                .tile-description {
+                    color: #6b7280;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    margin-bottom: 16px;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                }
+
+                .tile-meta {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    flex-wrap: wrap;
+                    gap: 12px;
+                }
+
+                .meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    color: #6b7280;
+                    font-size: 13px;
+                    font-weight: 500;
+                }
+
+                .meta-item svg {
+                    opacity: 0.7;
+                }
+
+                .status-badge {
+                    padding: 4px 8px;
+                    border-radius: 12px;
+                    font-size: 11px;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                }
+
+                .status-badge.flansa-text-success {
+                    background: #d1fae5;
+                    color: #065f46;
+                }
+
+                .status-badge.flansa-text-secondary {
+                    background: #f3f4f6;
+                    color: #6b7280;
+                }
+
+                .status-badge.flansa-text-warning {
+                    background: #fef3c7;
+                    color: #92400e;
+                }
+
+                /* Empty States */
+                .loading-placeholder {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 60px 20px;
+                    color: #6b7280;
+                }
+
+                .loading-placeholder i {
+                    font-size: 32px;
+                    margin-bottom: 16px;
+                }
+
+                .empty-state {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    justify-content: center;
+                    padding: 80px 20px;
+                    text-align: center;
+                    color: #6b7280;
+                }
+
+                .empty-state-icon {
+                    font-size: 48px;
+                    margin-bottom: 20px;
+                    opacity: 0.6;
+                }
+
+                .empty-state-title {
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #374151;
+                    margin-bottom: 8px;
+                }
+
+                .empty-state-description {
+                    font-size: 14px;
+                    margin-bottom: 24px;
+                    max-width: 400px;
+                }
+
+                /* Responsive Design */
+                @media (max-width: 1024px) {
+                    .header-content {
+                        flex-wrap: wrap;
+                        gap: 16px;
+                    }
+
+                    .context-controls {
+                        order: 3;
+                        width: 100%;
+                        justify-content: space-between;
+                        flex-wrap: wrap;
+                        gap: 12px;
+                    }
+
+                    .search-box {
+                        width: 240px;
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .sleek-header {
+                        margin: 0 -15px 20px -15px;
+                    }
+
+                    .breadcrumb-section {
+                        padding: 12px 20px 0;
+                    }
+
+                    .header-content {
+                        padding: 16px 20px 20px;
+                    }
+
+                    .main-content {
+                        padding: 0 20px;
+                    }
+
+                    .applications-container.tile-view .applications-grid {
+                        grid-template-columns: 1fr;
+                        gap: 16px;
+                    }
+
+                    .search-box {
+                        width: 200px;
+                    }
+
+                    .context-counter {
+                        display: none;
+                    }
+                }
+            </style>
         `;
         
         this.$container.html(html);
@@ -243,11 +990,6 @@ class FlansaApplicationsWorkspace {
         
         // Search functionality
         $('#app-search').on('input', function() {
-            self.filter_applications();
-        });
-        
-        // Status filter
-        $('#app-status-filter').on('change', function() {
             self.filter_applications();
         });
         
@@ -317,78 +1059,271 @@ class FlansaApplicationsWorkspace {
     }
     
     render_applications() {
+        const container = $('#applications-container');
+        const grid = $('#applications-grid');
+        const emptyState = $('#no-results-state');
+        
         const apps_to_render = this.filtered_apps;
         
         if (apps_to_render.length === 0) {
-            $('#applications-grid').hide();
-            $('#no-results-state').show();
+            grid.hide();
+            emptyState.show();
             return;
         }
         
-        $('#no-results-state').hide();
-        $('#applications-grid').show();
+        emptyState.hide();
+        grid.show();
         
-        let html = '';
+        if (this.view_mode === 'list') {
+            this.render_list_view(apps_to_render);
+        } else {
+            this.render_tile_view(apps_to_render);
+        }
         
-        apps_to_render.forEach(app => {
-            const status_badge = this.get_status_badge(app.status);
-            
-            html += `
-                <div class="grid-item flansa-card" data-app-name="${app.name}">
-                    <div class="item-header">
-                        <div class="item-icon">
-                            <i class="fa fa-cube"></i>
-                        </div>
-                        <div class="item-title">${app.app_title || app.name}</div>
-                    </div>
-                    <div class="item-meta">
-                        <small>${app.table_count || 0} tables</small>
-                        <small>${this.format_date(app.creation)}</small>
-                        <small class="status-badge ${status_badge.class}">${status_badge.text}</small>
-                    </div>
-                    <div class="item-description">
-                        ${app.description || 'No description provided'}
-                    </div>
-                    <div class="item-actions">
-                        <button class="btn btn-sm btn-flansa-primary open-app-btn" data-app="${app.name}">
-                            <i class="fa fa-external-link"></i> Open
-                        </button>
-                        <button class="btn btn-sm btn-flansa-secondary edit-app-btn" data-app="${app.name}">
-                            <i class="fa fa-cog"></i> Settings
-                        </button>
-                        <button class="btn btn-sm btn-danger delete-app-btn" data-app="${app.name}" title="Delete Application">
-                            <i class="fa fa-trash"></i>
-                        </button>
-                    </div>
-                </div>
-            `;
-        });
-        
-        $('#applications-grid').html(html);
+        // Update counters - show filtered count vs total count
+        this.update_counters(apps_to_render.length, this.filtered_apps.length);
         
         // Bind card events
         this.bind_card_events();
     }
     
+    render_list_view(apps) {
+        const grid = $('#applications-grid');
+        
+        // Create enterprise data grid similar to App Builder
+        grid.html(`
+            <div class="enterprise-data-grid">
+                <table class="data-grid-table">
+                    <thead class="data-grid-header">
+                        <tr>
+                            <th class="sortable-header" data-column="title">
+                                <div class="header-content">
+                                    <span class="header-text">Application Name</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="sortable-header" data-column="name">
+                                <div class="header-content">
+                                    <span class="header-text">System Name</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="sortable-header" data-column="description">
+                                <div class="header-content">
+                                    <span class="header-text">Description</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="sortable-header" data-column="tables">
+                                <div class="header-content">
+                                    <span class="header-text">Tables</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="actions-header">
+                                <div class="header-content">
+                                    <span class="header-text">Actions</span>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="data-grid-body">
+                        ${this.render_app_rows(apps)}
+                    </tbody>
+                </table>
+            </div>
+        `);
+        
+        // Setup sorting functionality
+        this.setup_app_sorting();
+    }
+    
+    render_app_rows(apps) {
+        return apps.map(app => {
+            const appName = app.name;
+            const appTitle = app.app_title || appName;
+            const description = app.description || 'No description provided';
+            const tableCount = app.table_count || 0;
+            
+            return `
+                <tr class="data-grid-row clickable" data-app-name="${appName}" onclick="window.location.href='/app/flansa-app-builder?app=${appName}'">
+                    <td class="app-title-cell">
+                        <div class="cell-content">
+                            <span class="app-title">${appTitle}</span>
+                        </div>
+                    </td>
+                    <td class="app-name-cell">
+                        <div class="cell-content">
+                            <code class="app-name-code">${appName}</code>
+                        </div>
+                    </td>
+                    <td class="app-description-cell">
+                        <div class="cell-content">
+                            <span class="app-description">${description}</span>
+                        </div>
+                    </td>
+                    <td class="app-tables-cell">
+                        <div class="cell-content">
+                            <span class="tables-count">${tableCount} tables</span>
+                        </div>
+                    </td>
+                    <td class="app-actions-cell">
+                        <div class="cell-content action-buttons">
+                            <button class="action-btn open-btn" onclick="event.stopPropagation(); window.location.href='/app/flansa-app-builder?app=${appName}'" title="Open Application">
+                                <i class="fa fa-arrow-right"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    render_tile_view(apps) {
+        const grid = $('#applications-grid');
+        
+        let html = '';
+        
+        apps.forEach(app => {
+            html += `
+                <div class="app-tile clickable" data-app-name="${app.name}" onclick="window.location.href='/app/flansa-app-builder?app=${app.name}'">
+                    <div class="tile-header">
+                        <div>
+                            <div class="tile-label">${app.app_title || app.name}</div>
+                            <div class="tile-field-name">
+                                <code style="font-size: 0.75rem; color: #6b7280; background: rgba(107, 114, 128, 0.1); padding: 2px 6px; border-radius: 4px;">${app.name}</code>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="tile-body">
+                        <div class="tile-description">${app.description || 'No description provided'}</div>
+                        <div class="tile-meta">
+                            <div class="meta-item">
+                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                </svg>
+                                <span>${app.table_count || 0} tables</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        });
+        
+        grid.html(html);
+    }
+    
+    setup_app_sorting() {
+        // Sorting functionality for table view
+        $('.sortable-header').on('click', (e) => {
+            const column = $(e.currentTarget).data('column');
+            const sortIcon = $(e.currentTarget).find('.sort-icon');
+            const currentSort = sortIcon.data('sort') || 'none';
+            
+            // Reset all other sort icons
+            $('.sort-icon').removeClass('fa-sort-up fa-sort-down').addClass('fa-sort').data('sort', 'none');
+            
+            // Toggle current column sort
+            let newSort = 'asc';
+            if (currentSort === 'asc') newSort = 'desc';
+            else if (currentSort === 'desc') newSort = 'none';
+            
+            if (newSort === 'none') {
+                sortIcon.removeClass('fa-sort-up fa-sort-down').addClass('fa-sort');
+                // Reset to original order
+                this.render_applications();
+            } else {
+                sortIcon.removeClass('fa-sort fa-sort-up fa-sort-down').addClass(newSort === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+                // Sort the applications
+                this.sort_applications(column, newSort);
+            }
+            
+            sortIcon.data('sort', newSort);
+        });
+    }
+    
+    sort_applications(column, direction) {
+        const sortedApps = [...this.filtered_apps].sort((a, b) => {
+            let aVal = '', bVal = '';
+            
+            switch(column) {
+                case 'title':
+                    aVal = a.app_title || a.name || '';
+                    bVal = b.app_title || b.name || '';
+                    break;
+                case 'name':
+                    aVal = a.name || '';
+                    bVal = b.name || '';
+                    break;
+                case 'description':
+                    aVal = a.description || '';
+                    bVal = b.description || '';
+                    break;
+                case 'status':
+                    aVal = a.status || '';
+                    bVal = b.status || '';
+                    break;
+                case 'tables':
+                    aVal = a.table_count || 0;
+                    bVal = b.table_count || 0;
+                    break;
+            }
+            
+            if (typeof aVal === 'number') {
+                return direction === 'asc' ? aVal - bVal : bVal - aVal;
+            } else {
+                return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+        });
+        
+        // Render sorted applications
+        if (this.view_mode === 'list') {
+            this.render_list_view(sortedApps);
+        } else {
+            this.render_tile_view(sortedApps);
+        }
+    }
+    
+    update_counters(displayed, total) {
+        $('#displayed-count').text(displayed);
+        $('#total-count').text(total);
+    }
+    
     bind_card_events() {
         const self = this;
         
-        // Open application - Navigate to application builder
+        // Handle new unified action buttons
+        $('.app-action-btn, .tile-action-btn, .action-btn').on('click', function(e) {
+            e.stopPropagation();
+            const action = $(this).data('action');
+            const app_name = $(this).data('app');
+            
+            switch(action) {
+                case 'edit':
+                    window.location.href = `/app/flansa-app-builder?app_name=${app_name}`;
+                    break;
+                case 'open':
+                    self.open_application(app_name);
+                    break;
+                case 'delete':
+                    self.delete_application(app_name);
+                    break;
+            }
+        });
+        
+        // Legacy button support (fallback)
         $('.open-app-btn').on('click', function() {
             const app_name = $(this).data('app');
             self.open_application(app_name);
         });
         
-        // Edit application - go to App Dashboard
         $('.edit-app-btn').on('click', function() {
             const app_name = $(this).data('app');
-            // Navigate to app dashboard which has settings and management options
-            window.location.href = `/app/flansa-app-builder/${app_name}`;
+            window.location.href = `/app/flansa-app-builder?app_name=${app_name}`;
         });
         
-        // Delete application
         $('.delete-app-btn').on('click', function(e) {
-            e.stopPropagation(); // Prevent opening the app
+            e.stopPropagation();
             const app_name = $(this).data('app');
             self.delete_application(app_name);
         });
@@ -626,7 +1561,6 @@ class FlansaApplicationsWorkspace {
     
     filter_applications() {
         const search_term = $('#app-search').val().toLowerCase();
-        const status_filter = $('#app-status-filter').val();
         
         this.filtered_apps = this.applications.filter(app => {
             // Search filter
@@ -634,21 +1568,23 @@ class FlansaApplicationsWorkspace {
                 (app.app_title || app.name).toLowerCase().includes(search_term) ||
                 (app.description || '').toLowerCase().includes(search_term);
             
-            // Status filter
-            const status_match = status_filter === 'all' || app.status === status_filter;
-            
-            return search_match && status_match;
+            return search_match;
         });
         
         this.render_applications();
     }
     
     toggle_view(view) {
-        if (view === 'grid') {
-            $('#applications-grid').removeClass('view-list').addClass('view-grid');
+        this.view_mode = view;
+        
+        if (view === 'tile') {
+            $('#applications-grid').removeClass('view-list').addClass('view-tile');
         } else {
-            $('#applications-grid').removeClass('view-grid').addClass('view-list');
+            $('#applications-grid').removeClass('view-tile').addClass('view-list');
         }
+        
+        // Re-render applications with new view
+        this.render_applications();
     }
     
     get_status_badge(status) {
@@ -1012,27 +1948,37 @@ class FlansaApplicationsWorkspace {
     }
     
     setup_context_menu() {
-        // Context menu functionality
-        $(document).on('click', '#context-menu-btn', (e) => {
+        const self = this;
+        
+        // Main button click - directly create new application
+        $(document).on('click', '#context-menu', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            const menu = $('#context-menu');
-            menu.toggle();
-        });
-        
-        // Close context menu when clicking outside
-        $(document).on('click', (e) => {
-            if (!$(e.target).closest('#context-menu-btn, #context-menu').length) {
-                $('#context-menu').hide();
+            
+            // If clicking on the main button area (not dropdown arrow), create app
+            if (!$(e.target).hasClass('dropdown-arrow')) {
+                self.create_new_application();
+            } else {
+                // Toggle dropdown menu
+                const menu = $('#context-dropdown');
+                menu.toggleClass('show');
             }
         });
         
-        // Context menu item actions
-        $(document).on('click', '.context-menu-item', (e) => {
+        // Close dropdown when clicking outside
+        $(document).on('click', (e) => {
+            if (!$(e.target).closest('#context-menu, #context-dropdown').length) {
+                $('#context-dropdown').removeClass('show');
+            }
+        });
+        
+        // Dropdown menu item actions
+        $(document).on('click', '.dropdown-item', (e) => {
             e.preventDefault();
+            e.stopPropagation();
             const action = $(e.currentTarget).data('action');
             this.handle_context_menu_action(action);
-            $('#context-menu').hide();
+            $('#context-dropdown').removeClass('show');
         });
     }
     
@@ -1152,6 +2098,17 @@ class FlansaApplicationsWorkspace {
                 tenantBadge.onclick = () => {
                     frappe.set_route('tenant-switcher');
                 };
+                
+                // Load tenant logo if available
+                if (tenantInfo.logo_url) {
+                    const logoContainer = document.getElementById('workspace-logo-container');
+                    const logoImg = document.getElementById('workspace-logo');
+                    if (logoContainer && logoImg) {
+                        logoImg.src = tenantInfo.logo_url;
+                        logoImg.alt = `${tenantInfo.tenant_name} Logo`;
+                        logoContainer.style.display = 'block';
+                    }
+                }
             }
             
         } catch (error) {

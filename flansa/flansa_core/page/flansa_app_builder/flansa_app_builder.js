@@ -15,9 +15,18 @@ frappe.pages['flansa-app-builder'].on_page_load = function(wrapper) {
 class FlansaAppBuilder {
     constructor(page) {
         this.page = page;
-        this.app_id = frappe.get_route()[1] || null;
+        // Get app parameter from URL query string
+        const urlParams = new URLSearchParams(window.location.search);
+        this.app_id = urlParams.get('app') || null;
         this.current_app = null;
         this.current_tables = [];
+        this.view_mode = 'tile'; // 'list' or 'tile' - default to tile for App Builder
+        
+        console.log('🔍 App Builder initialized:', {
+            route: frappe.get_route(),
+            app_id: this.app_id,
+            full_route: window.location.pathname
+        });
         
         this.init();
     }
@@ -34,14 +43,17 @@ class FlansaAppBuilder {
     }
     
     getApplicationTitle() {
+        if (this.current_app?.app_title) {
+            return this.current_app.app_title;
+        }
+        if (this.current_app?.app_name) {
+            return this.current_app.app_name;
+        }
         if (this.current_app?.application_title) {
             return this.current_app.application_title;
         }
         if (this.current_app?.application_name) {
             return this.current_app.application_name;
-        }
-        if (this.current_app?.app_name) {
-            return this.current_app.app_name;
         }
         return this.current_app?.name || 'Flansa Application';
     }
@@ -57,26 +69,42 @@ class FlansaAppBuilder {
     }
     
     update_banner_info() {
-        const titleElement = document.querySelector('.title-text');
-        const contextElement = document.querySelector('.context-name');
-        
         const title = this.current_app ? this.getApplicationTitle() : 'App Builder';
         
-        if (titleElement) {
-            titleElement.textContent = title;
-        }
+        // Update all title elements
+        const titleElements = document.querySelectorAll('.title-text');
+        const contextElements = document.querySelectorAll('.context-name');
         
-        if (contextElement) {
-            contextElement.textContent = title;
-        }
+        let titleUpdatedCount = 0;
+        let contextUpdatedCount = 0;
+        
+        titleElements.forEach(element => {
+            element.textContent = title;
+            titleUpdatedCount++;
+        });
+        
+        contextElements.forEach(element => {
+            element.textContent = title;
+            contextUpdatedCount++;
+        });
         
         console.log('🔍 Banner info updated:', { 
             title: title,
             hasApp: !!this.current_app,
             appId: this.app_id,
             app: this.current_app,
-            titleUpdated: !!titleElement,
-            contextUpdated: !!contextElement
+            titleElements: titleElements.length,
+            contextElements: contextElements.length,
+            titleUpdatedCount: titleUpdatedCount,
+            contextUpdatedCount: contextUpdatedCount
+        });
+        
+        // Force a visual inspection by logging the actual text content
+        titleElements.forEach((el, i) => {
+            console.log(`📝 Title element ${i}: "${el.textContent}"`);
+        });
+        contextElements.forEach((el, i) => {
+            console.log(`📝 Context element ${i}: "${el.textContent}"`);
         });
     }
     
@@ -136,7 +164,7 @@ class FlansaAppBuilder {
                                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                                     </svg>
-                                    <span>New Table</span>
+                                    <span>Add Table</span>
                                     <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
                                     </svg>
@@ -193,7 +221,7 @@ class FlansaAppBuilder {
                         
                         <div class="context-controls">
                             <div class="view-toggle">
-                                <button class="view-btn active" data-view="grid" title="Grid View">
+                                <button class="view-btn active" data-view="tile" title="Tile View">
                                     <i class="fa fa-th"></i>
                                 </button>
                                 <button class="view-btn" data-view="list" title="List View">
@@ -218,7 +246,7 @@ class FlansaAppBuilder {
                     <div class="section-wrapper">
                         <!-- Section header removed - controls moved to header -->
                         
-                        <div class="tables-container grid-view" id="tables-container">
+                        <div class="tables-container tile-view" id="tables-container">
                             <!-- Tables will be loaded here -->
                         </div>
                     </div>
@@ -827,30 +855,108 @@ class FlansaAppBuilder {
                 }
                 
                 /* Tables Container */
-                .tables-container.grid-view {
+                .tables-container.tile-view {
                     display: grid;
-                    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-                    gap: 1rem;
+                    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+                    gap: 24px;
                 }
                 
                 .tables-container.list-view {
                     display: block;
                 }
                 
-                /* Grid View Cards */
-                .tables-container.grid-view .table-card {
-                    background: #f8f9fa;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 0.5rem;
-                    padding: 1.25rem;
+                /* Modern Tile View Cards - Match Table Builder Style */
+                .tables-container.tile-view .table-card {
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    overflow: hidden;
                     cursor: pointer;
-                    transition: all 0.2s;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
                 }
                 
-                .tables-container.grid-view .table-card:hover {
+                .tables-container.tile-view .table-card:hover {
+                    transform: translateY(-4px);
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
                     border-color: #667eea;
-                    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
-                    transform: translateY(-2px);
+                }
+                
+                /* Tile Header - Match Table Builder */
+                .tile-header {
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    padding: 20px;
+                    border-bottom: 1px solid #e2e8f0;
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                }
+                
+                .tile-label {
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #1f2937;
+                    margin: 0 0 4px 0;
+                    line-height: 1.4;
+                }
+                
+                .tile-actions {
+                    display: flex;
+                    gap: 8px;
+                    flex-shrink: 0;
+                }
+                
+                .tile-action-btn {
+                    width: 32px;
+                    height: 32px;
+                    border: 1px solid #d1d5db;
+                    background: white;
+                    border-radius: 8px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    color: #6b7280;
+                }
+                
+                .tile-action-btn:hover {
+                    border-color: #667eea;
+                    background: #667eea;
+                    color: white;
+                    transform: translateY(-1px);
+                }
+                
+                /* Tile Body */
+                .tile-body {
+                    padding: 20px;
+                }
+                
+                .tile-description {
+                    color: #6b7280;
+                    font-size: 14px;
+                    line-height: 1.5;
+                    margin-bottom: 16px;
+                    min-height: 42px;
+                }
+                
+                .tile-meta {
+                    display: flex;
+                    gap: 16px;
+                    align-items: center;
+                }
+                
+                .meta-item {
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 13px;
+                    color: #6b7280;
+                    font-weight: 500;
+                }
+                
+                .meta-item svg {
+                    opacity: 0.7;
                 }
                 
                 /* List View Cards */
@@ -935,6 +1041,157 @@ class FlansaAppBuilder {
                     background: #667eea;
                     color: white;
                     border-color: #667eea;
+                }
+                
+                /* Enterprise Data Grid for List View */
+                .enterprise-data-grid {
+                    background: white;
+                    border-radius: 12px;
+                    overflow: hidden;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+                    border: 1px solid #e2e8f0;
+                }
+
+                .data-grid-table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 14px;
+                }
+
+                .data-grid-header {
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border-bottom: 2px solid #e2e8f0;
+                }
+
+                .data-grid-header th {
+                    padding: 16px 20px;
+                    text-align: left;
+                    font-weight: 600;
+                    color: #374151;
+                    font-size: 13px;
+                    letter-spacing: 0.025em;
+                    text-transform: uppercase;
+                    border-right: 1px solid #e5e7eb;
+                    position: relative;
+                    user-select: none;
+                }
+
+                .data-grid-header th:last-child {
+                    border-right: none;
+                }
+
+                .sortable-header {
+                    cursor: pointer;
+                    transition: background-color 0.2s ease;
+                }
+
+                .sortable-header:hover {
+                    background-color: rgba(79, 70, 229, 0.05);
+                }
+
+                .header-content {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 8px;
+                }
+
+                .sort-icon {
+                    color: #9ca3af;
+                    font-size: 12px;
+                    transition: color 0.2s ease;
+                }
+
+                .sortable-header:hover .sort-icon {
+                    color: #6b7280;
+                }
+
+                .data-grid-body tr {
+                    border-bottom: 1px solid #f1f5f9;
+                    transition: background-color 0.2s ease;
+                }
+
+                .data-grid-body tr:hover {
+                    background-color: #f8fafc;
+                }
+
+                .data-grid-body tr:last-child {
+                    border-bottom: none;
+                }
+
+                .data-grid-body td {
+                    padding: 16px 20px;
+                    color: #374151;
+                    border-right: 1px solid #f1f5f9;
+                    vertical-align: middle;
+                }
+
+                .data-grid-body td:last-child {
+                    border-right: none;
+                }
+
+                .cell-content {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                }
+
+                .table-label {
+                    font-weight: 600;
+                    color: #1f2937;
+                }
+
+                .table-name-code {
+                    background: #f3f4f6;
+                    color: #4b5563;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+
+                .table-description {
+                    color: #6b7280;
+                    font-size: 13px;
+                    max-width: 300px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .fields-count {
+                    color: #6b7280;
+                    font-size: 13px;
+                    font-weight: 500;
+                }
+
+                .action-buttons {
+                    display: flex;
+                    gap: 8px;
+                }
+
+                .action-btn {
+                    padding: 6px 8px;
+                    background: #f8fafc;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    transition: all 0.2s ease;
+                    color: #6b7280;
+                    font-size: 12px;
+                }
+
+                .action-btn:hover {
+                    background: #4f46e5;
+                    border-color: #4f46e5;
+                    color: white;
+                    transform: translateY(-1px);
+                    box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2);
+                }
+
+                .action-btn i {
+                    font-size: 12px;
                 }
                 
                 /* Empty State */
@@ -1083,7 +1340,10 @@ class FlansaAppBuilder {
         // Setup header first (this should work now that page is ready)
         this.setup_header();
         
+        console.log('🔍 Loading data with app_id:', this.app_id);
+        
         if (!this.app_id) {
+            console.log('⚠️ No app_id found, showing app selector');
             // Show app selector if no app selected
             this.show_app_selector();
             return;
@@ -1097,11 +1357,18 @@ class FlansaAppBuilder {
                 name: this.app_id
             },
             callback: (r) => {
+                console.log('📄 Application data response:', r);
                 if (r.message) {
                     this.current_app = r.message;
+                    console.log('✅ Application loaded:', {
+                        name: r.message.name,
+                        application_title: r.message.application_title,
+                        application_name: r.message.application_name
+                    });
                     this.update_banner_info(); // Update banner with loaded app data
                     this.load_tables_data();
                 } else {
+                    console.error('❌ Failed to load application data:', r);
                     frappe.msgprint('Failed to load application data');
                 }
             }
@@ -1266,26 +1533,88 @@ class FlansaAppBuilder {
         
         this.page.$app_builder.find('.view-btn').on('click', (e) => {
             const newView = $(e.currentTarget).data('view');
-            if (newView !== this.currentView) {
-                this.switchView(newView);
+            if (newView !== this.view_mode) {
+                this.toggle_view_mode(newView);
             }
         });
     }
     
-    switchView(view) {
-        this.currentView = view;
-        
+    toggle_view_mode(view) {
+        this.view_mode = view;
+        this.update_view_toggle_button();
+        this.render_tables(this.current_tables);
+    }
+    
+    update_view_toggle_button() {
         // Update button states
         this.page.$app_builder.find('.view-btn').removeClass('active');
-        this.page.$app_builder.find(`.view-btn[data-view="${view}"]`).addClass('active');
+        this.page.$app_builder.find(`.view-btn[data-view="${this.view_mode}"]`).addClass('active');
         
         // Update container class
         const container = this.page.$app_builder.find('#tables-container');
-        container.removeClass('grid-view list-view').addClass(`${view}-view`);
+        container.removeClass('tile-view list-view').addClass(`${this.view_mode}-view`);
+    }
+    
+    setup_table_sorting() {
+        // Sorting functionality for table view
+        this.page.$app_builder.find('.sortable-header').on('click', (e) => {
+            const column = $(e.currentTarget).data('column');
+            const sortIcon = $(e.currentTarget).find('.sort-icon');
+            const currentSort = sortIcon.data('sort') || 'none';
+            
+            // Reset all other sort icons
+            this.page.$app_builder.find('.sort-icon').removeClass('fa-sort-up fa-sort-down').addClass('fa-sort').data('sort', 'none');
+            
+            // Toggle current column sort
+            let newSort = 'asc';
+            if (currentSort === 'asc') newSort = 'desc';
+            else if (currentSort === 'desc') newSort = 'none';
+            
+            if (newSort === 'none') {
+                sortIcon.removeClass('fa-sort-up fa-sort-down').addClass('fa-sort');
+                // Reset to original order
+                this.render_tables(this.current_tables);
+            } else {
+                sortIcon.removeClass('fa-sort fa-sort-up fa-sort-down').addClass(newSort === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
+                // Sort the tables
+                this.sort_tables(column, newSort);
+            }
+            
+            sortIcon.data('sort', newSort);
+        });
+    }
+    
+    sort_tables(column, direction) {
+        const sortedTables = [...this.current_tables].sort((a, b) => {
+            let aVal = '', bVal = '';
+            
+            switch(column) {
+                case 'label':
+                    aVal = a.table_label || a.table_name || '';
+                    bVal = b.table_label || b.table_name || '';
+                    break;
+                case 'name':
+                    aVal = a.name || '';
+                    bVal = b.name || '';
+                    break;
+                case 'description':
+                    aVal = a.description || '';
+                    bVal = b.description || '';
+                    break;
+                case 'fields':
+                    aVal = a.fields_count || 0;
+                    bVal = b.fields_count || 0;
+                    break;
+            }
+            
+            if (typeof aVal === 'number') {
+                return direction === 'asc' ? aVal - bVal : bVal - aVal;
+            } else {
+                return direction === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+            }
+        });
         
-        // Re-render tables with current data
-        const currentTables = this.getCurrentDisplayedTables();
-        this.render_tables(currentTables);
+        this.render_tables(sortedTables);
     }
     
     getCurrentDisplayedTables() {
@@ -1332,56 +1661,164 @@ class FlansaAppBuilder {
         
         container.show();
         emptyState.hide();
+        
+        if (this.view_mode === 'list') {
+            this.render_list_view(tables);
+        } else {
+            this.render_tile_view(tables);
+        }
+    }
+    
+    render_list_view(tables) {
+        const container = this.page.$app_builder.find('#tables-container');
+        
+        // Create enterprise data grid similar to Table Builder
+        container.html(`
+            <div class="enterprise-data-grid">
+                <table class="data-grid-table">
+                    <thead class="data-grid-header">
+                        <tr>
+                            <th class="sortable-header" data-column="label">
+                                <div class="header-content">
+                                    <span class="header-text">Table Name</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="sortable-header" data-column="name">
+                                <div class="header-content">
+                                    <span class="header-text">System Name</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="sortable-header" data-column="description">
+                                <div class="header-content">
+                                    <span class="header-text">Description</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="sortable-header" data-column="fields">
+                                <div class="header-content">
+                                    <span class="header-text">Fields</span>
+                                    <i class="fa fa-sort sort-icon" data-sort="none"></i>
+                                </div>
+                            </th>
+                            <th class="actions-header">
+                                <div class="header-content">
+                                    <span class="header-text">Actions</span>
+                                </div>
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="data-grid-body">
+                        ${this.render_table_rows(tables)}
+                    </tbody>
+                </table>
+            </div>
+        `);
+        
+        // Setup sorting functionality
+        this.setup_table_sorting();
+    }
+    
+    render_table_rows(tables) {
+        return tables.map(table => {
+            const tableName = table.table_name || table.name;
+            const tableLabel = table.table_label || tableName;
+            const description = table.description || 'No description provided';
+            const fieldsCount = table.fields_count || 0;
+            
+            return `
+                <tr class="data-grid-row" data-table-name="${table.name}">
+                    <td class="table-label-cell">
+                        <div class="cell-content">
+                            <span class="table-label">${tableLabel}</span>
+                        </div>
+                    </td>
+                    <td class="table-name-cell">
+                        <div class="cell-content">
+                            <code class="table-name-code">${table.name}</code>
+                        </div>
+                    </td>
+                    <td class="table-description-cell">
+                        <div class="cell-content">
+                            <span class="table-description">${description}</span>
+                        </div>
+                    </td>
+                    <td class="table-fields-cell">
+                        <div class="cell-content">
+                            <span class="fields-count">${fieldsCount} fields</span>
+                        </div>
+                    </td>
+                    <td class="table-actions-cell">
+                        <div class="cell-content action-buttons">
+                            <button class="action-btn edit-btn tile-action-btn" data-action="edit" data-table="${table.name}" title="Edit Structure">
+                                <i class="fa fa-edit"></i>
+                            </button>
+                            <button class="action-btn view-btn tile-action-btn" data-action="view" data-table="${table.name}" title="View Records">
+                                <i class="fa fa-table"></i>
+                            </button>
+                            <button class="action-btn form-btn tile-action-btn" data-action="form" data-table="${table.name}" title="Form Builder">
+                                <i class="fa fa-wpforms"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    }
+    
+    render_tile_view(tables) {
+        const container = this.page.$app_builder.find('#tables-container');
         container.empty();
         
         tables.forEach(table => {
-            let card;
-            
-            if (this.currentView === 'list') {
-                // List view layout
-                card = $(`
+            // Tile/Grid view layout (default)
+            const card = $(`
                     <div class="table-card" data-table-id="${table.name}">
-                        <div class="table-info">
-                            <div class="table-name">${table.table_label || table.table_name}</div>
-                            <div class="table-description">${table.description || 'No description'}</div>
+                        <div class="tile-header">
+                            <div>
+                                <div class="tile-label">${table.table_label || table.table_name}</div>
+                                <div class="tile-field-name">
+                                    <code style="font-size: 0.75rem; color: #6b7280; background: rgba(107, 114, 128, 0.1); padding: 2px 6px; border-radius: 4px;">${table.name}</code>
+                                </div>
+                            </div>
+                            <div class="tile-actions">
+                                <button class="tile-action-btn" data-action="edit" data-table="${table.name}" title="Edit Structure">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                                    </svg>
+                                </button>
+                                <button class="tile-action-btn" data-action="view" data-table="${table.name}" title="View Data">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                                <button class="tile-action-btn" data-action="form" data-table="${table.name}" title="Form Builder">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2v8h12V6H4z" clip-rule="evenodd" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
-                        <div class="table-actions">
-                            <button class="table-action-btn" data-action="edit" data-table="${table.name}">
-                                <i class="fa fa-edit"></i> Edit
-                            </button>
-                            <button class="table-action-btn" data-action="view" data-table="${table.name}">
-                                <i class="fa fa-table"></i> View
-                            </button>
-                            <button class="table-action-btn" data-action="form" data-table="${table.name}">
-                                <i class="fa fa-form"></i> Form
-                            </button>
+                        <div class="tile-body">
+                            <div class="tile-description">${table.description || 'No description provided'}</div>
+                            <div class="tile-meta">
+                                <div class="meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>${table.fields_count || 0} fields</span>
+                                </div>
+                                <div class="meta-item">
+                                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd" />
+                                    </svg>
+                                    <span>${table.record_count || 0} records</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 `);
-            } else {
-                // Grid view layout (default)
-                card = $(`
-                    <div class="table-card" data-table-id="${table.name}">
-                        <div class="table-name">${table.table_label || table.table_name}</div>
-                        <div class="table-description">${table.description || 'No description'}</div>
-                        <div class="table-meta">
-                            <span><i class="fa fa-columns"></i> ${table.fields_count || 0} fields</span>
-                            <span><i class="fa fa-database"></i> ${table.record_count || 0} records</span>
-                        </div>
-                        <div class="table-actions">
-                            <button class="table-action-btn" data-action="edit" data-table="${table.name}">
-                                Edit Structure
-                            </button>
-                            <button class="table-action-btn" data-action="view" data-table="${table.name}">
-                                View Data
-                            </button>
-                            <button class="table-action-btn" data-action="form" data-table="${table.name}">
-                                Form Builder
-                            </button>
-                        </div>
-                    </div>
-                `);
-            }
             
             container.append(card);
         });
@@ -1450,8 +1887,8 @@ class FlansaAppBuilder {
             window.location.href = `/app/flansa-report-builder?app=${this.app_id}`;
         });
         
-        // Table actions
-        $builder.on('click', '.table-action-btn', (e) => {
+        // Table actions (support both old and new tile styling)
+        $builder.on('click', '.table-action-btn, .tile-action-btn', (e) => {
             e.stopPropagation();
             const action = $(e.target).data('action');
             const tableId = $(e.target).data('table');
@@ -1508,7 +1945,7 @@ class FlansaAppBuilder {
     
     create_table_dialog() {
         const dialog = new frappe.ui.Dialog({
-            title: 'Create New Table',
+            title: 'Create Add Table',
             size: 'large',
             fields: [
                 {

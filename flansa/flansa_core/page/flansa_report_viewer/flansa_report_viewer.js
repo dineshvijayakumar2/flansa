@@ -37,6 +37,12 @@ class FlansaReportViewer {
         this.load_report();
     }
     
+    setup_ui() {
+        // Initialize UI components and layout
+        // This method was called but not defined, adding minimal implementation
+        console.log('Report Viewer UI setup complete');
+    }
+    
     extract_url_parameters() {
         // Extract parameters from URL query string for hierarchical structure
         const urlParams = new URLSearchParams(window.location.search);
