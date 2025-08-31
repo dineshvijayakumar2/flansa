@@ -1031,6 +1031,14 @@ class FlansaRecordViewer {
         const displayValue = await this.getDisplayValueForLinkField(field, fieldValue, linkDoctype);
         const showDisplayValue = displayValue !== fieldValue; // Only show display format if different from raw value
         
+        // Debug logging
+        console.log(`🔗 Link field ${fieldName}:`, {
+            fieldValue,
+            displayValue,
+            showDisplayValue,
+            linkDoctype
+        });
+        
         // Get table label for better user experience
         const tableLabel = await this.getTableLabelForDoctype(linkDoctype);
         
@@ -1058,7 +1066,12 @@ class FlansaRecordViewer {
     }
     
     async getDisplayValueForLinkField(field, fieldValue, linkDoctype) {
-        if (!fieldValue) return '';
+        console.log(`🔍 Getting display value for ${field.fieldname}:`, { fieldValue, linkDoctype, table_name: this.table_name });
+        
+        if (!fieldValue) {
+            console.log(`⚠️  No field value provided for ${field.fieldname}`);
+            return '';
+        }
         
         // Try to get display field configuration from Flansa Logic Field
         try {
@@ -1076,12 +1089,18 @@ class FlansaRecordViewer {
                 }
             });
             
+            console.log(`📋 Logic field lookup result for ${field.fieldname}:`, logicFields);
+            
             if (logicFields.message && logicFields.message.length > 0) {
                 const logicField = logicFields.message[0];
                 if (logicField.link_display_field) {
+                    console.log(`✅ Found display field config: ${logicField.link_display_field} for ${field.fieldname}`);
                     // Fetch the display value from the linked record
                     const displayValue = await this.fetchDisplayValue(fieldValue, linkDoctype, logicField.link_display_field);
+                    console.log(`🎯 Display value result for ${field.fieldname}:`, { displayValue, fallback: displayValue || fieldValue });
                     return displayValue || fieldValue; // Fallback to raw value if display value not found
+                } else {
+                    console.log(`⚠️  Logic field found but no display field configured for ${field.fieldname}`);
                 }
             }
         } catch (error) {
