@@ -2260,20 +2260,10 @@ class FlansaApplicationsWorkspace {
             
             if (workspaceContextName && tenantInfo) {
                 workspaceContextName.textContent = tenantInfo.tenant_name || 'Unknown';
-                
-                // Load tenant logo if available
-                if (tenantInfo.logo_url) {
-                    const logoContainer = document.getElementById('workspace-logo-container');
-                    const logoImg = document.getElementById('workspace-logo');
-                    const logoPlaceholder = document.getElementById('logo-placeholder');
-                    if (logoContainer && logoImg) {
-                        logoImg.src = tenantInfo.logo_url;
-                        logoImg.alt = `${tenantInfo.tenant_name} Logo`;
-                        logoImg.style.display = 'block';
-                        if (logoPlaceholder) logoPlaceholder.style.display = 'none';
-                    }
-                }
             }
+            
+            // Load tenant logo using the proper logo service
+            this.load_workspace_logo();
             
         } catch (error) {
             console.warn('Could not load tenant info:', error);
@@ -2320,20 +2310,26 @@ class FlansaApplicationsWorkspace {
                 callback: (r) => {
                     if (r.message && r.message.logo) {
                         const logoContainer = document.getElementById('workspace-logo-container');
-                        const logoImg = document.getElementById('workspace-logo');
-                        const logoPlaceholder = document.getElementById('logo-placeholder');
                         
-                        if (logoContainer && logoImg) {
-                            logoImg.src = r.message.logo;
-                            logoImg.alt = `${r.message.workspace_name || 'Workspace'} Logo`;
-                            logoImg.style.display = 'block';
-                            if (logoPlaceholder) logoPlaceholder.style.display = 'none';
+                        if (logoContainer) {
+                            // Replace the generic Flansa logo with tenant-specific logo
+                            logoContainer.innerHTML = `
+                                <img src="${r.message.logo}" 
+                                     alt="${r.message.workspace_name || 'Workspace'} Logo" 
+                                     class="workspace-logo" 
+                                     style="height: 32px; width: auto; max-width: 120px; object-fit: contain; border-radius: 6px;" />
+                            `;
+                            console.log('✅ Workspace: Tenant logo loaded:', r.message.logo);
+                        } else {
+                            console.log('❌ Workspace: Logo container not found');
                         }
+                    } else {
+                        console.log('⚠️ Workspace: No tenant logo in API response');
                     }
                 }
             });
         } catch (error) {
-            console.log('No workspace logo configured:', error);
+            console.log('❌ Workspace: Logo loading error:', error);
         }
     }
     
@@ -2343,9 +2339,6 @@ class FlansaApplicationsWorkspace {
         if (workspaceTitle && this.tenant_info?.tenant_name) {
             workspaceTitle.textContent = this.tenant_info.tenant_name;
         }
-        
-        // Load workspace logo
-        this.load_workspace_logo();
     }
 }
 
