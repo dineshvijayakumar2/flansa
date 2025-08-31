@@ -1904,7 +1904,7 @@ class EnhancedFlansaTableBuilder {
         
         $container.on('click', '#saved-reports-menu', (e) => {
             e.preventDefault();
-            window.location.href = `/app/flansa-saved-reports?table_id=${this.table_id}`;
+            window.location.href = `/app/flansa-saved-reports?table=${this.table_id}`;
         });
         
         // View toggle

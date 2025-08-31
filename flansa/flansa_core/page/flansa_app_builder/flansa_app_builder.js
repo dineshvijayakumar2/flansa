@@ -1888,7 +1888,7 @@ class FlansaAppBuilder {
         
         $builder.on('click', '#saved-reports-menu', (e) => {
             e.preventDefault();
-            window.location.href = `/app/flansa-saved-reports?app_id=${this.app_id}`;
+            window.location.href = `/app/flansa-saved-reports?app=${this.app_id}`;
         });
         
         // Empty state create button
