@@ -257,7 +257,7 @@ class FlansaAppBuilder {
                         <h3>No tables yet</h3>
                         <p>Create your first table to start building your application</p>
                         <button class="btn btn-primary" id="empty-create-table">
-                            Create First Table
+                            Create Table
                         </button>
                     </div>
                 </div>

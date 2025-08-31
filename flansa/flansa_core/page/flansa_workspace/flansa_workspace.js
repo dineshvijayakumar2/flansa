@@ -1598,6 +1598,70 @@ class FlansaApplicationsWorkspace {
         });
     }
     
+    edit_application(app_name) {
+        const app = this.applications.find(a => a.name === app_name);
+        if (!app) {
+            frappe.msgprint('Application not found');
+            return;
+        }
+        
+        let app_name_manually_edited = false;
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Edit Application',
+            fields: [
+                {
+                    fieldtype: 'Data',
+                    fieldname: 'app_title',
+                    label: 'Application Title',
+                    reqd: 1,
+                    default: app.app_title || app.name
+                },
+                {
+                    fieldtype: 'Data',
+                    fieldname: 'app_name',
+                    label: 'Application Name',
+                    reqd: 1,
+                    read_only: 1,
+                    default: app.name,
+                    description: 'System name cannot be changed'
+                },
+                {
+                    fieldtype: 'Small Text',
+                    fieldname: 'description',
+                    label: 'Description',
+                    default: app.description || ''
+                }
+            ],
+            primary_action_label: 'Update Application',
+            primary_action: (values) => {
+                frappe.call({
+                    method: 'frappe.client.save',
+                    args: {
+                        doc: {
+                            doctype: 'Flansa Application',
+                            name: app_name,
+                            app_title: values.app_title,
+                            description: values.description
+                        }
+                    },
+                    callback: (r) => {
+                        if (r.message) {
+                            frappe.show_alert('Application updated successfully');
+                            dialog.hide();
+                            // Reload applications to show updated data
+                            this.load_applications();
+                        } else {
+                            frappe.msgprint('Failed to update application');
+                        }
+                    }
+                });
+            }
+        });
+        
+        dialog.show();
+    }
+    
     update_stats() {
         // Update the application count
         const count = this.applications.length;
