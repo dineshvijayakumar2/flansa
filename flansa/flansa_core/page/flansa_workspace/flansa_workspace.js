@@ -102,8 +102,14 @@ class FlansaApplicationsWorkspace {
                 <div class="app-banner">
                     <div class="banner-left">
                         <!-- Optional Workspace Logo -->
-                        <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
-                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
+                        <div class="workspace-logo-container" id="workspace-logo-container" style="margin-right: 8px;">
+                            <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" style="display: none;" />
+                            <div class="logo-placeholder" id="logo-placeholder" style="display: block;">
+                                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <rect x="3" y="3" width="18" height="18" rx="2" stroke="#667eea" stroke-width="2" fill="#f7fafc"/>
+                                    <path d="M8 12h8M8 8h8M8 16h5" stroke="#667eea" stroke-width="1.5" stroke-linecap="round"/>
+                                </svg>
+                            </div>
                         </div>
                         <!-- App Info Section -->
                         <div class="app-info">
@@ -407,9 +413,10 @@ class FlansaApplicationsWorkspace {
 
                 /* Main Content Area */
                 .main-content {
-                    max-width: 1200px;
+                    max-width: 1400px;
                     margin: 0 auto;
                     padding: 24px;
+                    width: 100%;
                 }
 
                 /* Section Header */
@@ -610,11 +617,12 @@ class FlansaApplicationsWorkspace {
                 .data-grid-table {
                     width: 100%;
                     border-collapse: collapse;
+                    table-layout: fixed;
                     font-size: 14px;
                 }
 
                 .data-grid-header {
-                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
                     border-bottom: 2px solid #e2e8f0;
                 }
 
@@ -1171,6 +1179,9 @@ class FlansaApplicationsWorkspace {
                         <div class="cell-content action-buttons">
                             <button class="action-btn open-btn" onclick="event.stopPropagation(); window.location.href='/app/flansa-app-builder?app=${appName}'" title="Open Application">
                                 <i class="fa fa-arrow-right"></i>
+                            </button>
+                            <button class="action-btn delete-btn" onclick="event.stopPropagation(); window.flansa_workspace.delete_application('${appName}')" title="Delete Application">
+                                <i class="fa fa-trash"></i>
                             </button>
                         </div>
                     </td>
@@ -2103,10 +2114,12 @@ class FlansaApplicationsWorkspace {
                 if (tenantInfo.logo_url) {
                     const logoContainer = document.getElementById('workspace-logo-container');
                     const logoImg = document.getElementById('workspace-logo');
+                    const logoPlaceholder = document.getElementById('logo-placeholder');
                     if (logoContainer && logoImg) {
                         logoImg.src = tenantInfo.logo_url;
                         logoImg.alt = `${tenantInfo.tenant_name} Logo`;
-                        logoContainer.style.display = 'block';
+                        logoImg.style.display = 'block';
+                        if (logoPlaceholder) logoPlaceholder.style.display = 'none';
                     }
                 }
             }
@@ -2148,11 +2161,13 @@ class FlansaApplicationsWorkspace {
                     if (r.message && r.message.logo) {
                         const logoContainer = document.getElementById('workspace-logo-container');
                         const logoImg = document.getElementById('workspace-logo');
+                        const logoPlaceholder = document.getElementById('logo-placeholder');
                         
                         if (logoContainer && logoImg) {
                             logoImg.src = r.message.logo;
                             logoImg.alt = `${r.message.workspace_name || 'Workspace'} Logo`;
-                            logoContainer.style.display = 'block';
+                            logoImg.style.display = 'block';
+                            if (logoPlaceholder) logoPlaceholder.style.display = 'none';
                         }
                     }
                 }
