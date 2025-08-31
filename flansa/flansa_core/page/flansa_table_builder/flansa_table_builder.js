@@ -1408,11 +1408,14 @@ class EnhancedFlansaTableBuilder {
         // Set global reference
         window.table_builder = this;
         
-        // Fix breadcrumb link to include application parameter
+        // Fix breadcrumb link to include application parameter (after HTML is rendered)
         if (this.table_data && this.table_data.application) {
             const appBuilderLink = this.$container.find('a[href*="flansa-app-builder"]');
             if (appBuilderLink.length) {
                 appBuilderLink.attr('href', `/app/flansa-app-builder?app=${this.table_data.application}`);
+                console.log('✅ Table Builder: Fixed breadcrumb link with app parameter:', this.table_data.application);
+            } else {
+                console.log('⚠️ Table Builder: App Builder breadcrumb link not found');
             }
         }
         
@@ -3979,6 +3982,34 @@ class EnhancedFlansaTableBuilder {
             primary_action_label: 'Add Field',
             primary_action: (values) => {
                 this.create_standard_field_from_dialog(values, dialog);
+            },
+            onshow: function() {
+                // Auto-populate field name from label
+                setTimeout(() => {
+                    dialog.fields_dict.field_label.$input.on('input', function() {
+                        const label = $(this).val();
+                        if (label) {
+                            // Convert to lowercase, replace spaces with underscores, remove special characters
+                            let fieldName = label.toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                                .trim()
+                                .replace(/\s+/g, '_'); // Replace spaces with underscores
+                            
+                            // Ensure it starts with a letter
+                            if (fieldName && !fieldName.match(/^[a-z]/)) {
+                                fieldName = 'field_' + fieldName;
+                            }
+                            
+                            // Set the field name only if it hasn't been manually edited
+                            if (!dialog.fields_dict.field_name.get_value() || 
+                                dialog.fields_dict.field_name.get_value().startsWith('field_') ||
+                                dialog.fields_dict.field_name.get_value().replace(/_/g, ' ').toLowerCase() === 
+                                label.slice(0, -1).toLowerCase()) {
+                                dialog.fields_dict.field_name.set_value(fieldName);
+                            }
+                        }
+                    });
+                }, 100);
             }
         });
 
