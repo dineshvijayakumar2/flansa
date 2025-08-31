@@ -247,9 +247,9 @@ class FlansaApplicationsWorkspace {
                 }
 
                 .breadcrumb-header .container {
-                    max-width: 1200px;
                     margin: 0 auto;
                     padding: 0 24px;
+                    width: 100%;
                 }
 
                 .breadcrumb-nav {
@@ -413,7 +413,6 @@ class FlansaApplicationsWorkspace {
 
                 /* Main Content Area */
                 .main-content {
-                    max-width: 1400px;
                     margin: 0 auto;
                     padding: 24px;
                     width: 100%;
@@ -638,6 +637,13 @@ class FlansaApplicationsWorkspace {
                     position: relative;
                     user-select: none;
                 }
+                
+                /* Column widths for applications table */
+                .data-grid-header th:nth-child(1) { width: 25%; } /* Application Name */
+                .data-grid-header th:nth-child(2) { width: 20%; } /* System Name */
+                .data-grid-header th:nth-child(3) { width: 35%; } /* Description */
+                .data-grid-header th:nth-child(4) { width: 10%; } /* Tables */
+                .data-grid-header th:nth-child(5) { width: 10%; } /* Actions */
 
                 .data-grid-header th:last-child {
                     border-right: none;
@@ -688,6 +694,13 @@ class FlansaApplicationsWorkspace {
                     border-right: 1px solid #f1f5f9;
                     vertical-align: middle;
                 }
+                
+                /* Corresponding body cell widths */
+                .data-grid-body td:nth-child(1) { width: 25%; } /* Application Name */
+                .data-grid-body td:nth-child(2) { width: 20%; } /* System Name */
+                .data-grid-body td:nth-child(3) { width: 35%; } /* Description */
+                .data-grid-body td:nth-child(4) { width: 10%; } /* Tables */
+                .data-grid-body td:nth-child(5) { width: 10%; } /* Actions */
 
                 .data-grid-body td:last-child {
                     border-right: none;
@@ -1088,8 +1101,8 @@ class FlansaApplicationsWorkspace {
             this.render_tile_view(apps_to_render);
         }
         
-        // Update counters - show filtered count vs total count
-        this.update_counters(apps_to_render.length, this.filtered_apps.length);
+        // Update counters - show displayed count vs total applications count
+        this.update_counters(apps_to_render.length, this.applications.length);
         
         // Bind card events
         this.bind_card_events();

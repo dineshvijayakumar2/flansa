@@ -1240,7 +1240,8 @@ class UnifiedReportBuilder {
             report_title: title,
             base_table: this.current_table,
             report_config: JSON.stringify(config),
-            report_type: 'Table'
+            report_type: 'Table',
+            series: 'REP-'  // Add series field for auto-naming
         };
         
         if (this.current_report_id) {
