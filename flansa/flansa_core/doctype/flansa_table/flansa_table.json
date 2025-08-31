@@ -24,7 +24,6 @@
   "description",
   "column_break_1",
   "doctype_name",
-  "status",
   "is_submittable",
   "is_child_table",
   "settings_section",
@@ -86,14 +85,6 @@
    "fieldtype": "Data",
    "label": "Generated DocType Name",
    "read_only": 1
-  },
-  {
-   "default": "Draft",
-   "fieldname": "status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "label": "Status",
-   "options": "Draft\nActive\nArchived"
   },
   {
    "default": "0",

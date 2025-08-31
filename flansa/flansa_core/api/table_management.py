@@ -17,7 +17,8 @@ def activate_table(table_name):
         # Get the table document with fresh data
         table_doc = frappe.get_doc("Flansa Table", table_name)
         
-        if table_doc.status == "Active":
+        # Check if DocType already exists (indicates table is already active)
+        if table_doc.doctype_name and frappe.db.exists("DocType", table_doc.doctype_name):
             frappe.msgprint("Table is already active", indicator="orange")
             return {
                 "success": False,
@@ -57,9 +58,6 @@ def activate_table(table_name):
         if doctype:
             # REFRESH the table document to get latest timestamp
             table_doc.reload()
-            
-            # Update table status
-            table_doc.status = "Active"
             
             # Save with ignore_permissions and handle timestamp conflicts
             table_doc.save(ignore_permissions=True)
@@ -130,32 +128,63 @@ def create_doctype_from_table(table_doc, fields_data):
         # Set naming rule based on Flansa Table configuration
         naming_type = getattr(table_doc, 'naming_type', 'Naming Series')
         
+        print(f"🔧 Configuring naming for DocType: {table_doc.doctype_name}")
+        print(f"   - Naming Type: '{naming_type}'")
+        print(f"   - Naming Prefix: '{getattr(table_doc, 'naming_prefix', None)}'")
+        print(f"   - Naming Digits: {getattr(table_doc, 'naming_digits', None)}")
+        print(f"   - Naming Field: '{getattr(table_doc, 'naming_field', None)}'")
+        print(f"   - Start From: {getattr(table_doc, 'naming_start_from', None)}")
+        
         if naming_type == 'Naming Series':
             # Use configured prefix and digits
             prefix = getattr(table_doc, 'naming_prefix', 'REC')
             digits = getattr(table_doc, 'naming_digits', 5)
             doctype.naming_rule = "By \"Naming Series\" field"
-            doctype.autoname = f"{prefix}-.{'#' * digits}"
+            
+            # For Naming Series, we need to use the prefix pattern
+            naming_series_pattern = f"{prefix}-.{'#' * digits}"
+            doctype.autoname = "naming_series:"
+            
+            # Add a naming series field to the DocType
+            doctype.append("fields", {
+                "fieldname": "naming_series",
+                "label": "Naming Series",
+                "fieldtype": "Select",
+                "options": naming_series_pattern,
+                "default": naming_series_pattern,
+                "reqd": 1,
+                "hidden": 1  # Hide from user interface
+            })
+            
+            print(f"   ✅ Set Naming Series: {naming_series_pattern}")
         elif naming_type == 'Auto Increment':
             # Just numbers without prefix
             digits = getattr(table_doc, 'naming_digits', 5)
             doctype.naming_rule = "Autoincrement"
             doctype.autoname = f".{'#' * digits}"
+            print(f"   ✅ Set Auto Increment: {doctype.autoname}")
         elif naming_type == 'Field Based':
             # Use a field value for naming
             field_name = getattr(table_doc, 'naming_field', '')
             if field_name:
                 doctype.naming_rule = "By fieldname"
                 doctype.autoname = f"field:{frappe.scrub(field_name)}"
+                print(f"   ✅ Set Field Based: {doctype.autoname}")
             else:
                 # Fallback to random if no field specified
                 doctype.naming_rule = "Random"
+                print(f"   ⚠️ Field Based but no field specified, using Random")
         elif naming_type == 'Prompt':
             # User will be prompted to enter the ID
             doctype.naming_rule = "Set by user"
             doctype.autoname = "Prompt"
+            print(f"   ✅ Set Prompt naming")
         else:  # Random or default
             doctype.naming_rule = "Random"
+            print(f"   ✅ Set Random naming")
+        
+        print(f"   🎯 Final DocType naming_rule: '{doctype.naming_rule}'")
+        print(f"   🎯 Final DocType autoname: '{getattr(doctype, 'autoname', 'None')}'", flush=True)
         
         # Basic settings - simplified
         doctype.track_changes = 0
@@ -300,7 +329,6 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
         table_doc.table_label = table_label
         table_doc.description = description or f"Table for {table_label}"
         table_doc.application = app_id  # Use correct field name 'application'
-        table_doc.status = "Draft"  # Start as draft
         
         # Set naming configuration
         table_doc.naming_type = naming_type
@@ -338,8 +366,7 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
                     "message": f"Table '{table_label}' created and activated successfully",
                     "table_name": table_doc.name,
                     "table_id": table_doc.name,
-                    "doctype_name": activation_result.get('doctype_name'),
-                    "status": "Active"
+                    "doctype_name": activation_result.get('doctype_name')
                 }
             else:
                 print(f"⚠️ Table created but activation failed: {activation_result.get('error')}", flush=True)
@@ -348,7 +375,6 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
                     "message": f"Table '{table_label}' created successfully (activation pending)",
                     "table_name": table_doc.name,
                     "table_id": table_doc.name,
-                    "status": table_doc.status,
                     "warning": f"Auto-activation failed: {activation_result.get('error')}"
                 }
         except Exception as activation_error:
@@ -358,7 +384,6 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
                 "message": f"Table '{table_label}' created successfully (manual activation required)",
                 "table_name": table_doc.name,
                 "table_id": table_doc.name,
-                "status": table_doc.status,
                 "warning": f"Auto-activation error: {str(activation_error)}"
             }
         
