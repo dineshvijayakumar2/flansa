@@ -602,6 +602,7 @@ class FlansaApplicationsWorkspace {
                 .applications-container.list-view .applications-grid {
                     display: block;
                     padding: 20px 0;
+                    width: 100%;
                 }
 
                 /* Enterprise Data Grid for List View */
@@ -611,6 +612,8 @@ class FlansaApplicationsWorkspace {
                     overflow: hidden;
                     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
                     border: 1px solid #e2e8f0;
+                    width: 100%;
+                    min-width: 800px;
                 }
 
                 .data-grid-table {
@@ -641,9 +644,9 @@ class FlansaApplicationsWorkspace {
                 /* Column widths for applications table */
                 .data-grid-header th:nth-child(1) { width: 25%; } /* Application Name */
                 .data-grid-header th:nth-child(2) { width: 20%; } /* System Name */
-                .data-grid-header th:nth-child(3) { width: 35%; } /* Description */
+                .data-grid-header th:nth-child(3) { width: 30%; } /* Description */
                 .data-grid-header th:nth-child(4) { width: 10%; } /* Tables */
-                .data-grid-header th:nth-child(5) { width: 10%; } /* Actions */
+                .data-grid-header th:nth-child(5) { width: 15%; } /* Actions - expanded for buttons */
 
                 .data-grid-header th:last-child {
                     border-right: none;
@@ -698,9 +701,9 @@ class FlansaApplicationsWorkspace {
                 /* Corresponding body cell widths */
                 .data-grid-body td:nth-child(1) { width: 25%; } /* Application Name */
                 .data-grid-body td:nth-child(2) { width: 20%; } /* System Name */
-                .data-grid-body td:nth-child(3) { width: 35%; } /* Description */
+                .data-grid-body td:nth-child(3) { width: 30%; } /* Description */
                 .data-grid-body td:nth-child(4) { width: 10%; } /* Tables */
-                .data-grid-body td:nth-child(5) { width: 10%; } /* Actions */
+                .data-grid-body td:nth-child(5) { width: 15%; } /* Actions - expanded for buttons */
 
                 .data-grid-body td:last-child {
                     border-right: none;
@@ -789,9 +792,10 @@ class FlansaApplicationsWorkspace {
                 }
 
                 .tile-header {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    color: #1f2937;
                     padding: 20px;
+                    border-bottom: 1px solid #e2e8f0;
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
@@ -1089,6 +1093,8 @@ class FlansaApplicationsWorkspace {
         if (apps_to_render.length === 0) {
             grid.hide();
             emptyState.show();
+            // Update counters even when no results to show "0 of X applications"
+            this.update_counters(0, this.applications.length);
             return;
         }
         

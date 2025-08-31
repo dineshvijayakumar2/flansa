@@ -1914,20 +1914,7 @@ class FlansaAppBuilder {
             }
         });
         
-        // Search
-        $builder.on('input', '#table-search', (e) => {
-            const searchTerm = e.target.value.toLowerCase();
-            $builder.find('.table-card').each((i, card) => {
-                const tableName = $(card).find('.table-name').text().toLowerCase();
-                const description = $(card).find('.table-description').text().toLowerCase();
-                
-                if (tableName.includes(searchTerm) || description.includes(searchTerm)) {
-                    $(card).show();
-                } else {
-                    $(card).hide();
-                }
-            });
-        });
+        // Search is handled by setupSearch() method - removed duplicate handler
     }
     
     show_table_creation_dialog() {
