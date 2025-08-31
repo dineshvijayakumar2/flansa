@@ -205,6 +205,13 @@ class FlansaAppBuilder {
                                         </svg>
                                         <span>Relationships</span>
                                     </a>
+                                    <a href="#" class="dropdown-option" id="saved-reports-menu">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4z"/>
+                                            <path d="M6 7h8m-8 4h8m-5 4h5"/>
+                                        </svg>
+                                        <span>Saved Reports</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -1877,6 +1884,11 @@ class FlansaAppBuilder {
         $builder.on('click', '#relationships-menu', (e) => {
             e.preventDefault();
             window.location.href = `/app/flansa-relationship-builder/${this.app_id}`;
+        });
+        
+        $builder.on('click', '#saved-reports-menu', (e) => {
+            e.preventDefault();
+            window.location.href = `/app/flansa-saved-reports?app_id=${this.app_id}`;
         });
         
         // Empty state create button
