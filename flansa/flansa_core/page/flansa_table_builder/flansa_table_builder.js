@@ -4337,7 +4337,11 @@ class EnhancedFlansaTableBuilder {
         });
         
         dialog.show();
-        this.load_current_naming_settings(dialog);
+        
+        // Load settings after dialog is shown to ensure DOM exists
+        setTimeout(() => {
+            this.load_current_naming_settings(dialog);
+        }, 100);
     }
     
     async load_current_naming_settings(dialog) {
@@ -4361,8 +4365,22 @@ class EnhancedFlansaTableBuilder {
                     naming_separator: '-'  // Always use dash for Frappe compatibility
                 });
                 
-                // Update preview
-                this.update_naming_preview(dialog.get_values());
+                // Bind change events for live preview updates and update preview initially
+                setTimeout(() => {
+                    const fields = ['naming_type', 'naming_prefix', 'naming_digits', 'naming_start_from', 'naming_separator'];
+                    fields.forEach(field => {
+                        if (dialog.fields_dict[field]) {
+                            dialog.fields_dict[field].$input.on('change keyup', () => {
+                                setTimeout(() => {
+                                    this.update_naming_preview(dialog.get_values());
+                                }, 50);
+                            });
+                        }
+                    });
+                    
+                    // Initial preview update after everything is bound
+                    this.update_naming_preview(dialog.get_values());
+                }, 300);
             }
         } catch (error) {
             console.error('Error loading naming settings:', error);

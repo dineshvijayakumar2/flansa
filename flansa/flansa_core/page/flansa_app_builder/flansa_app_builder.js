@@ -1850,7 +1850,16 @@ class FlansaAppBuilder {
         // Table creation options
         $builder.on('click', '#create-blank-table', (e) => {
             e.preventDefault();
-            this.show_table_creation_dialog();
+            console.log('🎯 Blank Table button clicked');
+            try {
+                this.show_table_creation_dialog();
+            } catch (error) {
+                console.error('❌ Error opening table creation dialog:', error);
+                frappe.show_alert({
+                    message: 'Error opening table creation dialog: ' + error.message,
+                    indicator: 'red'
+                });
+            }
         });
         
         $builder.on('click', '#import-table', (e) => {
@@ -1918,8 +1927,14 @@ class FlansaAppBuilder {
     }
     
     show_table_creation_dialog() {
-        // Use the existing create table dialog functionality
-        this.create_table_dialog();
+        console.log('📋 show_table_creation_dialog called');
+        try {
+            // Use the existing create table dialog functionality
+            this.create_table_dialog();
+        } catch (error) {
+            console.error('❌ Error in show_table_creation_dialog:', error);
+            throw error;
+        }
     }
     
     show_import_dialog() {
@@ -1931,7 +1946,9 @@ class FlansaAppBuilder {
     }
     
     create_table_dialog() {
-        const dialog = new frappe.ui.Dialog({
+        console.log('🔧 create_table_dialog called');
+        try {
+            const dialog = new frappe.ui.Dialog({
             title: 'Add Table',
             size: 'large',
             onshow: function() {
@@ -2096,6 +2113,15 @@ class FlansaAppBuilder {
             originalAction.call(dialog, values);
         };
         
+        console.log('✅ Table creation dialog created successfully');
+        
+        } catch (error) {
+            console.error('❌ Error creating table dialog:', error);
+            frappe.show_alert({
+                message: 'Error creating table dialog: ' + error.message,
+                indicator: 'red'
+            });
+        }
     }
     
     show_app_selector() {
