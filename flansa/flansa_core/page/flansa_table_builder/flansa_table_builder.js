@@ -2226,18 +2226,18 @@ class EnhancedFlansaTableBuilder {
             title: `Add ${fieldType} Field`,
             fields: [
                 {
-                    fieldname: 'field_name',
-                    label: 'Field Name',
-                    fieldtype: 'Data',
-                    reqd: 1,
-                    description: 'Internal field name (lowercase, no spaces)'
-                },
-                {
                     fieldname: 'label',
                     label: 'Label',
                     fieldtype: 'Data',
                     reqd: 1,
                     description: 'Display label for users'
+                },
+                {
+                    fieldname: 'field_name',
+                    label: 'Field Name',
+                    fieldtype: 'Data',
+                    reqd: 1,
+                    description: 'Internal field name (lowercase, no spaces)'
                 },
                 {
                     fieldname: 'description',
@@ -2255,6 +2255,21 @@ class EnhancedFlansaTableBuilder {
             primary_action_label: 'Add Field',
             primary_action: (values) => {
                 this.create_standard_field(fieldType, values, dialog);
+            },
+            onshow: function() {
+                setTimeout(() => {
+                    // Auto-populate field name from label
+                    dialog.fields_dict.label.$input.on('input', function() {
+                        const label = $(this).val();
+                        if (label) {
+                            let fieldName = label.toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, '')
+                                .trim()
+                                .replace(/\s+/g, '_');
+                            dialog.fields_dict.field_name.set_value(fieldName);
+                        }
+                    });
+                }, 200);
             }
         });
         
@@ -4598,13 +4613,25 @@ class EnhancedFlansaTableBuilder {
     
     async load_display_fields(dialog) {
         try {
-            const target_doctype = dialog.get_value('target_doctype');
-            if (!target_doctype) return;
+            const target_label = dialog.get_value('target_doctype');
+            if (!target_label) return;
+            
+            // Get actual doctype from stored data using the label (same as create_link_field)
+            const table_data = dialog._table_data || [];
+            const table_info = table_data.find(t => t.label === target_label);
+            
+            if (!table_info) {
+                console.error('Target table info not found for label:', target_label);
+                return;
+            }
+            
+            const actual_doctype = table_info.value;
+            console.log("Loading display fields for:", target_label, "→", actual_doctype);
             
             const result = await frappe.call({
                 method: 'flansa.flansa_core.api.table_api.get_table_fields',
                 args: {
-                    table_name: target_doctype
+                    table_name: actual_doctype
                 }
             });
             
@@ -4614,8 +4641,8 @@ class EnhancedFlansaTableBuilder {
                 
                 // Add fields from the table
                 result.message.fields.forEach(field => {
-                    if (['Data', 'Text'].includes(field.field_type) && !options.includes(field.field_name)) {
-                        options.push(field.field_name);
+                    if (['Data', 'Text'].includes(field.fieldtype) && !options.includes(field.fieldname)) {
+                        options.push(field.fieldname);
                     }
                 });
                 
