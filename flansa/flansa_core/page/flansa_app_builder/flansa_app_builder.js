@@ -2148,6 +2148,11 @@ class FlansaAppBuilder {
         console.log('🔧 Dialog wrapper:', dialog.$wrapper);
         console.log('🔧 Dialog show method:', typeof dialog.show);
         
+        // Actually show the dialog!
+        console.log('📱 About to show dialog...');
+        dialog.show();
+        console.log('✅ Dialog show() called successfully');
+        
         } catch (error) {
             console.error('❌ Error creating table dialog:', error);
             frappe.show_alert({
