@@ -1408,6 +1408,14 @@ class EnhancedFlansaTableBuilder {
         // Set global reference
         window.table_builder = this;
         
+        // Fix breadcrumb link to include application parameter
+        if (this.table_data && this.table_data.application) {
+            const appBuilderLink = this.$container.find('a[href*="flansa-app-builder"]');
+            if (appBuilderLink.length) {
+                appBuilderLink.attr('href', `/app/flansa-app-builder?app=${this.table_data.application}`);
+            }
+        }
+        
         // Setup event handlers
         this.setup_event_handlers();
         

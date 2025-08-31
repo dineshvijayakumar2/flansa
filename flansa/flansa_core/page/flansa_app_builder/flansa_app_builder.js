@@ -1934,6 +1934,35 @@ class FlansaAppBuilder {
         const dialog = new frappe.ui.Dialog({
             title: 'Add Table',
             size: 'large',
+            onshow: function() {
+                // Auto-populate table name from label with validation  
+                setTimeout(() => {
+                    dialog.fields_dict.table_label.$input.on('input', function() {
+                        const label = $(this).val();
+                        if (label) {
+                            // Convert to lowercase, replace spaces with underscores, remove special characters
+                            let tableName = label.toLowerCase()
+                                .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                                .trim()
+                                .replace(/\s+/g, '_'); // Replace spaces with underscores
+                            
+                            // Ensure it starts with a letter
+                            if (tableName && !tableName.match(/^[a-z]/)) {
+                                tableName = 't_' + tableName;
+                            }
+                            
+                            // Truncate if too long (Frappe DocType names should be <= 61 characters)
+                            if (tableName.length > 61) {
+                                tableName = tableName.substring(0, 61);
+                            }
+                            
+                            dialog.set_value('table_name', tableName);
+                        } else {
+                            dialog.set_value('table_name', '');
+                        }
+                    });
+                }, 100);
+            },
             fields: [
                 {
                     fieldname: 'table_label',
@@ -2067,73 +2096,6 @@ class FlansaAppBuilder {
             originalAction.call(dialog, values);
         };
         
-        // Setup event handlers before showing dialog
-        dialog.onshow = function() {
-            // Auto-populate table name from label with validation
-            dialog.fields_dict.table_label.$input.on('input', function() {
-                const label = $(this).val();
-                if (label) {
-                    // Convert to lowercase, replace spaces with underscores, remove special characters
-                    let tableName = label.toLowerCase()
-                        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-                        .trim()
-                        .replace(/\s+/g, '_'); // Replace spaces with underscores
-                    
-                    // Ensure it starts with a letter
-                    if (tableName && !tableName.match(/^[a-z]/)) {
-                        tableName = 't_' + tableName;
-                    }
-                    
-                    // Truncate if too long (Frappe DocType names should be <= 61 characters)
-                    if (tableName.length > 61) {
-                        tableName = tableName.substring(0, 61);
-                    }
-                    
-                    dialog.set_value('table_name', tableName);
-                } else {
-                    dialog.set_value('table_name', '');
-                }
-            });
-            
-            // Add validation for table name
-            dialog.fields_dict.table_name.$input.on('input', function() {
-                const tableName = $(this).val();
-                const $wrapper = dialog.fields_dict.table_name.$wrapper;
-                
-                // Clear previous validation messages
-                $wrapper.find('.validation-message').remove();
-                
-                if (tableName) {
-                    let isValid = true;
-                    let message = '';
-                    
-                    // Validate format
-                    if (!tableName.match(/^[a-z][a-z0-9_]*$/)) {
-                        isValid = false;
-                        message = 'Table name must start with a letter and contain only lowercase letters, numbers, and underscores';
-                    } else if (tableName.length > 61) {
-                        isValid = false;
-                        message = 'Table name must be 61 characters or less';
-                    } else if (tableName.endsWith('_')) {
-                        isValid = false;
-                        message = 'Table name cannot end with underscore';
-                    } else if (tableName.includes('__')) {
-                        isValid = false;
-                        message = 'Table name cannot contain consecutive underscores';
-                    }
-                    
-                    // Show validation message
-                    if (!isValid) {
-                        $wrapper.append(`<div class="validation-message text-danger small mt-1">${message}</div>`);
-                        dialog.get_primary_btn().prop('disabled', true);
-                    } else {
-                        dialog.get_primary_btn().prop('disabled', false);
-                    }
-                }
-            });
-        };
-        
-        dialog.show();
     }
     
     show_app_selector() {

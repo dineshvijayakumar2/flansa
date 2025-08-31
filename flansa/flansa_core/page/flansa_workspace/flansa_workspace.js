@@ -1635,12 +1635,13 @@ class FlansaApplicationsWorkspace {
             ],
             primary_action_label: 'Update Application',
             primary_action: (values) => {
+                // Use set_value for updating specific fields
                 frappe.call({
-                    method: 'frappe.client.save',
+                    method: 'frappe.client.set_value',
                     args: {
-                        doc: {
-                            doctype: 'Flansa Application',
-                            name: app_name,
+                        doctype: 'Flansa Application',
+                        name: app_name,
+                        fieldname: {
                             app_title: values.app_title,
                             description: values.description
                         }
