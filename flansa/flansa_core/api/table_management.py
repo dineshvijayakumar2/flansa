@@ -259,6 +259,96 @@ def map_field_type(flansa_type):
     return type_mapping.get(flansa_type, "Data")
 
 @frappe.whitelist()
+def create_flansa_table(app_id, table_name, table_label, description=None, 
+                       naming_type="Auto Number", naming_prefix=None, naming_digits=5, 
+                       naming_start_from=1, naming_field=None):
+    """Create a new Flansa Table with specified configuration"""
+    try:
+        print(f"🎯 Creating Flansa Table: {table_name} for app: {app_id}", flush=True)
+        
+        # Validate inputs
+        if not app_id:
+            return {
+                "success": False,
+                "error": "Application ID is required"
+            }
+            
+        if not table_name or not table_label:
+            return {
+                "success": False,
+                "error": "Table name and label are required"
+            }
+            
+        # Check if table already exists
+        if frappe.db.exists("Flansa Table", table_name):
+            return {
+                "success": False,
+                "error": f"Table '{table_name}' already exists"
+            }
+            
+        # Validate that the app exists
+        if not frappe.db.exists("Flansa Application", app_id):
+            return {
+                "success": False,
+                "error": f"Application '{app_id}' does not exist"
+            }
+            
+        # Create new Flansa Table document
+        table_doc = frappe.new_doc("Flansa Table")
+        table_doc.name = table_name
+        table_doc.table_name = table_name
+        table_doc.table_label = table_label
+        table_doc.description = description or f"Table for {table_label}"
+        table_doc.app_id = app_id
+        table_doc.status = "Draft"  # Start as draft
+        
+        # Set naming configuration
+        table_doc.naming_type = naming_type
+        table_doc.naming_prefix = naming_prefix
+        table_doc.naming_digits = int(naming_digits) if naming_digits else 5
+        table_doc.naming_start_from = int(naming_start_from) if naming_start_from else 1
+        table_doc.naming_field = naming_field
+        
+        # Add default fields JSON (basic title field)
+        default_fields = [
+            {
+                "field_name": "title",
+                "field_label": "Title",
+                "field_type": "Data",
+                "is_required": 1,
+                "display_order": 1
+            }
+        ]
+        table_doc.fields_json = json.dumps(default_fields)
+        
+        # Insert the document
+        table_doc.insert(ignore_permissions=True)
+        frappe.db.commit()
+        
+        print(f"✅ Flansa Table created successfully: {table_doc.name}", flush=True)
+        
+        return {
+            "success": True,
+            "message": f"Table '{table_label}' created successfully",
+            "table_name": table_doc.name,
+            "table_id": table_doc.name,
+            "status": table_doc.status
+        }
+        
+    except frappe.DuplicateEntryError:
+        return {
+            "success": False,
+            "error": f"Table '{table_name}' already exists"
+        }
+    except Exception as e:
+        print(f"❌ Error creating Flansa Table: {str(e)}", flush=True)
+        frappe.db.rollback()
+        return {
+            "success": False,
+            "error": f"Failed to create table: {str(e)}"
+        }
+
+@frappe.whitelist()
 def force_activate_table(table_name):
     """Force activate table by updating directly in database"""
     try:
