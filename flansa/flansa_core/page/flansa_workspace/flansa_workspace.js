@@ -28,8 +28,13 @@ class FlansaApplicationsWorkspace {
         this.setup_layout();
         this.setup_context_menu();
         this.bind_events();
-        this.load_tenant_info();
-        this.load_applications();
+        this.setup_app_sorting();
+        
+        // Load data after DOM is ready
+        setTimeout(() => {
+            this.load_tenant_info();
+            this.load_applications();
+        }, 100);
         
         // Store reference for theme functions
         window.flansa_workspace = this;
@@ -123,12 +128,6 @@ class FlansaApplicationsWorkspace {
                                             </svg>
                                             <span class="counter-text">Applications</span>
                                         </div>
-                                        <div class="tenant-badge" id="current-tenant-badge">
-                                            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                                <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd" />
-                                            </svg>
-                                            <span id="tenant-name-display">Loading...</span>
-                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -136,28 +135,34 @@ class FlansaApplicationsWorkspace {
                         <!-- Action Buttons -->
                         <div class="banner-right">
                             <div class="action-dropdown">
-                                <button class="sleek-btn primary split-btn" id="context-menu">
+                                <button class="sleek-btn primary split-btn" id="add-app-menu">
                                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
                                     </svg>
                                     <span>Add Application</span>
-                                    <svg class="dropdown-arrow" width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                                </button>
+                            </div>
+                            
+                            <!-- Context Menu - Similar to Table Builder -->
+                            <div class="action-dropdown">
+                                <button class="sleek-btn secondary" id="context-menu">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                                     </svg>
                                 </button>
                                 <div class="dropdown-panel" id="context-dropdown">
-                                    <div class="dropdown-item" data-action="create-app">
-                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
-                                        </svg>
-                                        <span>Add Application</span>
-                                    </div>
-                                    <div class="dropdown-separator"></div>
-                                    <div class="dropdown-item" data-action="tenant-switcher">
+                                    <div class="dropdown-item" data-action="switch-workspace">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                             <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                                         </svg>
                                         <span>Switch Workspace</span>
+                                    </div>
+                                    <div class="dropdown-separator"></div>
+                                    <div class="dropdown-item" data-action="workspace-settings">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+                                        </svg>
+                                        <span>Workspace Settings</span>
                                     </div>
                                     <div class="dropdown-item" data-action="refresh-cache">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -202,7 +207,7 @@ class FlansaApplicationsWorkspace {
                 
                 <!-- Main Content Area -->
                 <div class="main-content">
-                    <div class="applications-container" id="applications-container">
+                    <div class="applications-container tile-view" id="applications-container">
                             <!-- Loading State -->
                             <div class="loading-placeholder" id="loading-state">
                                 <i class="fa fa-spinner fa-spin"></i>
@@ -1303,10 +1308,11 @@ class FlansaApplicationsWorkspace {
     }
     
     setup_app_sorting() {
-        // Sorting functionality for table view
-        $('.sortable-header').on('click', (e) => {
-            const column = $(e.currentTarget).data('column');
-            const sortIcon = $(e.currentTarget).find('.sort-icon');
+        const self = this;
+        // Use event delegation for sorting functionality to work with dynamically generated content
+        $(document).off('click.app-sorting').on('click.app-sorting', '.sortable-header', function(e) {
+            const column = $(this).data('column');
+            const sortIcon = $(this).find('.sort-icon');
             const currentSort = sortIcon.data('sort') || 'none';
             
             // Reset all other sort icons
@@ -1320,11 +1326,11 @@ class FlansaApplicationsWorkspace {
             if (newSort === 'none') {
                 sortIcon.removeClass('fa-sort-up fa-sort-down').addClass('fa-sort');
                 // Reset to original order
-                this.render_applications();
+                self.render_applications();
             } else {
                 sortIcon.removeClass('fa-sort fa-sort-up fa-sort-down').addClass(newSort === 'asc' ? 'fa-sort-up' : 'fa-sort-down');
                 // Sort the applications
-                this.sort_applications(column, newSort);
+                self.sort_applications(column, newSort);
             }
             
             sortIcon.data('sort', newSort);
@@ -1729,9 +1735,12 @@ class FlansaApplicationsWorkspace {
     toggle_view(view) {
         this.view_mode = view;
         
+        const container = $('#applications-container');
         if (view === 'tile') {
+            container.removeClass('list-view').addClass('tile-view');
             $('#applications-grid').removeClass('view-list').addClass('view-tile');
         } else {
+            container.removeClass('tile-view').addClass('list-view');
             $('#applications-grid').removeClass('view-tile').addClass('view-list');
         }
         
@@ -2102,19 +2111,24 @@ class FlansaApplicationsWorkspace {
     setup_context_menu() {
         const self = this;
         
-        // Main button click - directly create new application
+        // Add Application button - direct action
+        $(document).on('click', '#add-app-menu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            self.create_new_application();
+        });
+        
+        // Context menu toggle (three dots)
         $(document).on('click', '#context-menu', (e) => {
             e.preventDefault();
             e.stopPropagation();
             
-            // If clicking on the main button area (not dropdown arrow), create app
-            if (!$(e.target).hasClass('dropdown-arrow')) {
-                self.create_new_application();
-            } else {
-                // Toggle dropdown menu
-                const menu = $('#context-dropdown');
-                menu.toggleClass('show');
-            }
+            // Close other dropdowns
+            $('.dropdown-panel').removeClass('show');
+            
+            // Toggle context dropdown
+            const menu = $('#context-dropdown');
+            menu.toggleClass('show');
         });
         
         // Close dropdown when clicking outside
@@ -2124,27 +2138,23 @@ class FlansaApplicationsWorkspace {
             }
         });
         
-        // Dropdown menu item actions
-        $(document).on('click', '.dropdown-item', (e) => {
+        // Context menu item actions
+        $(document).on('click', '#context-dropdown .dropdown-item', (e) => {
             e.preventDefault();
             e.stopPropagation();
             const action = $(e.currentTarget).data('action');
-            this.handle_context_menu_action(action);
+            this.handle_user_context_action(action);
             $('#context-dropdown').removeClass('show');
         });
     }
     
-    handle_context_menu_action(action) {
+    handle_user_context_action(action) {
         switch (action) {
-            case 'tenant-switcher':
+            case 'switch-workspace':
                 frappe.set_route('tenant-switcher');
                 break;
                 
-            case 'register-tenant':
-                frappe.set_route('tenant-registration');
-                break;
-                
-            case 'theme':
+            case 'workspace-settings':
                 this.show_theme_settings();
                 break;
                 
@@ -2155,14 +2165,6 @@ class FlansaApplicationsWorkspace {
                 } else {
                     window.location.reload(true);
                 }
-                break;
-                
-            case 'backup-apps':
-                this.backup_all_applications();
-                break;
-                
-            case 'keyboard-shortcuts':
-                this.show_keyboard_shortcuts();
                 break;
                 
             default:
@@ -2235,27 +2237,11 @@ class FlansaApplicationsWorkspace {
             const response = await this.call_tenant_api('get_current_tenant_info');
             const tenantInfo = response;
             
-            // Update tenant display in header
-            const tenantDisplay = document.getElementById('tenant-name-display');
-            const tenantBadge = document.getElementById('current-tenant-badge');
+            // Update workspace context in section controls only
+            const workspaceContextName = document.getElementById('workspace-context-name');
             
-            if (tenantDisplay && tenantInfo) {
-                tenantDisplay.textContent = tenantInfo.tenant_name || 'Unknown';
-                
-                // Update workspace context in section controls
-                const workspaceContextName = document.getElementById('workspace-context-name');
-                if (workspaceContextName) {
-                    workspaceContextName.textContent = tenantInfo.tenant_name || 'Unknown';
-                }
-                
-                // Add click handler to show tenant details
-                tenantBadge.style.cursor = 'pointer';
-                tenantBadge.title = `Tenant: ${tenantInfo.tenant_name}\nID: ${tenantInfo.tenant_id}\nApps: ${tenantInfo.stats?.apps || 0} | Tables: ${tenantInfo.stats?.tables || 0}`;
-                
-                // Optional: Add click to show tenant switcher
-                tenantBadge.onclick = () => {
-                    frappe.set_route('tenant-switcher');
-                };
+            if (workspaceContextName && tenantInfo) {
+                workspaceContextName.textContent = tenantInfo.tenant_name || 'Unknown';
                 
                 // Load tenant logo if available
                 if (tenantInfo.logo_url) {
@@ -2274,9 +2260,10 @@ class FlansaApplicationsWorkspace {
         } catch (error) {
             console.warn('Could not load tenant info:', error);
             // Set fallback display
-            const tenantDisplay = document.getElementById('tenant-name-display');
-            if (tenantDisplay) {
-                tenantDisplay.textContent = 'Default';
+            const workspaceContextName = document.getElementById('workspace-context-name');
+            
+            if (workspaceContextName) {
+                workspaceContextName.textContent = 'Default Workspace';
             }
         }
     }
