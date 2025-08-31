@@ -4258,7 +4258,182 @@ class EnhancedFlansaTableBuilder {
     }
     
     show_naming_settings() {
-        frappe.set_route('Form', 'Flansa Table', this.table_id);
+        if (!this.table_id) {
+            frappe.msgprint('Please select a table first');
+            return;
+        }
+        
+        const dialog = new frappe.ui.Dialog({
+            title: 'Naming Settings for ' + (this.table_data?.table_label || this.table_id),
+            size: 'large',
+            fields: [
+                {
+                    fieldname: 'naming_type',
+                    fieldtype: 'Select',
+                    label: 'Naming Type',
+                    options: ['Naming Series', 'Auto Increment', 'Field Based', 'Prompt', 'Random'],
+                    default: 'Naming Series',
+                    description: 'How should new records be named?'
+                },
+                {
+                    fieldname: 'naming_prefix',
+                    fieldtype: 'Data',
+                    label: 'Prefix',
+                    default: 'REC',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    description: 'Text that appears before the number (e.g., EXP for expenses)'
+                },
+                {
+                    fieldname: 'naming_digits',
+                    fieldtype: 'Int',
+                    label: 'Number of Digits',
+                    default: 5,
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    description: 'How many digits for the sequential number (3-10)'
+                },
+                {
+                    fieldname: 'naming_start_from',
+                    fieldtype: 'Int',
+                    label: 'Start Counter From',
+                    default: 1,
+                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    description: 'Starting number for the sequence (default: 1)'
+                },
+                {
+                    fieldname: 'naming_field',
+                    fieldtype: 'Select',
+                    label: 'Field for Dynamic Prefix',
+                    depends_on: 'eval:doc.naming_type=="Field Based"',
+                    description: 'Field whose value will be used for naming'
+                },
+                {
+                    fieldname: 'naming_separator',
+                    fieldtype: 'Data',
+                    label: 'Separator',
+                    default: '-',
+                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    description: 'Character between prefix and number (default: -)'
+                },
+                {
+                    fieldname: 'preview_section',
+                    fieldtype: 'Section Break',
+                    label: 'Preview'
+                },
+                {
+                    fieldname: 'preview_text',
+                    fieldtype: 'HTML',
+                    label: '',
+                    options: '<div id="naming-preview" style="padding: 15px; background: #f8f9fa; border-radius: 6px; border-left: 4px solid #007bff;"><strong>Record IDs will look like:</strong><br><span id="preview-examples" style="font-family: monospace; color: #495057;">Loading preview...</span></div>'
+                }
+            ],
+            primary_action_label: 'Save & Apply',
+            primary_action: (values) => {
+                this.save_naming_settings(values, dialog);
+            },
+            secondary_action_label: 'Test Pattern',
+            secondary_action: (values) => {
+                this.test_naming_pattern_preview(values);
+            }
+        });
+        
+        dialog.show();
+        this.load_current_naming_settings(dialog);
+    }
+    
+    async load_current_naming_settings(dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: 'Flansa Table',
+                    name: this.table_id
+                }
+            });
+            
+            if (result.message) {
+                const table_data = result.message;
+                dialog.set_values({
+                    naming_type: table_data.naming_type || 'Naming Series',
+                    naming_prefix: table_data.naming_prefix || 'REC',
+                    naming_digits: table_data.naming_digits || 5,
+                    naming_start_from: table_data.naming_start_from || 1,
+                    naming_field: table_data.naming_field || '',
+                    naming_separator: '-'  // Always use dash for Frappe compatibility
+                });
+                
+                // Update preview
+                this.update_naming_preview(dialog.get_values());
+            }
+        } catch (error) {
+            console.error('Error loading naming settings:', error);
+        }
+    }
+    
+    async save_naming_settings(values, dialog) {
+        try {
+            const result = await frappe.call({
+                method: 'frappe.client.set_value',
+                args: {
+                    doctype: 'Flansa Table',
+                    name: this.table_id,
+                    fieldname: values
+                }
+            });
+            
+            if (result.message) {
+                frappe.show_alert({
+                    message: 'Naming settings saved successfully!',
+                    indicator: 'green'
+                });
+                dialog.hide();
+            }
+        } catch (error) {
+            console.error('Error saving naming settings:', error);
+            frappe.show_alert({
+                message: 'Error saving naming settings',
+                indicator: 'red'
+            });
+        }
+    }
+    
+    test_naming_pattern_preview(values) {
+        this.update_naming_preview(values);
+    }
+    
+    update_naming_preview(values) {
+        let preview = '';
+        const prefix = values.naming_prefix || 'REC';
+        const digits = values.naming_digits || 5;
+        const separator = values.naming_separator || '-';
+        const startFrom = values.naming_start_from || 1;
+        
+        switch(values.naming_type) {
+            case 'Naming Series':
+                const paddedStart = String(startFrom).padStart(digits, '0');
+                const paddedNext = String(startFrom + 1).padStart(digits, '0');
+                const paddedLater = String(startFrom + 99).padStart(digits, '0');
+                preview = `${prefix}${separator}${paddedStart}, ${prefix}${separator}${paddedNext}, ${prefix}${separator}${paddedLater}`;
+                break;
+            case 'Auto Increment':
+                preview = String(startFrom).padStart(digits, '0') + ', ' + 
+                         String(startFrom + 1).padStart(digits, '0') + ', ' + 
+                         String(startFrom + 99).padStart(digits, '0');
+                break;
+            case 'Field Based':
+                preview = 'FIELD_VALUE-001, FIELD_VALUE-002, FIELD_VALUE-003';
+                break;
+            case 'Prompt':
+                preview = 'User will be prompted for each record name';
+                break;
+            case 'Random':
+                preview = 'ABC123, XYZ789, DEF456 (random 6-character codes)';
+                break;
+        }
+        
+        const previewElement = document.querySelector('#preview-examples');
+        if (previewElement) {
+            previewElement.textContent = preview;
+        }
     }
     
     view_table_data() {
