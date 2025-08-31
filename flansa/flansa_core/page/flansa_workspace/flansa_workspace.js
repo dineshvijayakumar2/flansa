@@ -89,16 +89,17 @@ class FlansaApplicationsWorkspace {
     setup_layout() {
         const html = `
             <div class="flansa-workspace">
-                <!-- Clean Breadcrumb Header - Match Table Builder -->
-                <div class="breadcrumb-header">
-                    <div class="container">
-                        <nav class="breadcrumb-nav">
-                            <span class="breadcrumb-current">Workspace</span>
+                <!-- Ultra-modern sleek header - Match App Builder and Table Builder -->
+                <div class="sleek-header">
+                    <div class="header-backdrop"></div>
+                    <div class="header-content">
+                        <!-- Breadcrumb Trail -->
+                        <nav class="breadcrumb-trail">
+                            <span class="breadcrumb-current">🏠 Workspace</span>
                         </nav>
                     </div>
-                </div>
-                
-                <!-- Application Banner below breadcrumbs -->
+                    
+                    <!-- Application Banner below breadcrumbs -->
                 <div class="app-banner">
                     <div class="banner-left">
                         <!-- Optional Workspace Logo -->
@@ -156,7 +157,7 @@ class FlansaApplicationsWorkspace {
                                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                         <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
                                     </svg>
-                                    <span>Switch Tenant</span>
+                                    <span>Switch Workspace</span>
                                 </div>
                                 <div class="dropdown-item" data-action="refresh-cache">
                                     <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
@@ -168,13 +169,17 @@ class FlansaApplicationsWorkspace {
                         </div>
                     </div>
                 </div>
+                </div>
                 
                 <!-- Main Content Area -->
-                <div class="container main-content">
+                <div class="main-content">
                     <!-- Section Header with Controls -->
                     <div class="section-header">
                         <div class="section-title">
-                            <h2>Applications</h2>
+                            <div class="context-info">
+                                <span class="context-label">WORKSPACE:</span>
+                                <span class="context-name" id="workspace-context-name">Loading...</span>
+                            </div>
                         </div>
                         <div class="section-controls">
                             <div class="view-toggle">
@@ -236,27 +241,42 @@ class FlansaApplicationsWorkspace {
             </div>
             
             <style>
-                /* Clean Header Styles - Match Table Builder Design */
-                .breadcrumb-header {
-                    background: #f8fafc;
+                /* Ultra-Modern Sleek Header - Match App Builder and Table Builder */
+                .sleek-header {
+                    background: linear-gradient(135deg, #f8fafc 0%, #edf2f7 100%);
                     border-bottom: 1px solid #e2e8f0;
-                    padding: 12px 0;
                     position: sticky;
                     top: 0;
-                    z-index: 100;
+                    z-index: 1000;
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
                 }
 
-                .breadcrumb-header .container {
+                .header-backdrop {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(248, 250, 252, 0.9);
+                    backdrop-filter: blur(8px);
+                    -webkit-backdrop-filter: blur(8px);
+                }
+
+                .header-content {
+                    position: relative;
+                    z-index: 2;
+                    max-width: 1200px;
                     margin: 0 auto;
-                    padding: 0 24px;
-                    width: 100%;
+                    padding: 12px 24px 0;
                 }
 
-                .breadcrumb-nav {
+                .breadcrumb-trail {
                     display: flex;
                     align-items: center;
                     gap: 8px;
                     font-size: 14px;
+                    margin-bottom: 0;
                 }
 
                 .breadcrumb-link {
@@ -286,13 +306,14 @@ class FlansaApplicationsWorkspace {
                 .app-banner {
                     background: white;
                     border-bottom: 1px solid #e2e8f0;
-                    padding: 20px 0;
                     display: flex;
                     align-items: center;
                     justify-content: space-between;
                     max-width: 1200px;
                     margin: 0 auto;
                     padding: 20px 24px;
+                    position: relative;
+                    z-index: 1;
                 }
 
                 .banner-left {
@@ -413,8 +434,17 @@ class FlansaApplicationsWorkspace {
 
                 /* Main Content Area */
                 .main-content {
+                    max-width: 1200px;
                     margin: 0 auto;
                     padding: 24px;
+                    width: 100%;
+                }
+
+                /* Container for consistent width */
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                    padding: 0 24px;
                     width: 100%;
                 }
 
@@ -473,6 +503,29 @@ class FlansaApplicationsWorkspace {
                     align-items: center;
                     gap: 12px;
                     flex-wrap: wrap;
+                }
+                
+                .context-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    padding: 0.375rem 0.75rem;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 6px;
+                    font-size: 0.8125rem;
+                    font-weight: 500;
+                }
+                
+                .context-label {
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                
+                .context-name {
+                    color: #374151;
+                    font-weight: 600;
                 }
 
                 .search-input {
@@ -708,6 +761,19 @@ class FlansaApplicationsWorkspace {
                 /* Ensure table stretches to full container width */
                 .applications-container, .section-wrapper {
                     width: 100%;
+                    max-width: none;
+                }
+
+                /* Enterprise data grid full width */
+                .enterprise-data-grid {
+                    width: 100%;
+                    max-width: none;
+                    min-width: unset;
+                }
+
+                .data-grid-table {
+                    width: 100%;
+                    max-width: none;
                 }
 
                 .data-grid-body td:last-child {
@@ -1049,11 +1115,11 @@ class FlansaApplicationsWorkspace {
         
         frappe.call({
             method: 'flansa.flansa_core.api.workspace_api.get_user_applications',
-            callback: (r) => {
+            callback: (response) => {
                 $('#loading-state').hide();
                 
-                if (r.message) {
-                    self.applications = r.message || [];
+                if (response.message) {
+                    self.applications = response.message || [];
                     self.filtered_apps = [...self.applications];
                     
                     // Update application count
@@ -1090,7 +1156,6 @@ class FlansaApplicationsWorkspace {
     }
     
     render_applications() {
-        const container = $('#applications-container');
         const grid = $('#applications-grid');
         const emptyState = $('#no-results-state');
         
@@ -1604,8 +1669,6 @@ class FlansaApplicationsWorkspace {
             frappe.msgprint('Application not found');
             return;
         }
-        
-        let app_name_manually_edited = false;
         
         const dialog = new frappe.ui.Dialog({
             title: 'Edit Application',
@@ -2201,6 +2264,12 @@ class FlansaApplicationsWorkspace {
             if (tenantDisplay && tenantInfo) {
                 tenantDisplay.textContent = tenantInfo.tenant_name || 'Unknown';
                 
+                // Update workspace context in section controls
+                const workspaceContextName = document.getElementById('workspace-context-name');
+                if (workspaceContextName) {
+                    workspaceContextName.textContent = tenantInfo.tenant_name || 'Unknown';
+                }
+                
                 // Add click handler to show tenant details
                 tenantBadge.style.cursor = 'pointer';
                 tenantBadge.title = `Tenant: ${tenantInfo.tenant_name}\nID: ${tenantInfo.tenant_id}\nApps: ${tenantInfo.stats?.apps || 0} | Tables: ${tenantInfo.stats?.tables || 0}`;
@@ -2255,7 +2324,7 @@ class FlansaApplicationsWorkspace {
     
     async load_workspace_logo() {
         try {
-            const response = await frappe.call({
+            await frappe.call({
                 method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
                 callback: (r) => {
                     if (r.message && r.message.logo) {
