@@ -1929,6 +1929,24 @@ class FlansaAppBuilder {
     show_table_creation_dialog() {
         console.log('📋 show_table_creation_dialog called');
         try {
+            // First try a simple test dialog
+            if (window.location.search.includes('debug=simple')) {
+                console.log('🧪 Creating simple test dialog...');
+                const testDialog = new frappe.ui.Dialog({
+                    title: 'Test Dialog',
+                    fields: [
+                        {
+                            fieldname: 'test_field',
+                            fieldtype: 'Data',
+                            label: 'Test Field'
+                        }
+                    ]
+                });
+                testDialog.show();
+                console.log('✅ Simple test dialog shown');
+                return;
+            }
+            
             // Use the existing create table dialog functionality
             this.create_table_dialog();
         } catch (error) {
@@ -2181,8 +2199,18 @@ class FlansaAppBuilder {
         
         try {
             console.log('📱 About to show dialog...');
-            dialog.show();
-            console.log('✅ Dialog.show() called successfully');
+            
+            // Try alternative showing methods if the standard one fails
+            try {
+                dialog.show();
+                console.log('✅ Dialog.show() called successfully');
+            } catch (showError) {
+                console.error('❌ Error in dialog.show():', showError);
+                // Try manual modal showing
+                console.log('🔄 Trying manual modal show...');
+                dialog.$wrapper.modal('show');
+                console.log('✅ Manual modal show called');
+            }
             
             // Check if dialog is actually visible
             setTimeout(() => {
@@ -2197,6 +2225,16 @@ class FlansaAppBuilder {
                         console.log('🔍 Found modal but not visible:', anyModal);
                         console.log('Modal classes:', anyModal.className);
                         console.log('Modal style:', anyModal.style.cssText);
+                        console.log('Modal display:', window.getComputedStyle(anyModal).display);
+                        console.log('Modal visibility:', window.getComputedStyle(anyModal).visibility);
+                        console.log('Modal z-index:', window.getComputedStyle(anyModal).zIndex);
+                        
+                        // Try to force show it
+                        console.log('🔧 Trying to force show modal...');
+                        anyModal.style.display = 'block';
+                        anyModal.classList.add('show', 'in');
+                        document.body.classList.add('modal-open');
+                        console.log('🔧 Forced modal visibility applied');
                     } else {
                         console.log('❌ No modal elements found at all');
                     }
