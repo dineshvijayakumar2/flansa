@@ -3986,30 +3986,52 @@ class EnhancedFlansaTableBuilder {
             onshow: function() {
                 // Auto-populate field name from label
                 setTimeout(() => {
-                    dialog.fields_dict.field_label.$input.on('input', function() {
-                        const label = $(this).val();
-                        if (label) {
-                            // Convert to lowercase, replace spaces with underscores, remove special characters
-                            let fieldName = label.toLowerCase()
-                                .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-                                .trim()
-                                .replace(/\s+/g, '_'); // Replace spaces with underscores
+                    console.log('🔧 Setting up auto-population for standard field dialog');
+                    
+                    // Check if fields exist
+                    if (dialog.fields_dict.field_label && dialog.fields_dict.field_name) {
+                        console.log('✅ Found field_label and field_name fields');
+                        
+                        dialog.fields_dict.field_label.$input.on('input', function() {
+                            const label = $(this).val();
+                            console.log('📝 Field label changed to:', label);
                             
-                            // Ensure it starts with a letter
-                            if (fieldName && !fieldName.match(/^[a-z]/)) {
-                                fieldName = 'field_' + fieldName;
+                            if (label) {
+                                // Convert to lowercase, replace spaces with underscores, remove special characters
+                                let fieldName = label.toLowerCase()
+                                    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                                    .trim()
+                                    .replace(/\s+/g, '_'); // Replace spaces with underscores
+                                
+                                // Ensure it starts with a letter
+                                if (fieldName && !fieldName.match(/^[a-z]/)) {
+                                    fieldName = 'field_' + fieldName;
+                                }
+                                
+                                console.log('🔄 Generated field name:', fieldName);
+                                
+                                // Set the field name only if it hasn't been manually edited
+                                const currentFieldName = dialog.fields_dict.field_name.get_value();
+                                console.log('📋 Current field name:', currentFieldName);
+                                
+                                if (!currentFieldName || 
+                                    currentFieldName.startsWith('field_') ||
+                                    currentFieldName.replace(/_/g, ' ').toLowerCase() === 
+                                    label.slice(0, -1).toLowerCase()) {
+                                    dialog.fields_dict.field_name.set_value(fieldName);
+                                    console.log('✅ Set field name to:', fieldName);
+                                } else {
+                                    console.log('⚠️ Field name manually edited, not overriding');
+                                }
                             }
-                            
-                            // Set the field name only if it hasn't been manually edited
-                            if (!dialog.fields_dict.field_name.get_value() || 
-                                dialog.fields_dict.field_name.get_value().startsWith('field_') ||
-                                dialog.fields_dict.field_name.get_value().replace(/_/g, ' ').toLowerCase() === 
-                                label.slice(0, -1).toLowerCase()) {
-                                dialog.fields_dict.field_name.set_value(fieldName);
-                            }
-                        }
-                    });
-                }, 100);
+                        });
+                        
+                        console.log('✅ Auto-population event handler bound');
+                    } else {
+                        console.error('❌ Could not find field_label or field_name fields in dialog');
+                        console.log('Available fields:', Object.keys(dialog.fields_dict));
+                    }
+                }, 200); // Increased timeout for better reliability
             }
         });
 
