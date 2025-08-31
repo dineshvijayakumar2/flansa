@@ -327,13 +327,40 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
         
         print(f"✅ Flansa Table created successfully: {table_doc.name}", flush=True)
         
-        return {
-            "success": True,
-            "message": f"Table '{table_label}' created successfully",
-            "table_name": table_doc.name,
-            "table_id": table_doc.name,
-            "status": table_doc.status
-        }
+        # Auto-activate the table to create the DocType with naming settings
+        print(f"🎯 Auto-activating table to create DocType with naming settings...", flush=True)
+        try:
+            activation_result = activate_table(table_doc.name)
+            if activation_result.get("success"):
+                print(f"✅ Table activated and DocType created: {activation_result.get('doctype_name')}", flush=True)
+                return {
+                    "success": True,
+                    "message": f"Table '{table_label}' created and activated successfully",
+                    "table_name": table_doc.name,
+                    "table_id": table_doc.name,
+                    "doctype_name": activation_result.get('doctype_name'),
+                    "status": "Active"
+                }
+            else:
+                print(f"⚠️ Table created but activation failed: {activation_result.get('error')}", flush=True)
+                return {
+                    "success": True,
+                    "message": f"Table '{table_label}' created successfully (activation pending)",
+                    "table_name": table_doc.name,
+                    "table_id": table_doc.name,
+                    "status": table_doc.status,
+                    "warning": f"Auto-activation failed: {activation_result.get('error')}"
+                }
+        except Exception as activation_error:
+            print(f"⚠️ Table created but auto-activation error: {str(activation_error)}", flush=True)
+            return {
+                "success": True,
+                "message": f"Table '{table_label}' created successfully (manual activation required)",
+                "table_name": table_doc.name,
+                "table_id": table_doc.name,
+                "status": table_doc.status,
+                "warning": f"Auto-activation error: {str(activation_error)}"
+            }
         
     except frappe.DuplicateEntryError:
         return {

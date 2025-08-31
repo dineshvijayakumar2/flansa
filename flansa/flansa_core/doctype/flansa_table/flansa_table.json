@@ -18,6 +18,7 @@
   "naming_start_from",
   "basic_info_section",
   "application",
+  "tenant_id",
   "table_name",
   "table_label",
   "description",
@@ -50,6 +51,13 @@
    "label": "Application",
    "options": "Flansa Application",
    "reqd": 1
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "label": "Tenant ID",
+   "read_only": 1,
+   "hidden": 1
   },
   {
    "fieldname": "table_name",
