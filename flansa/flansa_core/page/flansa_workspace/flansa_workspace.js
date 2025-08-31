@@ -32,7 +32,13 @@ class FlansaApplicationsWorkspace {
         
         // Load data after DOM is ready
         setTimeout(() => {
-            this.load_tenant_info();
+            this.load_tenant_info().then(() => {
+                console.log('✅ Tenant info loaded successfully');
+            }).catch((error) => {
+                console.warn('❌ Failed to load tenant info:', error);
+                // Set immediate fallback
+                this.set_fallback_tenant_info();
+            });
             this.load_applications();
         }, 100);
         
@@ -107,13 +113,19 @@ class FlansaApplicationsWorkspace {
                     <!-- Application Banner below breadcrumbs -->
                     <div class="app-banner">
                         <div class="banner-left">
-                            <!-- Optional Workspace Logo -->
-                            <div class="workspace-logo-container" id="workspace-logo-container" style="margin-right: 8px;">
-                                <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" style="display: none;" />
-                                <div class="logo-placeholder" id="logo-placeholder" style="display: block;">
-                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                        <rect x="3" y="3" width="18" height="18" rx="2" stroke="#667eea" stroke-width="2" fill="#f7fafc"/>
-                                        <path d="M8 12h8M8 8h8M8 16h5" stroke="#667eea" stroke-width="1.5" stroke-linecap="round"/>
+                            <!-- Flansa Platform Logo -->
+                            <div class="workspace-logo-container" id="workspace-logo-container" style="margin-right: 12px;">
+                                <div class="flansa-logo">
+                                    <svg width="32" height="32" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                        <rect width="100" height="100" rx="20" fill="url(#flansaGradient)"/>
+                                        <path d="M25 40h50M25 50h50M25 60h30" stroke="white" stroke-width="4" stroke-linecap="round"/>
+                                        <circle cx="75" cy="25" r="8" fill="white" opacity="0.9"/>
+                                        <defs>
+                                            <linearGradient id="flansaGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                                <stop offset="0%" style="stop-color:#4f46e5"/>
+                                                <stop offset="100%" style="stop-color:#7c3aed"/>
+                                            </linearGradient>
+                                        </defs>
                                     </svg>
                                 </div>
                             </div>
@@ -329,6 +341,12 @@ class FlansaApplicationsWorkspace {
                 .workspace-logo-container {
                     display: flex;
                     align-items: center;
+                }
+                
+                .flansa-logo {
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
                 }
                 
                 .workspace-logo {
@@ -2266,6 +2284,14 @@ class FlansaApplicationsWorkspace {
                 workspaceContextName.textContent = 'Default Workspace';
             }
         }
+    }
+    
+    set_fallback_tenant_info() {
+        const workspaceContextName = document.getElementById('workspace-context-name');
+        if (workspaceContextName) {
+            workspaceContextName.textContent = 'My Workspace';
+        }
+        console.log('✅ Fallback tenant info set');
     }
     
     async call_tenant_api(method, args = {}) {
