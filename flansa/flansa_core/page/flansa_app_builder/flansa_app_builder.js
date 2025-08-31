@@ -2114,6 +2114,9 @@ class FlansaAppBuilder {
         };
         
         console.log('✅ Table creation dialog created successfully');
+        console.log('🔧 Dialog object:', dialog);
+        console.log('🔧 Dialog wrapper:', dialog.$wrapper);
+        console.log('🔧 Dialog show method:', typeof dialog.show);
         
         } catch (error) {
             console.error('❌ Error creating table dialog:', error);
@@ -2176,7 +2179,37 @@ class FlansaAppBuilder {
             }
         });
         
-        dialog.show();
+        try {
+            console.log('📱 About to show dialog...');
+            dialog.show();
+            console.log('✅ Dialog.show() called successfully');
+            
+            // Check if dialog is actually visible
+            setTimeout(() => {
+                const dialogElement = document.querySelector('.modal.fade.in, .modal.show');
+                if (dialogElement) {
+                    console.log('✅ Dialog is visible in DOM:', dialogElement);
+                } else {
+                    console.log('❌ Dialog not found in DOM after show()');
+                    // Try to find any modal dialogs
+                    const anyModal = document.querySelector('.modal');
+                    if (anyModal) {
+                        console.log('🔍 Found modal but not visible:', anyModal);
+                        console.log('Modal classes:', anyModal.className);
+                        console.log('Modal style:', anyModal.style.cssText);
+                    } else {
+                        console.log('❌ No modal elements found at all');
+                    }
+                }
+            }, 100);
+            
+        } catch (error) {
+            console.error('❌ Error showing dialog:', error);
+            frappe.show_alert({
+                message: 'Error showing dialog: ' + error.message,
+                indicator: 'red'
+            });
+        }
     }
     
     app_settings() {
