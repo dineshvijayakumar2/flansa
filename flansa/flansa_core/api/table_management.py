@@ -299,7 +299,7 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
         table_doc.table_name = table_name
         table_doc.table_label = table_label
         table_doc.description = description or f"Table for {table_label}"
-        table_doc.app_id = app_id
+        table_doc.application = app_id  # Use correct field name 'application'
         table_doc.status = "Draft"  # Start as draft
         
         # Set naming configuration
