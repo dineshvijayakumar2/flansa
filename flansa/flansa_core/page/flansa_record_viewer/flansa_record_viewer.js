@@ -907,9 +907,22 @@ class FlansaRecordViewer {
             const readOnlyStyle = isFieldReadOnly ? 
                 'background: #f8f9fa; border-left: 3px solid #17a2b8; padding: 8px 12px; border-radius: 4px; font-family: monospace;' : '';
             
-            html += `<div class="form-control-static ${readOnlyClass}" style="${readOnlyStyle}">
-                ${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}
-            </div>`;
+            // Special handling for link fields in view mode
+            if ((field.fieldtype || 'Data') === 'Link') {
+                const displayValue = await this.getDisplayValueForLinkField(field, fieldValue, field.options);
+                const showDisplayValue = displayValue !== fieldValue;
+                
+                html += `<div class="form-control-static ${readOnlyClass}" style="${readOnlyStyle}">
+                    ${showDisplayValue ? 
+                        `${this.escapeHtml(displayValue)} <small class="text-muted">(${this.escapeHtml(fieldValue)})</small>` :
+                        `${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}`
+                    }
+                </div>`;
+            } else {
+                html += `<div class="form-control-static ${readOnlyClass}" style="${readOnlyStyle}">
+                    ${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}
+                </div>`;
+            }
         } else {
             // Edit mode for regular fields
             const fieldType = field.fieldtype || 'Data';
@@ -1028,9 +1041,10 @@ class FlansaRecordViewer {
                        class="form-control frappe-link-field" 
                        id="${uniqueId}"
                        name="${fieldName}" 
-                       value="${this.escapeHtml(fieldValue)}" 
+                       value="${this.escapeHtml(showDisplayValue ? displayValue : fieldValue)}" 
+                       data-raw-value="${this.escapeHtml(fieldValue)}"
                        data-display-value="${this.escapeHtml(displayValue)}"
-                       placeholder="${showDisplayValue ? `${displayValue} (${fieldValue})` : `Search ${tableLabel}...`}"
+                       placeholder="${showDisplayValue ? `Search ${tableLabel}...` : `Search ${tableLabel}...`}"
                        data-field-name="${fieldName}"
                        data-link-doctype="${linkDoctype}"
                        data-fieldtype="Link"
@@ -1563,8 +1577,14 @@ class FlansaRecordViewer {
                         formData[input.name] = linkValue || input.value;
                         console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]}`);
                     } else {
-                        // Fallback to input value or data attribute
-                        formData[input.name] = input.dataset.value || input.value;
+                        // For link fields with display values, use the raw ID value
+                        if (input.dataset.rawValue) {
+                            formData[input.name] = input.dataset.rawValue;
+                            console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]} (using raw value)`);
+                        } else {
+                            formData[input.name] = input.dataset.value || input.value;
+                            console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]} (fallback)`);
+                        }
                     }
                 } else {
                     formData[input.name] = input.value;
