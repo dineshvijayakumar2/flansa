@@ -1982,9 +1982,16 @@ class FlansaAppBuilder {
                     const labelField = dialog.fields_dict.table_label;
                     const nameField = dialog.fields_dict.table_name;
                     
-                    console.log('Fields found:', { labelField: !!labelField, nameField: !!nameField });
+                    console.log('Fields found:', { 
+                        labelField: !!labelField, 
+                        nameField: !!nameField,
+                        labelInput: !!(labelField && labelField.$input),
+                        nameInput: !!(nameField && nameField.$input)
+                    });
                     
                     if (labelField && nameField) {
+                        console.log('Both fields exist, setting up...');
+                        
                         // Make table name field readonly
                         if (nameField.$input) {
                             nameField.$input.prop('readonly', true);
@@ -1993,43 +2000,73 @@ class FlansaAppBuilder {
                                 'color': '#6c757d'
                             });
                             console.log('Made table name field readonly');
+                        } else {
+                            console.log('⚠️  nameField.$input not found yet');
                         }
                         
                         // Add visual indicator that it's auto-generated
-                        const label = nameField.$wrapper.find('.control-label');
+                        const label = nameField.$wrapper ? nameField.$wrapper.find('.control-label') : $();
                         if (label.length && !label.find('.auto-gen-indicator').length) {
                             label.append(' <small class="text-muted auto-gen-indicator">(auto-generated)</small>');
                             console.log('Added auto-generated indicator');
+                        } else {
+                            console.log('⚠️  Could not add auto-generated indicator');
                         }
                         
-                        // Set up auto-population event
+                        // Set up auto-population event - test with simple event first
                         if (labelField.$input) {
-                            labelField.$input.on('input keyup paste', function() {
+                            console.log('Binding events to labelField.$input');
+                            
+                            // Test basic event binding
+                            labelField.$input.on('input', function() {
+                                console.log('🔥 INPUT EVENT TRIGGERED!');
                                 const labelValue = $(this).val();
+                                console.log('Label value:', labelValue);
                                 const tableName = generateTableName(labelValue);
-                                console.log('Auto-populating:', labelValue, '->', tableName);
+                                console.log('Generated table name:', tableName);
                                 
-                                // Update the table name field
-                                nameField.set_value(tableName);
+                                // Update the table name field multiple ways
+                                if (nameField.set_value) {
+                                    nameField.set_value(tableName);
+                                    console.log('Used nameField.set_value()');
+                                }
+                                
                                 if (nameField.$input) {
                                     nameField.$input.val(tableName);
+                                    console.log('Used nameField.$input.val()');
+                                }
+                                
+                                // Try alternative update method
+                                try {
+                                    nameField.set_input(tableName);
+                                    console.log('Used nameField.set_input()');
+                                } catch (e) {
+                                    console.log('nameField.set_input() not available');
                                 }
                             });
+                            
                             console.log('Event handlers bound to label field');
+                        } else {
+                            console.log('⚠️  labelField.$input not found');
                         }
                         
                         // Also trigger on field change events
-                        labelField.df.onchange = function() {
-                            const labelValue = this.get_value();
-                            const tableName = generateTableName(labelValue);
-                            console.log('Field onchange:', labelValue, '->', tableName);
-                            nameField.set_value(tableName);
-                        };
+                        if (labelField.df) {
+                            labelField.df.onchange = function() {
+                                console.log('🔥 ONCHANGE EVENT TRIGGERED!');
+                                const labelValue = this.get_value();
+                                const tableName = generateTableName(labelValue);
+                                console.log('Field onchange:', labelValue, '->', tableName);
+                                nameField.set_value(tableName);
+                            };
+                            console.log('Set up df.onchange');
+                        }
+                        
                         console.log('Auto-population setup complete');
                     } else {
-                        console.log('Fields not found - setup failed');
+                        console.log('❌ Fields not found - setup failed');
                     }
-                }, 500); // Simple 500ms delay
+                }, 800); // Increased delay to 800ms
             },
             fields: [
                 {
