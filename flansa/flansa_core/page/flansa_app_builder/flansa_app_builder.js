@@ -22,11 +22,6 @@ class FlansaAppBuilder {
         this.current_tables = [];
         this.view_mode = 'tile'; // 'list' or 'tile' - default to tile for App Builder
         
-        console.log('🔍 App Builder initialized:', {
-            route: frappe.get_route(),
-            app_id: this.app_id,
-            full_route: window.location.pathname
-        });
         
         this.init();
     }
@@ -88,24 +83,7 @@ class FlansaAppBuilder {
             contextUpdatedCount++;
         });
         
-        console.log('🔍 Banner info updated:', { 
-            title: title,
-            hasApp: !!this.current_app,
-            appId: this.app_id,
-            app: this.current_app,
-            titleElements: titleElements.length,
-            contextElements: contextElements.length,
-            titleUpdatedCount: titleUpdatedCount,
-            contextUpdatedCount: contextUpdatedCount
-        });
         
-        // Force a visual inspection by logging the actual text content
-        titleElements.forEach((el, i) => {
-            console.log(`📝 Title element ${i}: "${el.textContent}"`);
-        });
-        contextElements.forEach((el, i) => {
-            console.log(`📝 Context element ${i}: "${el.textContent}"`);
-        });
     }
     
     setup_header() {
@@ -1347,10 +1325,8 @@ class FlansaAppBuilder {
         // Setup header first (this should work now that page is ready)
         this.setup_header();
         
-        console.log('🔍 Loading data with app_id:', this.app_id);
         
         if (!this.app_id) {
-            console.log('⚠️ No app_id found, showing app selector');
             // Show app selector if no app selected
             this.show_app_selector();
             return;
@@ -1364,14 +1340,8 @@ class FlansaAppBuilder {
                 name: this.app_id
             },
             callback: (r) => {
-                console.log('📄 Application data response:', r);
                 if (r.message) {
                     this.current_app = r.message;
-                    console.log('✅ Application loaded:', {
-                        name: r.message.name,
-                        application_title: r.message.application_title,
-                        application_name: r.message.application_name
-                    });
                     this.update_banner_info(); // Update banner with loaded app data
                     this.load_tables_data();
                 } else {
@@ -1857,7 +1827,6 @@ class FlansaAppBuilder {
         // Table creation options
         $builder.on('click', '#create-blank-table', (e) => {
             e.preventDefault();
-            console.log('🎯 Blank Table button clicked');
             try {
                 this.show_table_creation_dialog();
             } catch (error) {
@@ -1939,11 +1908,9 @@ class FlansaAppBuilder {
     }
     
     show_table_creation_dialog() {
-        console.log('📋 show_table_creation_dialog called');
         try {
             // First try a simple test dialog
             if (window.location.search.includes('debug=simple')) {
-                console.log('🧪 Creating simple test dialog...');
                 const testDialog = new frappe.ui.Dialog({
                     title: 'Test Dialog',
                     fields: [
@@ -1955,7 +1922,6 @@ class FlansaAppBuilder {
                     ]
                 });
                 testDialog.show();
-                console.log('✅ Simple test dialog shown');
                 return;
             }
             
@@ -1976,133 +1942,94 @@ class FlansaAppBuilder {
     }
     
     create_table_dialog() {
-        console.log('🔧 create_table_dialog called');
         try {
+            
+            // Auto-populate table name from display label
+            const generateTableName = (label) => {
+                if (!label) return '';
+                
+                // Convert to lowercase, replace spaces with underscores, remove special characters
+                let tableName = label.toLowerCase()
+                    .replace(/[^a-z0-9\s]/g, '') // Remove special characters
+                    .trim()
+                    .replace(/\s+/g, '_'); // Replace spaces with underscores
+                
+                // Ensure it starts with a letter
+                if (tableName && !tableName.match(/^[a-z]/)) {
+                    tableName = 't_' + tableName;
+                }
+                
+                // Truncate if too long (Frappe DocType names should be <= 61 characters)
+                if (tableName.length > 61) {
+                    tableName = tableName.substring(0, 61);
+                }
+                
+                return tableName;
+            };
+            
             const dialog = new frappe.ui.Dialog({
             title: 'Add Table',
             size: 'large',
             onshow: function() {
-                console.log('🎭 Dialog onshow triggered');
-                
-                // Simple and direct approach - auto-populate table name from label
-                const generateTableName = (label) => {
-                    if (!label) return '';
-                    
-                    console.log('🎯 Generating table name for label:', label);
-                    
-                    // Convert to lowercase, replace spaces with underscores, remove special characters
-                    let tableName = label.toLowerCase()
-                        .replace(/[^a-z0-9\s]/g, '') // Remove special characters
-                        .trim()
-                        .replace(/\s+/g, '_'); // Replace spaces with underscores
-                    
-                    // Ensure it starts with a letter
-                    if (tableName && !tableName.match(/^[a-z]/)) {
-                        tableName = 't_' + tableName;
+                // Setup auto-population with improved timing and error handling
+                const setupAutoPopulation = () => {
+                    try {
+                        const labelField = dialog.fields_dict.table_label;
+                        const nameField = dialog.fields_dict.table_name;
+                        
+                        if (labelField && labelField.$input && nameField && nameField.$input) {
+                            // Make table name field readonly with better styling
+                            nameField.$input.prop('readonly', true);
+                            nameField.$input.css({
+                                'background-color': '#f8f9fa',
+                                'color': '#6c757d',
+                                'cursor': 'not-allowed'
+                            });
+                            
+                            // Add visual indicator that it's auto-generated
+                            nameField.$wrapper.find('.control-label').append(
+                                ' <small class="text-muted">(auto-generated)</small>'
+                            );
+                            
+                            // Bind auto-population events with multiple triggers
+                            labelField.$input.on('input keyup paste change', function() {
+                                const label = $(this).val().trim();
+                                const tableName = generateTableName(label);
+                                
+                                // Update both the field value and input display
+                                nameField.set_value(tableName);
+                                nameField.$input.val(tableName);
+                            });
+                            
+                            return true;
+                        }
+                        return false;
+                    } catch (error) {
+                        frappe.show_alert({
+                            message: 'Auto-population setup failed, but dialog will continue to work',
+                            indicator: 'orange'
+                        });
+                        return false;
                     }
-                    
-                    // Truncate if too long (Frappe DocType names should be <= 61 characters)
-                    if (tableName.length > 61) {
-                        tableName = tableName.substring(0, 61);
-                    }
-                    
-                    console.log('✅ Generated table name:', tableName);
-                    return tableName;
                 };
                 
-                // Wait for dialog to be fully rendered, then set up auto-population
-                setTimeout(() => {
-                    console.log('⏰ Setting up auto-population after delay...');
-                    
-                    // First, make table name field readonly but updateable
-                    if (dialog.fields_dict.table_name) {
-                        console.log('🔧 Making table_name field readonly');
-                        const tableNameField = dialog.fields_dict.table_name;
-                        if (tableNameField.$input) {
-                            tableNameField.$input.prop('readonly', true);
-                            tableNameField.$input.css({
-                                'background-color': '#f8f9fa',
-                                'border-color': '#e9ecef',
-                                'color': '#6c757d'
-                            });
-                        }
+                // Try multiple times with increasing delays to ensure fields are ready
+                let attempts = 0;
+                const maxAttempts = 10;
+                
+                const trySetup = () => {
+                    attempts++;
+                    if (setupAutoPopulation()) {
+                        return; // Success
                     }
                     
-                    // Set up the auto-population using dialog's field refresh mechanism
-                    if (dialog.fields_dict.table_label) {
-                        console.log('🔧 Setting up table_label field listener');
-                        
-                        const labelField = dialog.fields_dict.table_label;
-                        
-                        // Method 1: Use dialog's refresh method override
-                        const originalRefresh = labelField.refresh;
-                        labelField.refresh = function() {
-                            const result = originalRefresh.call(this);
-                            const currentValue = this.get_value();
-                            console.log('🔄 Field refresh - current value:', currentValue);
-                            
-                            if (currentValue) {
-                                const tableName = generateTableName(currentValue);
-                                dialog.set_value('table_name', tableName);
-                            }
-                            
-                            return result;
-                        };
-                        
-                        // Method 2: Direct input event binding
-                        if (labelField.$input) {
-                            console.log('✅ Found table_label input element, binding events');
-                            
-                            labelField.$input.off('input.table_auto_gen keyup.table_auto_gen').on('input.table_auto_gen keyup.table_auto_gen', function(e) {
-                                const label = $(this).val();
-                                console.log('📝 Input event triggered:', label);
-                                
-                                if (label) {
-                                    const tableName = generateTableName(label);
-                                    console.log('🎯 Setting table name to:', tableName);
-                                    
-                                    // Update the table name field directly
-                                    if (dialog.fields_dict.table_name) {
-                                        dialog.fields_dict.table_name.set_value(tableName);
-                                        dialog.fields_dict.table_name.$input.val(tableName);
-                                    }
-                                } else {
-                                    // Clear table name if label is empty
-                                    if (dialog.fields_dict.table_name) {
-                                        dialog.fields_dict.table_name.set_value('');
-                                        dialog.fields_dict.table_name.$input.val('');
-                                    }
-                                }
-                            });
-                            
-                            console.log('✅ Event binding completed');
-                        } else {
-                            console.error('❌ Could not find table_label input element');
-                            
-                            // Fallback: Try again with longer delay
-                            setTimeout(() => {
-                                console.log('🔄 Fallback: Retrying input element binding...');
-                                const labelField = dialog.fields_dict.table_label;
-                                if (labelField && labelField.$input) {
-                                    console.log('✅ Found input on retry');
-                                    labelField.$input.on('input keyup', function() {
-                                        const label = $(this).val();
-                                        const tableName = generateTableName(label);
-                                        if (dialog.fields_dict.table_name) {
-                                            dialog.fields_dict.table_name.set_value(tableName);
-                                            dialog.fields_dict.table_name.$input.val(tableName);
-                                        }
-                                    });
-                                } else {
-                                    console.error('❌ Still could not find input element on retry');
-                                }
-                            }, 1000);
-                        }
-                    } else {
-                        console.error('❌ Could not find table_label field');
+                    if (attempts < maxAttempts) {
+                        setTimeout(trySetup, attempts * 100); // Increasing delay: 100ms, 200ms, 300ms, etc.
                     }
-                    
-                }, 500); // Wait 500ms for dialog to be fully rendered
+                };
+                
+                // Start setup attempts
+                setTimeout(trySetup, 100);
             },
             fields: [
                 {
@@ -2236,18 +2163,10 @@ class FlansaAppBuilder {
             originalAction.call(dialog, values);
         };
         
-        console.log('✅ Table creation dialog created successfully');
-        console.log('🔧 Dialog object:', dialog);
-        console.log('🔧 Dialog wrapper:', dialog.$wrapper);
-        console.log('🔧 Dialog show method:', typeof dialog.show);
-        
-        // Actually show the dialog!
-        console.log('📱 About to show dialog...');
+        // Show the dialog
         dialog.show();
-        console.log('✅ Dialog show() called successfully');
         
         } catch (error) {
-            console.error('❌ Error creating table dialog:', error);
             frappe.show_alert({
                 message: 'Error creating table dialog: ' + error.message,
                 indicator: 'red'
@@ -2308,45 +2227,27 @@ class FlansaAppBuilder {
         });
         
         try {
-            console.log('📱 About to show dialog...');
             
             // Try alternative showing methods if the standard one fails
             try {
                 dialog.show();
-                console.log('✅ Dialog.show() called successfully');
             } catch (showError) {
                 console.error('❌ Error in dialog.show():', showError);
                 // Try manual modal showing
-                console.log('🔄 Trying manual modal show...');
                 dialog.$wrapper.modal('show');
-                console.log('✅ Manual modal show called');
             }
             
             // Check if dialog is actually visible
             setTimeout(() => {
                 const dialogElement = document.querySelector('.modal.fade.in, .modal.show');
-                if (dialogElement) {
-                    console.log('✅ Dialog is visible in DOM:', dialogElement);
-                } else {
-                    console.log('❌ Dialog not found in DOM after show()');
-                    // Try to find any modal dialogs
+                if (!dialogElement) {
+                    // Try to find any modal dialogs and force show them
                     const anyModal = document.querySelector('.modal');
                     if (anyModal) {
-                        console.log('🔍 Found modal but not visible:', anyModal);
-                        console.log('Modal classes:', anyModal.className);
-                        console.log('Modal style:', anyModal.style.cssText);
-                        console.log('Modal display:', window.getComputedStyle(anyModal).display);
-                        console.log('Modal visibility:', window.getComputedStyle(anyModal).visibility);
-                        console.log('Modal z-index:', window.getComputedStyle(anyModal).zIndex);
-                        
                         // Try to force show it
-                        console.log('🔧 Trying to force show modal...');
                         anyModal.style.display = 'block';
                         anyModal.classList.add('show', 'in');
                         document.body.classList.add('modal-open');
-                        console.log('🔧 Forced modal visibility applied');
-                    } else {
-                        console.log('❌ No modal elements found at all');
                     }
                 }
             }, 100);
@@ -2385,7 +2286,6 @@ class FlansaAppBuilder {
             }
         } catch (error) {
             // Silently fail if workspace system isn't available
-            console.debug('Workspace logo not available:', error);
         }
     }
 }
