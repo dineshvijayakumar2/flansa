@@ -1885,6 +1885,13 @@ class FlansaAppBuilder {
         
         $builder.on('click', '#delete-app-menu', (e) => {
             e.preventDefault();
+            console.log('Delete app menu clicked, app_id:', this.app_id);
+            
+            if (!this.app_id) {
+                frappe.show_alert('❌ No application selected', 'red');
+                return;
+            }
+            
             this.delete_application(this.app_id);
         });
         
@@ -2429,22 +2436,25 @@ class FlansaAppBuilder {
                         • ${items}
                         </div>
                         <p><strong style="color: #d73527;">⚠️ This action cannot be undone and will remove ALL data, tables, forms, reports, and relationships!</strong></p>
-                        <p>Are you sure you want to permanently delete this application and all its associated data?</p>
+                        <p>Are you sure you want to proceed?</p>
                         </div>`,
                         () => {
-                            // User confirmed - proceed with deletion
+                            // Show loading message
+                            frappe.show_alert('🗑️ Deleting application and all connected resources...', 'blue');
+                            
                             frappe.call({
                                 method: 'flansa.flansa_core.api.clean_delete.clean_delete_app',
-                                args: {
-                                    app_name: app_name
-                                },
+                                args: { app_name: app_name },
                                 callback: (delete_r) => {
                                     if (delete_r.message && delete_r.message.success) {
-                                        frappe.show_alert('✅ Application deleted successfully', 'green');
-                                        // Navigate back to workspace
+                                        frappe.show_alert('✅ ' + delete_r.message.message, 'green');
+                                        console.log('🗑️ App deletion summary:', delete_r.message.summary);
+                                        console.log('🗑️ Deletion log:', delete_r.message.deletion_log);
+                                        
+                                        // Navigate back to workspace after successful deletion
                                         setTimeout(() => {
                                             window.location.href = '/app/flansa-workspace';
-                                        }, 1500);
+                                        }, 2000);
                                     } else {
                                         frappe.show_alert('❌ Failed to delete application: ' + (delete_r.message?.error || 'Unknown error'), 'red');
                                     }
