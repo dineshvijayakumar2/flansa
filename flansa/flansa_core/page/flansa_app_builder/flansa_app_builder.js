@@ -1971,65 +1971,61 @@ class FlansaAppBuilder {
             title: 'Add Table',
             size: 'large',
             onshow: function() {
-                // Setup auto-population with improved timing and error handling
-                const setupAutoPopulation = () => {
-                    try {
-                        const labelField = dialog.fields_dict.table_label;
-                        const nameField = dialog.fields_dict.table_name;
-                        
-                        if (labelField && labelField.$input && nameField && nameField.$input) {
-                            // Make table name field readonly with better styling
+                // Simple and direct auto-population setup with better timing
+                console.log('Dialog onshow triggered');
+                setTimeout(() => {
+                    console.log('Setting up auto-population...');
+                    const labelField = dialog.fields_dict.table_label;
+                    const nameField = dialog.fields_dict.table_name;
+                    
+                    console.log('Fields found:', { labelField: !!labelField, nameField: !!nameField });
+                    
+                    if (labelField && nameField) {
+                        // Make table name field readonly
+                        if (nameField.$input) {
                             nameField.$input.prop('readonly', true);
                             nameField.$input.css({
                                 'background-color': '#f8f9fa',
-                                'color': '#6c757d',
-                                'cursor': 'not-allowed'
+                                'color': '#6c757d'
                             });
-                            
-                            // Add visual indicator that it's auto-generated
-                            nameField.$wrapper.find('.control-label').append(
-                                ' <small class="text-muted">(auto-generated)</small>'
-                            );
-                            
-                            // Bind auto-population events with multiple triggers
-                            labelField.$input.on('input keyup paste change', function() {
-                                const label = $(this).val().trim();
-                                const tableName = generateTableName(label);
-                                
-                                // Update both the field value and input display
-                                nameField.set_value(tableName);
-                                nameField.$input.val(tableName);
-                            });
-                            
-                            return true;
+                            console.log('Made table name field readonly');
                         }
-                        return false;
-                    } catch (error) {
-                        frappe.show_alert({
-                            message: 'Auto-population setup failed, but dialog will continue to work',
-                            indicator: 'orange'
-                        });
-                        return false;
+                        
+                        // Add visual indicator that it's auto-generated
+                        const label = nameField.$wrapper.find('.control-label');
+                        if (label.length && !label.find('.auto-gen-indicator').length) {
+                            label.append(' <small class="text-muted auto-gen-indicator">(auto-generated)</small>');
+                            console.log('Added auto-generated indicator');
+                        }
+                        
+                        // Set up auto-population event
+                        if (labelField.$input) {
+                            labelField.$input.on('input keyup paste', function() {
+                                const labelValue = $(this).val();
+                                const tableName = generateTableName(labelValue);
+                                console.log('Auto-populating:', labelValue, '->', tableName);
+                                
+                                // Update the table name field
+                                nameField.set_value(tableName);
+                                if (nameField.$input) {
+                                    nameField.$input.val(tableName);
+                                }
+                            });
+                            console.log('Event handlers bound to label field');
+                        }
+                        
+                        // Also trigger on field change events
+                        labelField.df.onchange = function() {
+                            const labelValue = this.get_value();
+                            const tableName = generateTableName(labelValue);
+                            console.log('Field onchange:', labelValue, '->', tableName);
+                            nameField.set_value(tableName);
+                        };
+                        console.log('Auto-population setup complete');
+                    } else {
+                        console.log('Fields not found - setup failed');
                     }
-                };
-                
-                // Try multiple times with increasing delays to ensure fields are ready
-                let attempts = 0;
-                const maxAttempts = 10;
-                
-                const trySetup = () => {
-                    attempts++;
-                    if (setupAutoPopulation()) {
-                        return; // Success
-                    }
-                    
-                    if (attempts < maxAttempts) {
-                        setTimeout(trySetup, attempts * 100); // Increasing delay: 100ms, 200ms, 300ms, etc.
-                    }
-                };
-                
-                // Start setup attempts
-                setTimeout(trySetup, 100);
+                }, 500); // Simple 500ms delay
             },
             fields: [
                 {
