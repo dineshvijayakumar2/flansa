@@ -2036,13 +2036,14 @@ class FlansaAppBuilder {
             title: 'Add Table',
             size: 'large',
             onshow: function() {
-                // Simple and direct auto-population setup with better timing
                 console.log('Dialog onshow triggered');
-                setTimeout(() => {
-                    console.log('Setting up auto-population...');
+                
+                // More robust auto-population setup with multiple retries
+                const setupAutoPopulation = () => {
                     const labelField = dialog.fields_dict.table_label;
                     const nameField = dialog.fields_dict.table_name;
                     
+                    console.log('Setting up auto-population...');
                     console.log('Fields found:', { 
                         labelField: !!labelField, 
                         nameField: !!nameField,
@@ -2051,9 +2052,7 @@ class FlansaAppBuilder {
                     });
                     
                     if (labelField && nameField) {
-                        console.log('Both fields exist, setting up...');
-                        
-                        // Make table name field readonly
+                        // Make table name field readonly with proper styling
                         if (nameField.$input) {
                             nameField.$input.prop('readonly', true);
                             nameField.$input.css({
@@ -2061,73 +2060,88 @@ class FlansaAppBuilder {
                                 'color': '#6c757d'
                             });
                             console.log('Made table name field readonly');
-                        } else {
-                            console.log('⚠️  nameField.$input not found yet');
                         }
                         
-                        // Add visual indicator that it's auto-generated
-                        const label = nameField.$wrapper ? nameField.$wrapper.find('.control-label') : $();
-                        if (label.length && !label.find('.auto-gen-indicator').length) {
-                            label.append(' <small class="text-muted auto-gen-indicator">(auto-generated)</small>');
-                            console.log('Added auto-generated indicator');
-                        } else {
-                            console.log('⚠️  Could not add auto-generated indicator');
+                        // Add visual indicator
+                        if (nameField.$wrapper) {
+                            const label = nameField.$wrapper.find('.control-label');
+                            if (label.length && !label.find('.auto-gen-indicator').length) {
+                                label.append(' <small class="text-muted auto-gen-indicator">(auto-generated)</small>');
+                                console.log('Added auto-generated indicator');
+                            }
                         }
                         
-                        // Set up auto-population event - test with simple event first
-                        if (labelField.$input) {
-                            console.log('Binding events to labelField.$input');
+                        // Setup event handlers using multiple approaches
+                        const updateTableName = (labelValue) => {
+                            const tableName = generateTableName(labelValue);
+                            console.log('🔥 Updating table name:', labelValue, '->', tableName);
                             
-                            // Test basic event binding
-                            labelField.$input.on('input', function() {
-                                console.log('🔥 INPUT EVENT TRIGGERED!');
-                                const labelValue = $(this).val();
-                                console.log('Label value:', labelValue);
-                                const tableName = generateTableName(labelValue);
-                                console.log('Generated table name:', tableName);
-                                
-                                // Update the table name field multiple ways
-                                if (nameField.set_value) {
-                                    nameField.set_value(tableName);
-                                    console.log('Used nameField.set_value()');
-                                }
-                                
-                                if (nameField.$input) {
-                                    nameField.$input.val(tableName);
-                                    console.log('Used nameField.$input.val()');
-                                }
-                                
-                                // Try alternative update method
-                                try {
-                                    nameField.set_input(tableName);
-                                    console.log('Used nameField.set_input()');
-                                } catch (e) {
-                                    console.log('nameField.set_input() not available');
-                                }
-                            });
-                            
-                            console.log('Event handlers bound to label field');
-                        } else {
-                            console.log('⚠️  labelField.$input not found');
-                        }
-                        
-                        // Also trigger on field change events
-                        if (labelField.df) {
-                            labelField.df.onchange = function() {
-                                console.log('🔥 ONCHANGE EVENT TRIGGERED!');
-                                const labelValue = this.get_value();
-                                const tableName = generateTableName(labelValue);
-                                console.log('Field onchange:', labelValue, '->', tableName);
+                            // Multiple update methods to ensure it works
+                            if (nameField.set_value) {
                                 nameField.set_value(tableName);
-                            };
-                            console.log('Set up df.onchange');
+                            }
+                            if (nameField.$input) {
+                                nameField.$input.val(tableName);
+                                nameField.$input.trigger('change');
+                            }
+                        };
+                        
+                        // Method 1: Direct input event binding
+                        if (labelField.$input) {
+                            labelField.$input.on('input keyup paste', function() {
+                                const labelValue = $(this).val();
+                                updateTableName(labelValue);
+                            });
+                            console.log('✅ Bound input events');
                         }
                         
-                        console.log('Auto-population setup complete');
+                        // Method 2: Frappe field events
+                        if (labelField.df) {
+                            const originalOnchange = labelField.df.onchange;
+                            labelField.df.onchange = function() {
+                                console.log('🔥 Field onchange triggered');
+                                const labelValue = this.get_value();
+                                updateTableName(labelValue);
+                                
+                                // Call original onchange if it exists
+                                if (originalOnchange) {
+                                    originalOnchange.call(this);
+                                }
+                            };
+                            console.log('✅ Set up field onchange');
+                        }
+                        
+                        // Method 3: Monitor value changes with polling (fallback)
+                        let lastValue = '';
+                        const pollForChanges = () => {
+                            if (labelField.get_value && labelField.get_value() !== lastValue) {
+                                lastValue = labelField.get_value();
+                                if (lastValue) {
+                                    updateTableName(lastValue);
+                                }
+                            }
+                        };
+                        
+                        // Poll every 200ms for changes (as fallback)
+                        const pollInterval = setInterval(pollForChanges, 200);
+                        
+                        // Clear polling when dialog closes
+                        dialog.onhide = function() {
+                            clearInterval(pollInterval);
+                        };
+                        
+                        console.log('✅ Auto-population setup complete with polling fallback');
+                        return true;
                     } else {
                         console.log('❌ Fields not found - setup failed');
+                        return false;
                     }
-                }, 800); // Increased delay to 800ms
+                };
+                
+                // Try to setup with increasing delays
+                setTimeout(setupAutoPopulation, 300);
+                setTimeout(setupAutoPopulation, 600);
+                setTimeout(setupAutoPopulation, 1000);
             },
             fields: [
                 {
