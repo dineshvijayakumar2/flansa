@@ -125,66 +125,12 @@ def create_doctype_from_table(table_doc, fields_data):
         doctype.module = "Flansa Core"
         doctype.custom = 1
         
-        # Set naming rule based on Flansa Table configuration
-        naming_type = getattr(table_doc, 'naming_type', 'Naming Series')
+        # Use default naming initially - will be updated by apply_naming_to_doctype later
+        print(f"🔧 Setting default naming for DocType: {table_doc.doctype_name}")
+        print(f"   - Will be updated by apply_naming_to_doctype after creation")
         
-        print(f"🔧 Configuring naming for DocType: {table_doc.doctype_name}")
-        print(f"   - Naming Type: '{naming_type}'")
-        print(f"   - Naming Prefix: '{getattr(table_doc, 'naming_prefix', None)}'")
-        print(f"   - Naming Digits: {getattr(table_doc, 'naming_digits', None)}")
-        print(f"   - Naming Field: '{getattr(table_doc, 'naming_field', None)}'")
-        print(f"   - Start From: {getattr(table_doc, 'naming_start_from', None)}")
-        
-        if naming_type == 'Naming Series':
-            # Use configured prefix and digits
-            prefix = getattr(table_doc, 'naming_prefix', 'REC')
-            digits = getattr(table_doc, 'naming_digits', 5)
-            doctype.naming_rule = "By \"Naming Series\" field"
-            
-            # For Naming Series, we need to use the prefix pattern
-            naming_series_pattern = f"{prefix}-.{'#' * digits}"
-            doctype.autoname = "naming_series:"
-            
-            # Add a naming series field to the DocType
-            doctype.append("fields", {
-                "fieldname": "naming_series",
-                "label": "Naming Series",
-                "fieldtype": "Select",
-                "options": naming_series_pattern,
-                "default": naming_series_pattern,
-                "reqd": 1,
-                "hidden": 1  # Hide from user interface
-            })
-            
-            print(f"   ✅ Set Naming Series: {naming_series_pattern}")
-        elif naming_type == 'Auto Increment':
-            # Just numbers without prefix
-            digits = getattr(table_doc, 'naming_digits', 5)
-            doctype.naming_rule = "Autoincrement"
-            doctype.autoname = f".{'#' * digits}"
-            print(f"   ✅ Set Auto Increment: {doctype.autoname}")
-        elif naming_type == 'Field Based':
-            # Use a field value for naming
-            field_name = getattr(table_doc, 'naming_field', '')
-            if field_name:
-                doctype.naming_rule = "By fieldname"
-                doctype.autoname = f"field:{frappe.scrub(field_name)}"
-                print(f"   ✅ Set Field Based: {doctype.autoname}")
-            else:
-                # Fallback to random if no field specified
-                doctype.naming_rule = "Random"
-                print(f"   ⚠️ Field Based but no field specified, using Random")
-        elif naming_type == 'Prompt':
-            # User will be prompted to enter the ID
-            doctype.naming_rule = "Set by user"
-            doctype.autoname = "Prompt"
-            print(f"   ✅ Set Prompt naming")
-        else:  # Random or default
-            doctype.naming_rule = "Random"
-            print(f"   ✅ Set Random naming")
-        
-        print(f"   🎯 Final DocType naming_rule: '{doctype.naming_rule}'")
-        print(f"   🎯 Final DocType autoname: '{getattr(doctype, 'autoname', 'None')}'", flush=True)
+        # Set basic default naming (will be overridden by apply_naming_to_doctype)
+        doctype.naming_rule = "Random"  # Safe default
         
         # Basic settings - simplified
         doctype.track_changes = 0
@@ -361,12 +307,24 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
             activation_result = activate_table(table_doc.name)
             if activation_result.get("success"):
                 print(f"✅ Table activated and DocType created: {activation_result.get('doctype_name')}", flush=True)
+                
+                # Apply naming configuration using the working Visual Builder method
+                print(f"🎯 Applying naming settings to DocType...", flush=True)
+                from flansa.flansa_core.api.field_management import apply_naming_to_doctype
+                naming_result = apply_naming_to_doctype(table_doc.name)
+                
+                if naming_result.get("success"):
+                    print(f"✅ Naming settings applied successfully", flush=True)
+                else:
+                    print(f"⚠️ Warning: Naming settings could not be applied: {naming_result.get('message')}", flush=True)
+                
                 return {
                     "success": True,
-                    "message": f"Table '{table_label}' created and activated successfully",
+                    "message": f"Table '{table_label}' created and activated successfully with naming settings",
                     "table_name": table_doc.name,
                     "table_id": table_doc.name,
-                    "doctype_name": activation_result.get('doctype_name')
+                    "doctype_name": activation_result.get('doctype_name'),
+                    "naming_applied": naming_result.get("success", False)
                 }
             else:
                 print(f"⚠️ Table created but activation failed: {activation_result.get('error')}", flush=True)
