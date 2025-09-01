@@ -1883,9 +1883,10 @@ class FlansaAppBuilder {
             window.location.href = `/app/flansa-saved-reports?app=${this.app_id}`;
         });
         
+        // Multiple ways to handle delete app menu click
         $builder.on('click', '#delete-app-menu', (e) => {
             e.preventDefault();
-            console.log('Delete app menu clicked, app_id:', this.app_id);
+            console.log('🗑️ Delete app menu clicked via ID selector, app_id:', this.app_id);
             
             if (!this.app_id) {
                 frappe.show_alert('❌ No application selected', 'red');
@@ -1893,6 +1894,29 @@ class FlansaAppBuilder {
             }
             
             this.delete_application(this.app_id);
+        });
+        
+        // Alternative handler using class selector
+        $builder.on('click', '.delete-app-menu', (e) => {
+            e.preventDefault();
+            console.log('🗑️ Delete app menu clicked via class selector, app_id:', this.app_id);
+            
+            if (!this.app_id) {
+                frappe.show_alert('❌ No application selected', 'red');
+                return;
+            }
+            
+            this.delete_application(this.app_id);
+        });
+        
+        // Debug: Log all clicks on dropdown options
+        $builder.on('click', '.dropdown-option', (e) => {
+            console.log('🔍 Dropdown option clicked:', e.target.id, e.target.className);
+        });
+        
+        // Debug: Log context dropdown button clicks
+        $builder.on('click', '#context-menu-btn', (e) => {
+            console.log('🔍 Context menu button clicked');
         });
         
         // Empty state create button
