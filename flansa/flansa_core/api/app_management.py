@@ -9,9 +9,9 @@ def get_user_applications():
             "Flansa Application",
             fields=[
                 "name", 
-                "application_title", 
-                "application_name", 
-                "application_description",
+                "app_title", 
+                "app_name", 
+                "description",
                 "creation",
                 "modified"
             ],
