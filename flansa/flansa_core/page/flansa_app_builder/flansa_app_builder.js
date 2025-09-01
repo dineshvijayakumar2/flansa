@@ -1827,6 +1827,7 @@ class FlansaAppBuilder {
         // Table creation options
         $builder.on('click', '#create-blank-table', (e) => {
             e.preventDefault();
+            console.log('🎯 Create blank table button clicked - testing dialog trigger');
             try {
                 this.show_table_creation_dialog();
             } catch (error) {
@@ -1908,9 +1909,11 @@ class FlansaAppBuilder {
     }
     
     show_table_creation_dialog() {
+        console.log('📋 show_table_creation_dialog method called');
         try {
             // First try a simple test dialog
             if (window.location.search.includes('debug=simple')) {
+                console.log('🧪 Creating simple test dialog...');
                 const testDialog = new frappe.ui.Dialog({
                     title: 'Test Dialog',
                     fields: [
@@ -1942,6 +1945,7 @@ class FlansaAppBuilder {
     }
     
     create_table_dialog() {
+        console.log('🔧 create_table_dialog method called');
         try {
             
             // Auto-populate table name from display label
