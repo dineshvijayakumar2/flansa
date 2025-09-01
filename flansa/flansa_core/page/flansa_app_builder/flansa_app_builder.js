@@ -1849,7 +1849,6 @@ class FlansaAppBuilder {
         // Table creation options
         $builder.on('click', '#create-blank-table', (e) => {
             e.preventDefault();
-            console.log('🎯 Create blank table button clicked - testing dialog trigger');
             try {
                 this.show_table_creation_dialog();
             } catch (error) {
@@ -1970,7 +1969,6 @@ class FlansaAppBuilder {
     }
     
     show_table_creation_dialog() {
-        console.log('📋 show_table_creation_dialog method called');
         try {
             // First try a simple test dialog
             if (window.location.search.includes('debug=simple')) {
@@ -2006,7 +2004,6 @@ class FlansaAppBuilder {
     }
     
     create_table_dialog() {
-        console.log('🔧 create_table_dialog method called');
         try {
             
             // Auto-populate table name from display label
@@ -2035,128 +2032,29 @@ class FlansaAppBuilder {
             const dialog = new frappe.ui.Dialog({
             title: 'Add Table',
             size: 'large',
-            onshow: function() {
-                console.log('Dialog onshow triggered');
-                
-                // More robust auto-population setup with multiple retries
-                const setupAutoPopulation = () => {
-                    const labelField = dialog.fields_dict.table_label;
-                    const nameField = dialog.fields_dict.table_name;
-                    
-                    console.log('Setting up auto-population...');
-                    console.log('Fields found:', { 
-                        labelField: !!labelField, 
-                        nameField: !!nameField,
-                        labelInput: !!(labelField && labelField.$input),
-                        nameInput: !!(nameField && nameField.$input)
-                    });
-                    
-                    if (labelField && nameField) {
-                        // Make table name field readonly with proper styling
-                        if (nameField.$input) {
-                            nameField.$input.prop('readonly', true);
-                            nameField.$input.css({
-                                'background-color': '#f8f9fa',
-                                'color': '#6c757d'
-                            });
-                            console.log('Made table name field readonly');
-                        }
-                        
-                        // Add visual indicator
-                        if (nameField.$wrapper) {
-                            const label = nameField.$wrapper.find('.control-label');
-                            if (label.length && !label.find('.auto-gen-indicator').length) {
-                                label.append(' <small class="text-muted auto-gen-indicator">(auto-generated)</small>');
-                                console.log('Added auto-generated indicator');
-                            }
-                        }
-                        
-                        // Setup event handlers using multiple approaches
-                        const updateTableName = (labelValue) => {
-                            const tableName = generateTableName(labelValue);
-                            console.log('🔥 Updating table name:', labelValue, '->', tableName);
-                            
-                            // Multiple update methods to ensure it works
-                            if (nameField.set_value) {
-                                nameField.set_value(tableName);
-                            }
-                            if (nameField.$input) {
-                                nameField.$input.val(tableName);
-                                nameField.$input.trigger('change');
-                            }
-                        };
-                        
-                        // Method 1: Direct input event binding
-                        if (labelField.$input) {
-                            labelField.$input.on('input keyup paste', function() {
-                                const labelValue = $(this).val();
-                                updateTableName(labelValue);
-                            });
-                            console.log('✅ Bound input events');
-                        }
-                        
-                        // Method 2: Frappe field events
-                        if (labelField.df) {
-                            const originalOnchange = labelField.df.onchange;
-                            labelField.df.onchange = function() {
-                                console.log('🔥 Field onchange triggered');
-                                const labelValue = this.get_value();
-                                updateTableName(labelValue);
-                                
-                                // Call original onchange if it exists
-                                if (originalOnchange) {
-                                    originalOnchange.call(this);
-                                }
-                            };
-                            console.log('✅ Set up field onchange');
-                        }
-                        
-                        // Method 3: Monitor value changes with polling (fallback)
-                        let lastValue = '';
-                        const pollForChanges = () => {
-                            if (labelField.get_value && labelField.get_value() !== lastValue) {
-                                lastValue = labelField.get_value();
-                                if (lastValue) {
-                                    updateTableName(lastValue);
-                                }
-                            }
-                        };
-                        
-                        // Poll every 200ms for changes (as fallback)
-                        const pollInterval = setInterval(pollForChanges, 200);
-                        
-                        // Clear polling when dialog closes
-                        dialog.onhide = function() {
-                            clearInterval(pollInterval);
-                        };
-                        
-                        console.log('✅ Auto-population setup complete with polling fallback');
-                        return true;
-                    } else {
-                        console.log('❌ Fields not found - setup failed');
-                        return false;
-                    }
-                };
-                
-                // Try to setup with increasing delays
-                setTimeout(setupAutoPopulation, 300);
-                setTimeout(setupAutoPopulation, 600);
-                setTimeout(setupAutoPopulation, 1000);
-            },
             fields: [
                 {
                     fieldname: 'table_label',
                     label: 'Display Label',
                     fieldtype: 'Data',
                     reqd: 1,
-                    description: 'User-friendly name (e.g., Customer Orders)'
+                    description: 'User-friendly name (e.g., Customer Orders)',
+                    change: function() {
+                        const labelValue = this.get_value();
+                        
+                        if (labelValue) {
+                            const tableName = generateTableName(labelValue);
+                            dialog.set_value('table_name', tableName);
+                        }
+                    }
                 },
                 {
                     fieldname: 'table_name',
                     label: 'Table Name',
                     fieldtype: 'Data',
                     reqd: 1,
-                    description: 'Auto-generated from display label (e.g., customer_orders)'
+                    description: 'Auto-generated from display label (e.g., customer_orders)',
+                    read_only: 1
                 },
                 {
                     fieldname: 'description',
@@ -2338,38 +2236,13 @@ class FlansaAppBuilder {
             }
         });
         
+        // Show the dialog
         try {
-            
-            // Try alternative showing methods if the standard one fails
-            try {
-                dialog.show();
-            } catch (showError) {
-                console.error('❌ Error in dialog.show():', showError);
-                // Try manual modal showing
-                dialog.$wrapper.modal('show');
-            }
-            
-            // Check if dialog is actually visible
-            setTimeout(() => {
-                const dialogElement = document.querySelector('.modal.fade.in, .modal.show');
-                if (!dialogElement) {
-                    // Try to find any modal dialogs and force show them
-                    const anyModal = document.querySelector('.modal');
-                    if (anyModal) {
-                        // Try to force show it
-                        anyModal.style.display = 'block';
-                        anyModal.classList.add('show', 'in');
-                        document.body.classList.add('modal-open');
-                    }
-                }
-            }, 100);
-            
-        } catch (error) {
-            console.error('❌ Error showing dialog:', error);
-            frappe.show_alert({
-                message: 'Error showing dialog: ' + error.message,
-                indicator: 'red'
-            });
+            dialog.show();
+        } catch (showError) {
+            console.error('❌ Error in dialog.show():', showError);
+            // Try manual modal showing
+            dialog.$wrapper.modal('show');
         }
     }
     
