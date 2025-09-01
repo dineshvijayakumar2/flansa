@@ -190,6 +190,11 @@ class FlansaAppBuilder {
                                         </svg>
                                         <span>Saved Reports</span>
                                     </a>
+                                    <div style="border-top: 1px solid #e5e7eb; margin: 0.5rem 0;"></div>
+                                    <a href="#" class="dropdown-option delete-app-menu" id="delete-app-menu">
+                                        <i class="fa fa-trash" style="color: #dc3545;"></i>
+                                        <span style="color: #dc3545;">Delete Application</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -910,6 +915,17 @@ class FlansaAppBuilder {
                     background: #667eea;
                     color: white;
                     transform: translateY(-1px);
+                }
+                
+                .tile-action-btn.delete-btn {
+                    color: #dc3545;
+                    border-color: rgba(220, 53, 69, 0.2);
+                }
+                
+                .tile-action-btn.delete-btn:hover {
+                    border-color: #dc3545;
+                    background: #dc3545;
+                    color: white;
                 }
                 
                 /* Tile Body */
@@ -1737,6 +1753,9 @@ class FlansaAppBuilder {
                             <button class="action-btn form-btn tile-action-btn" data-action="form" data-table="${table.name}" title="Form Builder">
                                 <i class="fa fa-wpforms"></i>
                             </button>
+                            <button class="action-btn delete-btn tile-action-btn" data-action="delete" data-table="${table.name}" title="Delete Table">
+                                <i class="fa fa-trash"></i>
+                            </button>
                         </div>
                     </td>
                 </tr>
@@ -1774,6 +1793,9 @@ class FlansaAppBuilder {
                                     <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2v8h12V6H4z" clip-rule="evenodd" />
                                     </svg>
+                                </button>
+                                <button class="tile-action-btn delete-btn" data-action="delete" data-table="${table.name}" title="Delete Table">
+                                    <i class="fa fa-trash"></i>
                                 </button>
                             </div>
                         </div>
@@ -1861,6 +1883,11 @@ class FlansaAppBuilder {
             window.location.href = `/app/flansa-saved-reports?app=${this.app_id}`;
         });
         
+        $builder.on('click', '#delete-app-menu', (e) => {
+            e.preventDefault();
+            this.delete_application(this.app_id);
+        });
+        
         // Empty state create button
         $builder.on('click', '#empty-create-table', () => {
             this.create_table_dialog();
@@ -1881,8 +1908,8 @@ class FlansaAppBuilder {
         // Table actions (support both old and new tile styling)
         $builder.on('click', '.table-action-btn, .tile-action-btn', (e) => {
             e.stopPropagation();
-            const action = $(e.target).data('action');
-            const tableId = $(e.target).data('table');
+            const action = $(e.target).closest('button').data('action');
+            const tableId = $(e.target).closest('button').data('table');
             
             switch(action) {
                 case 'edit':
@@ -1893,6 +1920,9 @@ class FlansaAppBuilder {
                     break;
                 case 'form':
                     window.location.href = `/app/flansa-form-builder?table=${tableId}`;
+                    break;
+                case 'delete':
+                    this.delete_table(tableId);
                     break;
             }
         });
@@ -2324,5 +2354,111 @@ class FlansaAppBuilder {
         } catch (error) {
             // Silently fail if workspace system isn't available
         }
+    }
+    
+    delete_table(table_name) {
+        // First show preview of what will be deleted
+        frappe.call({
+            method: 'flansa.flansa_core.api.clean_delete.get_deletion_preview',
+            args: {
+                resource_type: 'table',
+                resource_name: table_name
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const preview = r.message.preview;
+                    const items = preview.items_to_delete.join('<br>• ');
+                    
+                    frappe.confirm(
+                        `<div style="max-width: 600px;">
+                        <h4>⚠️ Clean Delete Table</h4>
+                        <p>This will <strong>permanently delete</strong>:</p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 12px 0; font-family: monospace; font-size: 13px; border-left: 4px solid #dc3545;">
+                        • ${items}
+                        </div>
+                        <p><strong style="color: #d73527;">⚠️ This action cannot be undone and will remove ALL data, fields, forms, reports, and relationships!</strong></p>
+                        <p>Are you sure you want to permanently delete this table and all its associated data?</p>
+                        </div>`,
+                        () => {
+                            // User confirmed - proceed with deletion
+                            frappe.call({
+                                method: 'flansa.flansa_core.api.clean_delete.clean_delete_table',
+                                args: {
+                                    table_name: table_name
+                                },
+                                callback: (delete_r) => {
+                                    if (delete_r.message && delete_r.message.success) {
+                                        frappe.show_alert('✅ Table deleted successfully', 'green');
+                                        // Reload the tables
+                                        this.load_tables_data();
+                                    } else {
+                                        frappe.show_alert('❌ Failed to delete table: ' + (delete_r.message?.error || 'Unknown error'), 'red');
+                                    }
+                                }
+                            });
+                        },
+                        null, // No callback for cancel
+                        'Delete Table' // Dialog title
+                    );
+                } else {
+                    frappe.show_alert('Failed to get deletion preview', 'red');
+                    console.error('Preview error:', r.message?.error);
+                }
+            }
+        });
+    }
+    
+    delete_application(app_name) {
+        // First show preview of what will be deleted
+        frappe.call({
+            method: 'flansa.flansa_core.api.clean_delete.get_deletion_preview',
+            args: {
+                resource_type: 'app',
+                resource_name: app_name
+            },
+            callback: (r) => {
+                if (r.message && r.message.success) {
+                    const preview = r.message.preview;
+                    const items = preview.items_to_delete.join('<br>• ');
+                    
+                    frappe.confirm(
+                        `<div style="max-width: 600px;">
+                        <h4>⚠️ Clean Delete Application</h4>
+                        <p>This will <strong>permanently delete</strong>:</p>
+                        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 12px 0; font-family: monospace; font-size: 13px; border-left: 4px solid #dc3545;">
+                        • ${items}
+                        </div>
+                        <p><strong style="color: #d73527;">⚠️ This action cannot be undone and will remove ALL data, tables, forms, reports, and relationships!</strong></p>
+                        <p>Are you sure you want to permanently delete this application and all its associated data?</p>
+                        </div>`,
+                        () => {
+                            // User confirmed - proceed with deletion
+                            frappe.call({
+                                method: 'flansa.flansa_core.api.clean_delete.clean_delete_app',
+                                args: {
+                                    app_name: app_name
+                                },
+                                callback: (delete_r) => {
+                                    if (delete_r.message && delete_r.message.success) {
+                                        frappe.show_alert('✅ Application deleted successfully', 'green');
+                                        // Navigate back to workspace
+                                        setTimeout(() => {
+                                            window.location.href = '/app/flansa-workspace';
+                                        }, 1500);
+                                    } else {
+                                        frappe.show_alert('❌ Failed to delete application: ' + (delete_r.message?.error || 'Unknown error'), 'red');
+                                    }
+                                }
+                            });
+                        },
+                        null, // No callback for cancel
+                        'Delete Application' // Dialog title
+                    );
+                } else {
+                    frappe.show_alert('Failed to get deletion preview', 'red');
+                    console.error('Preview error:', r.message?.error);
+                }
+            }
+        });
     }
 }
