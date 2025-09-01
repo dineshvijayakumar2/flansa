@@ -4415,7 +4415,14 @@ class EnhancedFlansaTableBuilder {
                     message: 'Naming settings saved successfully!',
                     indicator: 'green'
                 });
-                dialog.hide();
+                
+                // Apply naming configuration to DocType (like Visual Builder does)
+                frappe.show_alert({
+                    message: 'Applying naming configuration to DocType...',
+                    indicator: 'blue'
+                });
+                
+                this.apply_naming_to_doctype(dialog);
             }
         } catch (error) {
             console.error('Error saving naming settings:', error);
@@ -4428,6 +4435,83 @@ class EnhancedFlansaTableBuilder {
     
     test_naming_pattern_preview(values) {
         this.update_naming_preview(values);
+    }
+    
+    // Apply naming configuration to DocType (copied from Visual Builder)
+    async apply_naming_to_doctype(dialog) {
+        try {
+            frappe.show_alert({
+                message: 'Applying naming configuration to DocType...',
+                indicator: 'blue'
+            });
+            
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.field_management.apply_naming_to_doctype',
+                args: { table_name: this.table_id }
+            });
+            
+            if (result.message && result.message.success) {
+                frappe.show_alert({
+                    message: 'Naming configuration applied! New records will use the updated pattern.',
+                    indicator: 'green'
+                });
+                dialog.hide();
+            } else {
+                const errorMsg = result.message?.message || 'Unknown error';
+                const suggestions = result.message?.suggestions || [];
+                
+                if (suggestions.length > 0) {
+                    // Show conflict resolution dialog with suggestions
+                    this.show_naming_conflict_dialog(suggestions, dialog);
+                } else {
+                    frappe.msgprint('Error applying naming: ' + errorMsg);
+                }
+            }
+        } catch (error) {
+            console.error('Error applying naming to DocType:', error);
+            frappe.show_alert({
+                message: 'Error applying naming configuration',
+                indicator: 'red'
+            });
+        }
+    }
+    
+    // Show naming conflict dialog (simplified version)
+    show_naming_conflict_dialog(suggestions, originalDialog) {
+        const dialog = new frappe.ui.Dialog({
+            title: 'Naming Series Conflict',
+            size: 'small',
+            fields: [
+                {
+                    fieldtype: 'HTML',
+                    fieldname: 'conflict_info',
+                    options: `<div style="padding: 10px; background: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; margin-bottom: 15px;">
+                        <strong>Conflict:</strong> The current naming series is already in use by another table.<br>
+                        <strong>Suggested alternatives:</strong>
+                    </div>`
+                },
+                {
+                    fieldname: 'new_prefix',
+                    fieldtype: 'Select',
+                    label: 'Choose Alternative Prefix',
+                    options: suggestions.join('\n'),
+                    reqd: 1
+                }
+            ],
+            primary_action_label: 'Use Selected Prefix',
+            primary_action: (values) => {
+                // Update the original dialog with new prefix
+                originalDialog.set_value('naming_prefix', values.new_prefix);
+                
+                // Update preview
+                this.update_naming_preview(originalDialog.get_values());
+                
+                // Close conflict dialog
+                dialog.hide();
+            }
+        });
+        
+        dialog.show();
     }
     
     update_naming_preview(values) {
