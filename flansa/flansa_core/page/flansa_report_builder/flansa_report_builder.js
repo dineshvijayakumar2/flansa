@@ -1,6 +1,12 @@
 class UnifiedReportBuilder {
     constructor(page = null) {
         this.page = page;
+        
+        // Hide the default page header to keep only our sleek banner
+        if (page && page.wrapper) {
+            $(page.wrapper).find('.page-head').hide();
+        }
+        
         this.current_table = null;
         this.available_fields = {};
         this.selected_fields = [];

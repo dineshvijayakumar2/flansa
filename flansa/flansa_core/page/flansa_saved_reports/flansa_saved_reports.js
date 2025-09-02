@@ -14,6 +14,9 @@ class SavedReportsPage {
         this.wrapper = page.wrapper;
         this.$container = $(this.wrapper).find('.layout-main-section');
         
+        // Hide the default page header to keep only our sleek banner
+        $(page.wrapper).find('.page-head').hide();
+        
         // State management
         this.reports = [];
         this.filtered_reports = [];
