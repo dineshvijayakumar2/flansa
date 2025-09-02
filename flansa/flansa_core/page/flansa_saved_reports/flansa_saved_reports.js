@@ -1581,11 +1581,12 @@ class SavedReportsPage {
         
         // Delete button
         document.querySelectorAll('.delete-report-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
                 const reportId = btn.dataset.reportId;
                 const report = this.reports.find(r => r.name === reportId);
                 if (report) {
-                    this.delete_report(report);
+                    await this.delete_report(report);
                 }
             });
         });
@@ -2164,11 +2165,23 @@ class SavedReportsPage {
         }
     }
     
-    async delete_report(e) {
-        e.preventDefault();
-        const reportCard = e.target.closest('.report-card');
-        const reportId = reportCard?.dataset.reportId;
-        const reportTitle = reportCard?.querySelector('.report-title')?.textContent;
+    async delete_report(report) {
+        // Handle both event and direct report object
+        let reportId, reportTitle;
+        
+        if (report && report.preventDefault) {
+            // Old event-based call
+            report.preventDefault();
+            const reportCard = report.target.closest('.report-card');
+            reportId = reportCard?.dataset.reportId;
+            reportTitle = reportCard?.querySelector('.report-title')?.textContent;
+        } else if (report && report.name) {
+            // Direct report object from new table
+            reportId = report.name;
+            reportTitle = report.report_title;
+        } else {
+            return;
+        }
         
         if (!reportId) return;
         
