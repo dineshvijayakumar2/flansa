@@ -4283,8 +4283,8 @@ class EnhancedFlansaTableBuilder {
                     fieldname: 'naming_type',
                     fieldtype: 'Select',
                     label: 'Naming Type',
-                    options: ['Naming Series', 'Auto Increment', 'Field Based', 'Prompt', 'Random'],
-                    default: 'Naming Series',
+                    options: 'Autoincrement\nBy "Naming Series" field\nBy fieldname\nSet by user\nRandom',
+                    default: 'By "Naming Series" field',
                     description: 'How should new records be named?'
                 },
                 {
@@ -4292,7 +4292,7 @@ class EnhancedFlansaTableBuilder {
                     fieldtype: 'Data',
                     label: 'Prefix',
                     default: 'REC',
-                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    depends_on: 'eval:doc.naming_type === "By \\"Naming Series\\" field"',
                     description: 'Text that appears before the number (e.g., EXP for expenses)'
                 },
                 {
@@ -4300,7 +4300,7 @@ class EnhancedFlansaTableBuilder {
                     fieldtype: 'Int',
                     label: 'Number of Digits',
                     default: 5,
-                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    depends_on: 'eval:["By \\"Naming Series\\" field", "Autoincrement"].includes(doc.naming_type)',
                     description: 'How many digits for the sequential number (3-10)'
                 },
                 {
@@ -4308,14 +4308,14 @@ class EnhancedFlansaTableBuilder {
                     fieldtype: 'Int',
                     label: 'Start Counter From',
                     default: 1,
-                    depends_on: 'eval:["Naming Series", "Auto Increment"].includes(doc.naming_type)',
+                    depends_on: 'eval:["By \\"Naming Series\\" field", "Autoincrement"].includes(doc.naming_type)',
                     description: 'Starting number for the sequence (default: 1)'
                 },
                 {
                     fieldname: 'naming_field',
                     fieldtype: 'Select',
                     label: 'Field for Dynamic Prefix',
-                    depends_on: 'eval:doc.naming_type=="Field Based"',
+                    depends_on: 'eval:doc.naming_type === "By fieldname"',
                     description: 'Field whose value will be used for naming'
                 },
                 {
@@ -4323,7 +4323,7 @@ class EnhancedFlansaTableBuilder {
                     fieldtype: 'Data',
                     label: 'Separator',
                     default: '-',
-                    depends_on: 'eval:doc.naming_type=="Naming Series"',
+                    depends_on: 'eval:doc.naming_type === "By \\"Naming Series\\" field"',
                     description: 'Character between prefix and number (default: -)'
                 },
                 {
@@ -4369,7 +4369,7 @@ class EnhancedFlansaTableBuilder {
             if (result.message) {
                 const table_data = result.message;
                 dialog.set_values({
-                    naming_type: table_data.naming_type || 'Naming Series',
+                    naming_type: table_data.naming_type || 'By "Naming Series" field',
                     naming_prefix: table_data.naming_prefix || 'REC',
                     naming_digits: table_data.naming_digits || 5,
                     naming_start_from: table_data.naming_start_from || 1,
@@ -4522,21 +4522,21 @@ class EnhancedFlansaTableBuilder {
         const startFrom = values.naming_start_from || 1;
         
         switch(values.naming_type) {
-            case 'Naming Series':
+            case 'By "Naming Series" field':
                 const paddedStart = String(startFrom).padStart(digits, '0');
                 const paddedNext = String(startFrom + 1).padStart(digits, '0');
                 const paddedLater = String(startFrom + 99).padStart(digits, '0');
                 preview = `${prefix}${separator}${paddedStart}, ${prefix}${separator}${paddedNext}, ${prefix}${separator}${paddedLater}`;
                 break;
-            case 'Auto Increment':
+            case 'Autoincrement':
                 preview = String(startFrom).padStart(digits, '0') + ', ' + 
                          String(startFrom + 1).padStart(digits, '0') + ', ' + 
                          String(startFrom + 99).padStart(digits, '0');
                 break;
-            case 'Field Based':
+            case 'By fieldname':
                 preview = 'FIELD_VALUE-001, FIELD_VALUE-002, FIELD_VALUE-003';
                 break;
-            case 'Prompt':
+            case 'Set by user':
                 preview = 'User will be prompted for each record name';
                 break;
             case 'Random':

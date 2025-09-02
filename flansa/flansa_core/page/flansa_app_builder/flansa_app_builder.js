@@ -2062,49 +2062,6 @@ class FlansaAppBuilder {
                     fieldtype: 'Text',
                     description: 'Brief description of the table purpose'
                 },
-                {
-                    fieldtype: 'Section Break',
-                    label: 'Auto-Naming Settings'
-                },
-                {
-                    fieldname: 'naming_type',
-                    label: 'Naming Type',
-                    fieldtype: 'Select',
-                    options: 'Autoincrement\nBy "Naming Series" field\nBy fieldname\nSet by user\nRandom',
-                    default: 'Autoincrement',
-                    description: 'How records will be named automatically'
-                },
-                {
-                    fieldname: 'naming_prefix',
-                    label: 'Prefix',
-                    fieldtype: 'Data',
-                    depends_on: 'eval:doc.naming_type === "By \\"Naming Series\\" field"',
-                    description: 'Prefix for auto-generated names (e.g., "ORD" for ORD-001)'
-                },
-                {
-                    fieldname: 'naming_digits',
-                    label: 'Number of Digits',
-                    fieldtype: 'Int',
-                    default: 5,
-                    depends_on: 'eval:["Autoincrement", "By \\"Naming Series\\" field"].includes(doc.naming_type)',
-                    description: 'Number of digits for auto numbering (e.g., 5 for 00001)'
-                },
-                {
-                    fieldname: 'naming_start_from',
-                    label: 'Start From',
-                    fieldtype: 'Int',
-                    default: 1,
-                    depends_on: 'eval:["Autoincrement", "By \\"Naming Series\\" field"].includes(doc.naming_type)',
-                    description: 'Starting number for auto numbering'
-                },
-                {
-                    fieldname: 'naming_field',
-                    label: 'Field for Naming',
-                    fieldtype: 'Data',
-                    depends_on: 'eval:doc.naming_type === "By fieldname"',
-                    description: 'Enter the field name that will be used for naming (e.g., "customer_name", "order_number")',
-                    placeholder: 'e.g., customer_name'
-                }
             ],
             primary_action_label: 'Create Table',
             primary_action: (values) => {
@@ -2114,12 +2071,7 @@ class FlansaAppBuilder {
                         app_id: this.app_id,
                         table_name: values.table_name,
                         table_label: values.table_label,
-                        description: values.description,
-                        naming_type: values.naming_type,
-                        naming_prefix: values.naming_prefix,
-                        naming_digits: values.naming_digits,
-                        naming_start_from: values.naming_start_from,
-                        naming_field: values.naming_field
+                        description: values.description
                     },
                     callback: (r) => {
                         if (r.message && r.message.success) {
