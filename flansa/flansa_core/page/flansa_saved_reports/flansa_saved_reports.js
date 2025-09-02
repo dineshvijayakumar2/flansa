@@ -1332,8 +1332,28 @@ class SavedReportsPage {
                 ]
             });
 
-            // Add hover effects for action buttons
+            // Add event handlers for action buttons
             setTimeout(() => {
+                // Bind action button events
+                document.querySelectorAll('.view-report-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const reportId = e.target.closest('.view-report-btn').dataset.reportId;
+                        this.view_report_by_id(reportId);
+                    });
+                });
+
+                document.querySelectorAll('.edit-report-btn').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const reportId = e.target.closest('.edit-report-btn').dataset.reportId;
+                        this.edit_report_by_id(reportId);
+                    });
+                });
+
+                // Add hover effects for action buttons
                 document.querySelectorAll('.tabulator-action-btn').forEach(btn => {
                     btn.addEventListener('mouseenter', function() {
                         this.style.transform = 'translateY(-1px)';
@@ -1384,6 +1404,23 @@ class SavedReportsPage {
             script.onerror = () => reject(new Error('Failed to load Tabulator'));
             document.head.appendChild(script);
         });
+    }
+
+    // Helper methods for action button handlers
+    view_report_by_id(reportId) {
+        const report = this.reports.find(r => r.name === reportId);
+        if (report) {
+            const event = { currentTarget: { dataset: { reportId: reportId } } };
+            this.view_report(event);
+        }
+    }
+
+    edit_report_by_id(reportId) {
+        const report = this.reports.find(r => r.name === reportId);
+        if (report) {
+            const event = { currentTarget: { dataset: { reportId: reportId } } };
+            this.edit_report(event);
+        }
     }
     
     create_report_card(report) {
