@@ -1,14 +1,14 @@
-frappe.pages['flansa-saved-reports'].on_page_load = function(wrapper) {
+frappe.pages['flansa-report-manager'].on_page_load = function(wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
-        title: 'Saved Reports',
+        title: 'Report Manager',
         single_column: true
     });
     
-    new SavedReportsPage(page);
+    new ReportManagerPage(page);
 };
 
-class SavedReportsPage {
+class ReportManagerPage {
     constructor(page) {
         this.page = page;
         this.wrapper = page.wrapper;
@@ -1086,7 +1086,7 @@ class SavedReportsPage {
         
         const createReportHandler = () => {
             // Build URL with proper encoding
-            let url = '/app/flansa-report-builder?source=saved_reports';
+            let url = '/app/flansa-report-builder?source=report_manager';
             
             if (this.filter_table) {
                 url += `&table=${encodeURIComponent(this.filter_table)}`;
@@ -2142,7 +2142,7 @@ class SavedReportsPage {
         
         if (reportId) {
             // Build URL with proper encoding
-            let url = `/app/flansa-report-builder?edit=${encodeURIComponent(reportId)}&source=saved_reports`;
+            let url = `/app/flansa-report-builder?edit=${encodeURIComponent(reportId)}&source=report_manager`;
             
             if (this.filter_table) {
                 url += `&table=${encodeURIComponent(this.filter_table)}`;
@@ -2284,7 +2284,7 @@ class SavedReportsPage {
     }
     
     async load_workspace_logo() {
-        console.log('🔍 Saved Reports: Loading workspace logo...');
+        console.log('🔍 Report Manager: Loading workspace logo...');
         try {
             // Get workspace logo from Flansa Tenant Registry
             const result = await frappe.call({
@@ -2294,13 +2294,13 @@ class SavedReportsPage {
                 quiet: false // Show errors for debugging
             });
             
-            console.log('🔍 Saved Reports: API response:', result);
+            console.log('🔍 Report Manager: API response:', result);
             
             if (result.message && result.message.logo) {
                 const logoContainer = document.getElementById('workspace-logo-container');
                 const logoImg = document.getElementById('workspace-logo');
                 
-                console.log('🔍 Saved Reports: DOM elements found:', {
+                console.log('🔍 Report Manager: DOM elements found:', {
                     logoContainer: !!logoContainer,
                     logoImg: !!logoImg
                 });
@@ -2308,18 +2308,18 @@ class SavedReportsPage {
                 if (logoContainer && logoImg) {
                     logoImg.src = result.message.logo;
                     logoContainer.style.display = 'block';
-                    console.log('✅ Saved Reports: Workspace logo loaded successfully');
+                    console.log('✅ Report Manager: Workspace logo loaded successfully');
                 } else {
-                    console.log('❌ Saved Reports: Logo DOM elements not found');
+                    console.log('❌ Report Manager: Logo DOM elements not found');
                 }
             } else {
-                console.log('⚠️ Saved Reports: No workspace logo in API response');
+                console.log('⚠️ Report Manager: No workspace logo in API response');
             }
         } catch (error) {
-            console.log('❌ Saved Reports: Workspace logo error:', error);
+            console.log('❌ Report Manager: Workspace logo error:', error);
         }
     }
 }
 
 // Make it globally accessible
-window.SavedReportsPage = SavedReportsPage;
+window.ReportManagerPage = ReportManagerPage;

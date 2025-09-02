@@ -7,9 +7,9 @@
  "modified": "2024-01-20 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flansa Core",
- "name": "flansa-saved-reports",
+ "name": "flansa-report-manager",
  "owner": "Administrator",
- "page_name": "Saved Reports",
+ "page_name": "Report Manager",
  "roles": [
   {
    "role": "System Manager"
@@ -22,5 +22,5 @@
  "standard": "Yes",
  "style": null,
  "system_page": 0,
- "title": "Saved Reports"
+ "title": "Report Manager"
 }

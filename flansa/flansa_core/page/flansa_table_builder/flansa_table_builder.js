@@ -190,12 +190,12 @@ class EnhancedFlansaTableBuilder {
                                         </svg>
                                         <span>Form Builder</span>
                                     </a>
-                                    <a href="#" class="dropdown-option" id="saved-reports-menu">
+                                    <a href="#" class="dropdown-option" id="report-manager-menu">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                             <path d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4z"/>
                                             <path d="M6 7h8m-8 4h8m-5 4h5"/>
                                         </svg>
-                                        <span>Saved Reports</span>
+                                        <span>Report Manager</span>
                                     </a>
                                 </div>
                             </div>
@@ -1902,9 +1902,9 @@ class EnhancedFlansaTableBuilder {
             window.location.href = `/app/flansa-form-builder?table=${this.table_id}`;
         });
         
-        $container.on('click', '#saved-reports-menu', (e) => {
+        $container.on('click', '#report-manager-menu', (e) => {
             e.preventDefault();
-            window.location.href = `/app/flansa-saved-reports?table=${this.table_id}`;
+            window.location.href = `/app/flansa-report-manager?table=${this.table_id}`;
         });
         
         // View toggle

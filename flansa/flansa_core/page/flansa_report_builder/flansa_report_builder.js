@@ -239,7 +239,7 @@ class UnifiedReportBuilder {
         `;
 
         // Build context-aware saved reports link
-        const savedReportsURL = this.build_saved_reports_url();
+        const savedReportsURL = this.build_report_manager_url();
         
         breadcrumbHTML += divider;
         breadcrumbHTML += `
@@ -262,7 +262,7 @@ class UnifiedReportBuilder {
         console.log('✅ Context-aware breadcrumbs setup complete');
     }
 
-    build_saved_reports_url() {
+    build_report_manager_url() {
         // Build URL with preserved context parameters
         const params = new URLSearchParams();
         
@@ -279,7 +279,7 @@ class UnifiedReportBuilder {
         // Add source context to indicate where user came from
         params.append('source', 'report-builder');
         
-        const baseURL = '/app/flansa-saved-reports';
+        const baseURL = '/app/flansa-report-manager';
         const paramString = params.toString();
         
         return paramString ? `${baseURL}?${paramString}` : baseURL;
@@ -1564,7 +1564,7 @@ class UnifiedReportBuilder {
                     
                     // Navigate back to saved reports with context after a brief delay
                     setTimeout(() => {
-                        const savedReportsURL = this.build_saved_reports_url();
+                        const savedReportsURL = this.build_report_manager_url();
                         frappe.set_route_from_url(savedReportsURL);
                     }, 1500); // Give user time to see the success message
                 } else {
@@ -1820,7 +1820,7 @@ class UnifiedReportBuilder {
                     
                     // Immediate navigation to saved reports with context
                     setTimeout(() => {
-                        const savedReportsURL = this.build_saved_reports_url();
+                        const savedReportsURL = this.build_report_manager_url();
                         frappe.set_route_from_url(savedReportsURL);
                     }, 1000); // Brief delay to show success message
                 } else {

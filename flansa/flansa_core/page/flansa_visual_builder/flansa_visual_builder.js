@@ -5523,7 +5523,7 @@ class EnhancedVisualBuilder {
         
         // Open Saved Reports page with current table pre-selected
         // Use URL hash parameters for proper navigation
-        window.location.href = `/app/flansa-saved-reports?table=${table_id}`;
+        window.location.href = `/app/flansa-report-manager?table=${table_id}`;
         frappe.show_alert(`Opening Reports for ${table_id}...`, 'blue');
     }
     

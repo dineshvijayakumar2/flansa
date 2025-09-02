@@ -113,7 +113,7 @@ class FlansaReportViewer {
         
         // Back to reports button
         $('#back-to-reports-btn').on('click', () => {
-            window.location.href = '/app/flansa-saved-reports';
+            window.location.href = '/app/flansa-report-manager';
         });
         
         // Search functionality
@@ -505,7 +505,7 @@ class FlansaReportViewer {
             // Add "View Saved Reports" button for all views
             this.page.add_action_button('📋 Saved Reports', () => {
                 // Use direct URL navigation to preserve query parameters
-                const url = `/app/flansa-saved-reports?table=${encodeURIComponent(this.table_name)}&source=report_viewer`;
+                const url = `/app/flansa-report-manager?table=${encodeURIComponent(this.table_name)}&source=report_viewer`;
                 window.location.href = url;
             });
             
@@ -1462,7 +1462,7 @@ class FlansaReportViewer {
     setup_initial_breadcrumbs() {
         frappe.breadcrumbs.clear();
         frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace");
-        frappe.breadcrumbs.add("Reports", "/app/flansa-saved-reports");
+        frappe.breadcrumbs.add("Reports", "/app/flansa-report-manager");
         frappe.breadcrumbs.add("Loading...");
         
         // Also setup initial custom breadcrumbs
@@ -1558,16 +1558,16 @@ class FlansaReportViewer {
                     // Add reports context with table filter
                     frappe.breadcrumbs.add(
                         "Reports",
-                        `/app/flansa-saved-reports?table=${report.base_table}`
+                        `/app/flansa-report-manager?table=${report.base_table}`
                     );
                 }
             } catch (error) {
                 // Fallback to general reports
-                frappe.breadcrumbs.add("Reports", "/app/flansa-saved-reports");
+                frappe.breadcrumbs.add("Reports", "/app/flansa-report-manager");
             }
         } else {
             // General reports
-            frappe.breadcrumbs.add("Reports", "/app/flansa-saved-reports");
+            frappe.breadcrumbs.add("Reports", "/app/flansa-report-manager");
         }
         
         // Add current report with breadcrumb overflow handling
@@ -1593,14 +1593,14 @@ class FlansaReportViewer {
         if (report && report.base_table) {
             // Add context based on the table
             breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-table-builder/${report.base_table}` });
-            breadcrumbs.push({ text: "📊 Reports", url: `/app/flansa-saved-reports?table=${report.base_table}` });
+            breadcrumbs.push({ text: "📊 Reports", url: `/app/flansa-report-manager?table=${report.base_table}` });
             
             // Current report
             const report_title = report.title || "Report";
             const display_title = report_title.length > 20 ? report_title.substring(0, 17) + '...' : report_title;
             breadcrumbs.push({ text: `📋 ${display_title}` });
         } else {
-            breadcrumbs.push({ text: "📊 Reports", url: "/app/flansa-saved-reports" });
+            breadcrumbs.push({ text: "📊 Reports", url: "/app/flansa-report-manager" });
             breadcrumbs.push({ text: "📋 Report Viewer" });
         }
         
