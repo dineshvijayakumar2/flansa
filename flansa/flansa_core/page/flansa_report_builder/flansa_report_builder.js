@@ -48,6 +48,8 @@ class UnifiedReportBuilder {
         this.auto_select_table();
         this.bind_events();
         this.apply_theme();
+        this.inject_workspace_logo_styles();
+        this.load_workspace_logo();
         
         if (this.current_report_id) {
             this.load_existing_report();
@@ -1814,6 +1816,72 @@ class UnifiedReportBuilder {
                 }
             }
         });
+    }
+    
+    inject_workspace_logo_styles() {
+        // Add consistent logo styling
+        const styleId = 'workspace-logo-styles';
+        if (document.getElementById(styleId)) {
+            return; // Already added
+        }
+        
+        const style = document.createElement('style');
+        style.id = styleId;
+        style.textContent = `
+            .workspace-logo-container {
+                display: none;
+                margin-right: 8px;
+            }
+            
+            .workspace-logo {
+                height: 40px;
+                width: auto;
+                max-width: 120px;
+                border-radius: 6px;
+                object-fit: contain;
+                background: white;
+                padding: 2px;
+                border: 1px solid rgba(0, 0, 0, 0.1);
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    async load_workspace_logo() {
+        console.log('🔍 Report Builder: Loading workspace logo...');
+        try {
+            // Get workspace logo from Flansa Tenant Registry
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                args: {},
+                freeze: false,
+                quiet: false // Show errors for debugging
+            });
+            
+            console.log('🔍 Report Builder: API response:', result);
+            
+            if (result.message && result.message.logo) {
+                const logoContainer = document.getElementById('workspace-logo-container');
+                const logoImg = document.getElementById('workspace-logo');
+                
+                console.log('🔍 Report Builder: DOM elements found:', {
+                    logoContainer: !!logoContainer,
+                    logoImg: !!logoImg
+                });
+                
+                if (logoContainer && logoImg) {
+                    logoImg.src = result.message.logo;
+                    logoContainer.style.display = 'block';
+                    console.log('✅ Report Builder: Workspace logo loaded successfully');
+                } else {
+                    console.log('❌ Report Builder: Logo DOM elements not found');
+                }
+            } else {
+                console.log('⚠️ Report Builder: No workspace logo in API response');
+            }
+        } catch (error) {
+            console.log('❌ Report Builder: Workspace logo error:', error);
+        }
     }
 }
 

@@ -45,6 +45,7 @@ class SavedReportsPage {
         this.setup_ui();
         this.bind_events();
         this.load_initial_data();
+        this.load_workspace_logo();
     }
     
     setup_ui() {
@@ -288,8 +289,9 @@ class SavedReportsPage {
                 }
 
                 .workspace-logo {
-                    width: 32px;
-                    height: 32px;
+                    height: 40px;
+                    width: auto;
+                    max-width: 120px;
                     border-radius: 6px;
                     object-fit: contain;
                     background: white;
@@ -1890,6 +1892,43 @@ class SavedReportsPage {
     
     load_initial_data() {
         console.log('Saved Reports page initialized');
+    }
+    
+    async load_workspace_logo() {
+        console.log('🔍 Saved Reports: Loading workspace logo...');
+        try {
+            // Get workspace logo from Flansa Tenant Registry
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                args: {},
+                freeze: false,
+                quiet: false // Show errors for debugging
+            });
+            
+            console.log('🔍 Saved Reports: API response:', result);
+            
+            if (result.message && result.message.logo) {
+                const logoContainer = document.getElementById('workspace-logo-container');
+                const logoImg = document.getElementById('workspace-logo');
+                
+                console.log('🔍 Saved Reports: DOM elements found:', {
+                    logoContainer: !!logoContainer,
+                    logoImg: !!logoImg
+                });
+                
+                if (logoContainer && logoImg) {
+                    logoImg.src = result.message.logo;
+                    logoContainer.style.display = 'block';
+                    console.log('✅ Saved Reports: Workspace logo loaded successfully');
+                } else {
+                    console.log('❌ Saved Reports: Logo DOM elements not found');
+                }
+            } else {
+                console.log('⚠️ Saved Reports: No workspace logo in API response');
+            }
+        } catch (error) {
+            console.log('❌ Saved Reports: Workspace logo error:', error);
+        }
     }
 }
 
