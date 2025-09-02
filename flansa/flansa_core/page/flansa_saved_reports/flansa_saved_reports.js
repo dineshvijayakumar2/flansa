@@ -596,32 +596,136 @@ class SavedReportsPage {
 
                 .reports-grid.list-view {
                     grid-template-columns: 1fr;
-                    gap: 12px;
+                    gap: 0;
+                    display: block;
+                    background: white;
+                    border-radius: 12px;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                    overflow: hidden;
+                    border: 1px solid #e2e8f0;
                 }
 
-                .list-view .report-card .card {
-                    display: flex;
-                    flex-direction: row;
-                    align-items: stretch;
+                /* Data Grid Header for List View */
+                .reports-grid.list-view .data-grid-header {
+                    display: grid;
+                    grid-template-columns: 1fr auto auto auto 100px;
+                    align-items: center;
+                    padding: 12px 20px;
+                    gap: 16px;
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+                    border-bottom: 2px solid #e2e8f0;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    position: sticky;
+                    top: 0;
+                    z-index: 10;
                 }
 
-                .list-view .report-card .card-header {
-                    flex: 0 0 300px;
-                    border-right: 1px solid #e2e8f0;
+                .reports-grid.list-view .report-card {
+                    margin: 0;
+                    border-radius: 0;
+                    background: transparent;
+                }
+
+                .reports-grid.list-view .report-card .card {
+                    border: none;
+                    border-radius: 0;
+                    box-shadow: none;
+                    border-bottom: 1px solid #f1f5f9;
+                    background: white;
+                    transition: background-color 0.2s ease;
+                }
+
+                .reports-grid.list-view .report-card .card:hover {
+                    background: #f8fafc;
+                    transform: none;
+                    box-shadow: none;
+                    border-color: #e2e8f0;
+                }
+
+                .reports-grid.list-view .report-card:last-child .card {
                     border-bottom: none;
                 }
 
-                .list-view .report-card .card-body {
-                    flex: 1;
-                    display: flex;
-                    flex-direction: row;
+                /* Clean data grid row layout */
+                .list-view .report-card .card {
+                    display: grid;
+                    grid-template-columns: 1fr auto auto auto 100px;
                     align-items: center;
-                    gap: 20px;
+                    padding: 16px 20px;
+                    gap: 16px;
+                    min-height: 60px;
                 }
 
-                .list-view .report-card .report-meta {
-                    flex-direction: row;
-                    gap: 20px;
+                .list-view .report-card .card-header,
+                .list-view .report-card .card-body {
+                    display: none;
+                }
+
+                .list-view .report-card .list-row-content {
+                    display: contents;
+                }
+
+                /* Column styling for organized grid */
+                .list-view .report-card .report-title-col {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 2px;
+                    min-width: 0;
+                }
+
+                .list-view .report-card .report-title-col .report-title {
+                    font-size: 15px;
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin: 0;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+
+                .list-view .report-card .report-title-col .report-description {
+                    font-size: 13px;
+                    color: #6b7280;
+                    margin: 0;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    max-width: 400px;
+                }
+
+                .list-view .report-card .report-table-col {
+                    color: #4b5563;
+                    font-size: 13px;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+
+                .list-view .report-card .report-type-col .report-type-badge {
+                    margin: 0;
+                    font-size: 11px;
+                    padding: 3px 8px;
+                }
+
+                .list-view .report-card .report-date-col {
+                    color: #6b7280;
+                    font-size: 12px;
+                    text-align: right;
+                }
+
+                .list-view .report-card .report-actions-col {
+                    display: flex;
+                    gap: 6px;
+                    justify-content: flex-end;
+                }
+
+                .list-view .report-card .report-actions-col .action-btn {
+                    width: 28px;
+                    height: 28px;
+                    font-size: 12px;
                 }
 
                 .report-card {
@@ -971,14 +1075,16 @@ class SavedReportsPage {
         try {
             this.show_loading_state();
             
+            // Always load all reports and apply filtering on frontend for consistency
             const response = await frappe.call({
                 method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.get_user_reports',
-                args: { base_table: this.filter_table }
+                args: {} // No base_table filter - load all reports
             });
             
             if (response.message) {
                 this.reports = response.message;
-                this.apply_filters();
+                // Apply initial filtering based on URL parameters
+                this.apply_initial_filters();
             } else {
                 this.reports = [];
                 this.show_empty_state();
@@ -988,6 +1094,19 @@ class SavedReportsPage {
             frappe.msgprint('Error loading reports');
             this.show_empty_state();
         }
+    }
+    
+    apply_initial_filters() {
+        // Set filter values based on URL parameters before applying filters
+        if (this.filter_table) {
+            const tableFilter = document.getElementById('table-filter');
+            if (tableFilter) {
+                tableFilter.value = this.filter_table;
+            }
+        }
+        
+        // Apply the filters with the URL-based initial state
+        this.apply_filters();
     }
     
     apply_filters() {
@@ -1047,6 +1166,21 @@ class SavedReportsPage {
         
         // Render report cards
         reportsGrid.innerHTML = '';
+        
+        // Add header for list view
+        if (this.view_mode === 'list') {
+            const header = document.createElement('div');
+            header.className = 'data-grid-header';
+            header.innerHTML = `
+                <div>Report Name</div>
+                <div>Table</div>
+                <div>Type</div>
+                <div>Created</div>
+                <div>Actions</div>
+            `;
+            reportsGrid.appendChild(header);
+        }
+        
         page_reports.forEach(report => {
             const card = this.create_report_card(report);
             reportsGrid.appendChild(card);
@@ -1065,77 +1199,105 @@ class SavedReportsPage {
         cardElement.className = 'report-card';
         cardElement.dataset.reportId = report.name;
         
-        // Create card HTML directly with modern Table Builder design
-        cardElement.innerHTML = `
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title-section">
-                        <h4 class="report-title">${report.report_title}</h4>
-                        <span class="report-type-badge ${(report.report_type || 'table').toLowerCase()}">${report.report_type || 'Table'}</span>
-                    </div>
-                    <div class="card-actions">
-                        <button class="action-btn view-report" title="View Report">
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                            </svg>
-                        </button>
-                        <button class="action-btn edit-report" title="Edit Report">
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
-                            </svg>
-                        </button>
-                        <div class="action-dropdown">
-                            <button class="action-btn dropdown-toggle" title="More Actions">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
-                                </svg>
+        // Generate different HTML based on view mode
+        if (this.view_mode === 'list') {
+            // Clean data grid row structure for list view
+            cardElement.innerHTML = `
+                <div class="card">
+                    <div class="list-row-content">
+                        <div class="report-title-col">
+                            <div class="report-title">${report.report_title}</div>
+                            <div class="report-description">${report.description || 'No description'}</div>
+                        </div>
+                        <div class="report-table-col">${report.base_table}</div>
+                        <div class="report-type-col">
+                            <span class="report-type-badge ${(report.report_type || 'table').toLowerCase()}">${report.report_type || 'Table'}</span>
+                        </div>
+                        <div class="report-date-col">${frappe.datetime.str_to_user(report.created_on)}</div>
+                        <div class="report-actions-col">
+                            <button class="action-btn view-report-btn" title="View Report">
+                                <i class="fa fa-eye"></i>
                             </button>
-                            <div class="dropdown-menu">
-                                <a class="dropdown-option duplicate-report" href="#">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
-                                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
-                                    </svg>
-                                    <span>Duplicate</span>
-                                </a>
-                                <div class="dropdown-divider"></div>
-                                <a class="dropdown-option delete-report text-danger" href="#">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                    <span>Delete</span>
-                                </a>
-                            </div>
+                            <button class="action-btn edit-report-btn" title="Edit Report">
+                                <i class="fa fa-edit"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
-                <div class="card-body">
-                    <p class="report-description">${report.description || 'No description'}</p>
-                    <div class="report-meta">
-                        <small class="text-muted">
-                            <i class="fa fa-table"></i> <span class="table-name">${report.base_table}</span>
-                        </small>
-                        <small class="text-muted">
-                            <i class="fa fa-user"></i> <span class="created-by">${report.created_by_user}</span>
-                        </small>
-                        <small class="text-muted">
-                            <i class="fa fa-calendar"></i> <span class="created-date">${frappe.datetime.str_to_user(report.created_on)}</span>
-                        </small>
+            `;
+        } else {
+            // Original card design for grid view
+            cardElement.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title-section">
+                            <h4 class="report-title">${report.report_title}</h4>
+                            <span class="report-type-badge ${(report.report_type || 'table').toLowerCase()}">${report.report_type || 'Table'}</span>
+                        </div>
+                        <div class="card-actions">
+                            <button class="action-btn view-report" title="View Report">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                </svg>
+                            </button>
+                            <button class="action-btn edit-report" title="Edit Report">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                </svg>
+                            </button>
+                            <div class="action-dropdown">
+                                <button class="action-btn dropdown-toggle" title="More Actions">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                                    </svg>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <a class="dropdown-option duplicate-report" href="#">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                                        </svg>
+                                        <span>Duplicate</span>
+                                    </a>
+                                    <div class="dropdown-divider"></div>
+                                    <a class="dropdown-option delete-report text-danger" href="#">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span>Delete</span>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p class="report-description">${report.description || 'No description'}</p>
+                        <div class="report-meta">
+                            <small class="text-muted">
+                                <i class="fa fa-table"></i> <span class="table-name">${report.base_table}</span>
+                            </small>
+                            <small class="text-muted">
+                                <i class="fa fa-user"></i> <span class="created-by">${report.created_by_user}</span>
+                            </small>
+                            <small class="text-muted">
+                                <i class="fa fa-calendar"></i> <span class="created-date">${frappe.datetime.str_to_user(report.created_on)}</span>
+                            </small>
+                        </div>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group btn-group-sm w-100">
+                            <button class="btn btn-primary view-report-btn">
+                                <i class="fa fa-eye"></i> View
+                            </button>
+                            <button class="btn btn-outline-primary edit-report-btn">
+                                <i class="fa fa-edit"></i> Edit
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="card-footer">
-                    <div class="btn-group btn-group-sm w-100">
-                        <button class="btn btn-primary view-report-btn">
-                            <i class="fa fa-eye"></i> View
-                        </button>
-                        <button class="btn btn-outline-primary edit-report-btn">
-                            <i class="fa fa-edit"></i> Edit
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
+            `;
+        }
         
         return cardElement;
     }
