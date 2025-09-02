@@ -184,11 +184,11 @@
    "read_only": 1
   },
   {
-   "default": "Naming Series",
+   "default": "Autoincrement",
    "fieldname": "naming_type",
    "fieldtype": "Select",
    "label": "Naming Type",
-   "options": "Naming Series\nAuto Increment\nField Based\nRandom\nPrompt"
+   "options": "Autoincrement\nBy \"Naming Series\" field\nBy fieldname\nSet by user\nRandom"
   },
   {
    "default": "5",

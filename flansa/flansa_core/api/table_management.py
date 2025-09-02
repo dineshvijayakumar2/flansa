@@ -235,7 +235,7 @@ def map_field_type(flansa_type):
 
 @frappe.whitelist()
 def create_flansa_table(app_id, table_name, table_label, description=None, 
-                       naming_type="By \"Naming Series\" field", naming_prefix="REC", naming_digits=5, 
+                       naming_type="Autoincrement", naming_prefix=None, naming_digits=5, 
                        naming_start_from=1, naming_field=None):
     """Create a new Flansa Table with specified configuration"""
     try:

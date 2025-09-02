@@ -489,54 +489,154 @@ class SavedReportsPage {
 
                 .report-card .card {
                     height: 100%;
-                    border: 1px solid #e0e0e0;
-                    border-radius: 8px;
-                    transition: all 0.3s ease;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 16px;
+                    overflow: hidden;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
                 }
 
                 .report-card .card:hover {
-                    transform: translateY(-2px);
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-                    border-color: #007bff;
+                    transform: translateY(-4px);
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                    border-color: #667eea;
                 }
 
                 .card-header {
-                    background: #f8f9fa;
-                    border-bottom: 1px solid #e0e0e0;
-                    padding: 15px;
-                }
-
-                .card-title {
+                    background: linear-gradient(135deg, #f7fafc 0%, #edf2f7 100%);
+                    border-bottom: 1px solid #e2e8f0;
+                    padding: 20px;
                     display: flex;
                     justify-content: space-between;
                     align-items: flex-start;
-                    margin-bottom: 0;
+                }
+
+                .card-title-section {
+                    display: flex;
+                    align-items: flex-start;
+                    gap: 12px;
+                    flex: 1;
+                }
+
+                .card-actions {
+                    display: flex;
+                    gap: 8px;
+                }
+
+                .action-btn {
+                    width: 32px;
+                    height: 32px;
+                    border: none;
+                    border-radius: 8px;
+                    background: rgba(255, 255, 255, 0.7);
+                    color: #6b7280;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    backdrop-filter: blur(4px);
+                    -webkit-backdrop-filter: blur(4px);
+                }
+
+                .action-btn:hover {
+                    background: white;
+                    color: #374151;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+                    transform: translateY(-1px);
+                }
+
+                .action-dropdown {
+                    position: relative;
+                }
+
+                .dropdown-menu {
+                    position: absolute;
+                    top: 100%;
+                    right: 0;
+                    background: white;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 12px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+                    padding: 8px;
+                    min-width: 160px;
+                    display: none;
+                    z-index: 1000;
+                }
+
+                .dropdown-option {
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                    padding: 8px 12px;
+                    border-radius: 8px;
+                    text-decoration: none;
+                    color: #374151;
+                    font-size: 14px;
+                    font-weight: 500;
+                    transition: all 0.2s;
+                }
+
+                .dropdown-option:hover {
+                    background: #f3f4f6;
+                    color: #111827;
+                }
+
+                .dropdown-option.text-danger {
+                    color: #dc2626;
+                }
+
+                .dropdown-option.text-danger:hover {
+                    background: #fef2f2;
+                    color: #b91c1c;
+                }
+
+                .dropdown-divider {
+                    height: 1px;
+                    background: #e2e8f0;
+                    margin: 4px 0;
                 }
 
                 .report-title {
                     margin: 0;
-                    font-size: 1.1rem;
-                    font-weight: 600;
-                    color: #333;
+                    font-size: 18px;
+                    font-weight: 700;
+                    color: #1f2937;
                     flex: 1;
+                    line-height: 1.4;
                 }
 
                 .report-type-badge {
-                    padding: 2px 8px;
-                    border-radius: 12px;
-                    font-size: 0.75rem;
-                    font-weight: 500;
-                    margin-left: 10px;
+                    padding: 4px 12px;
+                    border-radius: 16px;
+                    font-size: 12px;
+                    font-weight: 600;
+                    margin-left: 12px;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
                 }
 
                 .report-type-badge.table {
-                    background: #e7f3ff;
-                    color: #0066cc;
+                    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+                    color: #1d4ed8;
+                    border: 1px solid #93c5fd;
+                }
+
+                .report-type-badge.chart {
+                    background: linear-gradient(135deg, #fce7f3 0%, #fbcfe8 100%);
+                    color: #be185d;
+                    border: 1px solid #f9a8d4;
+                }
+
+                .report-type-badge.summary {
+                    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+                    color: #047857;
+                    border: 1px solid #86efac;
                 }
 
                 .card-body {
-                    padding: 15px;
+                    padding: 20px;
                     flex: 1;
                     display: flex;
                     flex-direction: column;
@@ -818,32 +918,46 @@ class SavedReportsPage {
         cardElement.className = 'report-card';
         cardElement.dataset.reportId = report.name;
         
-        // Create card HTML directly
+        // Create card HTML directly with modern Table Builder design
         cardElement.innerHTML = `
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title">
-                        <h6 class="report-title">${report.report_title}</h6>
+                    <div class="card-title-section">
+                        <h4 class="report-title">${report.report_title}</h4>
                         <span class="report-type-badge ${(report.report_type || 'table').toLowerCase()}">${report.report_type || 'Table'}</span>
                     </div>
                     <div class="card-actions">
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-toggle="dropdown">
-                                <i class="fa fa-ellipsis-v"></i>
+                        <button class="action-btn view-report" title="View Report">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                            </svg>
+                        </button>
+                        <button class="action-btn edit-report" title="Edit Report">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                            </svg>
+                        </button>
+                        <div class="action-dropdown">
+                            <button class="action-btn dropdown-toggle" title="More Actions">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z"/>
+                                </svg>
                             </button>
-                            <div class="dropdown-menu dropdown-menu-right">
-                                <a class="dropdown-item view-report" href="#">
-                                    <i class="fa fa-eye"></i> View Report
-                                </a>
-                                <a class="dropdown-item edit-report" href="#">
-                                    <i class="fa fa-edit"></i> Edit Report
-                                </a>
-                                <a class="dropdown-item duplicate-report" href="#">
-                                    <i class="fa fa-copy"></i> Duplicate
+                            <div class="dropdown-menu">
+                                <a class="dropdown-option duplicate-report" href="#">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z"/>
+                                        <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z"/>
+                                    </svg>
+                                    <span>Duplicate</span>
                                 </a>
                                 <div class="dropdown-divider"></div>
-                                <a class="dropdown-item text-danger delete-report" href="#">
-                                    <i class="fa fa-trash"></i> Delete
+                                <a class="dropdown-option delete-report text-danger" href="#">
+                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <span>Delete</span>
                                 </a>
                             </div>
                         </div>

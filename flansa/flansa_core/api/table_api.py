@@ -679,10 +679,20 @@ def get_table_meta(table_name):
                         "is_system_field": False
                     })
         
+        # Get naming configuration from the table
+        naming_config = {
+            "naming_type": getattr(table_doc, 'naming_type', 'Autoincrement'),
+            "naming_prefix": getattr(table_doc, 'naming_prefix', ''),
+            "naming_digits": getattr(table_doc, 'naming_digits', 5),
+            "naming_start_from": getattr(table_doc, 'naming_start_from', 1),
+            "naming_field": getattr(table_doc, 'naming_field', '')
+        }
+        
         return {
             "success": True,
             "doctype_name": table_doc.doctype_name,
             "application": table_doc.application if hasattr(table_doc, 'application') and table_doc.application else None,
+            "naming_config": naming_config,
             "fields": fields
         }
         
