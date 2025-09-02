@@ -89,7 +89,7 @@ class SavedReportsPage {
                         <!-- App Info Section -->
                         <div class="app-info">
                             <div class="app-details">
-                                <h1 class="app-name title-text">Saved Reports</h1>
+                                <h1 class="app-name">Saved Reports</h1>
                                 <div class="app-type">
                                     <div class="counter-pill">
                                         <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -303,6 +303,14 @@ class SavedReportsPage {
                     display: flex;
                     align-items: center;
                     gap: 12px;
+                }
+
+                .app-details h1.app-name {
+                    margin: 0;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #111827;
+                    line-height: 1.2;
                 }
 
                 .app-details {
@@ -1244,6 +1252,346 @@ class SavedReportsPage {
     }
 
     render_tabulator_view(reports) {
+        // Now using Shadcn table instead of Tabulator
+        this.render_shadcn_table(reports);
+    }
+    
+    render_shadcn_table(reports) {
+        const reportsGrid = document.getElementById('reports-grid');
+        
+        // Create container for the table
+        reportsGrid.innerHTML = `
+            <div class="shadcn-data-table">
+                <div class="shadcn-table-wrapper">
+                    <table class="shadcn-table">
+                        <thead class="shadcn-table-header">
+                            <tr class="shadcn-table-row">
+                                <th class="shadcn-table-head">Report Name</th>
+                                <th class="shadcn-table-head">Table</th>
+                                <th class="shadcn-table-head">Type</th>
+                                <th class="shadcn-table-head">Created</th>
+                                <th class="shadcn-table-head text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="shadcn-table-body">
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        
+        // Add the Shadcn table styles
+        this.inject_shadcn_table_styles();
+        
+        // Populate table rows
+        const tbody = document.querySelector('.shadcn-table-body');
+        
+        reports.forEach(report => {
+            const row = document.createElement('tr');
+            row.className = 'shadcn-table-row';
+            row.dataset.reportId = report.name;
+            
+            // Report Name cell with description
+            const nameCell = document.createElement('td');
+            nameCell.className = 'shadcn-table-cell font-medium';
+            nameCell.innerHTML = `
+                <div class="flex flex-col gap-1">
+                    <div class="text-sm font-semibold">${report.report_title}</div>
+                    <div class="text-xs text-muted-foreground">${report.description || 'No description'}</div>
+                </div>
+            `;
+            row.appendChild(nameCell);
+            
+            // Table cell
+            const tableCell = document.createElement('td');
+            tableCell.className = 'shadcn-table-cell';
+            tableCell.textContent = this.get_table_label(report.base_table);
+            row.appendChild(tableCell);
+            
+            // Type cell with badge
+            const typeCell = document.createElement('td');
+            typeCell.className = 'shadcn-table-cell';
+            const reportType = report.report_type || 'Table';
+            const typeColors = {
+                'Table': 'bg-blue-100 text-blue-700 border-blue-200',
+                'Chart': 'bg-pink-100 text-pink-700 border-pink-200',
+                'Summary': 'bg-green-100 text-green-700 border-green-200'
+            };
+            typeCell.innerHTML = `
+                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${typeColors[reportType] || typeColors['Table']}">
+                    ${reportType}
+                </span>
+            `;
+            row.appendChild(typeCell);
+            
+            // Created cell
+            const createdCell = document.createElement('td');
+            createdCell.className = 'shadcn-table-cell';
+            createdCell.textContent = frappe.datetime.str_to_user(report.created_on);
+            row.appendChild(createdCell);
+            
+            // Actions cell
+            const actionsCell = document.createElement('td');
+            actionsCell.className = 'shadcn-table-cell text-right';
+            actionsCell.innerHTML = `
+                <div class="flex gap-2 justify-end">
+                    <button class="shadcn-btn-ghost view-report-btn" data-report-id="${report.name}" title="View Report">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                            <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                    <button class="shadcn-btn-ghost edit-report-btn" data-report-id="${report.name}" title="Edit Report">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                        </svg>
+                    </button>
+                    <button class="shadcn-btn-ghost delete-report-btn" data-report-id="${report.name}" title="Delete Report">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+            row.appendChild(actionsCell);
+            
+            tbody.appendChild(row);
+        });
+        
+        // Re-bind action button events
+        this.bind_table_action_events();
+    }
+    
+    inject_shadcn_table_styles() {
+        // Check if styles already exist
+        if (document.getElementById('shadcn-table-styles')) {
+            return;
+        }
+        
+        const style = document.createElement('style');
+        style.id = 'shadcn-table-styles';
+        style.textContent = `
+            /* Shadcn Data Table Styles */
+            .shadcn-data-table {
+                width: 100%;
+            }
+            
+            .shadcn-table-wrapper {
+                overflow: hidden;
+                border: 1px solid hsl(214.3 31.8% 91.4%);
+                border-radius: 0.5rem;
+                background: white;
+                box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            }
+            
+            .shadcn-table {
+                width: 100%;
+                caption-side: bottom;
+                font-size: 0.875rem;
+                border-collapse: collapse;
+            }
+            
+            .shadcn-table-header {
+                background: hsl(210 40% 98%);
+                border-bottom: 1px solid hsl(214.3 31.8% 91.4%);
+            }
+            
+            .shadcn-table-row {
+                border-bottom: 1px solid hsl(214.3 31.8% 91.4%);
+                transition: background-color 0.2s;
+            }
+            
+            .shadcn-table-body .shadcn-table-row:hover {
+                background: hsl(210 40% 98%);
+            }
+            
+            .shadcn-table-body .shadcn-table-row:last-child {
+                border-bottom: 0;
+            }
+            
+            .shadcn-table-head {
+                padding: 0.75rem 1rem;
+                text-align: left;
+                font-weight: 500;
+                color: hsl(215.4 16.3% 46.9%);
+                text-transform: uppercase;
+                letter-spacing: 0.025em;
+                font-size: 0.75rem;
+            }
+            
+            .shadcn-table-cell {
+                padding: 0.75rem 1rem;
+                vertical-align: middle;
+                color: hsl(222.2 47.4% 11.2%);
+            }
+            
+            .shadcn-table-cell.font-medium {
+                font-weight: 500;
+            }
+            
+            .text-right {
+                text-align: right;
+            }
+            
+            .text-muted-foreground {
+                color: hsl(215.4 16.3% 46.9%);
+            }
+            
+            /* Button styles */
+            .shadcn-btn-ghost {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                padding: 0.5rem;
+                border-radius: 0.375rem;
+                background: transparent;
+                border: none;
+                color: hsl(215.4 16.3% 46.9%);
+                cursor: pointer;
+                transition: all 0.2s;
+            }
+            
+            .shadcn-btn-ghost:hover {
+                background: hsl(210 40% 96.1%);
+                color: hsl(222.2 47.4% 11.2%);
+            }
+            
+            .shadcn-btn-ghost:focus {
+                outline: 2px solid transparent;
+                outline-offset: 2px;
+                box-shadow: 0 0 0 2px hsl(222.2 47.4% 11.2%);
+            }
+            
+            /* Flex utilities */
+            .flex {
+                display: flex;
+            }
+            
+            .flex-col {
+                flex-direction: column;
+            }
+            
+            .gap-1 {
+                gap: 0.25rem;
+            }
+            
+            .gap-2 {
+                gap: 0.5rem;
+            }
+            
+            .justify-end {
+                justify-content: flex-end;
+            }
+            
+            /* Text utilities */
+            .text-sm {
+                font-size: 0.875rem;
+                line-height: 1.25rem;
+            }
+            
+            .text-xs {
+                font-size: 0.75rem;
+                line-height: 1rem;
+            }
+            
+            .font-semibold {
+                font-weight: 600;
+            }
+            
+            /* Badge styles for report types */
+            .bg-blue-100 {
+                background-color: rgb(219 234 254);
+            }
+            
+            .text-blue-700 {
+                color: rgb(29 78 216);
+            }
+            
+            .border-blue-200 {
+                border: 1px solid rgb(191 219 254);
+            }
+            
+            .bg-pink-100 {
+                background-color: rgb(252 231 243);
+            }
+            
+            .text-pink-700 {
+                color: rgb(190 24 93);
+            }
+            
+            .border-pink-200 {
+                border: 1px solid rgb(251 207 232);
+            }
+            
+            .bg-green-100 {
+                background-color: rgb(220 252 231);
+            }
+            
+            .text-green-700 {
+                color: rgb(21 128 61);
+            }
+            
+            .border-green-200 {
+                border: 1px solid rgb(187 247 208);
+            }
+            
+            .inline-flex {
+                display: inline-flex;
+            }
+            
+            .items-center {
+                align-items: center;
+            }
+            
+            .rounded-full {
+                border-radius: 9999px;
+            }
+            
+            /* Responsive */
+            @media (max-width: 768px) {
+                .shadcn-table {
+                    font-size: 0.8125rem;
+                }
+                
+                .shadcn-table-head,
+                .shadcn-table-cell {
+                    padding: 0.5rem;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    bind_table_action_events() {
+        // View button
+        document.querySelectorAll('.view-report-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reportId = btn.dataset.reportId;
+                window.location.href = `/app/flansa-report-viewer?report=${reportId}`;
+            });
+        });
+        
+        // Edit button
+        document.querySelectorAll('.edit-report-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reportId = btn.dataset.reportId;
+                window.location.href = `/app/flansa-report-builder?edit=${reportId}`;
+            });
+        });
+        
+        // Delete button
+        document.querySelectorAll('.delete-report-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const reportId = btn.dataset.reportId;
+                const report = this.reports.find(r => r.name === reportId);
+                if (report) {
+                    this.delete_report(report);
+                }
+            });
+        });
+    }
+    
+    render_tabulator_view_old(reports) {
         const reportsGrid = document.getElementById('reports-grid');
         
         // Create tabulator container
@@ -1255,9 +1603,6 @@ class SavedReportsPage {
             this.load_shadcn_inspired_styles()
         ]).then(() => {
             const tableData = reports.map(report => ({
-                id: report.name,
-                report_title: report.report_title,
-                description: report.description || 'No description',
                 base_table: this.get_table_label(report.base_table),
                 base_table_id: report.base_table, // Keep original ID for filtering
                 report_type: report.report_type || 'Table',

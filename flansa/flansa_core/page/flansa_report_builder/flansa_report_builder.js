@@ -82,7 +82,7 @@ class UnifiedReportBuilder {
                             <!-- App Info Section -->
                             <div class="app-info">
                                 <div class="app-details">
-                                    <h1 class="app-name title-text">Report Builder</h1>
+                                    <h1 class="app-name">Report Builder</h1>
                                     <div class="app-type">
                                         <div class="counter-pill">
                                             <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
