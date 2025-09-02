@@ -20,6 +20,7 @@ class SavedReportsPage {
         this.current_page = 1;
         this.page_size = 12;
         this.total_pages = 0;
+        this.view_mode = 'grid'; // 'grid' or 'list'
         
         // URL parameters
         this.extract_url_parameters();
@@ -101,12 +102,6 @@ class SavedReportsPage {
                     </div>
                     <!-- Action Buttons -->
                     <div class="banner-right">
-                        <button class="sleek-btn secondary" id="back-to-table-btn" style="display: none;">
-                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
-                            </svg>
-                            <span>Back to Table</span>
-                        </button>
                         
                         <div class="action-dropdown">
                             <button class="sleek-btn primary split-btn" id="create-new-report-btn">
@@ -137,37 +132,39 @@ class SavedReportsPage {
                 </div>
             </div>
 
-            <div class="filter-section" id="filter-section">
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Filter by Table</label>
-                            <select class="form-control" id="table-filter">
+            <!-- Context Section like Table Builder -->
+            <div class="context-section">
+                <div class="context-header">
+                    <div class="context-left">
+                        <div class="context-info">
+                            <span class="context-name">Saved Reports</span>
+                        </div>
+                        
+                        <div class="context-controls">
+                            <div class="view-toggle">
+                                <button class="view-btn active" data-view="grid" title="Grid View">
+                                    <i class="fa fa-th"></i>
+                                </button>
+                                <button class="view-btn" data-view="list" title="List View">
+                                    <i class="fa fa-list"></i>
+                                </button>
+                            </div>
+                            <input type="search" class="search-box" id="report-search" 
+                                   placeholder="Search reports...">
+                            <select class="filter-dropdown" id="table-filter">
                                 <option value="">All Tables</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Report Type</label>
-                            <select class="form-control" id="type-filter">
+                            <select class="filter-dropdown" id="type-filter">
                                 <option value="">All Types</option>
-                                <option value="Table">Table Reports</option>
-                                <option value="Chart">Chart Reports</option>
-                                <option value="Summary">Summary Reports</option>
+                                <option value="Table">Table</option>
+                                <option value="Chart">Chart</option>
+                                <option value="Summary">Summary</option>
                             </select>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-group">
-                            <label>Search</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="search-input" placeholder="Search reports...">
-                                <div class="input-group-append">
-                                    <button class="btn btn-outline-secondary" id="search-btn">
-                                        <i class="fa fa-search"></i>
-                                    </button>
-                                </div>
+                            <div class="context-counter">
+                                <span class="counter-text">
+                                    <span id="displayed-count">0</span> 
+                                    <span class="count-total">of <span id="total-count">0</span> reports</span>
+                                </span>
                             </div>
                         </div>
                     </div>
@@ -344,6 +341,120 @@ class SavedReportsPage {
                     align-items: center;
                     gap: 12px;
                 }
+
+                /* Context Section matching Table Builder exactly */
+                .context-section {
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e2e8f0;
+                    margin: 0 -24px 0 -24px;
+                }
+
+                .context-header {
+                    padding: 1.5rem 2rem;
+                }
+
+                .context-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 1.5rem;
+                }
+
+                .context-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+
+                .context-name {
+                    font-size: 1.125rem;
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin: 0;
+                }
+
+                .context-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+
+                .context-controls .view-toggle {
+                    display: flex;
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 2px;
+                }
+
+                .context-controls .view-btn {
+                    padding: 0.375rem 0.625rem;
+                    border: none;
+                    background: transparent;
+                    color: #64748b;
+                    cursor: pointer;
+                    border-radius: 6px;
+                    transition: all 0.2s ease;
+                    font-size: 0.8125rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 0.25rem;
+                }
+
+                .context-controls .view-btn.active {
+                    background: #ffffff;
+                    color: #4f46e5;
+                    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+                }
+
+                .context-controls .view-btn:hover:not(.active) {
+                    color: #475569;
+                    background: rgba(248, 250, 252, 0.8);
+                }
+
+                .context-controls .search-box {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 0.5rem 0.75rem;
+                    color: #374151;
+                    width: 200px;
+                    font-size: 0.875rem;
+                    transition: all 0.2s ease;
+                }
+
+                .context-controls .search-box:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+
+                .context-controls .filter-dropdown {
+                    background: #f8fafc;
+                    border: 1px solid #e2e8f0;
+                    border-radius: 8px;
+                    padding: 0.5rem 0.75rem;
+                    color: #374151;
+                    font-size: 0.875rem;
+                    min-width: 120px;
+                    transition: all 0.2s ease;
+                }
+
+                .context-controls .filter-dropdown:focus {
+                    outline: none;
+                    border-color: #4f46e5;
+                    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+
+                .context-counter .counter-text {
+                    color: #6b7280;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                }
+
+                .context-counter .count-total {
+                    opacity: 0.7;
+                    font-weight: 400;
+                }
                 
                 .title-text {
                     font-size: 1.375rem;
@@ -481,6 +592,36 @@ class SavedReportsPage {
                     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
                     gap: 20px;
                     padding: 20px 0;
+                }
+
+                .reports-grid.list-view {
+                    grid-template-columns: 1fr;
+                    gap: 12px;
+                }
+
+                .list-view .report-card .card {
+                    display: flex;
+                    flex-direction: row;
+                    align-items: stretch;
+                }
+
+                .list-view .report-card .card-header {
+                    flex: 0 0 300px;
+                    border-right: 1px solid #e2e8f0;
+                    border-bottom: none;
+                }
+
+                .list-view .report-card .card-body {
+                    flex: 1;
+                    display: flex;
+                    flex-direction: row;
+                    align-items: center;
+                    gap: 20px;
+                }
+
+                .list-view .report-card .report-meta {
+                    flex-direction: row;
+                    gap: 20px;
                 }
 
                 .report-card {
@@ -759,8 +900,7 @@ class SavedReportsPage {
         // Filter events
         $(document).on('change', '#table-filter', () => this.apply_filters());
         $(document).on('change', '#type-filter', () => this.apply_filters());
-        $(document).on('input', '#search-input', () => this.debounce_search());
-        $(document).on('click', '#search-btn', () => this.apply_filters());
+        $(document).on('input', '#report-search', () => this.debounce_search());
         
         // Report card events
         $(document).on('click', '.view-report-btn', (e) => this.view_report(e));
@@ -772,6 +912,9 @@ class SavedReportsPage {
         
         // Pagination events
         $(document).on('click', '.page-link', (e) => this.handle_pagination(e));
+        
+        // View toggle events
+        $(document).on('click', '.view-btn', (e) => this.switch_view(e));
     }
     
     async get_table_info() {
@@ -850,7 +993,7 @@ class SavedReportsPage {
     apply_filters() {
         const tableFilter = document.getElementById('table-filter')?.value || '';
         const typeFilter = document.getElementById('type-filter')?.value || '';
-        const searchTerm = document.getElementById('search-input')?.value.toLowerCase() || '';
+        const searchTerm = document.getElementById('report-search')?.value.toLowerCase() || '';
         
         this.filtered_reports = this.reports.filter(report => {
             // Table filter
@@ -891,8 +1034,9 @@ class SavedReportsPage {
             return;
         }
         
-        // Show grid
+        // Show grid and apply view mode class
         reportsGrid.style.display = 'grid';
+        reportsGrid.className = `reports-grid ${this.view_mode === 'list' ? 'list-view' : ''}`;
         if (emptyState) emptyState.style.display = 'none';
         
         // Calculate pagination
@@ -907,6 +1051,9 @@ class SavedReportsPage {
             const card = this.create_report_card(report);
             reportsGrid.appendChild(card);
         });
+        
+        // Update counters
+        this.update_counters();
         
         // Render pagination
         this.render_pagination();
@@ -1040,6 +1187,27 @@ class SavedReportsPage {
             this.current_page = page;
             this.render_reports();
         }
+    }
+    
+    switch_view(e) {
+        const viewType = $(e.currentTarget).data('view');
+        this.view_mode = viewType;
+        
+        // Update button states
+        $('.view-btn').removeClass('active');
+        $(`.view-btn[data-view="${viewType}"]`).addClass('active');
+        
+        // Re-render reports with new view
+        this.render_reports();
+        this.update_counters();
+    }
+    
+    update_counters() {
+        const displayedCount = this.filtered_reports.length;
+        const totalCount = this.reports.length;
+        
+        $('#displayed-count').text(displayedCount);
+        $('#total-count').text(totalCount);
     }
     
     view_report(e) {
