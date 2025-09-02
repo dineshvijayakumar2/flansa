@@ -632,10 +632,16 @@ class UnifiedReportBuilder {
     }
 
     load_tables() {
-        console.log('Loading available tables...');
+        console.log('Loading available tables...', { filter_app: this.filter_app });
+        
+        const args = {};
+        if (this.filter_app) {
+            args.app_name = this.filter_app;
+        }
         
         frappe.call({
             method: 'flansa.flansa_core.api.table_api.get_tables',
+            args: args,
             callback: (r) => {
                 if (r.message && r.message.success) {
                     const tables = r.message.tables;
