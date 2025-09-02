@@ -34,12 +34,10 @@ class SavedReportsPage {
     extract_url_parameters() {
         const urlParams = new URLSearchParams(window.location.search);
         this.filter_table = urlParams.get('table');
-        this.filter_app = urlParams.get('app');
         this.source_context = urlParams.get('source') || 'direct';
         
-        console.log('Saved Reports: URL parameters:', {
+        console.log('Report Manager: URL parameters:', {
             table: this.filter_table,
-            app: this.filter_app,
             source: this.source_context
         });
     }
@@ -78,7 +76,7 @@ class SavedReportsPage {
                         <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                             <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                         </svg>
-                        <span class="breadcrumb-current">📊 Saved Reports</span>
+                        <span class="breadcrumb-current">📊 Report Manager</span>
                     </nav>
                 </div>
                 
@@ -92,7 +90,7 @@ class SavedReportsPage {
                         <!-- App Info Section -->
                         <div class="app-info">
                             <div class="app-details">
-                                <h1 class="app-name">Saved Reports</h1>
+                                <h1 class="app-name">Report Manager</h1>
                                 <div class="app-type">
                                     <div class="counter-pill">
                                         <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -140,8 +138,8 @@ class SavedReportsPage {
             <div class="context-header">
                 <div class="context-container">
                     <div class="context-info">
-                        <span class="context-label">REPORTS:</span>
-                        <span class="context-name">Saved Reports</span>
+                        <span class="context-label">TABLE:</span>
+                        <span class="context-name" id="context-table-name">All Tables</span>
                     </div>
                     
                     <div class="context-controls">
@@ -1040,9 +1038,17 @@ class SavedReportsPage {
             // Table-specific context
             this.get_table_info().then(tableInfo => {
                 const tableName = tableInfo ? (tableInfo.table_label || tableInfo.table_name) : this.filter_table;
+                const appName = tableInfo ? (tableInfo.app_label || tableInfo.app_name) : 'Application';
                 
-                if (pageTitle) pageTitle.textContent = `Reports for ${tableName}`;
-                if (pageSubtitle) pageSubtitle.textContent = `View and manage reports for ${tableName}`;
+                // Banner shows app name
+                if (pageTitle) pageTitle.textContent = appName;
+                if (pageSubtitle) pageSubtitle.textContent = `Reports for ${tableName}`;
+                
+                // Update context section to show table name
+                const contextName = document.getElementById('context-table-name');
+                if (contextName) {
+                    contextName.textContent = tableName;
+                }
                 
                 // Show back button
                 if (backBtn) {
@@ -1061,10 +1067,16 @@ class SavedReportsPage {
                 // Add table-specific styling
                 document.body.classList.add('table-specific');
             });
-        } else if (this.filter_app) {
-            // App-specific context
-            if (pageTitle) pageTitle.textContent = `Application Reports`;
-            if (pageSubtitle) pageSubtitle.textContent = `Reports for all tables in this application`;
+        } else {
+            // Default context - show all reports
+            if (pageTitle) pageTitle.textContent = `Report Manager`;
+            if (pageSubtitle) pageSubtitle.textContent = `View and manage all reports`;
+            
+            // Context shows "All Tables"
+            const contextName = document.getElementById('context-table-name');
+            if (contextName) {
+                contextName.textContent = 'All Tables';
+            }
         }
     }
     
@@ -1078,10 +1090,6 @@ class SavedReportsPage {
             
             if (this.filter_table) {
                 url += `&table=${encodeURIComponent(this.filter_table)}`;
-            }
-            
-            if (this.filter_app) {
-                url += `&app=${encodeURIComponent(this.filter_app)}`;
             }
             
             window.location.href = url;
@@ -2138,10 +2146,6 @@ class SavedReportsPage {
             
             if (this.filter_table) {
                 url += `&table=${encodeURIComponent(this.filter_table)}`;
-            }
-            
-            if (this.filter_app) {
-                url += `&app=${encodeURIComponent(this.filter_app)}`;
             }
             
             window.location.href = url;
