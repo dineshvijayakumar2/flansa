@@ -4284,7 +4284,7 @@ class EnhancedFlansaTableBuilder {
                     fieldtype: 'Select',
                     label: 'Naming Type',
                     options: 'Autoincrement\nBy "Naming Series" field\nBy fieldname\nSet by user\nRandom',
-                    default: 'By "Naming Series" field',
+                    default: 'Autoincrement',
                     description: 'How should new records be named?'
                 },
                 {
@@ -4369,7 +4369,7 @@ class EnhancedFlansaTableBuilder {
             if (result.message) {
                 const table_data = result.message;
                 dialog.set_values({
-                    naming_type: table_data.naming_type || 'By "Naming Series" field',
+                    naming_type: table_data.naming_type || 'Autoincrement',
                     naming_prefix: table_data.naming_prefix || 'REC',
                     naming_digits: table_data.naming_digits || 5,
                     naming_start_from: table_data.naming_start_from || 1,

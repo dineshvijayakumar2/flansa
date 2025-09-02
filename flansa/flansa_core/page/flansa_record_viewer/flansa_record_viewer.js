@@ -588,10 +588,12 @@ class FlansaRecordViewer {
                 this.table_fields = metaResponse.fields || [];
                 this.doctype_name = metaResponse.doctype_name;
                 this.application = metaResponse.application;
+                this.naming_config = metaResponse.naming_config || {};
                 console.log('📋 Loaded table structure:', { 
                     fields_count: this.table_fields.length, 
                     doctype: this.doctype_name,
-                    application: this.application
+                    application: this.application,
+                    naming_type: this.naming_config.naming_type
                 });
                 this.update_dashboard_link();
                 await this.render_new_record_form();
@@ -871,6 +873,17 @@ class FlansaRecordViewer {
         const fieldLabel = field.label || fieldName;
         const fieldValue = value !== null ? value : (this.record_data[fieldName] || '');
         
+        // Special handling for the 'name' field based on naming configuration
+        if (fieldName === 'name' && this.naming_config) {
+            return this.render_name_field(field, fieldValue, isEdit);
+        }
+        
+        // Filter out system fields that shouldn't be displayed
+        const systemFields = ['owner', 'creation', 'modified', 'modified_by', 'docstatus', 'idx'];
+        if (systemFields.includes(fieldName) && this.mode !== 'view') {
+            return ''; // Hide system fields in edit/new modes
+        }
+        
         // Check both mode and field's read_only property
         const isFieldReadOnly = field.read_only || field.readonly || false;
         const isReadonly = (this.mode === 'view' && !isEdit) || isFieldReadOnly;
@@ -959,6 +972,99 @@ class FlansaRecordViewer {
         return html;
     }
     
+    render_name_field(field, fieldValue, isEdit) {
+        const namingType = this.naming_config.naming_type;
+        const isNewRecord = this.mode === 'new';
+        
+        // For existing records in view mode, always show the name
+        if (!isNewRecord && this.mode === 'view') {
+            return `
+                <div class="form-group">
+                    <label class="control-label">ID</label>
+                    <div class="form-control-static">
+                        ${this.escapeHtml(fieldValue) || '<em class="text-muted">No ID</em>'}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // For new records, handle based on naming type
+        if (isNewRecord) {
+            switch (namingType) {
+                case 'Set by user':
+                    // Show editable name field for user input
+                    return `
+                        <div class="form-group">
+                            <label class="control-label">
+                                ID <span class="text-danger">*</span>
+                                <small class="text-muted" style="font-size: 11px; margin-left: 8px;">
+                                    <i class="fa fa-user" title="User-defined ID"></i> Custom ID required
+                                </small>
+                            </label>
+                            <input type="text" 
+                                   class="form-control" 
+                                   name="name" 
+                                   value="${this.escapeHtml(fieldValue)}"
+                                   placeholder="Enter unique ID for this record"
+                                   required>
+                            <small class="help-text text-muted">Enter a unique identifier for this record</small>
+                        </div>
+                    `;
+                    
+                case 'By "Naming Series" field':
+                    // Hide name field, will be auto-generated with prefix
+                    return `
+                        <div class="form-group" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fa fa-magic"></i> ID will be auto-generated: ${this.naming_config.naming_prefix || 'PREFIX'}-00001
+                            </small>
+                        </div>
+                    `;
+                    
+                case 'By fieldname':
+                    // Hide name field, will be generated from another field
+                    const fieldName = this.naming_config.naming_field || 'field';
+                    return `
+                        <div class="form-group" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fa fa-link"></i> ID will be generated from: ${fieldName}
+                            </small>
+                        </div>
+                    `;
+                    
+                case 'Random':
+                    // Hide name field, will be auto-generated randomly
+                    return `
+                        <div class="form-group" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fa fa-random"></i> ID will be auto-generated randomly
+                            </small>
+                        </div>
+                    `;
+                    
+                case 'Autoincrement':
+                default:
+                    // Hide name field, will be auto-incremented
+                    return `
+                        <div class="form-group" style="display: none;">
+                            <small class="text-muted">
+                                <i class="fa fa-sort-numeric-asc"></i> ID will be auto-generated: 1, 2, 3...
+                            </small>
+                        </div>
+                    `;
+            }
+        }
+        
+        // For existing records in edit mode, show as read-only
+        return `
+            <div class="form-group">
+                <label class="control-label">ID</label>
+                <div class="form-control-static" style="background: #f8f9fa; padding: 8px 12px; border-radius: 4px;">
+                    ${this.escapeHtml(fieldValue)} <small class="text-muted">(cannot be changed)</small>
+                </div>
+            </div>
+        `;
+    }
 
     getLabelStyle(field) {
         // Simple clean label styling
@@ -1485,6 +1591,42 @@ class FlansaRecordViewer {
                 console.log(`🔄 Pre-save sync for ${input.name}: ${linkValue}`);
             }
         });
+        
+        // Special validation for naming when user must provide ID
+        if (this.mode === 'new' && this.naming_config && this.naming_config.naming_type === 'Set by user') {
+            const nameInput = content.querySelector('input[name="name"]');
+            if (!nameInput || !nameInput.value.trim()) {
+                frappe.show_alert({
+                    message: 'ID is required. Please enter a unique identifier for this record.',
+                    indicator: 'red'
+                });
+                if (nameInput) {
+                    nameInput.focus();
+                }
+                return false;
+            }
+            
+            // Basic ID validation
+            const nameValue = nameInput.value.trim();
+            if (nameValue.length < 3) {
+                frappe.show_alert({
+                    message: 'ID must be at least 3 characters long.',
+                    indicator: 'red'
+                });
+                nameInput.focus();
+                return false;
+            }
+            
+            // Check for invalid characters (basic check)
+            if (!/^[a-zA-Z0-9_-]+$/.test(nameValue)) {
+                frappe.show_alert({
+                    message: 'ID can only contain letters, numbers, underscores, and hyphens.',
+                    indicator: 'red'
+                });
+                nameInput.focus();
+                return false;
+            }
+        }
         
         return true;
     }
