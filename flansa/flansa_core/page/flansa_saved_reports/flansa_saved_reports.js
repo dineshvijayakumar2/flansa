@@ -1418,16 +1418,26 @@ class SavedReportsPage {
     view_report_by_id(reportId) {
         const report = this.reports.find(r => r.name === reportId);
         if (report) {
-            const event = { currentTarget: { dataset: { reportId: reportId } } };
-            this.view_report(event);
+            // Create a proper mock event object with preventDefault method
+            const mockEvent = {
+                preventDefault: () => {},
+                target: { closest: () => ({ dataset: { reportId: reportId } }) },
+                currentTarget: { dataset: { reportId: reportId } }
+            };
+            this.view_report(mockEvent);
         }
     }
 
     edit_report_by_id(reportId) {
         const report = this.reports.find(r => r.name === reportId);
         if (report) {
-            const event = { currentTarget: { dataset: { reportId: reportId } } };
-            this.edit_report(event);
+            // Create a proper mock event object with preventDefault method
+            const mockEvent = {
+                preventDefault: () => {},
+                target: { closest: () => ({ dataset: { reportId: reportId } }) },
+                currentTarget: { dataset: { reportId: reportId } }
+            };
+            this.edit_report(mockEvent);
         }
     }
 
