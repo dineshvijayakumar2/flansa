@@ -2070,15 +2070,15 @@ class FlansaAppBuilder {
                     fieldname: 'naming_type',
                     label: 'Naming Type',
                     fieldtype: 'Select',
-                    options: 'Auto Number\nNaming Series\nField Based\nPrompt\nRandom',
-                    default: 'Auto Number',
+                    options: 'Autoincrement\nBy "Naming Series" field\nBy fieldname\nSet by user\nRandom',
+                    default: 'Autoincrement',
                     description: 'How records will be named automatically'
                 },
                 {
                     fieldname: 'naming_prefix',
                     label: 'Prefix',
                     fieldtype: 'Data',
-                    depends_on: 'eval:doc.naming_type === "Naming Series"',
+                    depends_on: 'eval:doc.naming_type === "By \\"Naming Series\\" field"',
                     description: 'Prefix for auto-generated names (e.g., "ORD" for ORD-001)'
                 },
                 {
@@ -2086,7 +2086,7 @@ class FlansaAppBuilder {
                     label: 'Number of Digits',
                     fieldtype: 'Int',
                     default: 5,
-                    depends_on: 'eval:["Auto Number", "Naming Series"].includes(doc.naming_type)',
+                    depends_on: 'eval:["Autoincrement", "By \\"Naming Series\\" field"].includes(doc.naming_type)',
                     description: 'Number of digits for auto numbering (e.g., 5 for 00001)'
                 },
                 {
@@ -2094,14 +2094,14 @@ class FlansaAppBuilder {
                     label: 'Start From',
                     fieldtype: 'Int',
                     default: 1,
-                    depends_on: 'eval:["Auto Number", "Naming Series"].includes(doc.naming_type)',
+                    depends_on: 'eval:["Autoincrement", "By \\"Naming Series\\" field"].includes(doc.naming_type)',
                     description: 'Starting number for auto numbering'
                 },
                 {
                     fieldname: 'naming_field',
                     label: 'Field for Naming',
                     fieldtype: 'Data',
-                    depends_on: 'eval:doc.naming_type === "Field Based"',
+                    depends_on: 'eval:doc.naming_type === "By fieldname"',
                     description: 'Enter the field name that will be used for naming (e.g., "customer_name", "order_number")',
                     placeholder: 'e.g., customer_name'
                 }
