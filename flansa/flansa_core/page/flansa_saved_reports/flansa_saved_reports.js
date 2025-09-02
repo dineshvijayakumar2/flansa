@@ -615,7 +615,7 @@ class SavedReportsPage {
                 /* Data Grid Header for List View */
                 .reports-grid.list-view .data-grid-header {
                     display: grid;
-                    grid-template-columns: 1fr auto auto auto 100px;
+                    grid-template-columns: 2fr minmax(120px, 1fr) minmax(80px, max-content) minmax(100px, max-content) minmax(100px, max-content);
                     align-items: center;
                     padding: 12px 20px;
                     gap: 16px;
@@ -629,6 +629,26 @@ class SavedReportsPage {
                     position: sticky;
                     top: 0;
                     z-index: 10;
+                }
+
+                .reports-grid.list-view .data-grid-header .header-col-title {
+                    justify-self: start;
+                }
+
+                .reports-grid.list-view .data-grid-header .header-col-table {
+                    justify-self: start;
+                }
+
+                .reports-grid.list-view .data-grid-header .header-col-type {
+                    justify-self: center;
+                }
+
+                .reports-grid.list-view .data-grid-header .header-col-date {
+                    justify-self: end;
+                }
+
+                .reports-grid.list-view .data-grid-header .header-col-actions {
+                    justify-self: center;
                 }
 
                 .reports-grid.list-view .report-card {
@@ -660,7 +680,7 @@ class SavedReportsPage {
                 /* Clean data grid row layout */
                 .list-view .report-card .card {
                     display: grid;
-                    grid-template-columns: 1fr auto auto auto 100px;
+                    grid-template-columns: 2fr minmax(120px, 1fr) minmax(80px, max-content) minmax(100px, max-content) minmax(100px, max-content);
                     align-items: center;
                     padding: 16px 20px;
                     gap: 16px;
@@ -709,24 +729,37 @@ class SavedReportsPage {
                     font-size: 13px;
                     font-weight: 500;
                     white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    justify-self: start;
+                }
+
+                .list-view .report-card .report-type-col {
+                    text-align: center;
+                    justify-self: center;
                 }
 
                 .list-view .report-card .report-type-col .report-type-badge {
                     margin: 0;
                     font-size: 11px;
                     padding: 3px 8px;
+                    display: inline-block;
+                    white-space: nowrap;
                 }
 
                 .list-view .report-card .report-date-col {
                     color: #6b7280;
                     font-size: 12px;
                     text-align: right;
+                    justify-self: end;
+                    white-space: nowrap;
                 }
 
                 .list-view .report-card .report-actions-col {
                     display: flex;
                     gap: 6px;
-                    justify-content: flex-end;
+                    justify-content: center;
+                    justify-self: center;
                 }
 
                 .list-view .report-card .report-actions-col .action-btn {
@@ -1179,11 +1212,11 @@ class SavedReportsPage {
             const header = document.createElement('div');
             header.className = 'data-grid-header';
             header.innerHTML = `
-                <div>Report Name</div>
-                <div>Table</div>
-                <div>Type</div>
-                <div>Created</div>
-                <div>Actions</div>
+                <div class="header-col-title">Report Name</div>
+                <div class="header-col-table">Table</div>
+                <div class="header-col-type">Type</div>
+                <div class="header-col-date">Created</div>
+                <div class="header-col-actions">Actions</div>
             `;
             reportsGrid.appendChild(header);
         }
