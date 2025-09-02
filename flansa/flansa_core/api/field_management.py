@@ -71,6 +71,81 @@ def get_visual_builder_fields(table_name):
         tenant_system_fields = ['tenant_id', 'flansa_table_id', 'application_id']
         
         visible_fields = []
+        
+        # First, add essential system fields that should always be available for forms
+        # These may not appear in meta.fields but are important for form building
+        essential_system_fields = [
+            {
+                'fieldname': 'name',
+                'fieldtype': 'Data',
+                'label': 'ID/Name',
+                'hidden': 0,
+                'read_only': 1,  # Name field is typically read-only in forms
+                'reqd': 0,
+                'options': '',
+                'description': 'Document identifier',
+                'in_list_view': 1,
+                'category': 'system'
+            },
+            {
+                'fieldname': 'owner',
+                'fieldtype': 'Link',
+                'label': 'Created By',
+                'hidden': 0,
+                'read_only': 1,
+                'reqd': 0,
+                'options': 'User',
+                'description': 'User who created this record',
+                'in_list_view': 0,
+                'category': 'system'
+            },
+            {
+                'fieldname': 'creation',
+                'fieldtype': 'Datetime',
+                'label': 'Created On',
+                'hidden': 0,
+                'read_only': 1,
+                'reqd': 0,
+                'options': '',
+                'description': 'Date and time when record was created',
+                'in_list_view': 1,
+                'category': 'system'
+            },
+            {
+                'fieldname': 'modified',
+                'fieldtype': 'Datetime', 
+                'label': 'Last Modified',
+                'hidden': 0,
+                'read_only': 1,
+                'reqd': 0,
+                'options': '',
+                'description': 'Date and time when record was last modified',
+                'in_list_view': 1,
+                'category': 'system'
+            },
+            {
+                'fieldname': 'modified_by',
+                'fieldtype': 'Link',
+                'label': 'Modified By',
+                'hidden': 0,
+                'read_only': 1,
+                'reqd': 0,
+                'options': 'User',
+                'description': 'User who last modified this record',
+                'in_list_view': 0,
+                'category': 'system'
+            }
+        ]
+        
+        # Track which system fields we've added to avoid duplicates
+        added_fieldnames = set()
+        
+        # Add essential system fields first
+        for sys_field in essential_system_fields:
+            visible_fields.append(sys_field)
+            added_fieldnames.add(sys_field['fieldname'])
+        
+        # Now add fields from DocType meta, skipping duplicates and filtered fields
         for field in meta.fields:
             # Skip tenant system fields
             if field.fieldname in tenant_system_fields:
@@ -78,6 +153,10 @@ def get_visual_builder_fields(table_name):
                 
             # Skip Frappe internal fields
             if field.fieldname.startswith('__'):
+                continue
+            
+            # Skip if we already added this field (from essential system fields)
+            if field.fieldname in added_fieldnames:
                 continue
             
             # Include user and system fields
@@ -1236,9 +1315,9 @@ def apply_naming_to_doctype(table_name):
         doctype_doc = frappe.get_doc("DocType", table_doc.doctype_name)
         
         # Apply naming configuration based on the Flansa Table settings
-        naming_type = getattr(table_doc, 'naming_type', 'Naming Series')
+        naming_type = getattr(table_doc, 'naming_type', 'Autoincrement')
         
-        if naming_type == "Naming Series":
+        if naming_type == "By \"Naming Series\" field":
             # Frappe naming series format: PREFIX-.#####
             prefix = getattr(table_doc, 'naming_prefix', 'REC')
             digits = getattr(table_doc, 'naming_digits', 5)
@@ -1305,13 +1384,13 @@ def apply_naming_to_doctype(table_name):
                 
                 frappe.db.commit()
             
-        elif naming_type == "Auto Increment":
+        elif naming_type == "Autoincrement":
             # Pure auto increment: .#####
             digits = getattr(table_doc, 'naming_digits', 5)
             new_autoname = f".{'#' * digits}"
             doctype_doc.naming_rule = "Autoincrement"
             
-        elif naming_type == "Field Based":
+        elif naming_type == "By fieldname":
             # Field-based naming
             field_name = getattr(table_doc, 'naming_field', '')
             if field_name:
@@ -1320,7 +1399,7 @@ def apply_naming_to_doctype(table_name):
             else:
                 return {"success": False, "message": "Field-based naming selected but no field specified"}
                 
-        elif naming_type == "Prompt":
+        elif naming_type == "Set by user":
             # User prompt
             new_autoname = "Prompt"
             doctype_doc.naming_rule = "Set by user"
@@ -1344,7 +1423,7 @@ def apply_naming_to_doctype(table_name):
         
         # Prepare success message with details
         success_message = f"Applied naming configuration: {naming_type}"
-        if naming_type == "Naming Series":
+        if naming_type == "By \"Naming Series\" field":
             start_from = getattr(table_doc, 'naming_start_from', 1)
             if start_from and start_from > 1:
                 success_message += f" (starting from {start_from})"

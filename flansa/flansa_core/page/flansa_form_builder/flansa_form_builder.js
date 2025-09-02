@@ -208,29 +208,79 @@ if (typeof FlansaFormBuilder === 'undefined') {
                 </div>
             `;
         } else {
-            availableFields.forEach(field => {
-                const icon = this.get_field_icon(field.fieldtype || field.field_type);
+            // Separate system fields from user fields
+            const systemFields = availableFields.filter(field => field.category === 'system');
+            const userFields = availableFields.filter(field => field.category !== 'system');
+            
+            // Show system fields first if any
+            if (systemFields.length > 0) {
                 fields_html += `
-                    <div class="field-item available-field" data-field-name="${field.fieldname || field.field_name}" draggable="true"
-                         style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: white; transition: all 0.2s ease;"
-                         onmouseover="this.style.borderColor='var(--flansa-success, #28a745)'; this.style.backgroundColor='var(--flansa-background, #f8f9fa)';"
-                         onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='white';">
-                        <div style="display: flex; align-items: center; justify-content: space-between;">
-                            <div style="display: flex; align-items: center;">
-                                <i class="${icon}" style="margin-right: 8px; color: var(--flansa-success, #28a745); width: 16px;"></i>
-                                <div>
-                                    <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">${field.label || field.field_label}</div>
-                                    <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">${field.fieldtype || field.field_type}</div>
-                                </div>
-                            </div>
-                            <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
+                    <div style="margin: 16px 0 8px 0; padding: 8px 0; border-top: 1px solid var(--flansa-border, #e0e6ed);">
+                        <div style="font-size: 11px; font-weight: 600; color: #007bff; text-transform: uppercase; letter-spacing: 0.5px;">
+                            <i class="fa fa-cog"></i> System Fields
                         </div>
                     </div>
                 `;
-            });
+                
+                systemFields.forEach(field => {
+                    const icon = this.get_field_icon(field.fieldtype || field.field_type);
+                    fields_html += this.render_available_field(field, icon, true);
+                });
+            }
+            
+            // Show user fields
+            if (userFields.length > 0) {
+                if (systemFields.length > 0) {
+                    fields_html += `
+                        <div style="margin: 16px 0 8px 0; padding: 8px 0; border-top: 1px solid var(--flansa-border, #e0e6ed);">
+                            <div style="font-size: 11px; font-weight: 600; color: #28a745; text-transform: uppercase; letter-spacing: 0.5px;">
+                                <i class="fa fa-user"></i> Custom Fields
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                userFields.forEach(field => {
+                    const icon = this.get_field_icon(field.fieldtype || field.field_type);
+                    fields_html += this.render_available_field(field, icon, false);
+                });
+            }
         }
 
         $('#available-fields-list').html(fields_html);
+    }
+    
+    render_available_field(field, icon, isSystemField) {
+        const categoryColor = isSystemField ? '#007bff' : '#28a745';
+        const categoryBadge = isSystemField ? 
+            `<span style="background: #007bff; color: white; padding: 2px 6px; border-radius: 10px; font-size: 9px; margin-left: 6px;">SYSTEM</span>` : 
+            '';
+        
+        return `
+            <div class="field-item available-field ${isSystemField ? 'system-field' : 'user-field'}" 
+                 data-field-name="${field.fieldname || field.field_name}" 
+                 data-category="${field.category || 'user'}" 
+                 draggable="true"
+                 style="border: 1px solid var(--flansa-border, #e0e6ed); border-radius: 6px; padding: 10px; margin-bottom: 6px; cursor: move; background: white; transition: all 0.2s ease;"
+                 onmouseover="this.style.borderColor='${categoryColor}'; this.style.backgroundColor='var(--flansa-background, #f8f9fa)';"
+                 onmouseout="this.style.borderColor='var(--flansa-border, #e0e6ed)'; this.style.backgroundColor='white';">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <i class="${icon}" style="margin-right: 8px; color: ${categoryColor}; width: 16px;"></i>
+                        <div>
+                            <div style="font-weight: 600; color: var(--flansa-text-primary, #495057); font-size: 13px;">
+                                ${field.label || field.field_label}${categoryBadge}
+                            </div>
+                            <div style="font-size: 11px; color: var(--flansa-text-secondary, #6c757d);">
+                                ${field.fieldtype || field.field_type}
+                                ${field.description ? ` • ${field.description}` : ''}
+                            </div>
+                        </div>
+                    </div>
+                    <i class="fa fa-arrows-alt" style="color: var(--flansa-text-secondary, #6c757d); font-size: 14px;"></i>
+                </div>
+            </div>
+        `;
     }
 
     get_field_icon(field_type) {
