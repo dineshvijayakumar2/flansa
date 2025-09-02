@@ -1234,8 +1234,11 @@ class SavedReportsPage {
         // Create tabulator container
         reportsGrid.innerHTML = '<div id="reports-tabulator" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"></div>';
         
-        // Load Tabulator CSS and JS if not already loaded
-        this.load_tabulator_assets().then(() => {
+        // Load Tabulator and Shadcn-inspired styling
+        Promise.all([
+            this.load_tabulator_assets(),
+            this.load_shadcn_inspired_styles()
+        ]).then(() => {
             const tableData = reports.map(report => ({
                 id: report.name,
                 report_title: report.report_title,
@@ -1247,7 +1250,7 @@ class SavedReportsPage {
                 actions: report.name
             }));
 
-            // Initialize Tabulator
+            // Initialize Tabulator with Shadcn-inspired theme
             this.tabulator = new Tabulator("#reports-tabulator", {
                 data: tableData,
                 layout: "fitDataStretch",
@@ -1260,6 +1263,11 @@ class SavedReportsPage {
                 resizableRows: false,
                 selectable: false,
                 tooltips: true,
+                // Shadcn-inspired styling options
+                columnDefaults: {
+                    headerSort: true,
+                    headerTooltip: true,
+                },
                 columns: [
                     {
                         title: "Report Name", 
@@ -1318,12 +1326,12 @@ class SavedReportsPage {
                         headerSort: false,
                         formatter: (cell, formatterParams, onRendered) => {
                             return `
-                                <div style="display: flex; gap: 6px; justify-content: center;">
-                                    <button class="tabulator-action-btn view-report-btn" data-report-id="${cell.getValue()}" title="View Report" style="width: 28px; height: 28px; border: none; border-radius: 6px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
-                                        <i class="fa fa-eye" style="font-size: 12px;"></i>
+                                <div style="display: flex; gap: 8px; justify-content: center;">
+                                    <button class="tabulator-action-btn view-report-btn" data-report-id="${cell.getValue()}" title="View Report">
+                                        <i class="fa fa-eye" style="font-size: 14px;"></i>
                                     </button>
-                                    <button class="tabulator-action-btn edit-report-btn" data-report-id="${cell.getValue()}" title="Edit Report" style="width: 28px; height: 28px; border: none; border-radius: 6px; background: rgba(34, 197, 94, 0.1); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
-                                        <i class="fa fa-edit" style="font-size: 12px;"></i>
+                                    <button class="tabulator-action-btn edit-report-btn" data-report-id="${cell.getValue()}" title="Edit Report">
+                                        <i class="fa fa-edit" style="font-size: 14px;"></i>
                                     </button>
                                 </div>
                             `;
@@ -1421,6 +1429,117 @@ class SavedReportsPage {
             const event = { currentTarget: { dataset: { reportId: reportId } } };
             this.edit_report(event);
         }
+    }
+
+    load_shadcn_inspired_styles() {
+        // Inject Shadcn-inspired styles for modern UI components
+        const shadcnStyles = `
+            <style id="shadcn-inspired-styles">
+                /* Shadcn-inspired Variables */
+                :root {
+                    --shadcn-background: 0 0% 100%;
+                    --shadcn-foreground: 222.2 84% 4.9%;
+                    --shadcn-primary: 221.2 83.2% 53.3%;
+                    --shadcn-primary-foreground: 210 40% 98%;
+                    --shadcn-secondary: 210 40% 96%;
+                    --shadcn-secondary-foreground: 222.2 84% 4.9%;
+                    --shadcn-muted: 210 40% 96%;
+                    --shadcn-muted-foreground: 215.4 16.3% 46.9%;
+                    --shadcn-border: 214.3 31.8% 91.4%;
+                    --shadcn-radius: 0.5rem;
+                }
+
+                /* Apply Shadcn theme to Tabulator */
+                #reports-tabulator .tabulator {
+                    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                    background: hsl(var(--shadcn-background));
+                    border: 1px solid hsl(var(--shadcn-border));
+                    border-radius: var(--shadcn-radius);
+                }
+
+                #reports-tabulator .tabulator-header {
+                    background: hsl(var(--shadcn-muted));
+                    border-bottom: 1px solid hsl(var(--shadcn-border));
+                }
+
+                #reports-tabulator .tabulator-header .tabulator-col {
+                    border-right: 1px solid hsl(var(--shadcn-border));
+                    background: transparent;
+                }
+
+                #reports-tabulator .tabulator-header .tabulator-col-title {
+                    font-weight: 600;
+                    font-size: 14px;
+                    color: hsl(var(--shadcn-foreground));
+                }
+
+                #reports-tabulator .tabulator-row {
+                    background: hsl(var(--shadcn-background));
+                    border-bottom: 1px solid hsl(var(--shadcn-border));
+                    transition: all 0.2s ease;
+                }
+
+                #reports-tabulator .tabulator-row:hover {
+                    background: hsl(var(--shadcn-muted) / 0.5);
+                }
+
+                #reports-tabulator .tabulator-row .tabulator-cell {
+                    border-right: 1px solid hsl(var(--shadcn-border));
+                    color: hsl(var(--shadcn-foreground));
+                    font-size: 14px;
+                }
+
+                #reports-tabulator .tabulator-footer {
+                    background: hsl(var(--shadcn-muted));
+                    border-top: 1px solid hsl(var(--shadcn-border));
+                }
+
+                /* Enhanced Action Buttons with Shadcn styling */
+                .tabulator-action-btn {
+                    display: inline-flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    white-space: nowrap !important;
+                    border-radius: var(--shadcn-radius) !important;
+                    font-size: 14px !important;
+                    font-weight: 500 !important;
+                    transition: all 0.2s !important;
+                    border: none !important;
+                    cursor: pointer !important;
+                    height: 32px !important;
+                    width: 32px !important;
+                }
+
+                .view-report-btn {
+                    background: hsl(var(--shadcn-primary)) !important;
+                    color: hsl(var(--shadcn-primary-foreground)) !important;
+                }
+
+                .view-report-btn:hover {
+                    background: hsl(var(--shadcn-primary) / 0.9) !important;
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 8px hsl(var(--shadcn-primary) / 0.3) !important;
+                }
+
+                .edit-report-btn {
+                    background: hsl(var(--shadcn-secondary)) !important;
+                    color: hsl(var(--shadcn-secondary-foreground)) !important;
+                }
+
+                .edit-report-btn:hover {
+                    background: hsl(var(--shadcn-secondary) / 0.8) !important;
+                    transform: translateY(-1px) !important;
+                    box-shadow: 0 4px 8px hsl(var(--shadcn-secondary) / 0.3) !important;
+                }
+            </style>
+        `;
+
+        // Inject styles if not already present
+        if (!document.getElementById('shadcn-inspired-styles')) {
+            document.head.insertAdjacentHTML('beforeend', shadcnStyles);
+        }
+
+        return Promise.resolve();
     }
     
     create_report_card(report) {
