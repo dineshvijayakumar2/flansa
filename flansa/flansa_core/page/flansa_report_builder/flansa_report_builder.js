@@ -16,6 +16,8 @@ class UnifiedReportBuilder {
         this.current_report_title = null;
         this.modal_dialog = null;
         this.filter_table = null;
+        this.tabulator = null; // Modern data table instance
+        this.table_lookup = {}; // For table ID to label resolution
         
         this.extract_url_parameters();
         this.init();
@@ -559,6 +561,7 @@ class UnifiedReportBuilder {
 
         // Inline label editing
         this.save_field_label();
+        this.load_modern_ui_assets();
     }
 
     load_tables() {
@@ -754,7 +757,106 @@ class UnifiedReportBuilder {
             return;
         }
         
-        const headers = this.selected_fields.map(field => field.custom_label || field.field_label);
+        // Create modern preview container with Shadcn styling
+        const previewHtml = `
+            <div class="report-preview-container">
+                <div class="preview-header">
+                    <h3 class="preview-title">Report Preview</h3>
+                    <div class="preview-stats">
+                        <span><strong>${data.length}</strong> rows displayed</span>
+                        <span><strong>${report_data.total || data.length}</strong> total records</span>
+                        <span><strong>${this.selected_fields.length}</strong> columns</span>
+                    </div>
+                </div>
+                <div id="modern-report-table" class="report-builder-tabulator"></div>
+            </div>
+        `;
+        
+        $(container).html(previewHtml);
+        
+        // Initialize modern Tabulator table
+        this.init_modern_report_table(data, '#modern-report-table');
+    }
+
+    async init_modern_report_table(data, containerId) {
+        try {
+            // Ensure modern UI assets are loaded
+            await this.load_modern_ui_assets();
+            
+            // Prepare column definitions from selected fields
+            const columns = this.selected_fields.map(field => ({
+                title: field.custom_label || field.field_label || field.label || field.fieldname,
+                field: field.fieldname,
+                headerTooltip: field.field_label || field.fieldname,
+                formatter: (cell) => {
+                    const value = cell.getValue();
+                    return this.format_cell_value(value, field.fieldtype);
+                }
+            }));
+
+            // Initialize Tabulator with modern configuration
+            this.tabulator = new Tabulator(containerId, {
+                data: data,
+                columns: columns,
+                layout: "fitDataStretch",
+                responsiveLayout: "collapse",
+                responsiveLayoutCollapseStartOpen: false,
+                pagination: true,
+                paginationSize: 25,
+                paginationMode: "local",
+                movableColumns: true,
+                resizableRows: false,
+                selectable: false,
+                tooltips: true,
+                height: "400px",
+                // Modern Shadcn-inspired styling
+                columnDefaults: {
+                    headerSort: true,
+                    headerTooltip: true
+                }
+            });
+
+        } catch (error) {
+            console.error('Error initializing modern report table:', error);
+            // Fallback to basic HTML table
+            this.render_fallback_table(data, containerId);
+        }
+    }
+
+    format_cell_value(value, fieldtype) {
+        if (!value && value !== 0) return '';
+        
+        // Format based on field type
+        switch(fieldtype) {
+            case 'Date':
+                try {
+                    return frappe.datetime.str_to_user(value);
+                } catch {
+                    return value;
+                }
+            case 'Datetime':
+                try {
+                    return frappe.datetime.str_to_user(value) + ' ' + frappe.datetime.get_time_str(value);
+                } catch {
+                    return value;
+                }
+            case 'Currency':
+            case 'Float':
+                return parseFloat(value).toLocaleString();
+            case 'Int':
+                return parseInt(value).toLocaleString();
+            case 'Percent':
+                return (parseFloat(value) * 100).toFixed(2) + '%';
+            case 'Check':
+                return value ? '✓' : '✗';
+            default:
+                return value;
+        }
+    }
+
+    render_fallback_table(data, containerId) {
+        // Fallback HTML table with improved styling
+        const headers = this.selected_fields.map(field => field.custom_label || field.field_label || field.fieldname);
         const tableHtml = `
             <div class="table-responsive">
                 <table class="table table-bordered table-hover">
@@ -764,20 +866,19 @@ class UnifiedReportBuilder {
                         </tr>
                     </thead>
                     <tbody>
-                        ${data.slice(0, 10).map(row => `
+                        ${data.slice(0, 25).map(row => `
                             <tr>
                                 ${this.selected_fields.map(field => `
-                                    <td>${row[field.fieldname] || ''}</td>
+                                    <td>${this.format_cell_value(row[field.fieldname], field.fieldtype)}</td>
                                 `).join('')}
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
             </div>
-            <div class="text-muted">Showing first 10 rows of ${report_data.total} total records</div>
         `;
         
-        $(container).html(tableHtml);
+        $(containerId).html(tableHtml);
     }
 
     render_gallery_view(report_data, container) {
@@ -849,6 +950,125 @@ class UnifiedReportBuilder {
         }
         
         return '/assets/frappe/images/default-avatar.png';
+    }
+
+    // Modern UI Assets and Methods
+    async load_modern_ui_assets() {
+        // Load Tabulator and Shadcn-inspired styling for modern tables
+        try {
+            await Promise.all([
+                this.load_tabulator_assets(),
+                this.load_shadcn_inspired_styles()
+            ]);
+            console.log('✅ Modern UI assets loaded successfully');
+        } catch (error) {
+            console.error('❌ Error loading modern UI assets:', error);
+        }
+    }
+
+    async load_tabulator_assets() {
+        // Check if Tabulator is already loaded
+        if (window.Tabulator) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            // Load CSS first
+            const css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'https://unpkg.com/tabulator-tables@6.2.5/dist/css/tabulator.min.css';
+            document.head.appendChild(css);
+
+            // Load JS
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/tabulator-tables@6.2.5/dist/js/tabulator.min.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Tabulator'));
+            document.head.appendChild(script);
+        });
+    }
+
+    load_shadcn_inspired_styles() {
+        // Inject Shadcn-inspired styles for modern report builder components
+        const shadcnStyles = `
+            <style id="shadcn-report-builder-styles">
+                /* Enhanced Preview Section */
+                .report-preview-container {
+                    background: white;
+                    border-radius: 8px;
+                    padding: 1.5rem;
+                    margin-top: 1rem;
+                    border: 1px solid #e2e8f0;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+                }
+
+                .preview-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-bottom: 1rem;
+                    padding-bottom: 1rem;
+                    border-bottom: 1px solid #e2e8f0;
+                }
+
+                .preview-title {
+                    font-size: 18px;
+                    font-weight: 600;
+                    color: #1f2937;
+                    margin: 0;
+                }
+
+                .preview-stats {
+                    display: flex;
+                    gap: 1rem;
+                    font-size: 14px;
+                    color: #6b7280;
+                }
+
+                /* Modern Report Builder Tables */
+                .report-builder-tabulator .tabulator {
+                    font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+                    background: white !important;
+                    border: 1px solid #e2e8f0 !important;
+                    border-radius: 8px !important;
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05) !important;
+                }
+
+                .report-builder-tabulator .tabulator-header {
+                    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+                    border-bottom: 1px solid #e2e8f0 !important;
+                }
+
+                .report-builder-tabulator .tabulator-header .tabulator-col-title {
+                    font-weight: 600 !important;
+                    font-size: 14px !important;
+                    color: #1f2937 !important;
+                }
+
+                .report-builder-tabulator .tabulator-row:hover {
+                    background: #f8fafc !important;
+                }
+
+                .report-builder-tabulator .tabulator-row .tabulator-cell {
+                    border-right: 1px solid #f1f5f9 !important;
+                    color: #374151 !important;
+                    font-size: 14px !important;
+                    padding: 12px 16px !important;
+                }
+            </style>
+        `;
+
+        // Inject styles if not already present
+        if (!document.getElementById('shadcn-report-builder-styles')) {
+            document.head.insertAdjacentHTML('beforeend', shadcnStyles);
+        }
+
+        return Promise.resolve();
+    }
+
+    // Helper method to get table label from ID (for consistency with saved reports)
+    get_table_label(table_id) {
+        return this.table_lookup && this.table_lookup[table_id] ? this.table_lookup[table_id] : table_id;
     }
 
     switch_view_mode(view) {
@@ -1504,11 +1724,6 @@ frappe.pages['flansa-report-builder'].on_page_load = function(wrapper) {
     
     // Initialize the report builder
     window.report_builder = new UnifiedReportBuilder(page);
-    
-    // Load tables after initialization
-    setTimeout(() => {
-        window.report_builder.load_tables();
-    }, 500);
 };
 
 frappe.pages['flansa-report-builder'].on_page_show = function(wrapper) {
