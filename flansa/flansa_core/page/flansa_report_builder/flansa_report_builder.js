@@ -44,6 +44,7 @@ class UnifiedReportBuilder {
     init() {
         console.log('Unified Report Builder: Initializing...');
         this.setup_improved_layout();
+        this.setup_context_aware_breadcrumbs();
         this.auto_select_table();
         this.bind_events();
         this.apply_theme();
@@ -64,17 +65,8 @@ class UnifiedReportBuilder {
                     <div class="header-backdrop"></div>
                     <div class="header-content">
                         <!-- Breadcrumb Trail -->
-                        <nav class="breadcrumb-trail">
-                            <a href="/app/flansa-workspace" class="breadcrumb-link">
-                                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-                                </svg>
-                                <span>Workspace</span>
-                            </a>
-                            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                            </svg>
-                            <span class="breadcrumb-current">📊 Report Builder</span>
+                        <nav class="breadcrumb-trail" id="dynamic-breadcrumbs">
+                            <!-- Breadcrumbs will be populated dynamically based on context -->
                         </nav>
                     </div>
                     
@@ -210,6 +202,79 @@ class UnifiedReportBuilder {
         this.add_unified_styles();
         
         console.log('✅ Improved layout setup complete');
+    }
+
+    setup_context_aware_breadcrumbs() {
+        console.log('Setting up context-aware breadcrumbs...');
+        
+        const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
+        if (!breadcrumbContainer) return;
+
+        // Build breadcrumb path based on context
+        let breadcrumbHTML = '';
+        
+        // Always start with workspace
+        breadcrumbHTML += `
+            <a href="/app/flansa-workspace" class="breadcrumb-link">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                <span>Workspace</span>
+            </a>
+        `;
+
+        // Add divider
+        const divider = `
+            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+        `;
+
+        // Build context-aware saved reports link
+        const savedReportsURL = this.build_saved_reports_url();
+        
+        breadcrumbHTML += divider;
+        breadcrumbHTML += `
+            <a href="${savedReportsURL}" class="breadcrumb-link">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                </svg>
+                <span>Saved Reports</span>
+            </a>
+        `;
+
+        // Add current page
+        breadcrumbHTML += divider;
+        breadcrumbHTML += `
+            <span class="breadcrumb-current">📊 Report Builder</span>
+        `;
+
+        breadcrumbContainer.innerHTML = breadcrumbHTML;
+        console.log('✅ Context-aware breadcrumbs setup complete');
+    }
+
+    build_saved_reports_url() {
+        // Build URL with preserved context parameters
+        const params = new URLSearchParams();
+        
+        // Preserve table context
+        if (this.filter_table) {
+            params.append('table', this.filter_table);
+        }
+        
+        // Preserve app context  
+        if (this.filter_app) {
+            params.append('app', this.filter_app);
+        }
+        
+        // Add source context to indicate where user came from
+        params.append('source', 'report-builder');
+        
+        const baseURL = '/app/flansa-saved-reports';
+        const paramString = params.toString();
+        
+        return paramString ? `${baseURL}?${paramString}` : baseURL;
     }
 
     auto_select_table() {
@@ -402,7 +467,7 @@ class UnifiedReportBuilder {
             }],
             primary_action_label: 'Save Report',
             primary_action: () => {
-                this.save_report();
+                this.save_report_with_context_navigation();
                 dialog.hide();
             }
         });
@@ -1482,6 +1547,12 @@ class UnifiedReportBuilder {
                     frappe.msgprint('Report saved successfully');
                     this.current_report_id = r.message.name;
                     this.current_report_modified = r.message.modified; // Update modified timestamp
+                    
+                    // Navigate back to saved reports with context after a brief delay
+                    setTimeout(() => {
+                        const savedReportsURL = this.build_saved_reports_url();
+                        frappe.set_route_from_url(savedReportsURL);
+                    }, 1500); // Give user time to see the success message
                 } else {
                     frappe.msgprint('Failed to save report');
                 }
@@ -1700,6 +1771,49 @@ class UnifiedReportBuilder {
         }
         
         return null;
+    }
+
+    save_report_with_context_navigation() {
+        const title = $('#report-title-input').val();
+        if (!title) {
+            frappe.msgprint('Please enter a report title');
+            return;
+        }
+        
+        const config = this.build_report_config();
+        
+        const report_data = {
+            report_title: title,
+            description: title + ' - Generated Report',
+            base_table: this.current_table,
+            report_type: 'table',
+            report_config: JSON.stringify(config),
+            is_public: 0
+        };
+        
+        frappe.call({
+            method: 'frappe.client.save',
+            args: {
+                doc: {
+                    doctype: 'Flansa Saved Report',
+                    ...report_data
+                }
+            },
+            callback: (r) => {
+                if (r.message) {
+                    frappe.msgprint('Report saved successfully! Redirecting to Saved Reports...');
+                    this.current_report_id = r.message.name;
+                    
+                    // Immediate navigation to saved reports with context
+                    setTimeout(() => {
+                        const savedReportsURL = this.build_saved_reports_url();
+                        frappe.set_route_from_url(savedReportsURL);
+                    }, 1000); // Brief delay to show success message
+                } else {
+                    frappe.msgprint('Failed to save report');
+                }
+            }
+        });
     }
 }
 
