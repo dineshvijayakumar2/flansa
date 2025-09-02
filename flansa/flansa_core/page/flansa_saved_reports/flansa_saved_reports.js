@@ -1086,11 +1086,22 @@ class SavedReportsPage {
             });
             
             if (response.message && response.message.success) {
+                // Create table lookup map for ID to label resolution
+                this.table_lookup = {};
+                response.message.tables.forEach(table => {
+                    this.table_lookup[table.value] = table.label;
+                });
+                
                 this.populate_table_filter(response.message.tables);
             }
         } catch (error) {
             console.error('Error loading tables:', error);
         }
+    }
+
+    // Helper method to get table label from ID
+    get_table_label(table_id) {
+        return this.table_lookup && this.table_lookup[table_id] ? this.table_lookup[table_id] : table_id;
     }
     
     populate_table_filter(tables) {
@@ -1166,7 +1177,8 @@ class SavedReportsPage {
                 const searchableText = [
                     report.report_title,
                     report.description,
-                    report.base_table
+                    report.base_table,
+                    this.get_table_label(report.base_table) // Include table label in search
                 ].join(' ').toLowerCase();
                 
                 if (!searchableText.includes(searchTerm)) return false;
@@ -1183,7 +1195,8 @@ class SavedReportsPage {
                 id: report.name,
                 report_title: report.report_title,
                 description: report.description || 'No description',
-                base_table: report.base_table,
+                base_table: this.get_table_label(report.base_table),
+                base_table_id: report.base_table, // Keep original ID for filtering
                 report_type: report.report_type || 'Table',
                 created_on: report.created_on,
                 created_by_user: report.created_by_user,
@@ -1243,7 +1256,8 @@ class SavedReportsPage {
                 id: report.name,
                 report_title: report.report_title,
                 description: report.description || 'No description',
-                base_table: report.base_table,
+                base_table: this.get_table_label(report.base_table),
+                base_table_id: report.base_table, // Keep original ID for filtering
                 report_type: report.report_type || 'Table',
                 created_on: report.created_on,
                 created_by_user: report.created_by_user,
@@ -1568,7 +1582,7 @@ class SavedReportsPage {
                             <div class="report-title">${report.report_title}</div>
                             <div class="report-description">${report.description || 'No description'}</div>
                         </div>
-                        <div class="report-table-col">${report.base_table}</div>
+                        <div class="report-table-col">${this.get_table_label(report.base_table)}</div>
                         <div class="report-type-col">
                             <span class="report-type-badge ${(report.report_type || 'table').toLowerCase()}">${report.report_type || 'Table'}</span>
                         </div>
@@ -1634,7 +1648,7 @@ class SavedReportsPage {
                         <p class="report-description">${report.description || 'No description'}</p>
                         <div class="report-meta">
                             <small class="text-muted">
-                                <i class="fa fa-table"></i> <span class="table-name">${report.base_table}</span>
+                                <i class="fa fa-table"></i> <span class="table-name">${this.get_table_label(report.base_table)}</span>
                             </small>
                             <small class="text-muted">
                                 <i class="fa fa-user"></i> <span class="created-by">${report.created_by_user}</span>
