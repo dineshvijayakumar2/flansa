@@ -136,15 +136,15 @@ class SavedReportsPage {
                 </div>
             </div>
 
-            <!-- Context Section like Table Builder -->
-            <div class="context-section">
-                <div class="context-header">
-                    <div class="context-left">
-                        <div class="context-info">
-                            <span class="context-name">Saved Reports</span>
-                        </div>
-                        
-                        <div class="context-controls">
+            <!-- Context Header Area -->
+            <div class="context-header">
+                <div class="context-container">
+                    <div class="context-info">
+                        <span class="context-label">REPORTS:</span>
+                        <span class="context-name">Saved Reports</span>
+                    </div>
+                    
+                    <div class="context-controls">
                             <div class="view-toggle">
                                 <button class="view-btn active" data-view="tile" title="Tile View">
                                     <i class="fa fa-th"></i>
@@ -355,21 +355,26 @@ class SavedReportsPage {
                     gap: 12px;
                 }
 
-                /* Context Section matching Table Builder exactly */
-                .context-section {
-                    background: #f8fafc;
-                    border-bottom: 1px solid #e2e8f0;
-                    margin: 0 -24px 0 -24px;
-                }
-
+                /* Context Header Area - matching Table Builder exactly */
                 .context-header {
-                    padding: 1.5rem 2rem;
+                    background: #ffffff;
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    padding: 0.875rem 0;
+                    position: sticky;
+                    top: 60px;
+                    z-index: 99;
+                    backdrop-filter: blur(10px);
+                    background: rgba(255, 255, 255, 0.98);
                 }
-
-                .context-left {
+                
+                .context-container {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 0 1.5rem;
                     display: flex;
                     align-items: center;
-                    gap: 1.5rem;
+                    justify-content: space-between;
+                    gap: 2rem;
                 }
 
                 .context-info {
@@ -377,12 +382,23 @@ class SavedReportsPage {
                     align-items: center;
                     gap: 0.5rem;
                 }
+                
+                .context-label {
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    color: #6b7280;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
 
                 .context-name {
-                    font-size: 1.125rem;
+                    font-size: 0.875rem;
                     font-weight: 600;
-                    color: #1f2937;
-                    margin: 0;
+                    color: #374151;
+                    background: rgba(79, 70, 229, 0.1);
+                    padding: 0.25rem 0.625rem;
+                    border-radius: 6px;
+                    border: 1px solid rgba(79, 70, 229, 0.2);
                 }
 
                 .context-controls {
@@ -456,6 +472,24 @@ class SavedReportsPage {
                     outline: none;
                     border-color: #4f46e5;
                     box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+                }
+                
+                .context-counter {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .context-counter .counter-text {
+                    color: #374151;
+                    font-size: 0.8125rem;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+                
+                .context-counter .count-total {
+                    color: #6b7280;
+                    font-weight: 400;
                 }
 
                 .context-counter .counter-text {
