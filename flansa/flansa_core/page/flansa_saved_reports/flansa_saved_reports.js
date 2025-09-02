@@ -1176,7 +1176,24 @@ class SavedReportsPage {
         });
         
         this.current_page = 1;
-        this.render_reports();
+        
+        // If tabulator is active, update its data directly
+        if (this.view_mode === 'list' && this.tabulator) {
+            const tableData = this.filtered_reports.map(report => ({
+                id: report.name,
+                report_title: report.report_title,
+                description: report.description || 'No description',
+                base_table: report.base_table,
+                report_type: report.report_type || 'Table',
+                created_on: report.created_on,
+                created_by_user: report.created_by_user,
+                actions: report.name
+            }));
+            this.tabulator.setData(tableData);
+            this.update_counters();
+        } else {
+            this.render_reports();
+        }
     }
     
     render_reports() {
@@ -1204,33 +1221,169 @@ class SavedReportsPage {
         const end_index = start_index + this.page_size;
         const page_reports = this.filtered_reports.slice(start_index, end_index);
         
-        // Render report cards
+        if (this.view_mode === 'list') {
+            this.render_tabulator_view(page_reports);
+        } else {
+            this.render_tile_view(page_reports);
+        }
+    }
+
+    render_tabulator_view(reports) {
+        const reportsGrid = document.getElementById('reports-grid');
+        
+        // Create tabulator container
+        reportsGrid.innerHTML = '<div id="reports-tabulator" style="background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);"></div>';
+        
+        // Load Tabulator CSS and JS if not already loaded
+        this.load_tabulator_assets().then(() => {
+            const tableData = reports.map(report => ({
+                id: report.name,
+                report_title: report.report_title,
+                description: report.description || 'No description',
+                base_table: report.base_table,
+                report_type: report.report_type || 'Table',
+                created_on: report.created_on,
+                created_by_user: report.created_by_user,
+                actions: report.name
+            }));
+
+            // Initialize Tabulator
+            this.tabulator = new Tabulator("#reports-tabulator", {
+                data: tableData,
+                layout: "fitDataStretch",
+                responsiveLayout: "collapse",
+                responsiveLayoutCollapseStartOpen: false,
+                pagination: true,
+                paginationSize: this.page_size,
+                paginationMode: "local",
+                movableColumns: true,
+                resizableRows: false,
+                selectable: false,
+                tooltips: true,
+                columns: [
+                    {
+                        title: "Report Name", 
+                        field: "report_title", 
+                        width: 300,
+                        responsive: 0,
+                        formatter: (cell, formatterParams, onRendered) => {
+                            const data = cell.getRow().getData();
+                            return `
+                                <div style="display: flex; flex-direction: column; gap: 2px;">
+                                    <div style="font-weight: 600; color: #1f2937;">${data.report_title}</div>
+                                    <div style="font-size: 12px; color: #6b7280; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 280px;">${data.description}</div>
+                                </div>
+                            `;
+                        }
+                    },
+                    {
+                        title: "Table", 
+                        field: "base_table", 
+                        width: 150,
+                        responsive: 1
+                    },
+                    {
+                        title: "Type", 
+                        field: "report_type", 
+                        width: 100,
+                        responsive: 2,
+                        hozAlign: "center",
+                        formatter: (cell, formatterParams, onRendered) => {
+                            const type = cell.getValue().toLowerCase();
+                            const colors = {
+                                table: { bg: '#dbeafe', text: '#1d4ed8', border: '#93c5fd' },
+                                chart: { bg: '#fce7f3', text: '#be185d', border: '#f9a8d4' },
+                                summary: { bg: '#ecfdf5', text: '#047857', border: '#86efac' }
+                            };
+                            const color = colors[type] || colors.table;
+                            return `<span style="background: ${color.bg}; color: ${color.text}; border: 1px solid ${color.border}; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; text-transform: uppercase;">${cell.getValue()}</span>`;
+                        }
+                    },
+                    {
+                        title: "Created", 
+                        field: "created_on", 
+                        width: 120,
+                        responsive: 3,
+                        hozAlign: "right",
+                        formatter: (cell, formatterParams, onRendered) => {
+                            return frappe.datetime.str_to_user(cell.getValue());
+                        }
+                    },
+                    {
+                        title: "Actions", 
+                        field: "actions", 
+                        width: 120,
+                        responsive: 0,
+                        hozAlign: "center",
+                        headerSort: false,
+                        formatter: (cell, formatterParams, onRendered) => {
+                            return `
+                                <div style="display: flex; gap: 6px; justify-content: center;">
+                                    <button class="tabulator-action-btn view-report-btn" data-report-id="${cell.getValue()}" title="View Report" style="width: 28px; height: 28px; border: none; border-radius: 6px; background: rgba(79, 70, 229, 0.1); color: #4f46e5; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                                        <i class="fa fa-eye" style="font-size: 12px;"></i>
+                                    </button>
+                                    <button class="tabulator-action-btn edit-report-btn" data-report-id="${cell.getValue()}" title="Edit Report" style="width: 28px; height: 28px; border: none; border-radius: 6px; background: rgba(34, 197, 94, 0.1); color: #22c55e; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;">
+                                        <i class="fa fa-edit" style="font-size: 12px;"></i>
+                                    </button>
+                                </div>
+                            `;
+                        }
+                    }
+                ]
+            });
+
+            // Add hover effects for action buttons
+            setTimeout(() => {
+                document.querySelectorAll('.tabulator-action-btn').forEach(btn => {
+                    btn.addEventListener('mouseenter', function() {
+                        this.style.transform = 'translateY(-1px)';
+                        this.style.boxShadow = '0 2px 8px rgba(0,0,0,0.15)';
+                    });
+                    btn.addEventListener('mouseleave', function() {
+                        this.style.transform = 'translateY(0)';
+                        this.style.boxShadow = 'none';
+                    });
+                });
+            }, 100);
+        });
+    }
+
+    render_tile_view(reports) {
+        const reportsGrid = document.getElementById('reports-grid');
         reportsGrid.innerHTML = '';
         
-        // Add header for list view
-        if (this.view_mode === 'list') {
-            const header = document.createElement('div');
-            header.className = 'data-grid-header';
-            header.innerHTML = `
-                <div class="header-col-title">Report Name</div>
-                <div class="header-col-table">Table</div>
-                <div class="header-col-type">Type</div>
-                <div class="header-col-date">Created</div>
-                <div class="header-col-actions">Actions</div>
-            `;
-            reportsGrid.appendChild(header);
-        }
-        
-        page_reports.forEach(report => {
+        reports.forEach(report => {
             const card = this.create_report_card(report);
             reportsGrid.appendChild(card);
         });
         
-        // Update counters
-        this.update_counters();
-        
-        // Render pagination
-        this.render_pagination();
+        // Update counters (only for tile view, tabulator handles its own)
+        if (this.view_mode !== 'list') {
+            this.update_counters();
+            this.render_pagination();
+        }
+    }
+
+    async load_tabulator_assets() {
+        // Check if Tabulator is already loaded
+        if (window.Tabulator) {
+            return Promise.resolve();
+        }
+
+        return new Promise((resolve, reject) => {
+            // Load CSS first
+            const css = document.createElement('link');
+            css.rel = 'stylesheet';
+            css.href = 'https://unpkg.com/tabulator-tables@6.2.5/dist/css/tabulator.min.css';
+            document.head.appendChild(css);
+
+            // Load JS
+            const script = document.createElement('script');
+            script.src = 'https://unpkg.com/tabulator-tables@6.2.5/dist/js/tabulator.min.js';
+            script.onload = () => resolve();
+            script.onerror = () => reject(new Error('Failed to load Tabulator'));
+            document.head.appendChild(script);
+        });
     }
     
     create_report_card(report) {
