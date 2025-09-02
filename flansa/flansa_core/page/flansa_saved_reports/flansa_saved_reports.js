@@ -20,7 +20,7 @@ class SavedReportsPage {
         this.current_page = 1;
         this.page_size = 12;
         this.total_pages = 0;
-        this.view_mode = 'grid'; // 'grid' or 'list'
+        this.view_mode = 'tile'; // 'tile' or 'list'
         
         // URL parameters
         this.extract_url_parameters();
@@ -142,7 +142,7 @@ class SavedReportsPage {
                         
                         <div class="context-controls">
                             <div class="view-toggle">
-                                <button class="view-btn active" data-view="grid" title="Grid View">
+                                <button class="view-btn active" data-view="tile" title="Tile View">
                                     <i class="fa fa-th"></i>
                                 </button>
                                 <button class="view-btn" data-view="list" title="List View">
@@ -588,6 +588,13 @@ class SavedReportsPage {
                 }
 
                 .reports-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+                    gap: 20px;
+                    padding: 20px 0;
+                }
+
+                .reports-grid.tile-view {
                     display: grid;
                     grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
                     gap: 20px;
@@ -1155,7 +1162,7 @@ class SavedReportsPage {
         
         // Show grid and apply view mode class
         reportsGrid.style.display = 'grid';
-        reportsGrid.className = `reports-grid ${this.view_mode === 'list' ? 'list-view' : ''}`;
+        reportsGrid.className = `reports-grid ${this.view_mode}-view`;
         if (emptyState) emptyState.style.display = 'none';
         
         // Calculate pagination
@@ -1226,7 +1233,7 @@ class SavedReportsPage {
                 </div>
             `;
         } else {
-            // Original card design for grid view
+            // Original card design for tile view
             cardElement.innerHTML = `
                 <div class="card">
                     <div class="card-header">
