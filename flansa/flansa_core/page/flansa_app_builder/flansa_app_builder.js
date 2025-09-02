@@ -2070,8 +2070,8 @@ class FlansaAppBuilder {
                     fieldname: 'naming_type',
                     label: 'Naming Type',
                     fieldtype: 'Select',
-                    options: 'Naming Series\nAuto Increment\nField Based\nPrompt\nRandom',
-                    default: 'Auto Increment',
+                    options: 'Auto Number\nNaming Series\nField Based\nPrompt\nRandom',
+                    default: 'Auto Number',
                     description: 'How records will be named automatically'
                 },
                 {
@@ -2086,7 +2086,7 @@ class FlansaAppBuilder {
                     label: 'Number of Digits',
                     fieldtype: 'Int',
                     default: 5,
-                    depends_on: 'eval:["Auto Increment", "Naming Series"].includes(doc.naming_type)',
+                    depends_on: 'eval:["Auto Number", "Naming Series"].includes(doc.naming_type)',
                     description: 'Number of digits for auto numbering (e.g., 5 for 00001)'
                 },
                 {
@@ -2094,7 +2094,7 @@ class FlansaAppBuilder {
                     label: 'Start From',
                     fieldtype: 'Int',
                     default: 1,
-                    depends_on: 'eval:["Auto Increment", "Naming Series"].includes(doc.naming_type)',
+                    depends_on: 'eval:["Auto Number", "Naming Series"].includes(doc.naming_type)',
                     description: 'Starting number for auto numbering'
                 },
                 {
@@ -2102,7 +2102,8 @@ class FlansaAppBuilder {
                     label: 'Field for Naming',
                     fieldtype: 'Data',
                     depends_on: 'eval:doc.naming_type === "Field Based"',
-                    description: 'Field name to use for record names (will be created as a field)'
+                    description: 'Enter the field name that will be used for naming (e.g., "customer_name", "order_number")',
+                    placeholder: 'e.g., customer_name'
                 }
             ],
             primary_action_label: 'Create Table',
