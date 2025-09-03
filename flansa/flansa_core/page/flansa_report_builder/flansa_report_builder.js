@@ -120,6 +120,26 @@ class UnifiedReportBuilder {
                         </div>
                     </div>
                 </div>
+                
+                <!-- Context Header Area -->
+                <div class="context-header">
+                    <div class="context-container">
+                        <div class="context-info">
+                            <span class="context-label">REPORT:</span>
+                            <span class="context-name" id="context-report-name">New Report</span>
+                            <span class="context-description" id="context-table-name"></span>
+                        </div>
+                        
+                        <div class="context-controls">
+                            <div class="context-counter">
+                                <span class="counter-text">
+                                    <span id="selected-fields-count">0</span> 
+                                    <span class="count-total">fields selected</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Main Content Area with Single-Page Layout -->
                 <div class="container main-content">
@@ -247,7 +267,7 @@ class UnifiedReportBuilder {
                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                     <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
                 </svg>
-                <span>Saved Reports</span>
+                <span>Report Manager</span>
             </a>
         `;
 
@@ -579,6 +599,12 @@ class UnifiedReportBuilder {
                 this.select_table(table_name);
             }
         });
+        
+        // Report title input - update context on change
+        $(document).on('input', '#report-title-input', (e) => {
+            const title = $(e.target).val() || 'New Report';
+            $('#context-report-name').text(title);
+        });
 
         // Field selection events with improved UX
         $(document).on('click', '.field-item', (e) => {
@@ -647,6 +673,8 @@ class UnifiedReportBuilder {
                     
                     tables.forEach(table => {
                         selector.append(`<option value="${table.value}">${table.label}</option>`);
+                        // Store table label for context display
+                        this.table_lookup[table.value] = table.label;
                     });
                     
                     // Auto-select if there's a filter
@@ -664,6 +692,15 @@ class UnifiedReportBuilder {
     select_table(table_name) {
         console.log(`Selecting table: ${table_name}`);
         this.current_table = table_name;
+        
+        // Update context section with table name
+        const tableLabel = this.table_lookup[table_name] || table_name;
+        $('#context-table-name').text(` - ${tableLabel}`);
+        
+        // Update banner if we have app context
+        if (this.filter_app) {
+            $('.app-name').text(this.filter_app);
+        }
         
         // Show configuration sections
         $('#fields-config, #report-details, #filters-config, #sort-config, #grouping-config').show();
@@ -721,16 +758,22 @@ class UnifiedReportBuilder {
         
         this.selected_fields.push(field_data);
         this.render_selected_fields();
+        this.update_field_counter();
         this.show_action_buttons();
     }
 
     remove_field(fieldname) {
         this.selected_fields = this.selected_fields.filter(f => f.fieldname !== fieldname);
         this.render_selected_fields();
+        this.update_field_counter();
         
         if (this.selected_fields.length === 0) {
             this.hide_action_buttons();
         }
+    }
+    
+    update_field_counter() {
+        $('#selected-fields-count').text(this.selected_fields.length);
     }
 
     render_selected_fields() {
@@ -1257,6 +1300,69 @@ class UnifiedReportBuilder {
                     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
                     color: white;
                     border-color: rgba(102, 126, 234, 0.3);
+                }
+                
+                /* Context Section Styles */
+                .context-header {
+                    background: #f8fafc;
+                    border-bottom: 1px solid #e2e8f0;
+                    padding: 0.75rem 2rem;
+                }
+                
+                .context-container {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                }
+                
+                .context-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    flex: 1;
+                }
+                
+                .context-label {
+                    color: #64748b;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                
+                .context-name {
+                    color: #1e293b;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                }
+                
+                .context-description {
+                    color: #64748b;
+                    font-size: 0.875rem;
+                }
+                
+                .context-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                }
+                
+                .context-counter {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                }
+                
+                .context-counter .counter-text {
+                    color: #374151;
+                    font-size: 0.8125rem;
+                    font-weight: 500;
+                    white-space: nowrap;
+                }
+                
+                .context-counter .count-total {
+                    color: #6b7280;
+                    font-weight: 400;
                 }
                 
                 .main-content {
