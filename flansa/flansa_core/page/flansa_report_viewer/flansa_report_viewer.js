@@ -124,7 +124,7 @@ class FlansaReportViewer {
         
         // Back to reports button
         $('#back-to-reports-btn').on('click', () => {
-            window.location.href = '/app/flansa-report-manager';
+            window.location.href = this.getReportManagerUrl();
         });
         
         // Search functionality
@@ -1663,7 +1663,7 @@ class FlansaReportViewer {
     setup_initial_breadcrumbs() {
         frappe.breadcrumbs.clear();
         frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace");
-        frappe.breadcrumbs.add("Reports", "/app/flansa-report-manager");
+        frappe.breadcrumbs.add("Reports", this.getReportManagerUrl());
         frappe.breadcrumbs.add("Loading...");
         
         // Also setup initial custom breadcrumbs with test content
@@ -1682,7 +1682,7 @@ class FlansaReportViewer {
                 <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                     <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                 </svg>
-                <a href="/app/flansa-report-manager" class="breadcrumb-link">
+                <a href="${this.getReportManagerUrl()}" class="breadcrumb-link">
                     <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
                     </svg>
@@ -1793,7 +1793,7 @@ class FlansaReportViewer {
                 }
             } catch (error) {
                 // Fallback to general reports
-                frappe.breadcrumbs.add("Reports", "/app/flansa-report-manager");
+                frappe.breadcrumbs.add("Reports", this.getReportManagerUrl());
             }
         } else {
             // General reports
@@ -1808,6 +1808,15 @@ class FlansaReportViewer {
         
         // Also populate our custom breadcrumb container
         this.render_custom_breadcrumbs(report);
+    }
+    
+    getReportManagerUrl(tableName = null) {
+        // Use passed table name or fallback to instance table name
+        const table = tableName || this.table_name;
+        if (table) {
+            return `/app/flansa-report-manager?table=${encodeURIComponent(table)}`;
+        }
+        return '/app/flansa-report-manager';
     }
     
     getBreadcrumbIcon(text) {
@@ -1861,7 +1870,7 @@ class FlansaReportViewer {
             const display_title = report_title.length > 20 ? report_title.substring(0, 17) + '...' : report_title;
             breadcrumbs.push({ text: `📋 ${display_title}` });
         } else {
-            breadcrumbs.push({ text: "📊 Reports", url: "/app/flansa-report-manager" });
+            breadcrumbs.push({ text: "📊 Reports", url: this.getReportManagerUrl() });
             breadcrumbs.push({ text: "📋 Report Viewer" });
         }
         
@@ -1919,7 +1928,7 @@ class FlansaReportViewer {
             // Handle different source types
             switch (source) {
                 case 'report_manager':
-                    breadcrumbs.push({ text: "📊 Report Manager", url: "/app/flansa-report-manager" });
+                    breadcrumbs.push({ text: "📊 Report Manager", url: this.getReportManagerUrl() });
                     
                     // If navigated from a specific report, show it in breadcrumbs
                     if (sourceReport) {

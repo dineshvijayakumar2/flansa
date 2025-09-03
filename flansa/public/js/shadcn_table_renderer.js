@@ -179,7 +179,11 @@ class FlansaShadcnTableRenderer {
         const container = document.createElement('div');
         container.className = 'flex items-center gap-2';
         
+        // Debug: Log the raw image value
+        console.log('🖼️ FlansaShadcnTableRenderer - Raw image value for field', field.fieldname, ':', value, typeof value);
+        
         const imageUrls = this.extractImageUrls(value);
+        console.log('🖼️ FlansaShadcnTableRenderer - Extracted URLs:', imageUrls);
         
         if (imageUrls.length > 0) {
             const img = document.createElement('img');
@@ -353,37 +357,38 @@ class FlansaShadcnTableRenderer {
                this.imageFields.includes(field.fieldname);
     }
     
-    extractImageUrls(value) {
-        if (!value) return [];
+    // EXACT copy of working Report Viewer image extraction methods
+    extractImageUrls(image_value) {
+        if (!image_value) return [];
         
-        // Handle different data formats - same logic as Report Viewer
-        if (typeof value === 'object') {
-            if (Array.isArray(value)) {
+        // Handle different data formats
+        if (typeof image_value === 'object') {
+            if (Array.isArray(image_value)) {
                 const urls = [];
-                value.forEach((item) => {
-                    const url = this.getSingleImageUrl(item);
+                image_value.forEach((item) => {
+                    const url = this.get_single_image_url(item);
                     if (url && url !== '/assets/frappe/images/default-avatar.png') {
                         urls.push(url);
                     }
                 });
                 return urls;
             } else {
-                const url = this.getSingleImageUrl(value);
+                const url = this.get_single_image_url(image_value);
                 return url && url !== '/assets/frappe/images/default-avatar.png' ? [url] : [];
             }
         }
         
         // Convert to string and process
-        const processed_value = String(value).trim();
+        const processed_value = String(image_value).trim();
         
-        // Handle JSON arrays
+        // Handle JSON strings that contain arrays
         if (processed_value.startsWith('[') && processed_value.endsWith(']')) {
             try {
                 const parsed = JSON.parse(processed_value);
                 if (Array.isArray(parsed)) {
                     const urls = [];
                     parsed.forEach((item) => {
-                        const url = this.getSingleImageUrl(item);
+                        const url = this.get_single_image_url(item);
                         if (url && url !== '/assets/frappe/images/default-avatar.png') {
                             urls.push(url);
                         }
@@ -396,11 +401,11 @@ class FlansaShadcnTableRenderer {
         }
         
         // Handle single image case
-        const single_url = this.getSingleImageUrl(processed_value);
+        const single_url = this.get_single_image_url(processed_value);
         return single_url && single_url !== '/assets/frappe/images/default-avatar.png' ? [single_url] : [];
     }
     
-    getSingleImageUrl(image_value) {
+    get_single_image_url(image_value) {
         if (!image_value) return '/assets/frappe/images/default-avatar.png';
         
         // If it's an object, extract file_url
