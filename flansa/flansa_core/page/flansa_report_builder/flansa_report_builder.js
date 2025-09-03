@@ -87,7 +87,7 @@ class UnifiedReportBuilder {
                             <!-- App Info Section -->
                             <div class="app-info">
                                 <div class="app-details">
-                                    <h1 class="app-name">Report Builder</h1>
+                                    <h1 class="app-name title-text" id="app-name-display">Loading...</h1>
                                     <div class="app-type">
                                         <div class="counter-pill">
                                             <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
@@ -101,22 +101,20 @@ class UnifiedReportBuilder {
                         </div>
                         <!-- Action Buttons -->
                         <div class="banner-right">
-                            <div class="action-dropdown">
-                                <button class="sleek-btn" id="preview-report-btn" style="display: none;">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
-                                        <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Preview
-                                </button>
-                                <button class="sleek-btn primary" id="save-report-btn" style="display: none;">
-                                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                        <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z"/>
-                                        <path d="M5 3a2 2 0 00-2 2v1a1 1 0 002 0V5a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 102 0V5a2 2 0 00-2-2H5zM5 15a2 2 0 01-2-2v-1a1 1 0 012 0v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 112 0v1a2 2 0 01-2 2H5z"/>
-                                    </svg>
-                                    Save Report
-                                </button>
-                            </div>
+                            <button class="sleek-btn" id="preview-report-btn" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>
+                                    <path fill-rule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clip-rule="evenodd"/>
+                                </svg>
+                                Preview
+                            </button>
+                            <button class="sleek-btn primary" id="save-report-btn" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z"/>
+                                    <path d="M5 3a2 2 0 00-2 2v1a1 1 0 002 0V5a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 102 0V5a2 2 0 00-2-2H5zM5 15a2 2 0 01-2-2v-1a1 1 0 012 0v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 112 0v1a2 2 0 01-2 2H5z"/>
+                                </svg>
+                                Save Report
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -131,12 +129,6 @@ class UnifiedReportBuilder {
                         </div>
                         
                         <div class="context-controls">
-                            <div class="context-counter">
-                                <span class="counter-text">
-                                    <span id="selected-fields-count">0</span> 
-                                    <span class="count-total">fields selected</span>
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -237,6 +229,13 @@ class UnifiedReportBuilder {
         const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
         if (!breadcrumbContainer) return;
 
+        this.update_breadcrumbs();
+    }
+    
+    update_breadcrumbs() {
+        const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
+        if (!breadcrumbContainer) return;
+        
         // Build breadcrumb path based on context
         let breadcrumbHTML = '';
         
@@ -257,19 +256,43 @@ class UnifiedReportBuilder {
             </svg>
         `;
 
-        // Build context-aware saved reports link
-        const savedReportsURL = this.build_report_manager_url();
-        
-        breadcrumbHTML += divider;
-        breadcrumbHTML += `
-            <a href="${savedReportsURL}" class="breadcrumb-link">
-                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
-                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
-                </svg>
-                <span>Report Manager</span>
-            </a>
-        `;
+        // If we have a table selected, add table link
+        if (this.current_table) {
+            breadcrumbHTML += divider;
+            const tableLabel = this.table_lookup[this.current_table] || this.current_table;
+            breadcrumbHTML += `
+                <a href="/app/flansa-report-viewer?table=${this.current_table}" class="breadcrumb-link">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" />
+                    </svg>
+                    <span>${tableLabel}</span>
+                </a>
+            `;
+            
+            // Then add Report Manager link
+            breadcrumbHTML += divider;
+            breadcrumbHTML += `
+                <a href="/app/flansa-report-manager?table=${this.current_table}" class="breadcrumb-link">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Report Manager</span>
+                </a>
+            `;
+        } else {
+            // Just Report Manager without table context
+            breadcrumbHTML += divider;
+            breadcrumbHTML += `
+                <a href="/app/flansa-report-manager" class="breadcrumb-link">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
+                        <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
+                    </svg>
+                    <span>Report Manager</span>
+                </a>
+            `;
+        }
 
         // Add current page
         breadcrumbHTML += divider;
@@ -278,7 +301,6 @@ class UnifiedReportBuilder {
         `;
 
         breadcrumbContainer.innerHTML = breadcrumbHTML;
-        console.log('✅ Context-aware breadcrumbs setup complete');
     }
 
     build_report_manager_url() {
@@ -655,6 +677,13 @@ class UnifiedReportBuilder {
     }
 
     load_tables() {
+        // Set app name in banner if we have it
+        if (this.filter_app) {
+            $('#app-name-display').text(this.filter_app);
+        } else {
+            $('#app-name-display').text('Report Builder');
+        }
+        
         console.log('Loading available tables...', { filter_app: this.filter_app });
         
         const args = {};
@@ -697,10 +726,8 @@ class UnifiedReportBuilder {
         const tableLabel = this.table_lookup[table_name] || table_name;
         $('#context-table-name').text(` - ${tableLabel}`);
         
-        // Update banner if we have app context
-        if (this.filter_app) {
-            $('.app-name').text(this.filter_app);
-        }
+        // Update breadcrumbs with new table context
+        this.update_breadcrumbs();
         
         // Show configuration sections
         $('#fields-config, #report-details, #filters-config, #sort-config, #grouping-config').show();
@@ -758,23 +785,18 @@ class UnifiedReportBuilder {
         
         this.selected_fields.push(field_data);
         this.render_selected_fields();
-        this.update_field_counter();
         this.show_action_buttons();
     }
 
     remove_field(fieldname) {
         this.selected_fields = this.selected_fields.filter(f => f.fieldname !== fieldname);
         this.render_selected_fields();
-        this.update_field_counter();
         
         if (this.selected_fields.length === 0) {
             this.hide_action_buttons();
         }
     }
     
-    update_field_counter() {
-        $('#selected-fields-count').text(this.selected_fields.length);
-    }
 
     render_selected_fields() {
         const container = $('#selected-fields-list');
@@ -1258,10 +1280,83 @@ class UnifiedReportBuilder {
                     font-weight: 700;
                 }
                 
+                /* Banner Styles matching Table Builder */
+                .app-banner {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 12px;
+                    padding: 0 2rem;
+                }
+
+                .banner-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+
+                .workspace-logo-container {
+                    display: none;
+                }
+
+                .workspace-logo {
+                    height: 40px;
+                    width: auto;
+                    max-width: 120px;
+                    object-fit: contain;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+
+                .app-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+
+                .app-details h1.app-name {
+                    margin: 0;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #111827;
+                    line-height: 1.2;
+                }
+                
                 .title-text {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
+                    font-size: 1.375rem !important;
+                    font-weight: 700 !important;
+                    color: #111827 !important;
+                    letter-spacing: -0.025em;
+                    line-height: 1.2;
+                }
+
+                .app-type {
+                    margin-top: 2px;
+                }
+
+                .counter-pill {
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    padding: 4px 12px;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+
+                .counter-pill .counter-text {
+                    color: #667eea;
+                    font-weight: 600;
+                }
+
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
                 }
                 
                 .header-separator {
