@@ -1790,40 +1790,79 @@ class UnifiedReportBuilder {
         
         const config = this.build_report_config();
         
-        const report_data = {
-            doctype: 'Flansa Saved Report',
-            report_title: title,
-            base_table: this.current_table,
-            report_config: JSON.stringify(config),
-            report_type: 'Table',
-            naming_series: 'FR-.YYYY.-.#####'
-        };
-        
         if (this.current_report_id) {
-            report_data.name = this.current_report_id;
-        }
-        
-        frappe.call({
-            method: 'frappe.client.save',
-            args: {
-                doc: report_data
-            },
-            callback: (r) => {
-                if (r.message) {
-                    frappe.msgprint('Report saved successfully');
-                    this.current_report_id = r.message.name;
-                    this.current_report_modified = r.message.modified;
-                    
-                    // Navigate back to saved reports with context after a brief delay
-                    setTimeout(() => {
-                        const savedReportsURL = this.build_report_manager_url();
-                        frappe.set_route_from_url(savedReportsURL);
-                    }, 1500);
-                } else {
-                    frappe.msgprint('Failed to save report');
+            // For existing reports, get the latest document first to avoid conflicts
+            frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: 'Flansa Saved Report',
+                    name: this.current_report_id
+                },
+                callback: (r) => {
+                    if (r.message) {
+                        const latest_doc = r.message;
+                        
+                        // Update only the fields we want to change
+                        const report_data = {
+                            doctype: 'Flansa Saved Report',
+                            name: latest_doc.name,
+                            report_title: title,
+                            base_table: this.current_table,
+                            report_config: JSON.stringify(config),
+                            report_type: 'Table',
+                            modified: latest_doc.modified // Include latest timestamp
+                        };
+                        
+                        frappe.call({
+                            method: 'frappe.client.save',
+                            args: { doc: report_data },
+                            callback: (save_r) => {
+                                if (save_r.message) {
+                                    frappe.msgprint('Report updated successfully');
+                                    this.current_report_modified = save_r.message.modified;
+                                    
+                                    setTimeout(() => {
+                                        const savedReportsURL = this.build_report_manager_url();
+                                        frappe.set_route_from_url(savedReportsURL);
+                                    }, 1500);
+                                } else {
+                                    frappe.msgprint('Failed to update report');
+                                }
+                            }
+                        });
+                    }
                 }
-            }
-        });
+            });
+        } else {
+            // For new reports
+            const report_data = {
+                doctype: 'Flansa Saved Report',
+                report_title: title,
+                base_table: this.current_table,
+                report_config: JSON.stringify(config),
+                report_type: 'Table',
+                naming_series: 'FR-.YYYY.-.#####'
+            };
+            
+            frappe.call({
+                method: 'frappe.client.save',
+                args: { doc: report_data },
+                callback: (r) => {
+                    if (r.message) {
+                        frappe.msgprint('Report saved successfully');
+                        this.current_report_id = r.message.name;
+                        this.current_report_modified = r.message.modified;
+                        
+                        setTimeout(() => {
+                            const savedReportsURL = this.build_report_manager_url();
+                            frappe.set_route_from_url(savedReportsURL);
+                        }, 1500);
+                    } else {
+                        frappe.msgprint('Failed to save report');
+                    }
+                }
+            });
+        }
     }
 
     add_filter(existingFilter = null) {
