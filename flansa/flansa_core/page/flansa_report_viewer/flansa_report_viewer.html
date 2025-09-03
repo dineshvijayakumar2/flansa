@@ -1,72 +1,101 @@
 <!-- Report Viewer Template -->
 <div class="flansa-report-viewer-page">
     
-    <!-- Ultra-modern sleek header -->
+    <!-- Modern Header matching Table Builder -->
     <div class="sleek-header">
         <div class="header-backdrop"></div>
         <div class="header-content">
             <!-- Breadcrumb Trail -->
-            <nav class="breadcrumb-trail" id="breadcrumb-container">
-                <a href="/app/flansa-workspace" class="breadcrumb-link">
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 10h-1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-6H1a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
-                    </svg>
-                    Workspace
-                </a>
-                <svg width="8" height="8" viewBox="0 0 20 20" fill="currentColor" class="breadcrumb-separator">
-                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                </svg>
-                <a href="#" class="breadcrumb-link current">
-                    <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
-                    </svg>
-                    Report Viewer
-                </a>
+            <nav class="breadcrumb-trail" id="dynamic-breadcrumbs">
+                <!-- Will be populated dynamically based on context -->
             </nav>
             
-            <!-- Single Row Header Section -->
-            <div class="header-main">
-                <div class="header-left">
+            <!-- Application Banner -->
+            <div class="app-banner">
+                <div class="banner-left">
                     <!-- Optional Workspace Logo -->
-                    <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
+                    <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
                         <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
                     </div>
-                    
-                    <div class="header-title-inline">
-                        <h1 class="header-title">
-                            <span class="title-text" id="app-name-display">Loading...</span>
-                        </h1>
-                        <span class="header-separator">•</span>
-                        <p class="header-subtitle-inline">Viewing data reports</p>
+                    <!-- App Info Section -->
+                    <div class="app-info">
+                        <div class="app-details">
+                            <h1 class="app-name title-text" id="app-name-display">Loading...</h1>
+                            <div class="app-type">
+                                <div class="counter-pill">
+                                    <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                                    </svg>
+                                    <span class="counter-text">Report Viewer</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                
                 <!-- Action Buttons -->
-                <div class="header-actions">
-                    <div class="context-menu-wrapper" style="position: relative;">
-                        <button class="sleek-btn secondary" id="context-menu-btn" title="More options">
+                <div class="banner-right">
+                    <button class="sleek-btn success" id="new-record-btn" style="margin-right: 10px;">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span>New Record</span>
+                    </button>
+                    <button class="sleek-btn primary" id="edit-report-btn" style="margin-right: 15px;">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        <span>Edit Report</span>
+                    </button>
+                    <div class="action-dropdown">
+                        <button class="sleek-btn secondary dropdown-toggle" id="context-menu-btn">
                             <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
                             </svg>
-                            Options
+                            <span>Options</span>
                         </button>
-                        <div id="context-menu" style="display: none; position: absolute; top: 40px; right: 0; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000; border: 1px solid rgba(0,0,0,0.1);">
-                            <div class="context-menu-item" data-action="theme" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                <i class="fa fa-paint-brush" style="width: 16px;"></i>
-                                <span>Theme Settings</span>
+                        <div class="dropdown-menu" id="context-menu" style="display: none;">
+                            <div class="dropdown-item" data-action="refresh-cache">
+                                <i class="fa fa-refresh"></i>
+                                <span>Refresh Data</span>
                             </div>
-                            <div class="context-menu-item" data-action="refresh-cache" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                <i class="fa fa-refresh" style="width: 16px;"></i>
-                                <span>Clear Cache</span>
-                            </div>
-                            <div class="context-menu-item" data-action="export-data" style="padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; align-items: center; gap: 8px; color: #333;">
-                                <i class="fa fa-download" style="width: 16px;"></i>
+                            <div class="dropdown-item" data-action="export-data">
+                                <i class="fa fa-download"></i>
                                 <span>Export Data</span>
                             </div>
-                            <div class="context-menu-item" data-action="keyboard-shortcuts" style="padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; color: #333;">
-                                <i class="fa fa-keyboard-o" style="width: 16px;"></i>
-                                <span>Keyboard Shortcuts</span>
+                            <div class="dropdown-item" data-action="manage-reports">
+                                <i class="fa fa-list"></i>
+                                <span>Manage Reports</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Context Section -->
+            <div class="context-header">
+                <div class="context-container">
+                    <div class="context-info">
+                        <span class="context-label">REPORT:</span>
+                        <span class="context-name" id="context-report-name">Loading...</span>
+                        <span class="context-table-info" id="context-table-info"></span>
+                    </div>
+                    
+                    <div class="context-controls">
+                        <div class="view-toggle">
+                            <button class="view-btn active" data-view="table" title="Table View">
+                                <i class="fa fa-table"></i>
+                            </button>
+                            <button class="view-btn" data-view="tile" title="Tile View">
+                                <i class="fa fa-th"></i>
+                            </button>
+                        </div>
+                        <input type="search" class="search-box" id="report-search" 
+                               placeholder="Search records...">
+                        <div class="context-counter">
+                            <span class="counter-text">
+                                <span id="displayed-count">0</span> 
+                                <span class="count-total">of <span id="total-count">0</span> records</span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -74,16 +103,9 @@
         </div>
     </div>
     
-    <!-- Page Header for Report Name -->
-    <div id="page-header" style="padding: 20px 20px 10px 20px; margin: 0 -20px 16px -20px; background: white; border-bottom: 1px solid #e0e0e0; display: none;">
-        <h2 style="margin: 0; font-size: 24px; font-weight: 600; color: #333;" id="report-name-display">Loading...</h2>
-        <div style="margin: 5px 0 0 0; font-size: 14px; color: #666; display: flex; gap: 20px;" id="report-meta-info">
-            <span id="report-meta-display"></span>
-        </div>
-    </div>
 
     <!-- Content Wrapper -->
-    <div class="flansa-workspace-content" style="padding: var(--flansa-spacing-xl) var(--flansa-spacing-xl) 0;">
+    <div class="flansa-workspace-content">
 
     <!-- Loading State -->
     <div id="report-loading" style="display: none;">
@@ -95,72 +117,36 @@
 
     <!-- Report Content -->
     <div id="report-content" style="display: none;">
-        <!-- View Mode Toggle -->
-        <div class="view-controls" style="margin-bottom: 20px;">
-            <!-- Search Box on Left -->
-            <div class="search-container" style="float: left;">
-                <div class="input-group">
-                    <input type="text" class="form-control" id="report-search" placeholder="Search records...">
-                    <span class="input-group-btn">
-                        <button class="btn btn-default" type="button" id="clear-search-btn">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </span>
-                </div>
-            </div>
-            
-            <!-- View Toggle on Right -->
-            <div style="float: right; display: flex; align-items: center; gap: 15px;">
-                <!-- Tile Controls (shown only in tile view) -->
-                <div id="tile-controls" style="display: none;">
-                    <div class="btn-group" role="group" style="margin-right: 10px;">
-                        <button type="button" class="btn btn-default btn-sm tile-layout-btn active" data-layout="grid" title="Grid Layout">
+        <!-- Tile Controls (shown only in tile view) -->
+        <div id="tile-controls" class="tile-controls-section" style="display: none;">
+            <div class="controls-container">
+                <div class="tile-layout-controls">
+                    <span class="control-label">Layout:</span>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm tile-layout-btn active" data-layout="grid" title="Grid Layout">
                             <i class="fa fa-th"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-sm tile-layout-btn" data-layout="horizontal" title="Horizontal Layout">
+                        <button type="button" class="btn btn-sm tile-layout-btn" data-layout="horizontal" title="List Layout">
                             <i class="fa fa-bars"></i>
                         </button>
                     </div>
-                    
-                    <div class="btn-group" role="group" style="margin-right: 15px;">
-                        <button type="button" class="btn btn-default btn-sm tile-size-btn" data-size="small" title="Small Tiles">
+                </div>
+                
+                <div class="tile-size-controls">
+                    <span class="control-label">Size:</span>
+                    <div class="btn-group" role="group">
+                        <button type="button" class="btn btn-sm tile-size-btn" data-size="small" title="Small Tiles">
                             <i class="fa fa-compress"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-sm tile-size-btn active" data-size="medium" title="Medium Tiles">
+                        <button type="button" class="btn btn-sm tile-size-btn active" data-size="medium" title="Medium Tiles">
                             <i class="fa fa-square-o"></i>
                         </button>
-                        <button type="button" class="btn btn-default btn-sm tile-size-btn" data-size="large" title="Large Tiles">
+                        <button type="button" class="btn btn-sm tile-size-btn" data-size="large" title="Large Tiles">
                             <i class="fa fa-expand"></i>
                         </button>
                     </div>
                 </div>
-                
-                <!-- New Record Button -->
-                <button type="button" class="btn btn-success" id="new-record-btn" style="margin-right: 10px;">
-                    <i class="fa fa-plus"></i> New Record
-                </button>
-                
-                <!-- Edit Report Button -->
-                <button type="button" class="btn btn-primary" id="edit-report-btn" style="margin-right: 15px;">
-                    <i class="fa fa-edit"></i> Edit Report
-                </button>
-                
-                <div class="btn-group" role="group">
-                    <button type="button" class="btn btn-default view-mode-btn active" data-view="table">
-                        <i class="fa fa-table"></i> Table
-                    </button>
-                    <button type="button" class="btn btn-default view-mode-btn" data-view="tile">
-                        <i class="fa fa-th"></i> Tile
-                    </button>
-                </div>
             </div>
-            
-            <div class="clearfix"></div>
-        </div>
-
-        <!-- Record Count Info -->
-        <div class="record-info" style="margin-bottom: 15px;">
-            <span id="record-count-info" class="text-muted"></span>
         </div>
 
         <!-- Table View -->
@@ -205,7 +191,363 @@
     </div> <!-- Close flansa-workspace-content -->
 </div>
 
-<!-- Basic Styles Only -->
+<!-- Modern Styles matching Table Builder -->
+<style>
+    /* Import Table Builder-like styles */
+    
+    /* Banner Styles */
+    .app-banner {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 24px 12px 24px;
+        background: var(--flansa-accent-gradient, linear-gradient(135deg, #667eea 0%, #764ba2 100%));
+        position: relative;
+    }
+
+    .banner-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .banner-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .app-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .app-name.title-text {
+        margin: 0;
+        color: white;
+        font-size: 22px;
+        font-weight: 700;
+        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    }
+
+    .counter-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(8px);
+        border-radius: 20px;
+        padding: 4px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .counter-pill svg {
+        opacity: 0.9;
+        filter: brightness(0) invert(1);
+    }
+
+    .counter-text {
+        color: white;
+        font-size: 12px;
+        font-weight: 600;
+        opacity: 0.95;
+    }
+
+    /* Context Header Styles */
+    .context-header {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 12px 24px;
+    }
+
+    .context-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        max-width: 100%;
+    }
+
+    .context-info {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .context-label {
+        color: #6b7280;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+
+    .context-name {
+        color: #1f2937;
+        font-size: 16px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .context-table-info {
+        color: #6b7280;
+        font-size: 14px;
+        white-space: nowrap;
+    }
+
+    .context-controls {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        flex-shrink: 0;
+    }
+
+    .view-toggle {
+        display: flex;
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 8px;
+        padding: 2px;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    .view-btn {
+        border: none;
+        background: transparent;
+        padding: 8px 12px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: #6b7280;
+        font-size: 14px;
+    }
+
+    .view-btn.active {
+        background: white;
+        color: #1f2937;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .view-btn:hover:not(.active) {
+        color: #374151;
+        background: rgba(255, 255, 255, 0.5);
+    }
+
+    .search-box {
+        padding: 8px 12px;
+        border: 1px solid rgba(0, 0, 0, 0.1);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.9);
+        font-size: 14px;
+        min-width: 200px;
+        transition: all 0.2s ease;
+    }
+
+    .search-box:focus {
+        outline: none;
+        border-color: #667eea;
+        background: white;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .context-counter {
+        color: #6b7280;
+        font-size: 13px;
+        white-space: nowrap;
+    }
+
+    /* Tile Controls Section */
+    .tile-controls-section {
+        background: white;
+        border-bottom: 1px solid #e5e7eb;
+        padding: 12px 24px;
+    }
+
+    .controls-container {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+    }
+
+    .tile-layout-controls, .tile-size-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .control-label {
+        font-size: 13px;
+        font-weight: 500;
+        color: #6b7280;
+        margin-right: 4px;
+    }
+
+    .btn-group .btn {
+        border: 1px solid #d1d5db;
+        background: white;
+        padding: 6px 10px;
+        font-size: 13px;
+        border-radius: 0;
+        transition: all 0.2s ease;
+    }
+
+    .btn-group .btn:first-child {
+        border-top-left-radius: 6px;
+        border-bottom-left-radius: 6px;
+    }
+
+    .btn-group .btn:last-child {
+        border-top-right-radius: 6px;
+        border-bottom-right-radius: 6px;
+    }
+
+    .btn-group .btn:not(:first-child) {
+        border-left: none;
+    }
+
+    .btn-group .btn.active {
+        background: #667eea;
+        border-color: #667eea;
+        color: white;
+    }
+
+    .btn-group .btn:hover:not(.active) {
+        background: #f3f4f6;
+    }
+
+    /* Sleek Button Styles */
+    .sleek-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .sleek-btn.primary {
+        background: #667eea;
+        color: white;
+        border-color: #667eea;
+    }
+
+    .sleek-btn.primary:hover {
+        background: #5a67d8;
+        border-color: #5a67d8;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    }
+
+    .sleek-btn.success {
+        background: #48bb78;
+        color: white;
+        border-color: #48bb78;
+    }
+
+    .sleek-btn.success:hover {
+        background: #38a169;
+        border-color: #38a169;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+    }
+
+    .sleek-btn.secondary {
+        background: rgba(255, 255, 255, 0.9);
+        color: #4a5568;
+        border-color: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+    }
+
+    .sleek-btn.secondary:hover {
+        background: white;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Dropdown Styles */
+    .action-dropdown {
+        position: relative;
+    }
+
+    .dropdown-menu {
+        position: absolute;
+        top: calc(100% + 4px);
+        right: 0;
+        background: white;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        min-width: 180px;
+        z-index: 1000;
+        overflow: hidden;
+    }
+
+    .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #f3f4f6;
+        font-size: 14px;
+        color: #374151;
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background: #f8f9fa;
+        color: #1f2937;
+    }
+
+    .dropdown-item i {
+        width: 16px;
+        text-align: center;
+        opacity: 0.7;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .app-banner {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .banner-right {
+            justify-content: center;
+        }
+
+        .context-container {
+            flex-direction: column;
+            gap: 12px;
+            align-items: stretch;
+        }
+
+        .context-controls {
+            justify-content: space-between;
+        }
+
+        .search-box {
+            min-width: 150px;
+        }
+    }
+</style>
+
+<!-- Report Viewer Specific Styles -->
 <style>
     .flansa-report-viewer-page {
         padding: 0;  /* Remove padding to let banner extend to edges */
