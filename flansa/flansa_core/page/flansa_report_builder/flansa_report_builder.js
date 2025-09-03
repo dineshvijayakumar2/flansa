@@ -126,7 +126,7 @@ class UnifiedReportBuilder {
                         <div class="context-info">
                             <span class="context-label">REPORT:</span>
                             <span class="context-name" id="context-report-name">New Report</span>
-                            <span class="context-description" id="context-table-name"></span>
+                            <span class="context-description" id="context-table-label"></span>
                         </div>
                         
                         <div class="context-controls">
@@ -144,8 +144,14 @@ class UnifiedReportBuilder {
                         </div>
                         <div class="section-body">
                             <div class="row">
-                                <!-- Left Column: Table & Fields -->
+                                <!-- Left Column: Report Details & Table Selection -->
                                 <div class="col-md-6">
+                                    <!-- Report Details -->
+                                    <div class="config-group" id="report-details" style="display: none;">
+                                        <label class="config-label">Report Title</label>
+                                        <input type="text" class="form-control" id="report-title-input" placeholder="Enter report title...">
+                                    </div>
+                                    
                                     <!-- Table Selection -->
                                     <div class="config-group">
                                         <label class="config-label">Select Table</label>
@@ -172,11 +178,6 @@ class UnifiedReportBuilder {
                                 
                                 <!-- Right Column: Filters & Sort -->
                                 <div class="col-md-6">
-                                    <!-- Report Details -->
-                                    <div class="config-group" id="report-details" style="display: none;">
-                                        <label class="config-label">Report Title</label>
-                                        <input type="text" class="form-control" id="report-title-input" placeholder="Enter report title...">
-                                    </div>
                                     
                                     <!-- Filters -->
                                     <div class="config-group" id="filters-config" style="display: none;">
@@ -708,10 +709,10 @@ class UnifiedReportBuilder {
                         selector.append(`<option value="${table.value}">${table.label}</option>`);
                         // Store table label for context display
                         this.table_lookup[table.value] = table.label;
-                        // Store app name for the first table (assuming all tables in the same context have same app)
-                        if (!this.current_app_name && table.app_name) {
-                            this.current_app_name = table.app_name;
-                            $('#app-name-display').text(table.app_name);
+                        // Store app label for the first table (assuming all tables in the same context have same app)
+                        if (!this.current_app_name && table.app_label) {
+                            this.current_app_name = table.app_label;
+                            $('#app-name-display').text(table.app_label);
                         }
                     });
                     
@@ -734,29 +735,29 @@ class UnifiedReportBuilder {
         // Load app name for this table
         this.load_app_name_for_table(table_name);
         
-        // Update context section with table name
+        // Update context section with table label
         const tableLabel = this.table_lookup[table_name] || table_name;
-        $('#context-table-name').text(` - ${tableLabel}`);
+        $('#context-table-label').text(`(${tableLabel})`);
         
         // Update breadcrumbs with new table context
         this.update_breadcrumbs();
         
-        // Show configuration sections
-        $('#fields-config, #report-details, #filters-config, #sort-config, #grouping-config').show();
+        // Show configuration sections - report details first, then others
+        $('#report-details, #fields-config, #filters-config, #sort-config, #grouping-config').show();
         
         // Load fields for this table
         this.load_table_fields(table_name);
     }
     
     load_app_name_for_table(table_name) {
-        // Load app name for the given table
+        // Load app label for the given table
         frappe.call({
             method: 'flansa.flansa_core.api.table_api.get_table_meta',
             args: { table_name: table_name },
             callback: (r) => {
-                if (r.message && r.message.success && r.message.application) {
-                    this.current_app_name = r.message.application;
-                    $('#app-name-display').text(r.message.application);
+                if (r.message && r.message.success && r.message.app_label) {
+                    this.current_app_name = r.message.app_label;
+                    $('#app-name-display').text(r.message.app_label);
                 }
             }
         });
@@ -1400,27 +1401,43 @@ class UnifiedReportBuilder {
                     align-items: center;
                     gap: 0.5rem;
                     padding: 0.625rem 1rem;
-                    border: 1px solid rgba(0, 0, 0, 0.1);
-                    border-radius: 8px;
-                    background: rgba(255, 255, 255, 0.8);
-                    color: rgba(0, 0, 0, 0.8);
+                    border: none;
+                    border-radius: 10px;
                     font-size: 0.875rem;
                     font-weight: 600;
-                    text-decoration: none;
-                    transition: all 0.2s;
                     cursor: pointer;
-                }
-                
-                .sleek-btn:hover {
-                    background: rgba(255, 255, 255, 0.95);
-                    transform: translateY(-1px);
-                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    white-space: nowrap;
                 }
                 
                 .sleek-btn.primary {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
                     color: white;
-                    border-color: rgba(102, 126, 234, 0.3);
+                    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+                }
+                
+                .sleek-btn.primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+                }
+                
+                .sleek-btn.secondary {
+                    background: white;
+                    color: #6b7280;
+                    border: 1px solid #e5e7eb;
+                    padding: 0.5rem;
+                    min-width: 36px;
+                    justify-content: center;
+                }
+                
+                .sleek-btn.secondary:hover {
+                    background: #f9fafb;
+                    color: #4f46e5;
+                    border-color: #4f46e5;
+                }
+                
+                .sleek-btn svg {
+                    flex-shrink: 0;
                 }
                 
                 /* Context Section Styles */
@@ -1722,8 +1739,9 @@ class UnifiedReportBuilder {
             $('#context-report-name').text(this.current_report_title);
         }
         
-        // Hide table selector for existing reports since table is fixed
+        // Show report details and hide table selector for existing reports since table is fixed
         if (this.current_report_id) {
+            $('#report-details').show();
             $('.config-group:has(#table-selector)').hide();
         }
     }
