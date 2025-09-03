@@ -56,6 +56,14 @@ class FlansaReportViewer {
         this.report_id = urlParams.get('report');
         this.is_temp_report = urlParams.get('temp') === '1';
         
+        // Extract source context for dynamic breadcrumbs
+        this.source_context = {
+            source: urlParams.get('source'), // e.g., 'report_manager', 'record_viewer', 'table_builder'
+            source_report: urlParams.get('source_report'), // ID of the source report
+            source_record: urlParams.get('source_record'), // ID of the source record
+            from: urlParams.get('from') // Alternative source parameter
+        };
+        
         // Determine mode based on hierarchical parameters
         if (this.report_id) {
             this.is_table_direct = false;
@@ -856,21 +864,23 @@ class FlansaReportViewer {
         
         $('#report-content').show();
         
-        // Always use shared FlansaReportRenderer for consistent display (including grouped reports)
-        if (window.FlansaReportRenderer) {
-            this.display_with_shared_renderer();
+        // Use our modern tile/list view system with proper Shadcn table integration
+        console.log('🎯 Displaying results using modern view system, current view:', this.current_view);
+        
+        if (this.current_view === 'list') {
+            this.display_list_view();
+        } else if (this.current_view === 'tile') {
+            this.display_tile_view();
         } else {
-            // Fallback to legacy display methods
-            if (this.current_view === 'list') {
-                this.display_list_view();
-            } else if (this.current_view === 'tile') {
-                this.display_tile_view();
-            }
+            // Default to tile view
+            this.current_view = 'tile';
+            this.display_tile_view();
         }
     }
     
     
     display_tile_view() {
+        console.log('🔄 Switching to tile view with original gallery tiles');
         const tileContainer = $('#tile-container');
         tileContainer.empty();
         
@@ -879,8 +889,12 @@ class FlansaReportViewer {
             return;
         }
         
+        console.log('🎨 Creating gallery tiles:', {
+            recordCount: this.current_report_data.data.length
+        });
+        
         // Create tiles using original tile card logic
-        this.current_report_data.data.forEach((record, index) => {
+        this.current_report_data.data.forEach((record) => {
             const tileCard = this.create_tile_card(record);
             tileContainer.append(tileCard);
         });
@@ -890,6 +904,7 @@ class FlansaReportViewer {
         
         // Apply tile settings after creating tiles
         this.apply_tile_settings();
+        console.log('✅ Gallery tiles rendered successfully');
     }
     
     create_tile_card(record) {
@@ -1180,11 +1195,26 @@ class FlansaReportViewer {
     }
     
     display_list_view() {
+        console.log('🔄 Switching to list view with Shadcn table renderer');
         const listContainer = $('#list-content');
         listContainer.empty();
         
         if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
             listContainer.append('<div class="text-center text-muted p-4">No fields configured for this report</div>');
+            return;
+        }
+        
+        console.log('📊 Initializing Shadcn table with data:', {
+            recordCount: this.current_report_data.data.length,
+            fieldCount: this.current_report_config.selected_fields.length,
+            container: listContainer[0],
+            rendererAvailable: typeof FlansaShadcnTableRenderer !== 'undefined'
+        });
+        
+        // Check if FlansaShadcnTableRenderer is available
+        if (typeof FlansaShadcnTableRenderer === 'undefined') {
+            console.error('❌ FlansaShadcnTableRenderer not loaded, falling back to simple list');
+            this.render_simple_list_fallback();
             return;
         }
         
@@ -1217,16 +1247,64 @@ class FlansaReportViewer {
                     }
                 }
             });
+            console.log('✅ Shadcn table renderer created');
         } else {
             // Update existing renderer with new data
             this.shadcnTableRenderer.updateData(this.current_report_data.data);
+            console.log('🔄 Shadcn table renderer updated with new data');
         }
         
         // Render the table
         this.shadcnTableRenderer.render();
+        console.log('🎨 Shadcn table rendered in list view');
         
         $('#tile-view').hide();
         $('#list-view').show();
+    }
+    
+    render_simple_list_fallback() {
+        console.log('🔄 Rendering simple list fallback');
+        const listContainer = $('#list-content');
+        
+        // Create a simple table fallback
+        const tableHtml = `
+            <div style="background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead style="background: #f8f9fa; border-bottom: 1px solid #dee2e6;">
+                        <tr>
+                            ${this.current_report_config.selected_fields.slice(0, 5).map(field => 
+                                `<th style="padding: 12px 16px; text-align: left; font-weight: 600; color: #495057; font-size: 14px;">
+                                    ${field.label || field.fieldname}
+                                </th>`
+                            ).join('')}
+                            <th style="padding: 12px 16px; text-align: right; font-weight: 600; color: #495057; font-size: 14px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${this.current_report_data.data.map((record) => `
+                            <tr style="border-bottom: 1px solid #f1f3f4; transition: background-color 0.2s;" 
+                                onmouseover="this.style.backgroundColor='#f8f9fa'" 
+                                onmouseout="this.style.backgroundColor='white'">
+                                ${this.current_report_config.selected_fields.slice(0, 5).map(field => `
+                                    <td style="padding: 12px 16px; color: #333; font-size: 14px;">
+                                        ${record[field.fieldname] || ''}
+                                    </td>
+                                `).join('')}
+                                <td style="padding: 12px 16px; text-align: right;">
+                                    <button onclick="window.report_viewer.view_record('${record.name}')" 
+                                            style="padding: 4px 8px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                        View
+                                    </button>
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        listContainer.html(tableHtml);
+        console.log('✅ Simple list fallback rendered');
     }
     
     
@@ -1576,8 +1654,25 @@ class FlansaReportViewer {
         frappe.breadcrumbs.add("Reports", "/app/flansa-report-manager");
         frappe.breadcrumbs.add("Loading...");
         
-        // Also setup initial custom breadcrumbs
+        // Also setup initial custom breadcrumbs with test content
         this.render_custom_breadcrumbs(null);
+        
+        // Add test breadcrumbs to ensure visibility
+        const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
+        if (breadcrumbContainer) {
+            breadcrumbContainer.innerHTML = `
+                <span style="color: #666; font-weight: 500;">
+                    <a href="/app/flansa-workspace" style="color: #007bff; text-decoration: none;">🏠 Workspace</a>
+                    <span style="margin: 0 4px; color: #ccc;">›</span>
+                    <a href="/app/flansa-report-manager" style="color: #007bff; text-decoration: none;">📊 Reports</a>
+                    <span style="margin: 0 4px; color: #ccc;">›</span>
+                    <span style="color: #666;">📋 Loading...</span>
+                </span>
+            `;
+            console.log('✅ Initial breadcrumbs rendered');
+        } else {
+            console.error('❌ Breadcrumb container not found');
+        }
     }
     
     async update_breadcrumbs(report) {
@@ -1691,8 +1786,8 @@ class FlansaReportViewer {
         this.render_custom_breadcrumbs(report);
     }
     
-    render_custom_breadcrumbs(report) {
-        const breadcrumbContainer = document.getElementById('breadcrumb-container');
+    async render_custom_breadcrumbs(report) {
+        const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
         if (!breadcrumbContainer) return;
         
         // Build breadcrumb items based on current context
@@ -1700,6 +1795,11 @@ class FlansaReportViewer {
         
         // Always start with Workspace
         breadcrumbs.push({ text: "🏠 Workspace", url: "/app/flansa-workspace" });
+        
+        // Add dynamic breadcrumbs based on source context
+        if (this.source_context.source) {
+            await this.add_source_breadcrumbs(breadcrumbs);
+        }
         
         if (report && report.base_table) {
             // Add context based on the table
@@ -1728,6 +1828,114 @@ class FlansaReportViewer {
         }).join('<span style="margin: 0 4px; color: #ccc;">›</span>');
         
         breadcrumbContainer.innerHTML = breadcrumbHTML;
+    }
+    
+    async add_source_breadcrumbs(breadcrumbs) {
+        try {
+            const source = this.source_context.source;
+            const sourceReport = this.source_context.source_report;
+            const sourceRecord = this.source_context.source_record;
+            
+            // Handle different source types
+            switch (source) {
+                case 'report_manager':
+                    breadcrumbs.push({ text: "📊 Report Manager", url: "/app/flansa-report-manager" });
+                    
+                    // If navigated from a specific report, show it in breadcrumbs
+                    if (sourceReport) {
+                        const sourceReportData = await this.get_source_report_info(sourceReport);
+                        if (sourceReportData) {
+                            const sourceTitle = sourceReportData.title.length > 15 ? 
+                                sourceReportData.title.substring(0, 12) + '...' : sourceReportData.title;
+                            breadcrumbs.push({ 
+                                text: `📋 ${sourceTitle}`, 
+                                url: `/app/flansa-report-viewer/${sourceReport}?type=report` 
+                            });
+                        }
+                    }
+                    break;
+                    
+                case 'record_viewer':
+                    if (sourceRecord && this.table_name) {
+                        breadcrumbs.push({ 
+                            text: "📝 Record Viewer", 
+                            url: `/app/flansa-record-viewer/${this.table_name}/${sourceRecord}` 
+                        });
+                        
+                        // Add record title if available
+                        const recordTitle = await this.get_source_record_title(this.table_name, sourceRecord);
+                        if (recordTitle) {
+                            const displayTitle = recordTitle.length > 15 ? 
+                                recordTitle.substring(0, 12) + '...' : recordTitle;
+                            breadcrumbs.push({ text: `📄 ${displayTitle}` });
+                        }
+                    }
+                    break;
+                    
+                case 'table_builder':
+                    if (this.table_name) {
+                        breadcrumbs.push({ 
+                            text: "🔧 Table Builder", 
+                            url: `/app/flansa-table-builder/${this.table_name}` 
+                        });
+                    }
+                    break;
+                    
+                default:
+                    // Generic source handling
+                    if (source) {
+                        const sourceLabel = source.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                        breadcrumbs.push({ text: `🔗 ${sourceLabel}` });
+                    }
+            }
+        } catch (error) {
+            console.log('Could not load source breadcrumb context:', error);
+        }
+    }
+    
+    async get_source_report_info(reportId) {
+        try {
+            const response = await frappe.call({
+                method: 'frappe.client.get_value',
+                args: {
+                    doctype: 'Flansa Saved Report',
+                    filters: { name: reportId },
+                    fieldname: ['title', 'base_table']
+                }
+            });
+            return response.message;
+        } catch (error) {
+            console.log('Could not fetch source report info:', error);
+            return null;
+        }
+    }
+    
+    async get_source_record_title(tableName, recordId) {
+        try {
+            const response = await frappe.call({
+                method: 'frappe.client.get',
+                args: {
+                    doctype: tableName,
+                    name: recordId
+                }
+            });
+            
+            // Try to find a title field - common naming patterns
+            const record = response.message;
+            const titleFields = ['title', 'name', 'subject', 'full_name', 'customer_name', 'item_name'];
+            
+            for (let field of titleFields) {
+                if (record[field]) {
+                    return record[field];
+                }
+            }
+            
+            // Fallback to record name
+            return recordId;
+        } catch (error) {
+            console.log('Could not fetch source record title:', error);
+            return recordId;
+        }
     }
     
     update_banner_record_count() {
