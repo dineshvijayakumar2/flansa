@@ -51,7 +51,6 @@ class UnifiedReportBuilder {
         console.log('Unified Report Builder: Initializing...');
         this.setup_improved_layout();
         this.setup_context_aware_breadcrumbs();
-        this.auto_select_table();
         this.bind_events();
         this.apply_theme();
         this.inject_workspace_logo_styles();
@@ -285,17 +284,6 @@ class UnifiedReportBuilder {
         return paramString ? `${baseURL}?${paramString}` : baseURL;
     }
 
-    auto_select_table() {
-        console.log('Auto-selecting table based on context...');
-        
-        // Context-driven table selection
-        if (this.filter_table) {
-            console.log(`Auto-selecting table: ${this.filter_table}`);
-            setTimeout(() => {
-                $('#table-selector').val(this.filter_table).trigger('change');
-            }, 500);
-        }
-    }
 
     save_field_label() {
         // Inline label editing functionality
@@ -635,6 +623,9 @@ class UnifiedReportBuilder {
         // Inline label editing
         this.save_field_label();
         this.load_modern_ui_assets();
+        
+        // Load tables to populate the selector
+        this.load_tables();
     }
 
     load_tables() {
