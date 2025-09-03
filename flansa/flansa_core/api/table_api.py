@@ -688,10 +688,27 @@ def get_table_meta(table_name):
             "naming_field": getattr(table_doc, 'naming_field', '')
         }
         
+        # Get app label from linked application
+        app_label = None
+        if hasattr(table_doc, 'application') and table_doc.application:
+            try:
+                app_doc = frappe.get_doc("Flansa Application", table_doc.application)
+                if hasattr(app_doc, 'app_title'):
+                    app_label = app_doc.app_title
+            except:
+                pass
+        
+        # Get table label
+        table_label = None
+        if hasattr(table_doc, 'table_label'):
+            table_label = table_doc.table_label
+        
         return {
             "success": True,
             "doctype_name": table_doc.doctype_name,
             "application": table_doc.application if hasattr(table_doc, 'application') and table_doc.application else None,
+            "app_label": app_label,
+            "table_label": table_label,
             "naming_config": naming_config,
             "fields": fields
         }

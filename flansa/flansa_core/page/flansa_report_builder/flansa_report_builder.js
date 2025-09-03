@@ -713,10 +713,6 @@ class UnifiedReportBuilder {
                         if (!this.current_app_name && table.app_label) {
                             this.current_app_name = table.app_label;
                             $('#app-name-display').text(table.app_label);
-                        } else if (!this.current_app_name && table.app_name) {
-                            // Fallback to app_name if app_label not available
-                            this.current_app_name = table.app_name;
-                            $('#app-name-display').text(table.app_name);
                         }
                     });
                     
@@ -739,14 +735,11 @@ class UnifiedReportBuilder {
         // Load app name for this table
         this.load_app_name_for_table(table_name);
         
-        // Update context section with table label - will be updated when metadata loads
-        const tableLabel = this.table_lookup[table_name] || null;
-        if (tableLabel) {
-            $('#context-table-label').text(`(${tableLabel})`);
-        } else {
-            // Label will be updated when load_app_name_for_table completes
-            $('#context-table-label').text(`(${table_name})`);
+        // Update context section with table label from lookup
+        if (this.table_lookup[table_name]) {
+            $('#context-table-label').text(`(${this.table_lookup[table_name]})`);
         }
+        // If not in lookup, it will be updated when load_app_name_for_table completes
         
         // Update breadcrumbs with new table context
         this.update_breadcrumbs();
@@ -759,29 +752,26 @@ class UnifiedReportBuilder {
     }
     
     load_app_name_for_table(table_name) {
-        // Load app label and table label for the given table
+        // Load app label and table label from enhanced API
         frappe.call({
             method: 'flansa.flansa_core.api.table_api.get_table_meta',
             args: { table_name: table_name },
             callback: (r) => {
-                console.log('Table meta response:', r.message);
                 if (r.message && r.message.success) {
-                    // Set app label - try multiple possible field names
-                    const appName = r.message.app_label || r.message.application || r.message.app_name || 'Unknown App';
-                    this.current_app_name = appName;
-                    $('#app-name-display').text(appName);
+                    // Set app label
+                    if (r.message.app_label) {
+                        this.current_app_name = r.message.app_label;
+                        $('#app-name-display').text(r.message.app_label);
+                    }
                     
                     // Store table label for context and breadcrumbs
-                    const tableLabel = r.message.table_label || r.message.label || table_name;
-                    this.table_lookup[table_name] = tableLabel;
-                    // Update context with table label
-                    $('#context-table-label').text(`(${tableLabel})`);
-                    // Update breadcrumbs
-                    this.update_breadcrumbs();
-                } else {
-                    // Fallback if API fails
-                    $('#app-name-display').text('Flansa App');
-                    $('#context-table-label').text(`(${table_name})`);
+                    if (r.message.table_label) {
+                        this.table_lookup[table_name] = r.message.table_label;
+                        // Update context with table label
+                        $('#context-table-label').text(`(${r.message.table_label})`);
+                        // Update breadcrumbs
+                        this.update_breadcrumbs();
+                    }
                 }
             }
         });
@@ -1806,15 +1796,11 @@ class UnifiedReportBuilder {
             base_table: this.current_table,
             report_config: JSON.stringify(config),
             report_type: 'Table',
-            naming_series: 'FR-.YYYY.-.#####'  // Add naming series field for auto-naming
+            naming_series: 'FR-.YYYY.-.#####'
         };
         
         if (this.current_report_id) {
             report_data.name = this.current_report_id;
-            // Include modified timestamp to prevent conflict errors
-            if (this.current_report_modified) {
-                report_data.modified = this.current_report_modified;
-            }
         }
         
         frappe.call({
@@ -1826,13 +1812,13 @@ class UnifiedReportBuilder {
                 if (r.message) {
                     frappe.msgprint('Report saved successfully');
                     this.current_report_id = r.message.name;
-                    this.current_report_modified = r.message.modified; // Update modified timestamp
+                    this.current_report_modified = r.message.modified;
                     
                     // Navigate back to saved reports with context after a brief delay
                     setTimeout(() => {
                         const savedReportsURL = this.build_report_manager_url();
                         frappe.set_route_from_url(savedReportsURL);
-                    }, 1500); // Give user time to see the success message
+                    }, 1500);
                 } else {
                     frappe.msgprint('Failed to save report');
                 }
