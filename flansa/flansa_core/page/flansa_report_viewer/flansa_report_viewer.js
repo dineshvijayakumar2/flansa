@@ -16,7 +16,7 @@ class FlansaReportViewer {
         this.report_id = null;
         this.is_temp_report = false;
         this.current_report_data = null;
-        this.current_view = 'table';
+        this.current_view = 'tile';
         this.current_page = 1;
         this.page_size = 20;
         this.search_term = '';
@@ -28,6 +28,9 @@ class FlansaReportViewer {
     }
     
     init() {
+        // Set global reference for onclick handlers
+        window.report_viewer = this;
+        
         this.extract_url_parameters();
         this.setup_ui();
         this.bind_events();
@@ -209,6 +212,24 @@ class FlansaReportViewer {
         $(document).on('click', '#new-record-btn', (e) => {
             e.preventDefault();
             this.navigate_to_new_record();
+        });
+
+        // Shadcn table row click handlers (for list view)
+        $(document).on('click', '.shadcn-table-row', (e) => {
+            // Don't trigger if clicking on action buttons
+            if ($(e.target).closest('.shadcn-btn-ghost').length > 0) {
+                return;
+            }
+            
+            // Don't trigger if clicking on images (they have their own handlers)
+            if ($(e.target).is('img') || $(e.target).closest('img').length > 0) {
+                return;
+            }
+            
+            const recordName = $(e.currentTarget).data('record-name');
+            if (recordName) {
+                this.view_record(recordName);
+            }
         });
     }
     
@@ -840,8 +861,8 @@ class FlansaReportViewer {
             this.display_with_shared_renderer();
         } else {
             // Fallback to legacy display methods
-            if (this.current_view === 'table') {
-                this.display_table_view();
+            if (this.current_view === 'list') {
+                this.display_list_view();
             } else if (this.current_view === 'tile') {
                 this.display_tile_view();
             }
@@ -854,21 +875,21 @@ class FlansaReportViewer {
         tileContainer.empty();
         
         if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
-            tileContainer.append('<div class="text-center text-muted">No fields configured for this report</div>');
+            tileContainer.html('<div class="text-center text-muted p-4">No fields configured for this report</div>');
             return;
         }
         
-        // Apply tile settings
-        this.apply_tile_settings();
-        
-        // Create tiles for each record
-        this.current_report_data.data.forEach(record => {
+        // Create tiles using original tile card logic
+        this.current_report_data.data.forEach((record, index) => {
             const tileCard = this.create_tile_card(record);
             tileContainer.append(tileCard);
         });
         
-        $('#table-view').hide();
+        $('#list-view').hide();
         $('#tile-view').show();
+        
+        // Apply tile settings after creating tiles
+        this.apply_tile_settings();
     }
     
     create_tile_card(record) {
@@ -1117,7 +1138,18 @@ class FlansaReportViewer {
     
     apply_tile_settings() {
         const container = $('#tile-container');
-        container.removeClass('layout-grid layout-horizontal size-small size-medium size-large');
+        
+        // Check if we're using Shadcn table - if so, don't apply grid layouts
+        if (container.find('.flansa-shadcn-data-table').length > 0) {
+            // Remove all layout classes when using Shadcn table to prevent grid conflicts
+            container.removeClass('layout-grid layout-horizontal size-small size-medium size-large');
+            container.addClass('shadcn-table-mode');
+            console.log('🔧 Shadcn table detected - removed grid layout classes for full width');
+            return;
+        }
+        
+        // Apply grid layout classes only for legacy tile cards
+        container.removeClass('layout-grid layout-horizontal size-small size-medium size-large shadcn-table-mode');
         container.addClass(`layout-${this.tile_layout} size-${this.tile_size}`);
     }
     
@@ -1147,6 +1179,80 @@ class FlansaReportViewer {
         }
     }
     
+    display_list_view() {
+        const listContainer = $('#list-content');
+        listContainer.empty();
+        
+        if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
+            listContainer.append('<div class="text-center text-muted p-4">No fields configured for this report</div>');
+            return;
+        }
+        
+        // Initialize or update Shadcn Table Renderer for list view
+        if (!this.shadcnTableRenderer || this.shadcnTableRenderer.container !== listContainer[0]) {
+            // Clean up existing renderer if changing containers
+            if (this.shadcnTableRenderer && this.shadcnTableRenderer.container !== listContainer[0]) {
+                this.shadcnTableRenderer.destroy();
+            }
+            
+            this.shadcnTableRenderer = new FlansaShadcnTableRenderer({
+                container: listContainer[0],
+                data: this.current_report_data.data,
+                fields: this.current_report_config.selected_fields,
+                maxFields: 8, // Show more fields in list view
+                showActions: true,
+                imageFields: this.getImageFieldNames(),
+                primaryField: this.getPrimaryField(),
+                onRecordClick: (record) => {
+                    this.view_record(record.name);
+                },
+                onImageClick: (recordIndex, fieldname, imageIndex) => {
+                    this.open_image_lightbox(recordIndex, fieldname, imageIndex);
+                },
+                onActionClick: (action, record) => {
+                    if (action === 'view') {
+                        this.view_record(record.name);
+                    } else if (action === 'edit') {
+                        this.edit_record(record.name);
+                    }
+                }
+            });
+        } else {
+            // Update existing renderer with new data
+            this.shadcnTableRenderer.updateData(this.current_report_data.data);
+        }
+        
+        // Render the table
+        this.shadcnTableRenderer.render();
+        
+        $('#tile-view').hide();
+        $('#list-view').show();
+    }
+    
+    
+    // Helper methods for Shadcn Table Renderer
+    getImageFieldNames() {
+        if (!this.current_report_config.selected_fields) return [];
+        return this.current_report_config.selected_fields
+            .filter(f => ['Attach Image', 'Attach'].includes(f.fieldtype) || 
+                        f.fieldname.toLowerCase().includes('image'))
+            .map(f => f.fieldname);
+    }
+    
+    getPrimaryField() {
+        if (!this.current_report_config.selected_fields || this.current_report_config.selected_fields.length === 0) {
+            return null;
+        }
+        
+        // Return first non-image field as primary, or first field if all are images
+        const nonImageFields = this.current_report_config.selected_fields.filter(f => 
+            !['Attach Image', 'Attach'].includes(f.fieldtype) && 
+            !f.fieldname.toLowerCase().includes('image')
+        );
+        
+        return nonImageFields.length > 0 ? nonImageFields[0] : this.current_report_config.selected_fields[0];
+    }
+    
     /**
      * Display results using shared FlansaReportRenderer for consistency
      */
@@ -1155,9 +1261,9 @@ class FlansaReportViewer {
         if (!window.FlansaReportRenderer || typeof window.FlansaReportRenderer.render !== 'function') {
             console.warn('FlansaReportRenderer not available in report viewer, using fallback');
             
-            // Use fallback display methods - only tile view has fallback
-            if (this.current_view === 'table') {
-                this.show_error('Table view unavailable - shared renderer required');
+            // Use fallback display methods - both tile and list views have fallback
+            if (this.current_view === 'list') {
+                this.display_list_view();
             } else if (this.current_view === 'tile') {
                 this.display_tile_view();
             }
@@ -1167,9 +1273,9 @@ class FlansaReportViewer {
         // Prepare configuration for renderer
         const config = {
             showActions: this.should_show_action_buttons(),
-            tableClass: this.current_view === 'table' ? 'table table-striped table-hover' : 'table table-sm',
+            tableClass: this.current_view === 'list' ? 'table table-striped table-hover' : 'table table-sm',
             fields: this.current_report_config.selected_fields || [],
-            onRecordClick: this.current_view === 'table' ? null : (recordId) => {
+            onRecordClick: this.current_view === 'list' ? null : (recordId) => {
                 this.view_record(recordId);
             }
         };
@@ -1183,11 +1289,11 @@ class FlansaReportViewer {
             // Generate HTML using shared renderer
             const html = window.FlansaReportRenderer.render(this.current_report_data, config);
             
-            // For grouped reports or regular table view, display in table container
-            if (this.current_view === 'table' || this.current_report_data.is_grouped) {
-                const tableContainer = $('#table-view');
+            // For grouped reports or regular list view, display in list container using shared renderer
+            if (this.current_view === 'list' || this.current_report_data.is_grouped) {
+                const tableContainer = $('#list-content');
                 tableContainer.empty().html(html);
-                tableContainer.show();
+                $('#list-view').show();
                 $('#tile-view').hide();
                 
                 // Set up action button handlers if function is available
@@ -1203,17 +1309,19 @@ class FlansaReportViewer {
                 this.display_tile_view();
             }
         } catch (error) {
-            console.error('❌ SHARED RENDERER FAILED - Table view requires shared renderer');
+            console.error('❌ SHARED RENDERER FAILED - Falling back to custom view renderers');
             console.error('Error using shared renderer:', error);
             console.error('Report data:', this.current_report_data);
             
-            // Only tile view has fallback, table view requires shared renderer
+            // Both tile and list views have fallback implementations
             if (this.current_view === 'tile') {
                 console.log('🔧 FALLBACK: Using tile view');
                 this.display_tile_view();
+            } else if (this.current_view === 'list') {
+                console.log('🔧 FALLBACK: Using list view');
+                this.display_list_view();
             } else {
-                // Show error for table view since it requires shared renderer
-                this.show_error('Table view unavailable - shared renderer failed to load');
+                this.show_error('View unavailable - renderer failed to load');
             }
         }
     }
@@ -1235,7 +1343,7 @@ class FlansaReportViewer {
     
     show_no_results() {
         $('#no-results').show();
-        $('#table-view, #tile-view').hide();
+        $('#list-view, #tile-view').hide();
         $('#report-content').show();
     }
     
