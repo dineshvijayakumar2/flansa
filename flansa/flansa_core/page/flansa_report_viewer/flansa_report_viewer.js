@@ -105,8 +105,8 @@ class FlansaReportViewer {
     }
     
     bind_events() {
-        // View mode switching
-        $('.view-mode-btn').on('click', (e) => {
+        // View mode switching - handle both old and new button styles
+        $('.view-mode-btn, .view-btn').on('click', (e) => {
             const view = $(e.currentTarget).data('view');
             this.switch_view(view);
         });
@@ -456,24 +456,21 @@ class FlansaReportViewer {
                 }
             }
             
-            // Show page header with report title
-            $('#page-header').show();
-            $('#report-name-display').text(report.title);
+            // Update context section with report and table info
+            $('#context-report-name').text(report.title);
             
-            // Show report metadata
-            let metadata = `Table: ${report.base_table}`;
-            if (report.description && report.description.trim()) {
-                metadata += ` • ${report.description}`;
-            }
-            metadata += ` • Created: ${moment(report.created_on).format('MMM DD, YYYY')}`;
+            // Add table info to context
+            const table_label = table_response.message?.table_label || report.base_table;
+            $('#context-table-info').text(` • Table: ${table_label}`);
             
-            $('#report-meta-display').text(metadata);
+            // Store table label for navigation
+            this.current_table_label = table_label;
             
         } catch (error) {
             console.error('Error loading app info:', error);
-            // Fallback: at least show report title
-            $('#page-header').show();
-            $('#report-name-display').text(report.title);
+            // Fallback: still show report name even if table lookup fails
+            $('#context-report-name').text(report.title);
+            $('#context-table-info').text(` • Table: ${report.base_table}`);
             $('#app-name-display').text('Flansa Platform');
         }
     }
@@ -815,7 +812,13 @@ class FlansaReportViewer {
             displayCount = `${totalRecords} record${totalRecords !== 1 ? 's' : ''}`;
         }
         
+        // Update both old and new counter elements for compatibility
         $('#record-count-info').text(displayCount).css('color', 'var(--flansa-text-secondary, var(--flansa-gray-600))');
+        
+        // Update new context counter elements
+        const currentDisplayedRecords = this.current_report_data.data ? this.current_report_data.data.length : 0;
+        $('#displayed-count').text(currentDisplayedRecords);
+        $('#total-count').text(totalRecords || 0);
         
         // Update banner subtitle to include record count (use total unfiltered)
         this.update_banner_record_count();
@@ -1100,8 +1103,8 @@ class FlansaReportViewer {
     switch_view(view) {
         this.current_view = view;
         
-        $('.view-mode-btn').removeClass('active');
-        $(`.view-mode-btn[data-view="${view}"]`).addClass('active');
+        $('.view-mode-btn, .view-btn').removeClass('active');
+        $(`.view-mode-btn[data-view="${view}"], .view-btn[data-view="${view}"]`).addClass('active');
         
         if (view === 'tile') {
             $('#tile-controls').show();
