@@ -20,6 +20,7 @@ class UnifiedReportBuilder {
         this.preselected_table = null;
         this.current_report_id = null;
         this.current_report_title = null;
+        this.current_app_name = null;
         this.modal_dialog = null;
         this.filter_table = null;
         this.tabulator = null; // Modern data table instance
@@ -677,11 +678,14 @@ class UnifiedReportBuilder {
     }
 
     load_tables() {
-        // Set app name in banner if we have it
-        if (this.filter_app) {
-            $('#app-name-display').text(this.filter_app);
-        } else {
-            $('#app-name-display').text('Report Builder');
+        // If we're editing an existing report, hide table selector and get app name from existing data
+        if (this.current_report_id) {
+            $('.config-group:has(#table-selector)').hide();
+            // Get app name from current table if available
+            if (this.current_table) {
+                this.load_app_name_for_table(this.current_table);
+            }
+            return; // Don't load tables list for editing
         }
         
         console.log('Loading available tables...', { filter_app: this.filter_app });
@@ -704,6 +708,11 @@ class UnifiedReportBuilder {
                         selector.append(`<option value="${table.value}">${table.label}</option>`);
                         // Store table label for context display
                         this.table_lookup[table.value] = table.label;
+                        // Store app name for the first table (assuming all tables in the same context have same app)
+                        if (!this.current_app_name && table.app_name) {
+                            this.current_app_name = table.app_name;
+                            $('#app-name-display').text(table.app_name);
+                        }
                     });
                     
                     // Auto-select if there's a filter
@@ -722,6 +731,9 @@ class UnifiedReportBuilder {
         console.log(`Selecting table: ${table_name}`);
         this.current_table = table_name;
         
+        // Load app name for this table
+        this.load_app_name_for_table(table_name);
+        
         // Update context section with table name
         const tableLabel = this.table_lookup[table_name] || table_name;
         $('#context-table-name').text(` - ${tableLabel}`);
@@ -734,6 +746,20 @@ class UnifiedReportBuilder {
         
         // Load fields for this table
         this.load_table_fields(table_name);
+    }
+    
+    load_app_name_for_table(table_name) {
+        // Load app name for the given table
+        frappe.call({
+            method: 'flansa.flansa_core.api.table_api.get_table_meta',
+            args: { table_name: table_name },
+            callback: (r) => {
+                if (r.message && r.message.success && r.message.application) {
+                    this.current_app_name = r.message.application;
+                    $('#app-name-display').text(r.message.application);
+                }
+            }
+        });
     }
 
     load_table_fields(table_name) {
@@ -1690,9 +1716,15 @@ class UnifiedReportBuilder {
             }, 1000);
         }
         
-        // Update title
+        // Update title in both input and context
         if (this.current_report_title) {
             $('#report-title-input').val(this.current_report_title);
+            $('#context-report-name').text(this.current_report_title);
+        }
+        
+        // Hide table selector for existing reports since table is fixed
+        if (this.current_report_id) {
+            $('.config-group:has(#table-selector)').hide();
         }
     }
     
