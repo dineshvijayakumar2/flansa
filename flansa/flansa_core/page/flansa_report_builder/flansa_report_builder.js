@@ -59,6 +59,9 @@ class UnifiedReportBuilder {
         
         if (this.current_report_id) {
             this.load_existing_report();
+        } else if (this.filter_table) {
+            // For new reports with table context, load app name immediately
+            this.load_app_name_for_table(this.filter_table);
         }
     }
 
@@ -110,9 +113,8 @@ class UnifiedReportBuilder {
                                 Preview
                             </button>
                             <button class="sleek-btn primary" id="save-report-btn" style="display: none;">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z"/>
-                                    <path d="M5 3a2 2 0 00-2 2v1a1 1 0 002 0V5a1 1 0 011-1h8a1 1 0 011 1v1a1 1 0 102 0V5a2 2 0 00-2-2H5zM5 15a2 2 0 01-2-2v-1a1 1 0 012 0v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 112 0v1a2 2 0 01-2 2H5z"/>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V7l-4-4zM12 19c-1.66 0-3-1.34-3-3s1.34-3 3-3 3 1.34 3 3-1.34 3-3 3zm3-10H5V5h10v4z"/>
                                 </svg>
                                 Save Report
                             </button>
@@ -682,11 +684,7 @@ class UnifiedReportBuilder {
         // If we're editing an existing report, hide table selector and get app name from existing data
         if (this.current_report_id) {
             $('.config-group:has(#table-selector)').hide();
-            // Get app name from current table if available
-            if (this.current_table) {
-                this.load_app_name_for_table(this.current_table);
-            }
-            return; // Don't load tables list for editing
+            return; // Don't load tables list for editing - app name will be loaded when table is set
         }
         
         console.log('Loading available tables...', { filter_app: this.filter_app });
@@ -735,9 +733,14 @@ class UnifiedReportBuilder {
         // Load app name for this table
         this.load_app_name_for_table(table_name);
         
-        // Update context section with table label
-        const tableLabel = this.table_lookup[table_name] || table_name;
-        $('#context-table-label').text(`(${tableLabel})`);
+        // Update context section with table label - will be updated when metadata loads
+        const tableLabel = this.table_lookup[table_name] || null;
+        if (tableLabel) {
+            $('#context-table-label').text(`(${tableLabel})`);
+        } else {
+            // Label will be updated when load_app_name_for_table completes
+            $('#context-table-label').text(`(${table_name})`);
+        }
         
         // Update breadcrumbs with new table context
         this.update_breadcrumbs();
@@ -750,14 +753,26 @@ class UnifiedReportBuilder {
     }
     
     load_app_name_for_table(table_name) {
-        // Load app label for the given table
+        // Load app label and table label for the given table
         frappe.call({
             method: 'flansa.flansa_core.api.table_api.get_table_meta',
             args: { table_name: table_name },
             callback: (r) => {
-                if (r.message && r.message.success && r.message.app_label) {
-                    this.current_app_name = r.message.app_label;
-                    $('#app-name-display').text(r.message.app_label);
+                if (r.message && r.message.success) {
+                    // Set app label
+                    if (r.message.app_label) {
+                        this.current_app_name = r.message.app_label;
+                        $('#app-name-display').text(r.message.app_label);
+                    }
+                    
+                    // Store table label for context and breadcrumbs
+                    if (r.message.table_label) {
+                        this.table_lookup[table_name] = r.message.table_label;
+                        // Update context with table label
+                        $('#context-table-label').text(`(${r.message.table_label})`);
+                        // Update breadcrumbs
+                        this.update_breadcrumbs();
+                    }
                 }
             }
         });
