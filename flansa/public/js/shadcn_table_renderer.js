@@ -753,8 +753,18 @@ class FlansaShadcnTableRenderer {
     updateData(newData) {
         this.data = newData;
         
+        // Check if container still exists
+        const containerElement = typeof this.container === 'string' 
+            ? document.querySelector(this.container)
+            : this.container;
+            
+        if (!containerElement) {
+            console.warn('FlansaShadcnTableRenderer: Container no longer exists, skipping update');
+            return;
+        }
+        
         // Check if table structure exists, if not, do a full render
-        const tbody = document.getElementById('table-body');
+        const tbody = containerElement.querySelector('#table-body');
         if (!tbody) {
             console.log('FlansaShadcnTableRenderer: Table structure not found, doing full render');
             this.render();

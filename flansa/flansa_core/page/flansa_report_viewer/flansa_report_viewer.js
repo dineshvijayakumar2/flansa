@@ -881,6 +881,18 @@ class FlansaReportViewer {
     
     display_tile_view() {
         console.log('🔄 Switching to tile view with original gallery tiles');
+        
+        // Clean up any Shadcn table renderer from list view
+        if (this.shadcnTableRenderer) {
+            try {
+                this.shadcnTableRenderer.destroy();
+            } catch (e) {
+                console.log('Note: Shadcn renderer cleanup had minor issue:', e.message);
+            }
+            this.shadcnTableRenderer = null;
+            console.log('🧹 Cleaned up Shadcn table renderer for tile view');
+        }
+        
         const tileContainer = $('#tile-container');
         tileContainer.empty();
         
@@ -1218,41 +1230,41 @@ class FlansaReportViewer {
             return;
         }
         
-        // Initialize or update Shadcn Table Renderer for list view
-        if (!this.shadcnTableRenderer || this.shadcnTableRenderer.container !== listContainer[0]) {
-            // Clean up existing renderer if changing containers
-            if (this.shadcnTableRenderer && this.shadcnTableRenderer.container !== listContainer[0]) {
+        // Always create a fresh Shadcn Table Renderer for list view to avoid DOM conflicts
+        // Clean up any existing renderer first
+        if (this.shadcnTableRenderer) {
+            try {
                 this.shadcnTableRenderer.destroy();
+            } catch (e) {
+                console.log('Note: Previous renderer cleanup had minor issue:', e.message);
             }
-            
-            this.shadcnTableRenderer = new FlansaShadcnTableRenderer({
-                container: listContainer[0],
-                data: this.current_report_data.data,
-                fields: this.current_report_config.selected_fields,
-                maxFields: 8, // Show more fields in list view
-                showActions: true,
-                imageFields: this.getImageFieldNames(),
-                primaryField: this.getPrimaryField(),
-                onRecordClick: (record) => {
-                    this.view_record(record.name);
-                },
-                onImageClick: (recordIndex, fieldname, imageIndex) => {
-                    this.open_image_lightbox(recordIndex, fieldname, imageIndex);
-                },
-                onActionClick: (action, record) => {
-                    if (action === 'view') {
-                        this.view_record(record.name);
-                    } else if (action === 'edit') {
-                        this.edit_record(record.name);
-                    }
-                }
-            });
-            console.log('✅ Shadcn table renderer created');
-        } else {
-            // Update existing renderer with new data
-            this.shadcnTableRenderer.updateData(this.current_report_data.data);
-            console.log('🔄 Shadcn table renderer updated with new data');
+            this.shadcnTableRenderer = null;
         }
+        
+        // Create new renderer instance
+        this.shadcnTableRenderer = new FlansaShadcnTableRenderer({
+            container: listContainer[0],
+            data: this.current_report_data.data,
+            fields: this.current_report_config.selected_fields,
+            maxFields: 8, // Show more fields in list view
+            showActions: true,
+            imageFields: this.getImageFieldNames(),
+            primaryField: this.getPrimaryField(),
+            onRecordClick: (record) => {
+                this.view_record(record.name);
+            },
+            onImageClick: (recordIndex, fieldname, imageIndex) => {
+                this.open_image_lightbox(recordIndex, fieldname, imageIndex);
+            },
+            onActionClick: (action, record) => {
+                if (action === 'view') {
+                    this.view_record(record.name);
+                } else if (action === 'edit') {
+                    this.edit_record(record.name);
+                }
+            }
+        });
+        console.log('✅ Fresh Shadcn table renderer created for list view');
         
         // Render the table
         this.shadcnTableRenderer.render();
