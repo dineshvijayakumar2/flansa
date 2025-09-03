@@ -61,7 +61,9 @@ class UnifiedReportBuilder {
             this.load_existing_report();
         } else if (this.filter_table) {
             // For new reports with table context, load app name immediately
-            this.load_app_name_for_table(this.filter_table);
+            setTimeout(() => {
+                this.load_app_name_for_table(this.filter_table);
+            }, 100);
         }
     }
 
@@ -711,6 +713,10 @@ class UnifiedReportBuilder {
                         if (!this.current_app_name && table.app_label) {
                             this.current_app_name = table.app_label;
                             $('#app-name-display').text(table.app_label);
+                        } else if (!this.current_app_name && table.app_name) {
+                            // Fallback to app_name if app_label not available
+                            this.current_app_name = table.app_name;
+                            $('#app-name-display').text(table.app_name);
                         }
                     });
                     
@@ -758,21 +764,24 @@ class UnifiedReportBuilder {
             method: 'flansa.flansa_core.api.table_api.get_table_meta',
             args: { table_name: table_name },
             callback: (r) => {
+                console.log('Table meta response:', r.message);
                 if (r.message && r.message.success) {
-                    // Set app label
-                    if (r.message.app_label) {
-                        this.current_app_name = r.message.app_label;
-                        $('#app-name-display').text(r.message.app_label);
-                    }
+                    // Set app label - try multiple possible field names
+                    const appName = r.message.app_label || r.message.application || r.message.app_name || 'Unknown App';
+                    this.current_app_name = appName;
+                    $('#app-name-display').text(appName);
                     
                     // Store table label for context and breadcrumbs
-                    if (r.message.table_label) {
-                        this.table_lookup[table_name] = r.message.table_label;
-                        // Update context with table label
-                        $('#context-table-label').text(`(${r.message.table_label})`);
-                        // Update breadcrumbs
-                        this.update_breadcrumbs();
-                    }
+                    const tableLabel = r.message.table_label || r.message.label || table_name;
+                    this.table_lookup[table_name] = tableLabel;
+                    // Update context with table label
+                    $('#context-table-label').text(`(${tableLabel})`);
+                    // Update breadcrumbs
+                    this.update_breadcrumbs();
+                } else {
+                    // Fallback if API fails
+                    $('#app-name-display').text('Flansa App');
+                    $('#context-table-label').text(`(${table_name})`);
                 }
             }
         });
@@ -1797,7 +1806,7 @@ class UnifiedReportBuilder {
             base_table: this.current_table,
             report_config: JSON.stringify(config),
             report_type: 'Table',
-            series: 'REP-'  // Add series field for auto-naming
+            naming_series: 'FR-.YYYY.-.#####'  // Add naming series field for auto-naming
         };
         
         if (this.current_report_id) {
