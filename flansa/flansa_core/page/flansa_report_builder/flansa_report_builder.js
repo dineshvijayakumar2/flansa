@@ -1802,14 +1802,16 @@ class UnifiedReportBuilder {
                     if (r.message) {
                         const latest_doc = r.message;
                         
-                        // Update only the fields we want to change
+                        // Update only the fields we want to change, preserve all existing values
                         const report_data = {
                             doctype: 'Flansa Saved Report',
                             name: latest_doc.name,
+                            naming_series: latest_doc.naming_series || 'FR-.YYYY.-.#####',
                             report_title: title,
                             base_table: this.current_table,
                             report_config: JSON.stringify(config),
-                            report_type: 'Table',
+                            report_type: latest_doc.report_type || 'Table',
+                            is_public: latest_doc.is_public || 0,
                             modified: latest_doc.modified // Include latest timestamp
                         };
                         
@@ -1834,14 +1836,15 @@ class UnifiedReportBuilder {
                 }
             });
         } else {
-            // For new reports
+            // For new reports - ensure all required fields are provided
             const report_data = {
                 doctype: 'Flansa Saved Report',
+                naming_series: 'FR-.YYYY.-.#####',
                 report_title: title,
                 base_table: this.current_table,
-                report_config: JSON.stringify(config),
                 report_type: 'Table',
-                naming_series: 'FR-.YYYY.-.#####'
+                report_config: JSON.stringify(config),
+                is_public: 0
             };
             
             frappe.call({
