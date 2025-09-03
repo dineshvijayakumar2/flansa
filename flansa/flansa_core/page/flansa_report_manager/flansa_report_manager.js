@@ -5,7 +5,41 @@ frappe.pages['flansa-report-manager'].on_page_load = function(wrapper) {
         single_column: true
     });
     
-    new ReportManagerPage(page);
+    // Store the page instance globally so we can access it in on_page_show
+    wrapper.page_instance = new ReportManagerPage(page);
+};
+
+frappe.pages['flansa-report-manager'].on_page_show = function(wrapper) {
+    // Preserve URL parameters when page is shown
+    const urlParams = new URLSearchParams(window.location.search);
+    const table = urlParams.get('table');
+    const source = urlParams.get('source');
+    
+    if (table || source) {
+        // Build the URL with parameters
+        let newUrl = '/app/flansa-report-manager';
+        const params = [];
+        if (table) params.push(`table=${encodeURIComponent(table)}`);
+        if (source) params.push(`source=${encodeURIComponent(source)}`);
+        
+        if (params.length > 0) {
+            newUrl += '?' + params.join('&');
+        }
+        
+        // Update the URL without triggering a reload
+        if (window.location.pathname + window.location.search !== newUrl) {
+            window.history.replaceState(null, '', newUrl);
+        }
+    }
+    
+    // Re-extract parameters in case they were reset
+    if (wrapper.page_instance) {
+        wrapper.page_instance.extract_url_parameters();
+        // Optionally reload reports if table filter changed
+        if (wrapper.page_instance.filter_table) {
+            wrapper.page_instance.load_reports();
+        }
+    }
 };
 
 class ReportManagerPage {
