@@ -1657,19 +1657,31 @@ class FlansaReportViewer {
         // Also setup initial custom breadcrumbs with test content
         this.render_custom_breadcrumbs(null);
         
-        // Add test breadcrumbs to ensure visibility
+        // Add test breadcrumbs with Report Manager structure
         const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
         if (breadcrumbContainer) {
             breadcrumbContainer.innerHTML = `
-                <span style="color: #666; font-weight: 500;">
-                    <a href="/app/flansa-workspace" style="color: #007bff; text-decoration: none;">🏠 Workspace</a>
-                    <span style="margin: 0 4px; color: #ccc;">›</span>
-                    <a href="/app/flansa-report-manager" style="color: #007bff; text-decoration: none;">📊 Reports</a>
-                    <span style="margin: 0 4px; color: #ccc;">›</span>
-                    <span style="color: #666;">📋 Loading...</span>
-                </span>
+                <a href="/app/flansa-workspace" class="breadcrumb-link">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                    </svg>
+                    <span>Workspace</span>
+                </a>
+                <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <a href="/app/flansa-report-manager" class="breadcrumb-link">
+                    <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+                    </svg>
+                    <span>Reports</span>
+                </a>
+                <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <span class="breadcrumb-current">📋 Loading...</span>
             `;
-            console.log('✅ Initial breadcrumbs rendered');
+            console.log('✅ Initial breadcrumbs rendered with Report Manager styling');
         } else {
             console.error('❌ Breadcrumb container not found');
         }
@@ -1786,6 +1798,32 @@ class FlansaReportViewer {
         this.render_custom_breadcrumbs(report);
     }
     
+    getBreadcrumbIcon(text) {
+        if (text.includes('🏠') || text.includes('Workspace')) {
+            return `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+            </svg>`;
+        } else if (text.includes('📊') || text.includes('Report')) {
+            return `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" />
+            </svg>`;
+        } else if (text.includes('🔧') || text.includes('Table')) {
+            return `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
+            </svg>`;
+        } else if (text.includes('📝') || text.includes('Record')) {
+            return `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6.586A2 2 0 0115.414 13L11 17.414A2 2 0 019.586 18H6a2 2 0 01-2-2V5z" clip-rule="evenodd" />
+            </svg>`;
+        } else {
+            // Default icon
+            return `<svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zM3 10a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H4a1 1 0 01-1-1v-6zM14 9a1 1 0 00-1 1v6a1 1 0 001 1h2a1 1 0 001-1v-6a1 1 0 00-1-1h-2z" clip-rule="evenodd" />
+            </svg>`;
+        }
+    }
+    
     async render_custom_breadcrumbs(report) {
         const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
         if (!breadcrumbContainer) return;
@@ -1815,17 +1853,47 @@ class FlansaReportViewer {
             breadcrumbs.push({ text: "📋 Report Viewer" });
         }
         
-        // Render breadcrumbs
+        // Render breadcrumbs with Report Manager structure
         const breadcrumbHTML = breadcrumbs.map((item, index) => {
             const isLast = index === breadcrumbs.length - 1;
+            const needsDivider = index < breadcrumbs.length - 1;
+            
+            let html = '';
+            
             if (isLast) {
-                return `<span style="color: #666; font-weight: 500;">${item.text}</span>`;
+                // Current page - no link
+                html = `<span class="breadcrumb-current">${item.text}</span>`;
             } else if (item.url) {
-                return `<a href="${item.url}" style="color: #007bff; text-decoration: none; font-weight: 500;">${item.text}</a>`;
+                // Clickable breadcrumb link
+                const icon = this.getBreadcrumbIcon(item.text);
+                html = `
+                    <a href="${item.url}" class="breadcrumb-link">
+                        ${icon}
+                        <span>${item.text.replace(/🏠 |📊 |🔧 |📝 |🔗 /g, '')}</span>
+                    </a>
+                `;
             } else {
-                return `<span style="color: #666;">${item.text}</span>`;
+                // Non-clickable item
+                const icon = this.getBreadcrumbIcon(item.text);
+                html = `
+                    <span class="breadcrumb-link" style="cursor: default;">
+                        ${icon}
+                        <span>${item.text.replace(/🏠 |📊 |🔧 |📝 |🔗 /g, '')}</span>
+                    </span>
+                `;
             }
-        }).join('<span style="margin: 0 4px; color: #ccc;">›</span>');
+            
+            // Add divider after non-last items
+            if (needsDivider) {
+                html += `
+                    <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                `;
+            }
+            
+            return html;
+        }).join('');
         
         breadcrumbContainer.innerHTML = breadcrumbHTML;
     }

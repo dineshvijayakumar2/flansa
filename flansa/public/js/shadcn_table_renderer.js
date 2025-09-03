@@ -94,6 +94,10 @@ class FlansaShadcnTableRenderer {
     
     renderRows() {
         const tbody = document.getElementById('table-body');
+        if (!tbody) {
+            console.error('FlansaShadcnTableRenderer: table-body element not found, skipping renderRows');
+            return;
+        }
         tbody.innerHTML = '';
         
         if (!this.data || this.data.length === 0) {
@@ -748,7 +752,15 @@ class FlansaShadcnTableRenderer {
     // Public methods for external updates
     updateData(newData) {
         this.data = newData;
-        this.renderRows();
+        
+        // Check if table structure exists, if not, do a full render
+        const tbody = document.getElementById('table-body');
+        if (!tbody) {
+            console.log('FlansaShadcnTableRenderer: Table structure not found, doing full render');
+            this.render();
+        } else {
+            this.renderRows();
+        }
     }
     
     updateFields(newFields) {
