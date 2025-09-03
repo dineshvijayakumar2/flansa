@@ -275,7 +275,7 @@ class UnifiedReportBuilder {
                 </a>
             `;
             
-            // Then add Report Manager link
+            // Then add Report Manager link with table context
             breadcrumbHTML += divider;
             breadcrumbHTML += `
                 <a href="/app/flansa-report-manager?table=${this.current_table}" class="breadcrumb-link">
@@ -310,17 +310,13 @@ class UnifiedReportBuilder {
     }
 
     build_report_manager_url() {
-        // Build URL with preserved context parameters
+        // Build URL with table context (table context is more useful than app context)
         const params = new URLSearchParams();
         
-        // Preserve table context
-        if (this.filter_table) {
-            params.append('table', this.filter_table);
-        }
-        
-        // Preserve app context  
-        if (this.filter_app) {
-            params.append('app', this.filter_app);
+        // Use current table or filter table for context
+        const tableContext = this.current_table || this.filter_table;
+        if (tableContext) {
+            params.append('table', tableContext);
         }
         
         // Add source context to indicate where user came from
@@ -1808,8 +1804,9 @@ class UnifiedReportBuilder {
                     this.current_report_modified = r.message.modified;
                     
                     setTimeout(() => {
-                        const savedReportsURL = this.build_report_manager_url();
-                        frappe.set_route_from_url(savedReportsURL);
+                        // Redirect to report viewer page to show the saved report
+                        const reportViewerURL = `/app/flansa-report-viewer?report=${r.message.name}`;
+                        frappe.set_route_from_url(reportViewerURL);
                     }, 1500);
                 } else {
                     const errorMsg = r.message ? r.message.error : 'Failed to save report';
