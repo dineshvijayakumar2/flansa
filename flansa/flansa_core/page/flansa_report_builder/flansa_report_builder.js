@@ -278,7 +278,7 @@ class UnifiedReportBuilder {
             // Then add Report Manager link with table context
             breadcrumbHTML += divider;
             breadcrumbHTML += `
-                <a href="/app/flansa-report-manager?table=${this.current_table}" class="breadcrumb-link">
+                <a href="#" class="breadcrumb-link" data-route="flansa-report-manager" data-table="${this.current_table}">
                     <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                         <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
@@ -676,6 +676,19 @@ class UnifiedReportBuilder {
         
         // Load tables to populate the selector
         this.load_tables();
+        
+        // Handle breadcrumb navigation with context
+        $(document).on('click', '.breadcrumb-link[data-route]', (e) => {
+            e.preventDefault();
+            const route = $(e.currentTarget).data('route');
+            const table = $(e.currentTarget).data('table');
+            
+            if (route === 'flansa-report-manager' && table) {
+                // Navigate to report manager with table context
+                const url = `/app/flansa-report-manager?table=${table}`;
+                window.location.href = url;
+            }
+        });
     }
 
     load_tables() {
@@ -1806,7 +1819,7 @@ class UnifiedReportBuilder {
                     setTimeout(() => {
                         // Redirect to report viewer page to show the saved report
                         const reportViewerURL = `/app/flansa-report-viewer?report=${r.message.name}`;
-                        frappe.set_route_from_url(reportViewerURL);
+                        window.location.href = reportViewerURL;
                     }, 1500);
                 } else {
                     const errorMsg = r.message ? r.message.error : 'Failed to save report';
