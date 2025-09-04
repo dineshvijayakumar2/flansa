@@ -582,27 +582,54 @@ class FlansaRecordViewer {
             content.innerHTML = '<div class="text-center"><div class="spinner"></div><p>Loading form structure...</p></div>';
         }
         
-        this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name })
-        .then(async (metaResponse) => {
-            if (metaResponse.success) {
-                this.table_fields = metaResponse.fields || [];
-                this.doctype_name = metaResponse.doctype_name;
-                this.application = metaResponse.application;
-                this.naming_config = metaResponse.naming_config || {};
-                console.log('📋 Loaded table structure:', { 
-                    fields_count: this.table_fields.length, 
-                    doctype: this.doctype_name,
-                    application: this.application,
-                    naming_type: this.naming_config.naming_type
+        // First check if user has access to this table
+        frappe.call({
+            method: 'flansa.flansa_core.role_service.get_filtered_tables',
+            callback: (accessResult) => {
+                const accessibleTables = accessResult.message || [];
+                const hasAccess = accessibleTables.some(table => table.name === this.table_name);
+                
+                if (!hasAccess) {
+                    this.show_error('You do not have permission to access this table');
+                    return;
+                }
+                
+                // User has access, load table structure
+                this.call_api('flansa.flansa_core.api.table_api.get_table_meta', { table_name: this.table_name })
+                .then(async (metaResponse) => {
+                    if (metaResponse.success) {
+                        this.table_fields = metaResponse.fields || [];
+                        this.doctype_name = metaResponse.doctype_name;
+                        this.application = metaResponse.application;
+                        this.naming_config = metaResponse.naming_config || {};
+                        
+                        // Check if table is readonly for this user
+                        const tableInfo = accessibleTables.find(t => t.name === this.table_name);
+                        this.is_readonly = tableInfo && tableInfo.readonly;
+                        
+                        console.log('📋 Loaded table structure:', { 
+                            fields_count: this.table_fields.length, 
+                            doctype: this.doctype_name,
+                            application: this.application,
+                            naming_type: this.naming_config.naming_type,
+                            readonly: this.is_readonly
+                        });
+                        
+                        if (this.is_readonly && (this.mode === 'edit' || this.mode === 'new')) {
+                            frappe.show_alert('This table is read-only for your role', 'orange');
+                            this.mode = 'view';
+                        }
+                        
+                        this.update_dashboard_link();
+                        await this.render_new_record_form();
+                    } else {
+                        this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
+                    }
+                }).catch(error => {
+                    console.error('Error loading table structure:', error);
+                    this.show_error('Error loading table structure');
                 });
-                this.update_dashboard_link();
-                await this.render_new_record_form();
-            } else {
-                this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
             }
-        }).catch(error => {
-            console.error('Error loading table structure:', error);
-            this.show_error('Error loading table structure');
         });
     }
     

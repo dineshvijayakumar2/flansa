@@ -1185,14 +1185,60 @@ class ReportManagerPage {
         try {
             this.show_loading_state();
             
-            // Always load all reports and apply filtering on frontend for consistency
+            // First check user permissions
+            const permResponse = await frappe.call({
+                method: 'flansa.flansa_core.role_service.get_current_user_permissions',
+                args: {}
+            });
+            
+            const user_permissions = permResponse.message || [];
+            console.log('Report Manager: User permissions:', user_permissions);
+            
+            // Check if user has read permission
+            if (!user_permissions.includes('read')) {
+                frappe.show_alert('You do not have permission to view reports', 'red');
+                this.show_empty_state();
+                return;
+            }
+            
+            // Load reports with role-based filtering
             const response = await frappe.call({
                 method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.get_user_reports',
-                args: {} // No base_table filter - load all reports
+                args: {} // No base_table filter - load all accessible reports
             });
             
             if (response.message) {
-                this.reports = response.message;
+                // Filter reports based on user's accessible tables
+                const accessibleTablesResponse = await frappe.call({
+                    method: 'flansa.flansa_core.role_service.get_filtered_tables',
+                    args: {}
+                });
+                
+                const accessibleTableIds = accessibleTablesResponse.message ? 
+                    accessibleTablesResponse.message.map(t => t.name) : [];
+                
+                // Filter reports to only show those for accessible tables
+                this.reports = response.message.filter(report => {
+                    // If no base_table restriction (user is admin), show all their reports
+                    if (user_permissions.includes('admin')) {
+                        return true;
+                    }
+                    // Otherwise, only show reports for tables they can access
+                    return !report.base_table || accessibleTableIds.includes(report.base_table);
+                });
+                
+                console.log(`Loaded ${this.reports.length} accessible reports`);
+                
+                // Add role information to each report
+                this.reports.forEach(report => {
+                    report.can_edit = user_permissions.includes('update') || 
+                                    user_permissions.includes('admin') || 
+                                    report.owner === frappe.session.user;
+                    report.can_delete = user_permissions.includes('delete') || 
+                                      user_permissions.includes('admin') || 
+                                      report.owner === frappe.session.user;
+                });
+                
                 // Apply initial filtering based on URL parameters
                 this.apply_initial_filters();
             } else {

@@ -698,41 +698,70 @@ class UnifiedReportBuilder {
             return; // Don't load tables list for editing - app name will be loaded when table is set
         }
         
-        console.log('Loading available tables...', { filter_app: this.filter_app });
+        console.log('Loading available tables with role-based filtering...', { filter_app: this.filter_app });
         
-        const args = {};
-        if (this.filter_app) {
-            args.app_name = this.filter_app;
-        }
-        
+        // First check user permissions
         frappe.call({
-            method: 'flansa.flansa_core.api.table_api.get_tables',
-            args: args,
-            callback: (r) => {
-                if (r.message && r.message.success) {
-                    const tables = r.message.tables;
-                    const selector = $('#table-selector');
-                    selector.empty().append('<option value="">Choose table...</option>');
-                    
-                    tables.forEach(table => {
-                        selector.append(`<option value="${table.value}">${table.label}</option>`);
-                        // Store table label for context display
-                        this.table_lookup[table.value] = table.label;
-                        // Store app label for the first table (assuming all tables in the same context have same app)
-                        if (!this.current_app_name && table.app_label) {
-                            this.current_app_name = table.app_label;
-                            $('#app-name-display').text(table.app_label);
-                        }
+            method: 'flansa.flansa_core.role_service.get_current_user_permissions',
+            args: { application_id: this.filter_app },
+            callback: (perm_result) => {
+                const user_permissions = perm_result.message || [];
+                console.log('User permissions:', user_permissions);
+                
+                // Check if user has at least read permission
+                if (!user_permissions.includes('read')) {
+                    frappe.msgprint({
+                        title: 'Access Denied',
+                        indicator: 'red',
+                        message: 'You do not have permission to create reports for this application.'
                     });
-                    
-                    // Auto-select if there's a filter
-                    if (this.filter_table) {
-                        selector.val(this.filter_table);
-                        this.select_table(this.filter_table);
-                    }
-                } else {
-                    frappe.msgprint('Failed to load tables');
+                    return;
                 }
+                
+                // Load filtered tables based on user role
+                const args = {};
+                if (this.filter_app) {
+                    args.application_id = this.filter_app;
+                }
+                
+                frappe.call({
+                    method: 'flansa.flansa_core.role_service.get_filtered_tables',
+                    args: args,
+                    callback: (r) => {
+                        if (r.message) {
+                            const tables = r.message;
+                            const selector = $('#table-selector');
+                            selector.empty().append('<option value="">Choose table...</option>');
+                            
+                            if (tables.length === 0) {
+                                selector.append('<option value="">No accessible tables found</option>');
+                                frappe.show_alert('No tables available for your role', 'orange');
+                                return;
+                            }
+                            
+                            tables.forEach(table => {
+                                const isReadonly = table.readonly ? ' (Read Only)' : '';
+                                selector.append(`<option value="${table.name}">${table.display_name || table.table_name}${isReadonly}</option>`);
+                                // Store table info for context display
+                                this.table_lookup[table.name] = table.display_name || table.table_name;
+                            });
+                            
+                            // Auto-select if there's a filter
+                            if (this.filter_table) {
+                                // Check if user can access this specific table
+                                const accessibleTable = tables.find(t => t.name === this.filter_table);
+                                if (accessibleTable) {
+                                    selector.val(this.filter_table);
+                                    this.select_table(this.filter_table);
+                                } else {
+                                    frappe.show_alert('You do not have access to the requested table', 'red');
+                                }
+                            }
+                        } else {
+                            frappe.msgprint('Failed to load accessible tables');
+                        }
+                    }
+                });
             }
         });
     }

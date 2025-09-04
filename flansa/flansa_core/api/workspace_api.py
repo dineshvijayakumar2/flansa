@@ -1,33 +1,46 @@
 from flansa.flansa_core.tenant_service import apply_tenant_filter, get_tenant_filter, TenantContext
+from flansa.flansa_core.role_service import FlansaRoleService
 """
-Workspace API - DISABLED
-Workspace functionality has been removed from Flansa
+Workspace API - Role-based access for the Flansa workspace
+Handles user applications, role-based filtering, and workspace customization
 """
 import frappe
+from typing import Dict, List, Optional
+from frappe import _
 
 @frappe.whitelist()
 def get_user_applications():
-    """Get applications accessible to current user with dynamic table counts"""
-    # Get base filters and apply tenant filter
-    filters = {"status": "Active"}
-    tenant_filter = get_tenant_filter()
-    if tenant_filter:
-        filters.update(tenant_filter)
-    
-    apps = frappe.get_all("Flansa Application", 
-                         fields=["name", "app_name", "app_title", "description", "theme_color", "icon", 
-                                "status", "creation"],
-                         filters=filters,
-                         order_by="creation desc")
-    
-    # Add calculated table count for each application (with tenant filtering)
-    for app in apps:
-        table_filters = {"application": app['name']}
-        if tenant_filter:
-            table_filters.update(tenant_filter)
-        app['table_count'] = frappe.db.count("Flansa Table", table_filters)
-    
-    return apps
+    """Get applications accessible by current user with role information"""
+    try:
+        user_email = frappe.session.user
+        
+        # Get user's accessible applications using role service
+        applications = FlansaRoleService.get_user_applications(user_email)
+        
+        # Enhance each application with additional info
+        enhanced_apps = []
+        for app in applications:
+            # Get table count for this application
+            table_count = frappe.db.count(
+                'Flansa Table', 
+                filters={
+                    'application_id': app.get('name'),
+                    'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''
+                }
+            )
+            
+            # Add computed fields
+            app['table_count'] = table_count
+            app['can_edit'] = 'admin' in app.get('permissions', []) or 'delete' in app.get('permissions', [])
+            app['can_create_tables'] = 'create' in app.get('permissions', []) or 'admin' in app.get('permissions', [])
+            
+            enhanced_apps.append(app)
+        
+        return enhanced_apps
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting user applications: {str(e)}")
+        return []
 
 @frappe.whitelist()
 def get_application_details(app_name):
@@ -262,4 +275,320 @@ def create_flansa_relationship(relationship_data):
             "error": str(e)
         }
 
-# All other workspace functions disabled
+@frappe.whitelist()
+def get_user_dashboard_stats():
+    """Get dashboard statistics based on user's role and access"""
+    try:
+        user_email = frappe.session.user
+        user_role = FlansaRoleService.get_user_role(user_email)
+        user_permissions = FlansaRoleService.get_user_permissions(user_email)
+        
+        # Get accessible applications
+        applications = FlansaRoleService.get_user_applications(user_email)
+        app_count = len(applications)
+        
+        # Get accessible tables
+        accessible_tables = FlansaRoleService.get_filtered_tables_for_user(user_email)
+        table_count = len(accessible_tables)
+        
+        # Get report count (user can see reports they created or public reports)
+        report_count = 0
+        if 'read' in user_permissions:
+            report_filters = {'owner': user_email}
+            if hasattr(frappe.local, 'tenant_id'):
+                report_filters['tenant_id'] = frappe.local.tenant_id
+            
+            report_count = frappe.db.count('Flansa Saved Report', filters=report_filters)
+        
+        # Get user's menu items
+        menu_items = FlansaRoleService.get_role_based_menu_items(user_email)
+        
+        return {
+            'user_role': user_role,
+            'permissions': user_permissions,
+            'stats': {
+                'applications': app_count,
+                'tables': table_count, 
+                'reports': report_count
+            },
+            'menu_items': menu_items,
+            'quick_actions': get_quick_actions_for_role(user_role, user_permissions)
+        }
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting dashboard stats: {str(e)}")
+        return {
+            'user_role': 'App Viewer',
+            'permissions': ['read'],
+            'stats': {'applications': 0, 'tables': 0, 'reports': 0},
+            'menu_items': {'main_menu': [], 'admin_menu': [], 'tools_menu': []},
+            'quick_actions': []
+        }
+
+
+@frappe.whitelist()
+def get_recent_activity():
+    """Get recent activity based on user's role and permissions"""
+    try:
+        user_email = frappe.session.user
+        user_permissions = FlansaRoleService.get_user_permissions(user_email)
+        
+        activities = []
+        
+        # Recent applications (if user can see them)
+        if 'read' in user_permissions:
+            recent_apps = frappe.get_all(
+                'Flansa Application',
+                filters={'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''},
+                fields=['name', 'app_title', 'creation', 'owner'],
+                order_by='creation desc',
+                limit=5
+            )
+            
+            for app in recent_apps:
+                if FlansaRoleService.can_access_application(user_email, app.name):
+                    activities.append({
+                        'type': 'application',
+                        'title': f"Application '{app.app_title}' created",
+                        'timestamp': app.creation,
+                        'user': app.owner,
+                        'link': f'/app/flansa-app-builder?app={app.name}'
+                    })
+        
+        # Recent tables (if user can see them)
+        if 'read' in user_permissions:
+            recent_tables = frappe.get_all(
+                'Flansa Table',
+                filters={'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''},
+                fields=['name', 'display_name', 'creation', 'owner', 'application_id'],
+                order_by='creation desc',
+                limit=5
+            )
+            
+            for table in recent_tables:
+                # Check if user can access the application this table belongs to
+                if table.application_id and FlansaRoleService.can_access_application(user_email, table.application_id):
+                    activities.append({
+                        'type': 'table',
+                        'title': f"Table '{table.display_name}' created",
+                        'timestamp': table.creation,
+                        'user': table.owner,
+                        'link': f'/app/flansa-record-viewer?table={table.name}'
+                    })
+        
+        # Recent reports (user's own reports)
+        user_reports = frappe.get_all(
+            'Flansa Saved Report',
+            filters={
+                'owner': user_email,
+                'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''
+            },
+            fields=['name', 'report_title', 'creation'],
+            order_by='creation desc',
+            limit=3
+        )
+        
+        for report in user_reports:
+            activities.append({
+                'type': 'report',
+                'title': f"Report '{report.report_title}' created",
+                'timestamp': report.creation,
+                'user': user_email,
+                'link': f'/app/flansa-report-viewer?report={report.name}'
+            })
+        
+        # Sort all activities by timestamp
+        activities.sort(key=lambda x: x['timestamp'], reverse=True)
+        
+        return activities[:10]  # Return top 10 recent activities
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting recent activity: {str(e)}")
+        return []
+
+
+def get_quick_actions_for_role(user_role: str, permissions: List[str]) -> List[Dict]:
+    """Generate quick actions based on user role"""
+    actions = []
+    
+    # Actions for all users with read permission
+    if 'read' in permissions:
+        actions.append({
+            'icon': 'table',
+            'title': 'View Tables',
+            'description': 'Browse available data tables',
+            'route': '/app/flansa-record-viewer',
+            'color': 'blue'
+        })
+        
+        actions.append({
+            'icon': 'chart-bar',
+            'title': 'View Reports',
+            'description': 'Access your reports and analytics',
+            'route': '/app/flansa-report-manager',
+            'color': 'green'
+        })
+    
+    # Actions for users who can create/update
+    if 'create' in permissions or 'update' in permissions:
+        actions.append({
+            'icon': 'chart-line',
+            'title': 'Create Report',
+            'description': 'Build new reports and visualizations',
+            'route': '/app/flansa-report-builder',
+            'color': 'purple'
+        })
+    
+    # Actions for editors and admins
+    if 'delete' in permissions or 'admin' in permissions:
+        actions.append({
+            'icon': 'table',
+            'title': 'Create Table',
+            'description': 'Build new data structures',
+            'route': '/app/flansa-table-builder',
+            'color': 'orange'
+        })
+        
+        actions.append({
+            'icon': 'edit',
+            'title': 'Form Builder',
+            'description': 'Design custom forms',
+            'route': '/app/flansa-form-builder',
+            'color': 'indigo'
+        })
+    
+    # Actions for admins only
+    if 'admin' in permissions and user_role == 'App Admin':
+        actions.append({
+            'icon': 'cogs',
+            'title': 'App Builder',
+            'description': 'Manage applications',
+            'route': '/app/flansa-app-builder',
+            'color': 'red'
+        })
+        
+        actions.append({
+            'icon': 'database',
+            'title': 'Database Viewer',
+            'description': 'Advanced database management',
+            'route': '/app/flansa-database-viewer',
+            'color': 'gray'
+        })
+    
+    return actions
+
+
+@frappe.whitelist()
+def get_user_workspace_config():
+    """Get workspace configuration based on user role"""
+    try:
+        user_email = frappe.session.user
+        user_role = FlansaRoleService.get_user_role(user_email)
+        user_permissions = FlansaRoleService.get_user_permissions(user_email)
+        
+        # Determine what features to show/hide
+        config = {
+            'show_create_app_button': 'admin' in user_permissions,
+            'show_admin_tools': 'delete' in user_permissions or 'admin' in user_permissions,
+            'show_advanced_features': user_role in ['App Admin', 'App Editor'],
+            'readonly_mode': user_role == 'App Viewer',
+            'user_role_display': get_role_display_name(user_role),
+            'available_views': get_available_views_for_role(user_role),
+            'dashboard_widgets': get_dashboard_widgets_for_role(user_role, user_permissions)
+        }
+        
+        return config
+        
+    except Exception as e:
+        frappe.log_error(f"Error getting workspace config: {str(e)}")
+        return {
+            'show_create_app_button': False,
+            'show_admin_tools': False,
+            'show_advanced_features': False,
+            'readonly_mode': True,
+            'user_role_display': 'Viewer',
+            'available_views': ['tile'],
+            'dashboard_widgets': []
+        }
+
+
+def get_role_display_name(role: str) -> str:
+    """Get user-friendly role name"""
+    role_names = {
+        'App Admin': 'Administrator',
+        'App Editor': 'Editor',
+        'App User': 'User', 
+        'App Viewer': 'Viewer'
+    }
+    return role_names.get(role, 'User')
+
+
+def get_available_views_for_role(role: str) -> List[str]:
+    """Get available view modes based on role"""
+    if role in ['App Admin', 'App Editor']:
+        return ['tile', 'list']  # Admins and editors get both views
+    else:
+        return ['tile']  # Users and viewers get tile view only
+
+
+def get_dashboard_widgets_for_role(role: str, permissions: List[str]) -> List[Dict]:
+    """Get dashboard widgets based on role"""
+    widgets = []
+    
+    # Stats widget for all users
+    widgets.append({
+        'id': 'stats_overview',
+        'title': 'Overview',
+        'type': 'stats',
+        'size': 'large',
+        'priority': 1
+    })
+    
+    # Quick actions widget for users with create permissions
+    if 'create' in permissions or 'update' in permissions:
+        widgets.append({
+            'id': 'quick_actions',
+            'title': 'Quick Actions',
+            'type': 'actions',
+            'size': 'medium',
+            'priority': 2
+        })
+    
+    # Recent activity widget
+    widgets.append({
+        'id': 'recent_activity', 
+        'title': 'Recent Activity',
+        'type': 'activity',
+        'size': 'medium',
+        'priority': 3
+    })
+    
+    # Admin widgets for administrators
+    if 'admin' in permissions:
+        widgets.append({
+            'id': 'system_info',
+            'title': 'System Information',
+            'type': 'system',
+            'size': 'small',
+            'priority': 4
+        })
+    
+    return widgets
+
+
+@frappe.whitelist()
+def check_application_access(application_id):
+    """Check if current user can access a specific application"""
+    user_email = frappe.session.user
+    return FlansaRoleService.can_access_application(user_email, application_id)
+
+
+@frappe.whitelist()
+def get_user_navigation_menu():
+    """Get navigation menu items based on user role"""
+    try:
+        user_email = frappe.session.user
+        return FlansaRoleService.get_role_based_menu_items(user_email)
+    except Exception as e:
+        frappe.log_error(f"Error getting navigation menu: {str(e)}")
+        return {'main_menu': [], 'admin_menu': [], 'tools_menu': []}
