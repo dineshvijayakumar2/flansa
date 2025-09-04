@@ -2,6 +2,7 @@
 """
 Flansa Role Service - Central role management and access control
 Handles user roles, permissions, and application-level access control
+Now integrates with HierarchicalRoleService for advanced role management
 """
 
 import frappe
@@ -34,8 +35,23 @@ class FlansaRoleService:
     
     @staticmethod
     def get_user_role(user_email: str, application_id: str = None) -> str:
-        """Get user's role for a specific application"""
+        """Get user's highest role for a specific application (integrates with hierarchical system)"""
         try:
+            # Try to use hierarchical role service first
+            try:
+                from flansa.flansa_core.hierarchical_role_service import HierarchicalRoleService
+                context = {'application_id': application_id}
+                if hasattr(frappe.local, 'tenant_id'):
+                    context['tenant_id'] = frappe.local.tenant_id
+                
+                hierarchy = HierarchicalRoleService.get_user_role_hierarchy(user_email, context)
+                if hierarchy.get('highest_role'):
+                    return hierarchy['highest_role']
+                
+            except ImportError:
+                pass  # Fall back to basic role service
+            
+            # Fallback to basic role determination
             # If application_id provided, get role from Application Users
             if application_id:
                 app_user = frappe.get_value(
@@ -48,17 +64,25 @@ class FlansaRoleService:
             
             # Default role based on user type
             user_doc = frappe.get_doc('User', user_email)
+            user_roles = [role.role for role in user_doc.roles]
             
+            # Check for new hierarchical roles first
+            if 'Flansa Super Admin' in user_roles:
+                return 'App Owner'  # Super admin gets highest app-level role
+            
+            if 'Flansa Platform Admin' in user_roles:
+                return 'App Admin'
+                
             # System Manager gets App Admin
-            if 'System Manager' in [role.role for role in user_doc.roles]:
+            if 'System Manager' in user_roles:
                 return 'App Admin'
             
             # Flansa Admin gets App Admin
-            if 'Flansa Admin' in [role.role for role in user_doc.roles]:
+            if 'Flansa Admin' in user_roles:
                 return 'App Admin'
             
             # Flansa Builder gets App Editor
-            if 'Flansa Builder' in [role.role for role in user_doc.roles]:
+            if 'Flansa Builder' in user_roles:
                 return 'App Editor'
             
             # Default to App Viewer for other users
@@ -121,12 +145,31 @@ class FlansaRoleService:
     def get_user_applications(user_email: str) -> List[Dict]:
         """Get list of applications user can access"""
         try:
-            # Get all applications for the current tenant
-            applications = frappe.get_all(
-                'Flansa Application',
-                filters={'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''},
-                fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public']
-            )
+            # Check if user is System Manager/Admin - they should see all apps
+            user_doc = frappe.get_doc('User', user_email)
+            user_roles = [role.role for role in user_doc.roles]
+            is_system_admin = ('System Manager' in user_roles or 
+                              'Flansa Super Admin' in user_roles or 
+                              user_email == 'Administrator')
+            
+            if is_system_admin:
+                # System admins see all applications regardless of tenant
+                applications = frappe.get_all(
+                    'Flansa Application',
+                    filters={'status': 'Active'},
+                    fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'tenant_id']
+                )
+            else:
+                # Regular users: filter by tenant if tenant_id is set
+                filters = {}
+                if hasattr(frappe.local, 'tenant_id') and frappe.local.tenant_id:
+                    filters['tenant_id'] = frappe.local.tenant_id
+                
+                applications = frappe.get_all(
+                    'Flansa Application',
+                    filters=filters,
+                    fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'tenant_id']
+                )
             
             accessible_apps = []
             for app in applications:

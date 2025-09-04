@@ -14,29 +14,67 @@ def get_user_applications():
     try:
         user_email = frappe.session.user
         
-        # Get user's accessible applications using role service
-        applications = FlansaRoleService.get_user_applications(user_email)
+        # Check if user is System Manager or Administrator - they should see all apps
+        user_doc = frappe.get_doc('User', user_email)
+        user_roles = [role.role for role in user_doc.roles]
+        is_system_admin = ('System Manager' in user_roles or 
+                          'Flansa Super Admin' in user_roles or 
+                          user_email == 'Administrator')
         
-        # Enhance each application with additional info
-        enhanced_apps = []
-        for app in applications:
-            # Get table count for this application
-            table_count = frappe.db.count(
-                'Flansa Table', 
-                filters={
-                    'application_id': app.get('name'),
-                    'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''
+        if is_system_admin:
+            # System admins see all applications
+            all_apps = frappe.get_all("Flansa Application", 
+                                     fields=["name", "app_name", "app_title", "description", "status", 
+                                            "theme_color", "icon", "is_public", "tenant_id", "creation"],
+                                     filters={"status": "Active"},
+                                     order_by="creation desc")
+            
+            enhanced_apps = []
+            for app in all_apps:
+                # Get table count for this application  
+                table_count = frappe.db.count('Flansa Table', filters={'application': app.name})
+                
+                # Add computed fields for system admin
+                app_data = {
+                    'name': app.name,
+                    'app_name': app.app_name,
+                    'app_title': app.app_title,
+                    'description': app.description,
+                    'status': app.status,
+                    'theme_color': app.theme_color,
+                    'icon': app.icon,
+                    'is_public': app.is_public,
+                    'tenant_id': app.tenant_id,
+                    'table_count': table_count,
+                    'user_role': 'App Owner',  # System admins get owner privileges
+                    'permissions': ['admin', 'create', 'read', 'update', 'delete', 'manage_users'],
+                    'can_edit': True,
+                    'can_create_tables': True
                 }
-            )
+                enhanced_apps.append(app_data)
             
-            # Add computed fields
-            app['table_count'] = table_count
-            app['can_edit'] = 'admin' in app.get('permissions', []) or 'delete' in app.get('permissions', [])
-            app['can_create_tables'] = 'create' in app.get('permissions', []) or 'admin' in app.get('permissions', [])
+            return enhanced_apps
+        else:
+            # Regular users use the role service for filtered access
+            applications = FlansaRoleService.get_user_applications(user_email)
             
-            enhanced_apps.append(app)
-        
-        return enhanced_apps
+            # Enhance each application with additional info
+            enhanced_apps = []
+            for app in applications:
+                # Get table count for this application
+                table_count = frappe.db.count(
+                    'Flansa Table', 
+                    filters={'application': app.get('name')}
+                )
+                
+                # Add computed fields
+                app['table_count'] = table_count
+                app['can_edit'] = 'admin' in app.get('permissions', []) or 'delete' in app.get('permissions', [])
+                app['can_create_tables'] = 'create' in app.get('permissions', []) or 'admin' in app.get('permissions', [])
+                
+                enhanced_apps.append(app)
+            
+            return enhanced_apps
         
     except Exception as e:
         frappe.log_error(f"Error getting user applications: {str(e)}")
