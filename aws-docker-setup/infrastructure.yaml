@@ -23,8 +23,40 @@ Parameters:
   ECRImageURI:
     Description: ECR image URI for Flansa application
     Type: String
+  
+  S3BucketName:
+    Description: Name of existing S3 bucket for file storage
+    Type: String
+    Default: flansa
 
 Resources:
+  # ============================================
+  # S3 BUCKET REFERENCE
+  # ============================================
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      CorsConfiguration:
+        CorsRules:
+          - AllowedHeaders: ['*']
+            AllowedMethods: [GET, PUT, POST, DELETE, HEAD]
+            AllowedOrigins: ['*']
+            MaxAge: 3000
+      VersioningConfiguration:
+        Status: Enabled
+      LifecycleConfiguration:
+        Rules:
+          - Id: DeleteIncompleteMultipartUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
+
   # ============================================
   # VPC AND NETWORKING
   # ============================================
@@ -319,6 +351,24 @@ Resources:
                   - ssm:GetParameters
                   - ssm:GetParametersByPath
                 Resource: !Sub 'arn:aws:ssm:${AWS::Region}:${AWS::AccountId}:parameter/flansa/*'
+        - PolicyName: S3FileStorageAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:PutObject
+                  - s3:DeleteObject
+                  - s3:GetObjectAcl
+                  - s3:PutObjectAcl
+                Resource: 
+                  - !Sub '${S3Bucket}/*'
+              - Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource: !Ref S3Bucket
 
   ECSTaskDefinition:
     Type: AWS::ECS::TaskDefinition
@@ -365,6 +415,12 @@ Resources:
               Value: !GetAtt RedisCluster.RedisEndpoint.Address
             - Name: REDIS_PORT
               Value: '6379'
+            - Name: S3_BUCKET_NAME
+              Value: !Ref S3BucketName
+            - Name: AWS_S3_REGION
+              Value: !Ref AWS::Region
+            - Name: S3_FOLDER_PATH
+              Value: 'flansa-files'
           Secrets:
             - Name: RDS_PASSWORD
               ValueFrom: !Ref DBPasswordParameter
@@ -409,6 +465,13 @@ Resources:
       Name: /flansa/admin/password
       Type: SecureString
       Value: !Ref AdminPassword
+
+  S3BucketParameter:
+    Type: AWS::SSM::Parameter
+    Properties:
+      Name: /flansa/s3/bucket_name
+      Type: String
+      Value: !Ref S3BucketName
 
   # ============================================
   # CLOUDWATCH LOG GROUP

@@ -26,7 +26,13 @@ Internet → ALB → ECS Fargate → RDS PostgreSQL
 - Docker installed locally
 - AWS account with ECS, RDS, ECR permissions
 
-### Step 1: Deploy Infrastructure
+### Step 1: Configure S3 Integration
+```bash
+# Configure S3 bucket and IAM permissions
+./configure-s3.sh
+```
+
+### Step 2: Deploy Infrastructure
 ```bash
 # Deploy complete infrastructure using CloudFormation
 aws cloudformation create-stack \
@@ -34,21 +40,22 @@ aws cloudformation create-stack \
   --template-body file://infrastructure.yaml \
   --parameters ParameterKey=DBPassword,ParameterValue=YourSecureDBPassword \
                ParameterKey=AdminPassword,ParameterValue=YourSecureAdminPassword \
-               ParameterKey=ECRImageURI,ParameterValue=ACCOUNT_ID.dkr.ecr.REGION.amazonaws.com/flansa-app:latest \
+               ParameterKey=ECRImageURI,ParameterValue=567106097357.dkr.ecr.us-east-1.amazonaws.com/flansa-app:latest \
+               ParameterKey=S3BucketName,ParameterValue=flansa \
   --capabilities CAPABILITY_NAMED_IAM
 ```
 
-### Step 2: Build and Push to ECR
+### Step 3: Build and Push to ECR
 ```bash
 # Set your AWS account ID and region
-export AWS_ACCOUNT_ID=123456789012
+export AWS_ACCOUNT_ID=567106097357
 export AWS_REGION=us-east-1
 
 # Build and push Docker image
 ./deploy-to-ecr.sh
 ```
 
-### Step 3: Update and Deploy Service
+### Step 4: Update and Deploy Service
 ```bash
 # Update ECS service with new task definition
 aws ecs update-service \
@@ -62,11 +69,12 @@ aws ecs update-service \
 | File | Purpose |
 |------|---------|
 | `Dockerfile.aws` | AWS-optimized Dockerfile with PostgreSQL client and health checks |
-| `aws-start.sh` | Startup script with RDS/ElastiCache configuration |
+| `aws-start.sh` | Startup script with RDS/ElastiCache/S3 configuration |
 | `health-check.sh` | ECS health check endpoint |
 | `task-definition.json` | ECS Fargate task definition template |
-| `infrastructure.yaml` | Complete CloudFormation infrastructure |
+| `infrastructure.yaml` | Complete CloudFormation infrastructure with S3 integration |
 | `deploy-to-ecr.sh` | Automated ECR build and deployment script |
+| `configure-s3.sh` | S3 bucket setup and IAM configuration script |
 
 ## 🔧 Configuration
 
@@ -87,12 +95,22 @@ RDS_DB_NAME=flansa_db
 # Redis (auto-configured from ElastiCache)
 REDIS_ENDPOINT=auto-populated
 REDIS_PORT=6379
+
+# S3 File Storage (auto-configured)
+S3_BUCKET_NAME=flansa
+AWS_S3_REGION=us-east-1
+S3_FOLDER_PATH=flansa-files
 ```
 
 ### SSM Parameters (Secure Secrets)
-Parameters are automatically created by CloudFormation:
+Parameters are automatically created by CloudFormation and configure-s3.sh:
 - `/flansa/rds/password` - Database password
 - `/flansa/admin/password` - Flansa admin password
+- `/flansa/s3/bucket_name` - S3 bucket name
+- `/flansa/s3/access_key_id` - S3 access key ID
+- `/flansa/s3/secret_access_key` - S3 secret access key
+- `/flansa/s3/region` - S3 region
+- `/flansa/s3/folder_path` - S3 folder path
 
 ## 🔍 Monitoring and Health Checks
 
@@ -212,6 +230,7 @@ aws rds describe-db-instances --db-instance-identifier flansa-postgresql
 - ECS Fargate (1 task): ~$15
 - RDS PostgreSQL (db.t3.micro): ~$15
 - ElastiCache Redis (cache.t3.micro): ~$12
+- S3 Storage (10GB): ~$0.30
 - ALB: ~$18
 - Data Transfer: ~$5
 - **Total**: ~$65/month for small production workload

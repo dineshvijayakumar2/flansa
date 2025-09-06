@@ -59,6 +59,25 @@ else
 fi
 
 # ============================================
+# 2.1. AWS S3 CONFIGURATION FOR FILE STORAGE
+# ============================================
+echo "📁 Configuring AWS S3 File Storage..."
+
+if [ -n "$S3_BUCKET_NAME" ]; then
+    S3_CONFIG='"s3_bucket": "'$S3_BUCKET_NAME'",
+  "aws_access_key_id": "'${AWS_ACCESS_KEY_ID:-}'",
+  "aws_secret_access_key": "'${AWS_SECRET_ACCESS_KEY:-}'",
+  "aws_s3_region_name": "'${AWS_S3_REGION:-us-east-1}'",
+  "s3_folder_path": "'${S3_FOLDER_PATH:-flansa-files}'",
+  "use_s3": 1,'
+    echo "✅ S3 Bucket: $S3_BUCKET_NAME in ${AWS_S3_REGION:-us-east-1}"
+    echo "✅ S3 Folder: ${S3_FOLDER_PATH:-flansa-files}"
+else
+    S3_CONFIG=''
+    echo "⚠️  S3 not configured - files will be stored locally"
+fi
+
+# ============================================
 # 3. CHECK SITE STATUS
 # ============================================
 echo ""
@@ -151,7 +170,7 @@ cat > "sites/$SITE_NAME/site_config.json" <<EOF
 }
 EOF
 
-# Common configuration with AWS-specific settings
+# Common configuration with AWS-specific settings including S3
 cat > "sites/common_site_config.json" <<EOF
 {
   "db_host": "$DB_HOST",
@@ -160,6 +179,7 @@ cat > "sites/common_site_config.json" <<EOF
   "db_password": "$DB_PASSWORD",
   "db_type": "postgres",
   $REDIS_CONFIG
+  $S3_CONFIG
   "default_site": "$SITE_NAME",
   "serve_default_site": true,
   "developer_mode": 0,

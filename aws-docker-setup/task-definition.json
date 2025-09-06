@@ -45,6 +45,14 @@
         {
           "name": "GUNICORN_TIMEOUT",
           "value": "120"
+        },
+        {
+          "name": "AWS_S3_REGION",
+          "value": "{REGION}"
+        },
+        {
+          "name": "S3_FOLDER_PATH",
+          "value": "flansa-files"
         }
       ],
       "secrets": [
@@ -71,6 +79,18 @@
         {
           "name": "ADMIN_PASSWORD",
           "valueFrom": "arn:aws:ssm:{REGION}:{ACCOUNT_ID}:parameter/flansa/admin/password"
+        },
+        {
+          "name": "S3_BUCKET_NAME",
+          "valueFrom": "arn:aws:ssm:{REGION}:{ACCOUNT_ID}:parameter/flansa/s3/bucket_name"
+        },
+        {
+          "name": "AWS_ACCESS_KEY_ID",
+          "valueFrom": "arn:aws:ssm:{REGION}:{ACCOUNT_ID}:parameter/flansa/s3/access_key_id"
+        },
+        {
+          "name": "AWS_SECRET_ACCESS_KEY",
+          "valueFrom": "arn:aws:ssm:{REGION}:{ACCOUNT_ID}:parameter/flansa/s3/secret_access_key"
         }
       ],
       "healthCheck": {
