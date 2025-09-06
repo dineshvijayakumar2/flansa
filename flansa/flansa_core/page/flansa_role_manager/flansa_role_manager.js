@@ -24,17 +24,118 @@ class FlansaRoleManager {
         
         // State management
         this.current_view = 'overview'; // 'overview', 'users', 'roles', 'permissions'
-        this.selected_application = null;
-        this.selected_user = null;
-        this.user_hierarchy = null;
+        this.context = {
+            scope: 'platform',
+            application_id: null,
+            workspace_id: null
+        };
+        this.user_capabilities = null;
+        this.contextual_data = null;
         
+        this.extract_context();
         this.init();
     }
     
+    extract_context() {
+        // Extract context from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        this.context.application_id = urlParams.get('app');
+        this.context.workspace_id = urlParams.get('workspace') || urlParams.get('tenant');
+        
+        // Determine scope
+        if (this.context.application_id) {
+            this.context.scope = 'application';
+        } else if (this.context.workspace_id) {
+            this.context.scope = 'workspace';
+        } else {
+            this.context.scope = 'platform';
+        }
+        
+        console.log('Role Manager Context:', this.context);
+    }
+    
     init() {
-        this.setup_ui();
-        this.load_user_hierarchy();
-        this.bind_events();
+        this.load_contextual_data().then(() => {
+            this.setup_ui();
+            this.update_contextual_ui();
+            this.bind_events();
+            // Load initial view content
+            this.load_view_content(this.current_view);
+        });
+    }
+    
+    async load_contextual_data() {
+        try {
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.contextual_role_manager.get_contextual_role_data',
+                args: {
+                    app_id: this.context.application_id,
+                    tenant_id: this.context.workspace_id
+                }
+            });
+            
+            if (response.message) {
+                this.contextual_data = response.message;
+                this.user_capabilities = response.message.capabilities;
+                console.log('Contextual role data loaded:', this.contextual_data);
+            }
+        } catch (error) {
+            console.error('Failed to load contextual role data:', error);
+            frappe.show_alert('Failed to load role management data', 'red');
+        }
+    }
+    
+    render_breadcrumbs() {
+        if (!this.contextual_data || !this.contextual_data.breadcrumbs) return;
+        
+        const breadcrumbsHtml = this.contextual_data.breadcrumbs.map(crumb => {
+            if (crumb.current) {
+                return `<span class="breadcrumb-current">
+                    <i class="fa fa-${crumb.icon}"></i> ${crumb.label}
+                </span>`;
+            } else {
+                return `<a href="${crumb.route}" class="breadcrumb-link">
+                    <i class="fa fa-${crumb.icon}"></i>
+                    <span>${crumb.label}</span>
+                </a>
+                <i class="fa fa-chevron-right breadcrumb-divider"></i>`;
+            }
+        }).join('');
+        
+        $('#dynamic-breadcrumbs').html(breadcrumbsHtml);
+    }
+    
+    update_contextual_ui() {
+        if (!this.contextual_data) return;
+        
+        // Update title and description
+        $('#role-manager-title').text(this.contextual_data.page_title || 'Role Manager');
+        
+        let contextDescription = '';
+        switch (this.context.scope) {
+            case 'application':
+                contextDescription = `Application Role Management - ${this.user_capabilities.user_role}`;
+                break;
+            case 'workspace':
+                contextDescription = `Workspace Role Management - ${this.user_capabilities.user_role}`;
+                break;
+            case 'platform':
+                contextDescription = `Platform Role Management - ${this.user_capabilities.user_role}`;
+                break;
+        }
+        
+        $('#context-description').text(contextDescription);
+        
+        // Show/hide create custom role button based on permissions
+        if (this.user_capabilities.can_create_custom_roles && this.context.scope === 'application') {
+            $('#create-custom-role-btn').show();
+        } else {
+            $('#create-custom-role-btn').hide();
+        }
+        
+        // Render breadcrumbs
+        this.render_breadcrumbs();
     }
     
     setup_ui() {
@@ -44,13 +145,8 @@ class FlansaRoleManager {
                 <div class="sleek-header">
                     <div class="header-backdrop"></div>
                     <div class="header-content">
-                        <nav class="breadcrumb-trail">
-                            <a href="/app/flansa-workspace" class="breadcrumb-link">
-                                <i class="fa fa-home"></i>
-                                <span>Workspace</span>
-                            </a>
-                            <i class="fa fa-chevron-right breadcrumb-divider"></i>
-                            <span class="breadcrumb-current">🔐 Role Manager</span>
+                        <nav class="breadcrumb-trail" id="dynamic-breadcrumbs">
+                            <!-- Breadcrumbs will be populated dynamically -->
                         </nav>
                     </div>
                     
@@ -58,11 +154,11 @@ class FlansaRoleManager {
                         <div class="banner-left">
                             <div class="app-info">
                                 <div class="app-details">
-                                    <h1 class="app-name">Role Manager</h1>
+                                    <h1 class="app-name" id="role-manager-title">Role Manager</h1>
                                     <div class="app-type">
                                         <div class="counter-pill">
                                             <i class="fa fa-users"></i>
-                                            <span class="counter-text">Hierarchical Role Management</span>
+                                            <span class="counter-text" id="context-description">Loading...</span>
                                         </div>
                                     </div>
                                 </div>

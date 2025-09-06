@@ -5,6 +5,11 @@ frappe.pages['flansa-database-viewer'].on_page_load = function(wrapper) {
         single_column: true
     });
 
+    // Add Platform Role Manager menu item
+    page.add_menu_item('👥 Platform Role Manager', () => {
+        frappe.set_route('flansa-role-manager');
+    });
+
     page.main.html(frappe.render_template("flansa_database_viewer"));
     
     // Initialize the database viewer

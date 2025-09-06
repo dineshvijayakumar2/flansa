@@ -1,0 +1,31 @@
+{
+ "charts": [],
+ "content": "[\n  {\n    \"id\": \"header1\",\n    \"type\": \"header\",\n    \"data\": {\n      \"text\": \"<span class='h4'>\\ud83d\\udee1\\ufe0f Flansa Platform Administration</span>\",\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"para1\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"Super Admin portal for managing tenants and platform configuration\",\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"spacer1\",\n    \"type\": \"spacer\",\n    \"data\": {\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"subheader1\",\n    \"type\": \"header\",\n    \"data\": {\n      \"text\": \"<span class='h5'>Tenant Management</span>\",\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"link_platform_role_manager\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"<a href='/app/flansa-role-manager'>\\ud83d\\udc65 <b>Platform Role Manager</b></a> - Manage platform-wide roles and permissions\",\n      \"col\": 6\n    }\n  },\n  {\n    \"id\": \"link_workspace\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"<a href='/app/flansa-workspace'>\\ud83c\\udfe2 <b>Flansa Workspace</b></a> - Manage applications by tenant (main entry point for builders)\",\n      \"col\": 6\n    }\n  },\n  {\n    \"id\": \"link_tenant_switcher\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"<a href='/app/tenant-switcher'>\\ud83d\\udd04 <b>Switch Tenant</b></a> - Switch between different tenant contexts\",\n      \"col\": 6\n    }\n  },\n  {\n    \"id\": \"link_tenant_registration\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"<a href='/app/tenant-registration'>\\u2795 <b>Register Tenant</b></a> - Create and configure new tenants\",\n      \"col\": 6\n    }\n  },\n  {\n    \"id\": \"spacer2\",\n    \"type\": \"spacer\",\n    \"data\": {\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"subheader2\",\n    \"type\": \"header\",\n    \"data\": {\n      \"text\": \"<span class='h5'>System Tools</span>\",\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"link_database\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"<a href='/app/flansa-database-viewer'>\\ud83d\\uddc4\\ufe0f <b>Database Viewer</b></a> - Direct database access and query tool\",\n      \"col\": 6\n    }\n  },\n  {\n    \"id\": \"spacer3\",\n    \"type\": \"spacer\",\n    \"data\": {\n      \"col\": 12\n    }\n  },\n  {\n    \"id\": \"info_note\",\n    \"type\": \"paragraph\",\n    \"data\": {\n      \"text\": \"<div style='background-color: #f0f8ff; padding: 15px; border-radius: 5px; border-left: 4px solid #4169e1;'><b>\\u2139\\ufe0f Navigation Hierarchy:</b><br>\\u2022 <b>Flansa Workspace</b> \\u2192 Lists apps per tenant<br>\\u2022 <b>App Dashboard</b> \\u2192 Lists tables within selected app<br>\\u2022 <b>Visual Builder</b> \\u2192 Shows fields within selected table<br><br><em>Tenant builders and end users should primarily access the Flansa Workspace page.</em></div>\",\n      \"col\": 12\n    }\n  }\n]",
+ "creation": "2025-08-21 09:01:19",
+ "custom_blocks": [],
+ "docstatus": 0,
+ "doctype": "Workspace",
+ "hide_custom": 0,
+ "icon": "shield",
+ "idx": 0,
+ "is_hidden": 0,
+ "label": "Flansa",
+ "links": [],
+ "modified": "2025-09-05 07:13:56.564433",
+ "modified_by": "Administrator",
+ "module": "Flansa Core",
+ "name": "Flansa",
+ "number_cards": [],
+ "owner": "Administrator",
+ "public": 1,
+ "quick_lists": [
+  {
+   "document_type": "Flansa Application",
+   "label": "Quick Actions"
+  }
+ ],
+ "roles": [],
+ "sequence_id": 0.0,
+ "shortcuts": [],
+ "title": "Flansa"
+}

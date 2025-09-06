@@ -242,12 +242,12 @@ class FlansaRoleService:
             
             # If application_id provided, filter by application
             if application_id:
-                filters['application_id'] = application_id
+                filters['application'] = application_id
             
             tables = frappe.get_all(
                 'Flansa Table',
                 filters=filters,
-                fields=['name', 'table_name', 'display_name', 'description', 'status', 'created_by', 'creation']
+                fields=['name', 'table_name', 'table_label', 'description', 'created_by', 'creation']
             )
             
             # Filter based on role permissions

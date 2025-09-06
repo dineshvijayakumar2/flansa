@@ -52,6 +52,24 @@ class FlansaApplicationsWorkspace {
         // Hide default page header to make banner freeze at top
         this.hide_default_page_header();
         
+        // Role Management Menu
+        this.page.add_menu_item('👥 Platform Role Manager', () => {
+            frappe.set_route('flansa-role-manager');
+        });
+        
+        this.page.add_menu_item('🏢 Workspace Role Manager', () => {
+            // Get current tenant/workspace context and open role manager
+            const workspace_id = this.get_current_workspace_id();
+            if (workspace_id) {
+                window.location.href = `/app/flansa-role-manager?workspace=${workspace_id}`;
+            } else {
+                frappe.set_route('flansa-role-manager');
+            }
+        });
+        
+        // Separator
+        this.page.add_menu_item('─────────', null);
+        
         // Cache management buttons
         this.page.add_menu_item('🚀 Force Reload (Clear All)', () => {
             if (window.flansaBrowserCacheManager) {
@@ -163,9 +181,16 @@ class FlansaApplicationsWorkspace {
                                     </svg>
                                 </button>
                                 <div class="dropdown-panel" id="context-dropdown">
+                                    <div class="dropdown-item" data-action="workspace-role-manager">
+                                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                            <path d="M10 9a3 3 0 100-6 3 3 0 000 6zM6 8a2 2 0 11-4 0 2 2 0 014 0zM1.49 15.326a.78.78 0 01-.358-.442 3 3 0 014.308-3.516 6.484 6.484 0 00-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 01-2.07-.655zM16.44 15.98a4.97 4.97 0 002.07-.654.78.78 0 00.357-.442 3 3 0 00-4.308-3.517 6.484 6.484 0 011.907 3.96 2.32 2.32 0 01-.026.654z" />
+                                        </svg>
+                                        <span>🏢 Workspace Role Manager</span>
+                                    </div>
+                                    <div class="dropdown-separator"></div>
                                     <div class="dropdown-item" data-action="switch-workspace">
                                         <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                            <path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3z" />
+                                            <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8zM12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
                                         </svg>
                                         <span>Switch Workspace</span>
                                     </div>
@@ -2168,6 +2193,15 @@ class FlansaApplicationsWorkspace {
     
     handle_user_context_action(action) {
         switch (action) {
+            case 'workspace-role-manager':
+                const workspace_id = this.get_current_workspace_id();
+                if (workspace_id) {
+                    window.location.href = `/app/flansa-role-manager?workspace=${workspace_id}`;
+                } else {
+                    frappe.set_route('flansa-role-manager');
+                }
+                break;
+                
             case 'switch-workspace':
                 frappe.set_route('tenant-switcher');
                 break;
@@ -2339,6 +2373,42 @@ class FlansaApplicationsWorkspace {
         if (workspaceTitle && this.tenant_info?.tenant_name) {
             workspaceTitle.textContent = this.tenant_info.tenant_name;
         }
+    }
+    
+    get_current_workspace_id() {
+        // Try multiple sources to get workspace/tenant ID
+        if (this.tenant_info?.tenant_id) {
+            return this.tenant_info.tenant_id;
+        }
+        
+        // Try URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const workspaceParam = urlParams.get('workspace') || urlParams.get('tenant');
+        if (workspaceParam) {
+            return workspaceParam;
+        }
+        
+        // Try route options if the function exists
+        if (frappe.get_route_options && typeof frappe.get_route_options === 'function') {
+            const sessionWorkspace = frappe.get_route_options()?.workspace;
+            if (sessionWorkspace) {
+                return sessionWorkspace;
+            }
+        }
+        
+        // Try current user's default workspace if available
+        if (frappe.session?.user_workspace) {
+            return frappe.session.user_workspace;
+        }
+        
+        // Try to get from local storage
+        const storedWorkspace = localStorage.getItem('flansa_current_workspace');
+        if (storedWorkspace) {
+            return storedWorkspace;
+        }
+        
+        // Fallback - return null to indicate platform-level context
+        return null;
     }
 }
 
