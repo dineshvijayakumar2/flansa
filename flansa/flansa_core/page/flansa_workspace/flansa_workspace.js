@@ -1138,8 +1138,14 @@ class FlansaApplicationsWorkspace {
         $('#empty-state').hide();
         $('#no-results-state').hide();
         
+        // Get current tenant_id from workspace context
+        const current_tenant_id = this.get_current_workspace_id();
+        
         frappe.call({
             method: 'flansa.flansa_core.api.workspace_api.get_user_applications',
+            args: {
+                tenant_id: current_tenant_id
+            },
             callback: (response) => {
                 $('#loading-state').hide();
                 
@@ -1565,6 +1571,12 @@ class FlansaApplicationsWorkspace {
                 // Remove non-DocType fields
                 const doc_values = {...values};
                 delete doc_values.create_samples;  // Remove non-DocType field
+                
+                // Add current tenant_id
+                const current_tenant_id = self.get_current_workspace_id();
+                if (current_tenant_id) {
+                    doc_values.tenant_id = current_tenant_id;
+                }
                 
                 frappe.call({
                     method: 'frappe.client.insert',

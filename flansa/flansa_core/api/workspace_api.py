@@ -8,11 +8,44 @@ import frappe
 from typing import Dict, List, Optional
 from frappe import _
 
+def get_current_tenant_id():
+    """Get the current tenant_id from session or workspace context"""
+    # Try to get from frappe session first
+    if hasattr(frappe.local, 'current_tenant_id'):
+        return frappe.local.current_tenant_id
+    
+    # Try to get from request headers or params
+    if frappe.request and frappe.request.headers:
+        tenant_id = frappe.request.headers.get('X-Tenant-Id')
+        if tenant_id:
+            return tenant_id
+    
+    # Try to get from form dict (passed from frontend)
+    if frappe.form_dict and frappe.form_dict.get('tenant_id'):
+        return frappe.form_dict.get('tenant_id')
+    
+    # Try to get from user's default workspace
+    user = frappe.session.user
+    workspace_user = frappe.get_all(
+        "Flansa Workspace User",
+        filters={"user": user},
+        fields=["workspace", "tenant_id"],
+        limit=1
+    )
+    
+    if workspace_user and workspace_user[0].get('tenant_id'):
+        return workspace_user[0].get('tenant_id')
+    
+    return None
+
 @frappe.whitelist()
 def get_user_applications():
     """Get applications accessible by current user with role information"""
     try:
         user_email = frappe.session.user
+        
+        # Get current tenant context
+        current_tenant_id = get_current_tenant_id()
         
         # Check if user is System Manager or Administrator - they should see all apps
         user_doc = frappe.get_doc('User', user_email)
@@ -22,11 +55,17 @@ def get_user_applications():
                           user_email == 'Administrator')
         
         if is_system_admin:
-            # System admins see all applications
+            # System admins see applications filtered by current workspace/tenant
+            filters = {"status": "Active"}
+            
+            # Apply tenant filter if we have a current tenant context
+            if current_tenant_id:
+                filters["tenant_id"] = current_tenant_id
+            
             all_apps = frappe.get_all("Flansa Application", 
                                      fields=["name", "app_name", "app_title", "description", "status", 
                                             "theme_color", "icon", "is_public", "tenant_id", "creation"],
-                                     filters={"status": "Active"},
+                                     filters=filters,
                                      order_by="creation desc")
             
             enhanced_apps = []
