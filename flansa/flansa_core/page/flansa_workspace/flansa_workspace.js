@@ -2301,6 +2301,9 @@ class FlansaApplicationsWorkspace {
             const response = await this.call_tenant_api('get_current_tenant_info');
             const tenantInfo = response;
             
+            // Store tenant info for later use
+            this.tenant_info = tenantInfo;
+            
             // Update workspace context in section controls only
             const workspaceContextName = document.getElementById('workspace-context-name');
             
@@ -2413,7 +2416,12 @@ class FlansaApplicationsWorkspace {
             return frappe.session.user_workspace;
         }
         
-        // Try to get from local storage
+        // Try to get from local storage - check both keys
+        const storedTenantId = localStorage.getItem('flansa_current_tenant_id');
+        if (storedTenantId) {
+            return storedTenantId;
+        }
+        
         const storedWorkspace = localStorage.getItem('flansa_current_workspace');
         if (storedWorkspace) {
             return storedWorkspace;

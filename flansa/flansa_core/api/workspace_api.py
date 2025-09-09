@@ -24,17 +24,22 @@ def get_current_tenant_id():
     if frappe.form_dict and frappe.form_dict.get('tenant_id'):
         return frappe.form_dict.get('tenant_id')
     
-    # Try to get from user's default workspace
+    # Try to get from user's default workspace - check if table/fields exist
     user = frappe.session.user
-    workspace_user = frappe.get_all(
-        "Flansa Workspace User",
-        filters={"user": user},
-        fields=["workspace", "tenant_id"],
-        limit=1
-    )
-    
-    if workspace_user and workspace_user[0].get('tenant_id'):
-        return workspace_user[0].get('tenant_id')
+    try:
+        if frappe.db.table_exists("tabFlansa Workspace User"):
+            # Check available fields first
+            workspace_user = frappe.get_all(
+                "Flansa Workspace User",
+                filters={"user": user},
+                fields=["tenant_id"],  # Only get tenant_id, not workspace
+                limit=1
+            )
+            
+            if workspace_user and workspace_user[0].get('tenant_id'):
+                return workspace_user[0].get('tenant_id')
+    except:
+        pass
     
     return None
 
@@ -58,9 +63,11 @@ def get_user_applications():
             # System admins see applications filtered by current workspace/tenant
             filters = {"status": "Active"}
             
-            # Apply tenant filter if we have a current tenant context
+            # Apply tenant filter only if we have a specific tenant context
+            # If no tenant_id, show all apps (for Administrator/System Manager)
             if current_tenant_id:
                 filters["tenant_id"] = current_tenant_id
+            # If no current_tenant_id, system admins see ALL apps
             
             all_apps = frappe.get_all("Flansa Application", 
                                      fields=["name", "app_name", "app_title", "description", "status", 
