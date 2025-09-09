@@ -15,7 +15,8 @@
   "custom_js",
   "field_overrides",
   "created_by",
-  "modified_by"
+  "modified_by",
+  "tenant_id"
  ],
  "fields": [
   {
@@ -77,6 +78,11 @@
    "label": "Modified By",
    "options": "User",
    "read_only": 1
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "label": "Tenant ID"
   }
  ],
  "index_web_pages_for_search": 1,

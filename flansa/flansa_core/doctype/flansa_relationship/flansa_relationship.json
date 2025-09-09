@@ -39,7 +39,13 @@
   "behaviors",
   "trigger_code",
   "ui_config",
-  "performance_config"
+  "performance_config",
+  "tenant_id",
+  "workspace",
+  "enterprise_type",
+  "inherit_permissions",
+  "required_field",
+  "summary_field"
  ],
  "fields": [
   {
@@ -253,6 +259,36 @@
    "fieldtype": "Code",
    "label": "Performance Configuration",
    "options": "JSON"
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "label": "Tenant ID"
+  },
+  {
+   "fieldname": "workspace",
+   "fieldtype": "Data",
+   "label": "Workspace"
+  },
+  {
+   "fieldname": "enterprise_type",
+   "fieldtype": "Data",
+   "label": "Enterprise Type"
+  },
+  {
+   "fieldname": "inherit_permissions",
+   "fieldtype": "Check",
+   "label": "Inherit Permissions"
+  },
+  {
+   "fieldname": "required_field",
+   "fieldtype": "Check",
+   "label": "Required Field"
+  },
+  {
+   "fieldname": "summary_field",
+   "fieldtype": "Data",
+   "label": "Summary Field"
   }
  ],
  "links": [],

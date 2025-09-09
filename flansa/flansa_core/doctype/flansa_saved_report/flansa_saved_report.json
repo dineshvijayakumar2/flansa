@@ -21,7 +21,8 @@
   "created_on",
   "column_break_15",
   "modified_by_user",
-  "last_modified"
+  "last_modified",
+  "tenant_id"
  ],
  "fields": [
   {
@@ -126,6 +127,11 @@
    "fieldtype": "Datetime",
    "label": "Last Modified",
    "read_only": 1
+  },
+  {
+   "fieldname": "tenant_id",
+   "fieldtype": "Data",
+   "label": "Tenant ID"
   }
  ],
  "index_web_pages_for_search": 1,
