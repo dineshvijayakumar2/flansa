@@ -29,28 +29,29 @@ app_include_css = [
     "/assets/flansa/css/gallery_field_renderer.css"
 ]
 app_include_js = [
-    "/assets/flansa/js/flansa-browser-cache-manager.js",  # Load first for comprehensive browser cache management
-    
-    # Foundation Services - Load these first for other components to use
-    "/assets/flansa/js/flansa-state-manager.js",  # Centralized state management
-    "/assets/flansa/js/flansa-data-service.js",  # Unified CRUD operations
-    "/assets/flansa/js/flansa-navigation-service.js",  # Navigation controller
+    # Core Services (load first)
+    "/assets/flansa/js/flansa-browser-cache-manager.js",
+    "/assets/flansa/js/flansa-state-manager.js",
+    "/assets/flansa/js/flansa-data-service.js",
+    "/assets/flansa/js/flansa-navigation-service.js",
     
     # UI Components
-    "/assets/flansa/js/flansa_global_nav.js",  # Global navigation bar with dark mode and user menu
-    "/assets/flansa/js/flansa_breadcrumb_utils.js",  # Enhanced breadcrumb functionality
-    "/assets/flansa/js/flansa-header-manager.js",  # Modern header component system
-    "/assets/flansa/js/flansa-unified-data-view.js",  # Unified data view system for tables and reports
-    "/assets/flansa/js/flansa_report_renderer.js",  # Shared report display component for consistency
+    "/assets/flansa/js/flansa_global_nav.js",
+    "/assets/flansa/js/flansa_breadcrumb_utils.js",
+    "/assets/flansa/js/flansa-header-manager.js",
+    "/assets/flansa/js/flansa-unified-data-view.js",
+    "/assets/flansa/js/flansa_report_renderer.js",
     "/assets/flansa/js/flansa-theme-manager.js",
     "/assets/flansa/js/flansa-theme.js",
-    "/assets/flansa/js/gallery_field.js",
-    "/assets/flansa/js/gallery_field_renderer.js",  # Multi-image gallery renderer for JSON fields
-    #"/assets/flansa/js/flansa_home_redirect.js",
-    #"/assets/flansa/js/frappe-navbar-force.js"  # Fix for navbar visibility in Railway deployment
     
-    # Legacy - to be refactored
-    ]
+    # Field Components  
+    "/assets/flansa/js/gallery_field.js",
+    "/assets/flansa/js/gallery_field_renderer.js",
+    
+    # Utilities
+    "/assets/flansa/js/datetime_formatter.js",
+    "/assets/flansa/js/field-sync-tools.js",
+]
 
 # include js, css files in header of web template
 # web_include_js = "/assets/flansa/js/flansa.js"
