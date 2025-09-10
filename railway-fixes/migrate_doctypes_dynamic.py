@@ -48,7 +48,7 @@ for dt in flansa_generated_doctypes:
     # Try to find corresponding Flansa Table by doctype_name
     tables = frappe.get_all("Flansa Table",
         filters={"doctype_name": doctype_name},
-        fields=["name", "table_name", "application", "tenant_id", "status"]
+        fields=["name", "table_name", "application", "workspace_id", "status"]
     )
     
     if tables:
@@ -65,7 +65,7 @@ for dt in flansa_generated_doctypes:
             filters=[
                 ["doctype_name", "in", ["", None]],
             ],
-            fields=["name", "table_name", "application", "tenant_id", "status"]
+            fields=["name", "table_name", "application", "workspace_id", "status"]
         )
         
         if empty_tables:
@@ -149,7 +149,7 @@ all_tables = []
 for app_id in applications:
     tables = frappe.get_all("Flansa Table",
         filters={"application": app_id},
-        fields=["name", "table_name", "doctype_name", "tenant_id", "application"]
+        fields=["name", "table_name", "doctype_name", "workspace_id", "application"]
     )
     all_tables.extend(tables)
 
@@ -166,9 +166,9 @@ for table_data in all_tables:
     table_doc = frappe.get_doc("Flansa Table", table_data.name)
     
     # Set tenant inheritance
-    print(f"   Current tenant_id: {table_doc.tenant_id or 'Not set'}", flush=True)
+    print(f"   Current workspace_id: {table_doc.workspace_id or 'Not set'}", flush=True)
     table_doc.inherit_tenant_from_application()
-    print(f"   New tenant_id: {table_doc.tenant_id}", flush=True)
+    print(f"   New workspace_id: {table_doc.workspace_id}", flush=True)
     
     # Generate new DocType name
     new_doctype_name = table_doc.get_generated_doctype_name()

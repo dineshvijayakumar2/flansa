@@ -17,7 +17,7 @@ print("=" * 50, flush=True)
 # Fields that should be added (excluding standard Frappe fields)
 fields_to_add = {
     "Flansa Relationship": [
-        {"fieldname": "tenant_id", "fieldtype": "Data", "label": "Tenant ID"},
+        {"fieldname": "workspace_id", "fieldtype": "Data", "label": "Workspace ID"},
         {"fieldname": "workspace", "fieldtype": "Data", "label": "Workspace"},
         {"fieldname": "enterprise_type", "fieldtype": "Data", "label": "Enterprise Type"},
         {"fieldname": "inherit_permissions", "fieldtype": "Check", "label": "Inherit Permissions"},
@@ -25,10 +25,10 @@ fields_to_add = {
         {"fieldname": "summary_field", "fieldtype": "Data", "label": "Summary Field"}
     ],
     "Flansa Saved Report": [
-        {"fieldname": "tenant_id", "fieldtype": "Data", "label": "Tenant ID"}
+        {"fieldname": "workspace_id", "fieldtype": "Data", "label": "Workspace ID"}
     ],
     "Flansa Form Config": [
-        {"fieldname": "tenant_id", "fieldtype": "Data", "label": "Tenant ID"}
+        {"fieldname": "workspace_id", "fieldtype": "Data", "label": "Workspace ID"}
     ]
 }
 

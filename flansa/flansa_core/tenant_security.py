@@ -6,14 +6,14 @@ import frappe
 from frappe.exceptions import PermissionError
 
 def get_current_tenant():
-    """Get the current user's tenant_id"""
+    """Get the current user's workspace_id"""
     try:
         # For now, use session tenant or default to first tenant
-        if hasattr(frappe.local, 'tenant_id') and frappe.local.tenant_id:
-            return frappe.local.tenant_id
+        if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+            return frappe.local.workspace_id
         
         # Fallback: get from user session or first available tenant
-        session_tenant = frappe.session.get('tenant_id')
+        session_tenant = frappe.session.get('workspace_id')
         if session_tenant:
             return session_tenant
             
@@ -23,7 +23,7 @@ def get_current_tenant():
                                          fieldname='name', 
                                          order_by='creation')
         if first_tenant:
-            frappe.local.tenant_id = first_tenant
+            frappe.local.workspace_id = first_tenant
             return first_tenant
             
         return None
@@ -35,7 +35,7 @@ def get_current_tenant():
 def apply_tenant_filter(doctype, filters=None):
     """Apply tenant filter to database queries"""
     
-    # List of DocTypes that have tenant_id field
+    # List of DocTypes that have workspace_id field
     tenant_enabled_doctypes = [
         'Flansa Application',
         'Flansa Table',
@@ -72,9 +72,9 @@ def apply_tenant_filter(doctype, filters=None):
         filters = {}
     
     if isinstance(filters, dict):
-        filters['tenant_id'] = current_tenant
+        filters['workspace_id'] = current_tenant
     elif isinstance(filters, list):
-        filters.append(['tenant_id', '=', current_tenant])
+        filters.append(['workspace_id', '=', current_tenant])
     
     return filters
 
@@ -88,7 +88,7 @@ def validate_tenant_access(doc, method=None):
     if "System Manager" in frappe.get_roles():
         return
         
-    # Check if DocType has tenant_id field
+    # Check if DocType has workspace_id field
     tenant_enabled_doctypes = [
         'Flansa Application',
         'Flansa Table', 
@@ -111,14 +111,14 @@ def validate_tenant_access(doc, method=None):
         frappe.throw("Tenant access required. Please contact administrator.", 
                     PermissionError)
     
-    # For new documents, set tenant_id
-    if doc.is_new() and hasattr(doc, 'tenant_id'):
-        if not doc.tenant_id:
-            doc.tenant_id = current_tenant
+    # For new documents, set workspace_id
+    if doc.is_new() and hasattr(doc, 'workspace_id'):
+        if not doc.workspace_id:
+            doc.workspace_id = current_tenant
     
     # For existing documents, validate tenant access
-    elif hasattr(doc, 'tenant_id') and doc.tenant_id:
-        if doc.tenant_id != current_tenant:
+    elif hasattr(doc, 'workspace_id') and doc.workspace_id:
+        if doc.workspace_id != current_tenant:
             frappe.throw(f"Access denied. Document belongs to different tenant.", 
                         PermissionError)
 

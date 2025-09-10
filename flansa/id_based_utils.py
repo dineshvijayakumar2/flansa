@@ -5,11 +5,11 @@ Uses unique IDs instead of names for DocType generation
 
 import frappe
 
-def generate_id_based_doctype_name(tenant_id, application_id, table_id):
+def generate_id_based_doctype_name(workspace_id, application_id, table_id):
     """Generate DocType name using unique IDs - ensures name starts with a letter"""
     try:
-        # Clean tenant_id - remove special chars
-        clean_tenant = str(tenant_id).replace('-', '').replace('_', '').replace(' ', '')[:10]
+        # Clean workspace_id - remove special chars
+        clean_tenant = str(workspace_id).replace('-', '').replace('_', '').replace(' ', '')[:10]
         
         # Use first 8 chars of hash IDs
         clean_app = str(application_id)[:8] if application_id else "app"
@@ -55,32 +55,32 @@ def generate_id_based_doctype_name(tenant_id, application_id, table_id):
         # Fallback with guaranteed valid prefix
         return f"FLS_ERR_{str(application_id)[:6]}_{str(table_id)[:6]}"
 
-def get_tenant_id_from_context():
-    """Get tenant_id from current context or default"""
+def get_workspace_id_from_context():
+    """Get workspace_id from current context or default"""
     try:
         from flansa.flansa_core.tenant_security import get_current_tenant
-        tenant_id = get_current_tenant()
-        return tenant_id if tenant_id else "default"
+        workspace_id = get_current_tenant()
+        return workspace_id if workspace_id else "default"
     except Exception:
         return "default"
 
-def get_tenant_id_from_application(application_id):
-    """Get tenant_id from the Flansa Application (preferred method for consistent tenant lookup)"""
+def get_workspace_id_from_application(application_id):
+    """Get workspace_id from the Flansa Application (preferred method for consistent tenant lookup)"""
     try:
         if not application_id:
-            return get_tenant_id_from_context()  # Fallback
+            return get_workspace_id_from_context()  # Fallback
         
         app_doc = frappe.get_doc("Flansa Application", application_id)
         
-        if hasattr(app_doc, 'tenant_id') and app_doc.tenant_id:
-            return app_doc.tenant_id
+        if hasattr(app_doc, 'workspace_id') and app_doc.workspace_id:
+            return app_doc.workspace_id
         else:
-            # Application doesn't have tenant_id set, use context as fallback
-            return get_tenant_id_from_context()
+            # Application doesn't have workspace_id set, use context as fallback
+            return get_workspace_id_from_context()
             
     except Exception as e:
         frappe.log_error(f"Error getting tenant from application {application_id}: {str(e)}")
-        return get_tenant_id_from_context()  # Fallback
+        return get_workspace_id_from_context()  # Fallback
         
 def get_application_and_table_ids(application_name, table_name):
     """Get the actual IDs from names"""

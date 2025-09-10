@@ -5,7 +5,7 @@
  "allow_guest_to_view": 0,
  "allow_import": 0,
  "allow_rename": 1,
- "autoname": "field:tenant_id",
+ "autoname": "field:workspace_id",
  "beta": 0,
  "creation": "2025-08-19 16:00:00.000000",
  "default_view": "List",
@@ -13,25 +13,18 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "tenant_details_section",
-  "tenant_id",
-  "tenant_name",
+  "workspace_details_section",
+  "workspace_id",
+  "workspace_name",
   "status",
   "column_break_5",
   "primary_domain",
-  "admin_email",
   "created_date",
   "domain_configuration_section",
   "custom_domains",
-  "limits_and_config_section",
-  "max_users",
-  "max_tables",
-  "storage_limit_gb",
-  "column_break_14",
-  "features_enabled",
+  "branding_section",
   "custom_branding",
   "workspace_logo",
-  "api_access_enabled",
   "metadata_section",
   "total_applications",
   "total_tables",
@@ -43,23 +36,23 @@
  ],
  "fields": [
   {
-   "fieldname": "tenant_details_section",
+   "fieldname": "workspace_details_section",
    "fieldtype": "Section Break",
-   "label": "Tenant Details"
+   "label": "Workspace Details"
   },
   {
-   "fieldname": "tenant_id",
+   "fieldname": "workspace_id",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Tenant ID",
+   "label": "Workspace ID",
    "reqd": 1,
    "unique": 1
   },
   {
-   "fieldname": "tenant_name",
+   "fieldname": "workspace_name",
    "fieldtype": "Data",
    "in_list_view": 1,
-   "label": "Tenant Name",
+   "label": "Workspace Name",
    "reqd": 1
   },
   {
@@ -81,11 +74,6 @@
    "label": "Primary Domain"
   },
   {
-   "fieldname": "admin_email",
-   "fieldtype": "Data",
-   "label": "Admin Email"
-  },
-  {
    "default": "Today",
    "fieldname": "created_date",
    "fieldtype": "Date",
@@ -103,39 +91,6 @@
    "options": "Flansa Tenant Domain"
   },
   {
-   "fieldname": "limits_and_config_section",
-   "fieldtype": "Section Break",
-   "label": "Limits and Configuration"
-  },
-  {
-   "default": "100",
-   "fieldname": "max_users",
-   "fieldtype": "Int",
-   "label": "Max Users"
-  },
-  {
-   "default": "50",
-   "fieldname": "max_tables",
-   "fieldtype": "Int",
-   "label": "Max Tables"
-  },
-  {
-   "default": "10",
-   "fieldname": "storage_limit_gb",
-   "fieldtype": "Float",
-   "label": "Storage Limit (GB)"
-  },
-  {
-   "fieldname": "column_break_14",
-   "fieldtype": "Column Break"
-  },
-  {
-   "default": "1",
-   "fieldname": "features_enabled",
-   "fieldtype": "Check",
-   "label": "Features Enabled"
-  },
-  {
    "default": "0",
    "fieldname": "custom_branding",
    "fieldtype": "Check",
@@ -146,12 +101,6 @@
    "fieldtype": "Attach Image",
    "label": "Workspace Logo",
    "description": "Logo to display in the workspace header"
-  },
-  {
-   "default": "1",
-   "fieldname": "api_access_enabled",
-   "fieldtype": "Check",
-   "label": "API Access Enabled"
   },
   {
    "fieldname": "metadata_section",
@@ -217,7 +166,7 @@
  "modified": "2025-08-19 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flansa Core",
- "name": "Flansa Tenant Registry",
+ "name": "Flansa Workspace",
  "naming_rule": "By fieldname",
  "owner": "Administrator",
  "permissions": [
@@ -252,7 +201,7 @@
  "show_name_in_global_search": 0,
  "sort_field": "modified",
  "sort_order": "DESC",
- "title_field": "tenant_name",
+ "title_field": "workspace_name",
  "track_changes": 1,
  "track_seen": 0,
  "track_views": 0

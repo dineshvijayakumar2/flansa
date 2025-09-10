@@ -71,7 +71,7 @@ class FlansaRoleManager {
                 method: 'flansa.flansa_core.contextual_role_manager.get_contextual_role_data',
                 args: {
                     app_id: this.context.application_id,
-                    tenant_id: this.context.workspace_id
+                    workspace_id: this.context.workspace_id
                 }
             });
             
@@ -983,7 +983,7 @@ class FlansaRoleManager {
                 break;
             case 'Workspace':
                 options = 'Workspace Admin\nWorkspace Manager';
-                context_field.df.label = 'Tenant ID';
+                context_field.df.label = 'Workspace ID';
                 context_field.df.options = '';
                 context_field.df.hidden = 0;
                 break;

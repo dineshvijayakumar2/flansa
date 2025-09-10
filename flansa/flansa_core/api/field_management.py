@@ -68,7 +68,7 @@ def get_visual_builder_fields(table_name):
         meta = frappe.get_meta(table_doc.doctype_name)
         
         # Define tenant system fields that should be hidden
-        tenant_system_fields = ['tenant_id', 'flansa_table_id', 'application_id']
+        tenant_system_fields = ['workspace_id', 'flansa_table_id', 'application_id']
         
         visible_fields = []
         

@@ -71,7 +71,7 @@ doctype_js = {
 # ----------
 
 # application home page (will override Website Settings)
-home_page = "app/flansa"
+home_page = "app/flansa-workspace-builder"
 
 # Default desk page
 default_workspace = "Flansa"

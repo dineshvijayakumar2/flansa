@@ -18,7 +18,7 @@ print("\n🔍 Step 1: Finding new DocTypes...", flush=True)
 
 tables = frappe.get_all("Flansa Table",
     filters={"application": "f41h2vd9ki"},
-    fields=["name", "table_name", "doctype_name", "tenant_id"]
+    fields=["name", "table_name", "doctype_name", "workspace_id"]
 )
 
 new_doctypes = []
@@ -151,9 +151,9 @@ print("\n🔧 Step 4: Adding missing custom fields...", flush=True)
 
 standard_custom_fields = [
     {
-        'fieldname': 'tenant_id',
+        'fieldname': 'workspace_id',
         'fieldtype': 'Data',
-        'label': 'Tenant ID',
+        'label': 'Workspace ID',
         'hidden': 1,
         'read_only': 1
     },
@@ -274,7 +274,7 @@ print("=" * 40, flush=True)
 print("✅ FIXES APPLIED:", flush=True)
 print("• Changed module from 'Flansa Core' to 'Flansa Generated'", flush=True)
 print("• Added standard permissions for list view access", flush=True)
-print("• Added missing custom fields (tenant_id, flansa_table_id)", flush=True)
+print("• Added missing custom fields (workspace_id, flansa_table_id)", flush=True)
 print("• Cleared cache and refreshed DocTypes", flush=True)
 
 print(f"\n🎯 TESTING STEPS:", flush=True)

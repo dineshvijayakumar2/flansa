@@ -94,11 +94,11 @@ for dt in flansa_doctypes:
         existing_fields = {f.fieldname for f in doctype_doc.fields}
         custom_fields_to_add = []
         
-        if 'tenant_id' not in existing_fields:
+        if 'workspace_id' not in existing_fields:
             custom_fields_to_add.append({
-                'fieldname': 'tenant_id',
+                'fieldname': 'workspace_id',
                 'fieldtype': 'Data',
-                'label': 'Tenant ID',
+                'label': 'Workspace ID',
                 'hidden': 1,
                 'read_only': 1
             })
@@ -164,7 +164,7 @@ print(f"• DocTypes already correct: {len(flansa_doctypes) - fixed_count}", flu
 print(f"\n✅ FIXES APPLIED:", flush=True)
 print(f"• Module set to 'Flansa Generated'", flush=True)
 print(f"• Standard permissions added where missing", flush=True)
-print(f"• Custom fields added (tenant_id, flansa_table_id)", flush=True)
+print(f"• Custom fields added (workspace_id, flansa_table_id)", flush=True)
 print(f"• Read-only flag removed", flush=True)
 print(f"• Cache cleared", flush=True)
 

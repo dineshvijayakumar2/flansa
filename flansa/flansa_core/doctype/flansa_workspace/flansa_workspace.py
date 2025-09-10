@@ -15,17 +15,17 @@ def get_table_name(doctype):
     else:
         return f'`{table}`'
 
-class FlansaTenantRegistry(Document):
+class FlansaWorkspace(Document):
     def validate(self):
         """Validate tenant data before saving"""
         
-        # Ensure tenant_id is set and valid
-        if not self.tenant_id:
-            frappe.throw("Tenant ID is required")
+        # Ensure workspace_id is set and valid
+        if not self.workspace_id:
+            frappe.throw("Workspace ID is required")
             
-        # Validate tenant_id format (alphanumeric, no spaces)
-        if not self.tenant_id.replace("_", "").replace("-", "").isalnum():
-            frappe.throw("Tenant ID must contain only letters, numbers, hyphens, and underscores")
+        # Validate workspace_id format (alphanumeric, no spaces)
+        if not self.workspace_id.replace("_", "").replace("-", "").isalnum():
+            frappe.throw("Workspace ID must contain only letters, numbers, hyphens, and underscores")
             
         # Ensure tenant_name is set
         if not self.tenant_name:
@@ -65,7 +65,7 @@ class FlansaTenantRegistry(Document):
                     # Check if DocType exists
                     if frappe.db.exists("DocType", doctype):
                         # Use frappe.db.count which works with both databases
-                        count = frappe.db.count(doctype, {"tenant_id": self.tenant_id})
+                        count = frappe.db.count(doctype, {"workspace_id": self.workspace_id})
                         setattr(self, field_name, count or 0)
                     else:
                         # DocType doesn't exist yet
@@ -125,7 +125,7 @@ def get_tenant_by_domain(domain):
         tenant = frappe.db.get_value(
             "Flansa Tenant Registry", 
             {"primary_domain": domain}, 
-            ["name", "tenant_id", "tenant_name", "status"],
+            ["name", "workspace_id", "tenant_name", "status"],
             as_dict=True
         )
         
@@ -136,7 +136,7 @@ def get_tenant_by_domain(domain):
         # Get all tenants with custom domains
         tenants = frappe.get_all(
             "Flansa Tenant Registry",
-            fields=["name", "tenant_id", "tenant_name", "status"]
+            fields=["name", "workspace_id", "tenant_name", "status"]
         )
         
         for tenant in tenants:
@@ -146,7 +146,7 @@ def get_tenant_by_domain(domain):
                     if custom_domain.domain == domain:
                         return {
                             "name": doc.name,
-                            "tenant_id": doc.tenant_id,
+                            "workspace_id": doc.workspace_id,
                             "tenant_name": doc.tenant_name,
                             "status": doc.status
                         }
@@ -160,38 +160,38 @@ def get_tenant_by_domain(domain):
         return None
 
 @frappe.whitelist()
-def activate_tenant(tenant_id):
+def activate_tenant(workspace_id):
     """Activate a tenant - database agnostic"""
     try:
         # Use frappe.get_doc which works with both databases
-        tenant = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": tenant_id})
+        tenant = frappe.get_doc("Flansa Tenant Registry", {"workspace_id": workspace_id})
         tenant.status = "Active"
         tenant.save()
         frappe.db.commit()
-        return {"status": "success", "message": f"Tenant {tenant_id} activated"}
+        return {"status": "success", "message": f"Tenant {workspace_id} activated"}
     except Exception as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
 
 @frappe.whitelist()
-def deactivate_tenant(tenant_id):
+def deactivate_tenant(workspace_id):
     """Deactivate a tenant - database agnostic"""
     try:
         # Use frappe.get_doc which works with both databases
-        tenant = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": tenant_id})
+        tenant = frappe.get_doc("Flansa Tenant Registry", {"workspace_id": workspace_id})
         tenant.status = "Inactive"
         tenant.save()
         frappe.db.commit()
-        return {"status": "success", "message": f"Tenant {tenant_id} deactivated"}
+        return {"status": "success", "message": f"Tenant {workspace_id} deactivated"}
     except Exception as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
 
 @frappe.whitelist()
-def get_tenant_statistics(tenant_id):
+def get_tenant_statistics(workspace_id):
     """Get detailed statistics for a tenant - database agnostic"""
     try:
-        tenant = frappe.get_doc("Flansa Tenant Registry", {"tenant_id": tenant_id})
+        tenant = frappe.get_doc("Flansa Tenant Registry", {"workspace_id": workspace_id})
         
         # Update stats before returning
         tenant.update_tenant_stats()

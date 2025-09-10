@@ -39,8 +39,8 @@ def setup_hierarchical_role_system():
                         "in_list_view": 1
                     },
                     {
-                        "fieldname": "tenant_id",
-                        "label": "Tenant ID",
+                        "fieldname": "workspace_id",
+                        "label": "Workspace ID",
                         "fieldtype": "Data",
                         "reqd": 1,
                         "in_standard_filter": 1

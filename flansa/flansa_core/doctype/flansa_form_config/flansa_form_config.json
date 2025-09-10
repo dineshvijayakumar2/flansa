@@ -80,9 +80,9 @@
    "read_only": 1
   },
   {
-   "fieldname": "tenant_id",
+   "fieldname": "workspace_id",
    "fieldtype": "Data",
-   "label": "Tenant ID"
+   "label": "Workspace ID"
   }
  ],
  "index_web_pages_for_search": 1,

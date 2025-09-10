@@ -31,13 +31,13 @@ window.FlansaGlobalNav = {
                 <!-- Navigation Menu - Vertical Icons -->
                 <nav class="sidebar-nav vertical-icons">
                     <div class="nav-icons-stack">
-                        <a href="/app/flansa-workspace" class="nav-icon-item" data-route="workspace" title="Home">
+                        <a href="/app/flansa-workspace-builder" class="nav-icon-item" data-route="workspace" title="Home">
                             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                             </svg>
                         </a>
                         
-                        <a href="/app/tenant-switcher" class="nav-icon-item" data-route="tenant-switcher" title="Tenant Switcher">
+                        <a href="/app/workspace-manager" class="nav-icon-item" data-route="workspace-manager" title="Workspace Manager">
                             <svg width="24" height="24" viewBox="0 0 20 20" fill="currentColor">
                                 <path d="M4 3a2 2 0 100 4h12a2 2 0 100-4H4z"/>
                                 <path fill-rule="evenodd" d="M3 8a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
@@ -272,7 +272,7 @@ window.FlansaGlobalNav = {
         const currentPath = window.location.pathname;
         $('.nav-icon-item').removeClass('active');
         
-        if (currentPath.includes('flansa-workspace')) {
+        if (currentPath.includes('flansa-workspace-builder')) {
             $('[data-route="workspace"]').addClass('active');
         } else if (currentPath.includes('flansa-app-builder') || currentPath.includes('flansa-table-builder')) {
             $('[data-route="app-builder"]').addClass('active');
@@ -318,11 +318,11 @@ window.FlansaGlobalNav = {
             }
             
             // Try to fetch current workspace settings
-            if (frappe.boot && frappe.boot.tenant_id) {
+            if (frappe.boot && frappe.boot.workspace_id) {
                 const result = await frappe.call({
                     method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
                     args: {
-                        tenant_id: frappe.boot.tenant_id
+                        workspace_id: frappe.boot.workspace_id
                     },
                     freeze: false
                 });

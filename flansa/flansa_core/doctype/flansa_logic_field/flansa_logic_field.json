@@ -83,9 +83,9 @@
    "label": "Is Active"
   },
   {
-   "fieldname": "tenant_id",
+   "fieldname": "workspace_id",
    "fieldtype": "Data",
-   "label": "Tenant ID",
+   "label": "Workspace ID",
    "read_only": 1
   },
   {

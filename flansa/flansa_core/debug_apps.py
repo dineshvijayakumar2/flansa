@@ -9,16 +9,16 @@ def debug_applications():
     try:
         print("Step 1: Checking all Flansa Applications...", flush=True)
         all_apps = frappe.get_all("Flansa Application", 
-                                 fields=["name", "app_name", "app_title", "status", "tenant_id", "owner", "creation"],
+                                 fields=["name", "app_name", "app_title", "status", "workspace_id", "owner", "creation"],
                                  order_by="creation desc")
         
         print(f"✅ Found {len(all_apps)} total applications:", flush=True)
         for app in all_apps:
-            print(f"  - {app.name}: '{app.app_title}' (Status: {app.status}, Tenant: {app.tenant_id}, Owner: {app.owner})", flush=True)
+            print(f"  - {app.name}: '{app.app_title}' (Status: {app.status}, Tenant: {app.workspace_id}, Owner: {app.owner})", flush=True)
         
         print("Step 2: Checking current tenant context...", flush=True)
-        current_tenant = getattr(frappe.local, 'tenant_id', None)
-        print(f"✅ Current tenant_id: {current_tenant}", flush=True)
+        current_tenant = getattr(frappe.local, 'workspace_id', None)
+        print(f"✅ Current workspace_id: {current_tenant}", flush=True)
         
         print("Step 3: Checking workspace API without role filtering...", flush=True)
         try:
@@ -47,14 +47,14 @@ def debug_applications():
         for tenant in test_tenants:
             filters = {"status": "Active"}
             if tenant:
-                filters["tenant_id"] = tenant
+                filters["workspace_id"] = tenant
             
             tenant_apps = frappe.get_all("Flansa Application",
                                         filters=filters,
-                                        fields=["name", "app_title", "tenant_id"])
+                                        fields=["name", "app_title", "workspace_id"])
             print(f"  Tenant '{tenant}': {len(tenant_apps)} apps", flush=True)
             for app in tenant_apps:
-                print(f"    - {app.app_title} (Tenant: {app.tenant_id})", flush=True)
+                print(f"    - {app.app_title} (Tenant: {app.workspace_id})", flush=True)
         
         return {
             "total_apps": len(all_apps),

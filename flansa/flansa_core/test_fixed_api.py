@@ -15,7 +15,7 @@ def test_fixed_workspace_api():
         for app in apps:
             print(f"  - {app.get('app_title', 'Unknown')}", flush=True)
             print(f"    Name: {app.get('name', 'N/A')}", flush=True)
-            print(f"    Tenant: {app.get('tenant_id', 'N/A')}", flush=True)
+            print(f"    Tenant: {app.get('workspace_id', 'N/A')}", flush=True)
             print(f"    Tables: {app.get('table_count', 0)}", flush=True)
             print(f"    Role: {app.get('user_role', 'N/A')}", flush=True)
             print(f"    Can Edit: {app.get('can_edit', False)}", flush=True)

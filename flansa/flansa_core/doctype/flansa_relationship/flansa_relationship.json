@@ -261,9 +261,9 @@
    "options": "JSON"
   },
   {
-   "fieldname": "tenant_id",
+   "fieldname": "workspace_id",
    "fieldtype": "Data",
-   "label": "Tenant ID"
+   "label": "Workspace ID"
   },
   {
    "fieldname": "workspace",

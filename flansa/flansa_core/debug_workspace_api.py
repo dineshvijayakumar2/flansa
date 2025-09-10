@@ -23,7 +23,7 @@ def debug_workspace_api_detailed():
         if is_system_admin:
             all_apps = frappe.get_all("Flansa Application", 
                                      fields=["name", "app_name", "app_title", "description", "status", 
-                                            "theme_color", "icon", "is_public", "tenant_id", "creation"],
+                                            "theme_color", "icon", "is_public", "workspace_id", "creation"],
                                      filters={"status": "Active"},
                                      order_by="creation desc")
             print(f"Direct query returned {len(all_apps)} apps:", flush=True)
@@ -46,7 +46,7 @@ def debug_workspace_api_detailed():
             # This should be the path taken
             all_apps = frappe.get_all("Flansa Application", 
                                      fields=["name", "app_name", "app_title", "description", "status", 
-                                            "theme_color", "icon", "is_public", "tenant_id", "creation"],
+                                            "theme_color", "icon", "is_public", "workspace_id", "creation"],
                                      filters={"status": "Active"},
                                      order_by="creation desc")
             
@@ -65,7 +65,7 @@ def debug_workspace_api_detailed():
                     'theme_color': app.theme_color,
                     'icon': app.icon,
                     'is_public': app.is_public,
-                    'tenant_id': app.tenant_id,
+                    'workspace_id': app.workspace_id,
                     'table_count': table_count,
                     'user_role': 'App Owner',  # System admins get owner privileges
                     'permissions': ['admin', 'create', 'read', 'update', 'delete', 'manage_users'],

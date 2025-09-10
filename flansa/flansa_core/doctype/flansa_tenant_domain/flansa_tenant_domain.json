@@ -78,12 +78,12 @@
    "read_only": 1
   },
   {
-   "fieldname": "tenant_id",
+   "fieldname": "workspace_id",
    "fieldtype": "Data",
    "hidden": 1,
    "ignore_user_permissions": 1,
    "in_standard_filter": 1,
-   "label": "Tenant ID",
+   "label": "Workspace ID",
    "read_only": 1
   }
  ],

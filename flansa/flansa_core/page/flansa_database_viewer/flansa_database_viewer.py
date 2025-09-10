@@ -1,7 +1,7 @@
 import frappe
 import re
 from frappe import _
-from flansa.id_based_utils import generate_id_based_doctype_name, get_tenant_id_from_context
+from flansa.id_based_utils import generate_id_based_doctype_name, get_workspace_id_from_context
 
 def get_db_type():
     """Get current database type"""
@@ -944,10 +944,10 @@ def fix_flansa_table_references():
                     return ''.join(x.capitalize() for x in components if x)
                 
                 # Generate ID-based expected DocType name
-                tenant_id = get_tenant_id_from_context()
+                workspace_id = get_workspace_id_from_context()
                 application_id = ft.application  # Hash ID
                 table_id = ft.name              # Hash ID
-                expected_doctype = generate_id_based_doctype_name(tenant_id, application_id, table_id)
+                expected_doctype = generate_id_based_doctype_name(workspace_id, application_id, table_id)
                 
                 # Check if this DocType actually exists
                 if expected_doctype in doctype_names:

@@ -1,7 +1,7 @@
 import frappe
 from frappe.model.document import Document
 from frappe import _
-from flansa.id_based_utils import generate_id_based_doctype_name, get_tenant_id_from_context, get_tenant_id_from_application
+from flansa.id_based_utils import generate_id_based_doctype_name, get_workspace_id_from_context, get_workspace_id_from_application
 
 class FlansaTable(Document):
     def validate(self):
@@ -13,16 +13,16 @@ class FlansaTable(Document):
             self.doctype_name = self.get_generated_doctype_name()
     
     def inherit_tenant_from_application(self):
-        """Inherit tenant_id from the parent Application for consistent multi-tenancy"""
+        """Inherit workspace_id from the parent Application for consistent multi-tenancy"""
         try:
             if self.application:
-                # Get the tenant_id from the Application
-                app_tenant_id = get_tenant_id_from_application(self.application)
+                # Get the workspace_id from the Application
+                app_workspace_id = get_workspace_id_from_application(self.application)
                 
-                if app_tenant_id and app_tenant_id != "default":
-                    # Set tenant_id if not already set or different
-                    if not self.tenant_id or self.tenant_id != app_tenant_id:
-                        self.tenant_id = app_tenant_id
+                if app_workspace_id and app_workspace_id != "default":
+                    # Set workspace_id if not already set or different
+                    if not self.workspace_id or self.workspace_id != app_workspace_id:
+                        self.workspace_id = app_workspace_id
                         
         except Exception as e:
             frappe.log_error(f"Error inheriting tenant from application: {str(e)}")
@@ -65,16 +65,16 @@ class FlansaTable(Document):
             return ""
         
         try:
-            # IMPORTANT: Get tenant_id from the Application for consistent multi-tenant naming
-            # This ensures all tables in the same application use the same tenant_id
-            tenant_id = get_tenant_id_from_application(self.application)
+            # IMPORTANT: Get workspace_id from the Application for consistent multi-tenant naming
+            # This ensures all tables in the same application use the same workspace_id
+            workspace_id = get_workspace_id_from_application(self.application)
             
             # Use application and table IDs directly (they're already hashes from autoname)
             application_id = self.application  # This is the hash ID
             table_id = self.name              # This is the hash ID
             
             # Generate ID-based DocType name
-            doctype_name = generate_id_based_doctype_name(tenant_id, application_id, table_id)
+            doctype_name = generate_id_based_doctype_name(workspace_id, application_id, table_id)
             
             return doctype_name
             

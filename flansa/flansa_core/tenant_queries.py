@@ -20,7 +20,7 @@ def get_tenant_doc(doctype, name):
     
     # Validate tenant access
     current_tenant = get_current_tenant()
-    if hasattr(doc, 'tenant_id') and doc.tenant_id != current_tenant:
+    if hasattr(doc, 'workspace_id') and doc.workspace_id != current_tenant:
         frappe.throw("Access denied. Document belongs to different tenant.")
     
     return doc

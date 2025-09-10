@@ -51,14 +51,14 @@ for old_doctype, table_name in existing_doctypes.items():
         # Find corresponding Flansa Table
         flansa_table = frappe.get_all("Flansa Table",
             filters={"table_name": table_name, "application": "f41h2vd9ki"},
-            fields=["name", "table_name", "tenant_id", "doctype_name", "status"]
+            fields=["name", "table_name", "workspace_id", "doctype_name", "status"]
         )
         
         if flansa_table:
             flansa_table = flansa_table[0]
             print(f"   Flansa Table: {flansa_table.name} (status: {flansa_table.status})", flush=True)
             print(f"   Current doctype_name: {flansa_table.doctype_name or 'NOT SET'}", flush=True)
-            print(f"   Current tenant_id: {flansa_table.tenant_id or 'NOT SET'}", flush=True)
+            print(f"   Current workspace_id: {flansa_table.workspace_id or 'NOT SET'}", flush=True)
         else:
             print(f"   ❌ No matching Flansa Table found for '{table_name}'", flush=True)
             continue
@@ -97,7 +97,7 @@ for old_doctype, data in analysis.items():
         
         # Ensure tenant inheritance
         table_doc.inherit_tenant_from_application()
-        print(f"   Tenant ID: {table_doc.tenant_id}", flush=True)
+        print(f"   Workspace ID: {table_doc.workspace_id}", flush=True)
         
         # Generate new name
         new_name = table_doc.get_generated_doctype_name()

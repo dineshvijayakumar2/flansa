@@ -128,8 +128,8 @@ class HierarchicalRoleService:
                         hierarchy['highest_role'] = role_name
             
             # Get workspace roles for current tenant
-            if context and context.get('tenant_id'):
-                workspace_roles = HierarchicalRoleService._get_workspace_roles(user_email, context['tenant_id'])
+            if context and context.get('workspace_id'):
+                workspace_roles = HierarchicalRoleService._get_workspace_roles(user_email, context['workspace_id'])
                 hierarchy['workspace_roles'] = workspace_roles
                 
                 for role_name in workspace_roles:
@@ -172,7 +172,7 @@ class HierarchicalRoleService:
             }
     
     @staticmethod
-    def _get_workspace_roles(user_email: str, tenant_id: str) -> List[str]:
+    def _get_workspace_roles(user_email: str, workspace_id: str) -> List[str]:
         """Get workspace-level roles for a user in a specific tenant"""
         try:
             # Check if workspace roles are stored in a separate DocType
@@ -180,7 +180,7 @@ class HierarchicalRoleService:
                 'Flansa Workspace User',
                 filters={
                     'user': user_email,
-                    'tenant_id': tenant_id
+                    'workspace_id': workspace_id
                 },
                 fields=['workspace_role']
             )
@@ -188,7 +188,7 @@ class HierarchicalRoleService:
             return [user.workspace_role for user in workspace_users if user.workspace_role]
         except:
             # Fallback: Check if user is workspace admin based on tenant ownership
-            tenant_doc = frappe.get_value('Flansa Tenant Registry', tenant_id, 'owner')
+            tenant_doc = frappe.get_value('Flansa Tenant Registry', workspace_id, 'owner')
             if tenant_doc == user_email:
                 return ['Workspace Admin']
             return []
@@ -381,7 +381,7 @@ class HierarchicalRoleService:
                 # Workspace admins can assign workspace roles
                 assigner_perms = HierarchicalRoleService.get_effective_permissions(
                     assigned_by,
-                    {'tenant_id': context_id}
+                    {'workspace_id': context_id}
                 )
                 
                 if 'manage_users' not in assigner_perms and '*' not in assigner_perms:
@@ -392,7 +392,7 @@ class HierarchicalRoleService:
                     'doctype': 'Flansa Workspace User',
                     'user': user_email,
                     'workspace_role': role_name,
-                    'tenant_id': context_id,
+                    'workspace_id': context_id,
                     'assigned_by': assigned_by
                 })
                 workspace_user.insert()
@@ -435,7 +435,7 @@ class HierarchicalRoleService:
 def get_user_hierarchy(application_id=None):
     """Get current user's role hierarchy"""
     context = {
-        'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else None,
+        'workspace_id': frappe.local.workspace_id if hasattr(frappe.local, 'workspace_id') else None,
         'application_id': application_id
     }
     return HierarchicalRoleService.get_user_role_hierarchy(frappe.session.user, context)
@@ -445,7 +445,7 @@ def get_user_hierarchy(application_id=None):
 def check_page_access(page_name, application_id=None):
     """Check if current user can access a specific page"""
     context = {
-        'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else None,
+        'workspace_id': frappe.local.workspace_id if hasattr(frappe.local, 'workspace_id') else None,
         'application_id': application_id
     }
     return HierarchicalRoleService.can_access_core_page(frappe.session.user, page_name, context)
@@ -455,7 +455,7 @@ def check_page_access(page_name, application_id=None):
 def get_user_permissions(application_id=None):
     """Get effective permissions for current user"""
     context = {
-        'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else None,
+        'workspace_id': frappe.local.workspace_id if hasattr(frappe.local, 'workspace_id') else None,
         'application_id': application_id
     }
     permissions = HierarchicalRoleService.get_effective_permissions(frappe.session.user, context)

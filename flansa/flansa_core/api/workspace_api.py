@@ -8,21 +8,21 @@ import frappe
 from typing import Dict, List, Optional
 from frappe import _
 
-def get_current_tenant_id():
-    """Get the current tenant_id from session or workspace context"""
+def get_current_workspace_id():
+    """Get the current workspace_id from session or workspace context"""
     # Try to get from frappe session first
-    if hasattr(frappe.local, 'current_tenant_id'):
-        return frappe.local.current_tenant_id
+    if hasattr(frappe.local, 'current_workspace_id'):
+        return frappe.local.current_workspace_id
     
     # Try to get from request headers or params
     if frappe.request and frappe.request.headers:
-        tenant_id = frappe.request.headers.get('X-Tenant-Id')
-        if tenant_id:
-            return tenant_id
+        workspace_id = frappe.request.headers.get('X-Tenant-Id')
+        if workspace_id:
+            return workspace_id
     
     # Try to get from form dict (passed from frontend)
-    if frappe.form_dict and frappe.form_dict.get('tenant_id'):
-        return frappe.form_dict.get('tenant_id')
+    if frappe.form_dict and frappe.form_dict.get('workspace_id'):
+        return frappe.form_dict.get('workspace_id')
     
     # Try to get from user's default workspace - check if table/fields exist
     user = frappe.session.user
@@ -32,12 +32,12 @@ def get_current_tenant_id():
             workspace_user = frappe.get_all(
                 "Flansa Workspace User",
                 filters={"user": user},
-                fields=["tenant_id"],  # Only get tenant_id, not workspace
+                fields=["workspace_id"],  # Only get workspace_id, not workspace
                 limit=1
             )
             
-            if workspace_user and workspace_user[0].get('tenant_id'):
-                return workspace_user[0].get('tenant_id')
+            if workspace_user and workspace_user[0].get('workspace_id'):
+                return workspace_user[0].get('workspace_id')
     except:
         pass
     
@@ -50,7 +50,7 @@ def get_user_applications():
         user_email = frappe.session.user
         
         # Get current tenant context
-        current_tenant_id = get_current_tenant_id()
+        current_workspace_id = get_current_workspace_id()
         
         # Check if user is System Manager or Administrator - they should see all apps
         user_doc = frappe.get_doc('User', user_email)
@@ -64,14 +64,14 @@ def get_user_applications():
             filters = {"status": "Active"}
             
             # Apply tenant filter only if we have a specific tenant context
-            # If no tenant_id, show all apps (for Administrator/System Manager)
-            if current_tenant_id:
-                filters["tenant_id"] = current_tenant_id
-            # If no current_tenant_id, system admins see ALL apps
+            # If no workspace_id, show all apps (for Administrator/System Manager)
+            if current_workspace_id:
+                filters["workspace_id"] = current_workspace_id
+            # If no current_workspace_id, system admins see ALL apps
             
             all_apps = frappe.get_all("Flansa Application", 
                                      fields=["name", "app_name", "app_title", "description", "status", 
-                                            "theme_color", "icon", "is_public", "tenant_id", "creation"],
+                                            "theme_color", "icon", "is_public", "workspace_id", "creation"],
                                      filters=filters,
                                      order_by="creation desc")
             
@@ -90,7 +90,7 @@ def get_user_applications():
                     'theme_color': app.theme_color,
                     'icon': app.icon,
                     'is_public': app.is_public,
-                    'tenant_id': app.tenant_id,
+                    'workspace_id': app.workspace_id,
                     'table_count': table_count,
                     'user_role': 'App Owner',  # System admins get owner privileges
                     'permissions': ['admin', 'create', 'read', 'update', 'delete', 'manage_users'],
@@ -379,8 +379,8 @@ def get_user_dashboard_stats():
         report_count = 0
         if 'read' in user_permissions:
             report_filters = {'owner': user_email}
-            if hasattr(frappe.local, 'tenant_id'):
-                report_filters['tenant_id'] = frappe.local.tenant_id
+            if hasattr(frappe.local, 'workspace_id'):
+                report_filters['workspace_id'] = frappe.local.workspace_id
             
             report_count = frappe.db.count('Flansa Saved Report', filters=report_filters)
         
@@ -423,7 +423,7 @@ def get_recent_activity():
         if 'read' in user_permissions:
             recent_apps = frappe.get_all(
                 'Flansa Application',
-                filters={'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''},
+                filters={'workspace_id': frappe.local.workspace_id if hasattr(frappe.local, 'workspace_id') else ''},
                 fields=['name', 'app_title', 'creation', 'owner'],
                 order_by='creation desc',
                 limit=5
@@ -443,7 +443,7 @@ def get_recent_activity():
         if 'read' in user_permissions:
             recent_tables = frappe.get_all(
                 'Flansa Table',
-                filters={'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''},
+                filters={'workspace_id': frappe.local.workspace_id if hasattr(frappe.local, 'workspace_id') else ''},
                 fields=['name', 'display_name', 'creation', 'owner', 'application_id'],
                 order_by='creation desc',
                 limit=5
@@ -465,7 +465,7 @@ def get_recent_activity():
             'Flansa Saved Report',
             filters={
                 'owner': user_email,
-                'tenant_id': frappe.local.tenant_id if hasattr(frappe.local, 'tenant_id') else ''
+                'workspace_id': frappe.local.workspace_id if hasattr(frappe.local, 'workspace_id') else ''
             },
             fields=['name', 'report_title', 'creation'],
             order_by='creation desc',

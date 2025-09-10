@@ -79,7 +79,7 @@ print("\n🔍 Step 2: Setting up Flansa Tables...", flush=True)
 
 tables = frappe.get_all("Flansa Table",
     filters={"application": "f41h2vd9ki"},
-    fields=["name", "table_name", "doctype_name", "tenant_id"]
+    fields=["name", "table_name", "doctype_name", "workspace_id"]
 )
 
 table_mapping = {}
@@ -87,11 +87,11 @@ for table_data in tables:
     print(f"\n📋 Setting up {table_data.table_name}:", flush=True)
     
     table_doc = frappe.get_doc("Flansa Table", table_data.name)
-    print(f"   Current tenant_id: {table_doc.tenant_id or 'Not set'}", flush=True)
+    print(f"   Current workspace_id: {table_doc.workspace_id or 'Not set'}", flush=True)
     
     # Set tenant inheritance
     table_doc.inherit_tenant_from_application()
-    print(f"   New tenant_id: {table_doc.tenant_id}", flush=True)
+    print(f"   New workspace_id: {table_doc.workspace_id}", flush=True)
     
     # Generate new DocType name
     new_doctype_name = table_doc.get_generated_doctype_name()

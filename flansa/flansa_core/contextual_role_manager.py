@@ -53,14 +53,14 @@ class ContextualRoleManager:
         context = {
             'scope': 'platform',  # Default to platform level
             'application_id': url_params.get('app'),
-            'tenant_id': url_params.get('tenant'),
+            'workspace_id': url_params.get('tenant'),
             'user_id': url_params.get('user')
         }
         
         # Determine scope based on parameters
         if context['application_id']:
             context['scope'] = 'application'
-        elif context['tenant_id']:
+        elif context['workspace_id']:
             context['scope'] = 'workspace'
         
         return context
@@ -122,9 +122,9 @@ class ContextualRoleManager:
             )
         elif user_scope == 'workspace':
             # Workspace admins see users in their workspace
-            if context.get('tenant_id'):
+            if context.get('workspace_id'):
                 # Get users who have roles in this workspace
-                users = ContextualRoleManager._get_workspace_users(context['tenant_id'])
+                users = ContextualRoleManager._get_workspace_users(context['workspace_id'])
             else:
                 # If no specific workspace, show users with workspace-related roles
                 users = ContextualRoleManager._get_users_with_roles(['Workspace Admin', 'Workspace Manager'])
@@ -156,7 +156,7 @@ class ContextualRoleManager:
         # Get users with workspace roles in this workspace
         workspace_users = frappe.get_all(
             'Flansa Workspace User',
-            filters={'tenant_id': workspace_id},
+            filters={'workspace_id': workspace_id},
             fields=['user']
         )
         
@@ -167,7 +167,7 @@ class ContextualRoleManager:
             SELECT DISTINCT au.user
             FROM `tabFlansa Application User` au
             JOIN `tabFlansa Application` app ON au.parent = app.name
-            WHERE app.tenant_id = %s
+            WHERE app.workspace_id = %s
         """, (workspace_id,), as_dict=True)
         
         user_emails.extend([u.user for u in app_users])
@@ -340,10 +340,10 @@ class ContextualRoleManager:
             except:
                 breadcrumbs.append({'label': 'Role Manager', 'route': '#', 'icon': 'users', 'current': True})
         
-        elif context['scope'] == 'workspace' and context.get('tenant_id'):
+        elif context['scope'] == 'workspace' and context.get('workspace_id'):
             # Workspace level: Home > Workspace > Role Manager
             breadcrumbs.extend([
-                {'label': f'Workspace: {context["tenant_id"]}', 'route': f'/app/flansa-workspace?tenant={context["tenant_id"]}', 'icon': 'building'},
+                {'label': f'Workspace: {context["workspace_id"]}', 'route': f'/app/flansa-workspace?tenant={context["workspace_id"]}', 'icon': 'building'},
                 {'label': 'Role Manager', 'route': '#', 'icon': 'users', 'current': True}
             ])
         
@@ -356,11 +356,11 @@ class ContextualRoleManager:
 
 # API Methods
 @frappe.whitelist()
-def get_contextual_role_data(app_id=None, tenant_id=None, user_id=None):
+def get_contextual_role_data(app_id=None, workspace_id=None, user_id=None):
     """Get role management data for the given context"""
     context = {
         'application_id': app_id,
-        'tenant_id': tenant_id,
+        'workspace_id': workspace_id,
         'user_id': user_id,
         'scope': 'platform'
     }
@@ -368,7 +368,7 @@ def get_contextual_role_data(app_id=None, tenant_id=None, user_id=None):
     # Determine scope
     if app_id:
         context['scope'] = 'application'
-    elif tenant_id:
+    elif workspace_id:
         context['scope'] = 'tenant'
     
     current_user = frappe.session.user
@@ -405,7 +405,7 @@ def assign_contextual_role(user_email, role_name, scope, context_id=None):
     if scope == 'application':
         context['application_id'] = context_id
     elif scope == 'tenant':
-        context['tenant_id'] = context_id
+        context['workspace_id'] = context_id
     
     # Check if current user can assign this role
     capabilities = ContextualRoleManager.get_user_role_management_capabilities(current_user, context)

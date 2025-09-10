@@ -117,10 +117,10 @@ def apply_tenant_inheritance(doc, method=None):
         return
     
     try:
-        # Auto-populate tenant_id if not set
-        if hasattr(doc, 'tenant_id') and not doc.tenant_id:
-            from flansa.id_based_utils import get_tenant_id_from_context
-            doc.tenant_id = get_tenant_id_from_context()
+        # Auto-populate workspace_id if not set
+        if hasattr(doc, 'workspace_id') and not doc.workspace_id:
+            from flansa.id_based_utils import get_workspace_id_from_context
+            doc.workspace_id = get_workspace_id_from_context()
         
         # Auto-populate application_id if available from context  
         if hasattr(doc, 'application_id') and not doc.application_id:

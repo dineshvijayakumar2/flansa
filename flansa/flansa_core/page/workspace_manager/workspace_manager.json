@@ -7,9 +7,9 @@
  "modified": "2025-08-19 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Flansa Core",
- "name": "tenant-switcher",
+ "name": "workspace-manager",
  "owner": "Administrator",
- "page_name": "Tenant Switcher",
+ "page_name": "Workspace Manager",
  "roles": [
   {
    "role": "System Manager"
@@ -17,5 +17,5 @@
  ],
  "standard": "Yes",
  "system_page": 0,
- "title": "Tenant Switcher"
+ "title": "Workspace Manager"
 }

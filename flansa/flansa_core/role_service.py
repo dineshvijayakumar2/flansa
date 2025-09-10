@@ -41,8 +41,8 @@ class FlansaRoleService:
             try:
                 from flansa.flansa_core.hierarchical_role_service import HierarchicalRoleService
                 context = {'application_id': application_id}
-                if hasattr(frappe.local, 'tenant_id'):
-                    context['tenant_id'] = frappe.local.tenant_id
+                if hasattr(frappe.local, 'workspace_id'):
+                    context['workspace_id'] = frappe.local.workspace_id
                 
                 hierarchy = HierarchicalRoleService.get_user_role_hierarchy(user_email, context)
                 if hierarchy.get('highest_role'):
@@ -157,18 +157,18 @@ class FlansaRoleService:
                 applications = frappe.get_all(
                     'Flansa Application',
                     filters={'status': 'Active'},
-                    fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'tenant_id']
+                    fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'workspace_id']
                 )
             else:
-                # Regular users: filter by tenant if tenant_id is set
+                # Regular users: filter by tenant if workspace_id is set
                 filters = {}
-                if hasattr(frappe.local, 'tenant_id') and frappe.local.tenant_id:
-                    filters['tenant_id'] = frappe.local.tenant_id
+                if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                    filters['workspace_id'] = frappe.local.workspace_id
                 
                 applications = frappe.get_all(
                     'Flansa Application',
                     filters=filters,
-                    fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'tenant_id']
+                    fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'workspace_id']
                 )
             
             accessible_apps = []
@@ -237,8 +237,8 @@ class FlansaRoleService:
             
             # Base filter for tenant
             filters = {}
-            if hasattr(frappe.local, 'tenant_id') and frappe.local.tenant_id:
-                filters['tenant_id'] = frappe.local.tenant_id
+            if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                filters['workspace_id'] = frappe.local.workspace_id
             
             # If application_id provided, filter by application
             if application_id:

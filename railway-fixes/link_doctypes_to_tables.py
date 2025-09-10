@@ -30,7 +30,7 @@ print("\n🔍 Step 2: Finding Flansa Tables to link...", flush=True)
 
 # Get tables with empty or mismatched doctype_name
 all_tables = frappe.db.sql("""
-    SELECT name, table_name, doctype_name, tenant_id, application
+    SELECT name, table_name, doctype_name, workspace_id, application
     FROM `tabFlansa Table`
     WHERE doctype_name IS NULL 
        OR doctype_name = '' 

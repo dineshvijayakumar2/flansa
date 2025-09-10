@@ -1432,7 +1432,7 @@ class FlansaAppBuilder {
                                 
                                 // Flansa-specific system fields to exclude
                                 const flansaFields = [
-                                    'tenant', 'application', 'application_id', 'table_id', 'tenant_id'
+                                    'tenant', 'application', 'application_id', 'table_id', 'workspace_id'
                                 ];
                                 
                                 // Exclude system fields, flansa fields, and fields marked as standard

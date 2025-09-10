@@ -29,13 +29,13 @@ class TenantValidator:
         """Get current user's tenant with fallback logic"""
         try:
             # Check session first
-            if hasattr(frappe.local, 'tenant_id') and frappe.local.tenant_id:
-                return frappe.local.tenant_id
+            if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                return frappe.local.workspace_id
             
             # Check user session
-            session_tenant = frappe.session.get('tenant_id')
+            session_tenant = frappe.session.get('workspace_id')
             if session_tenant:
-                frappe.local.tenant_id = session_tenant
+                frappe.local.workspace_id = session_tenant
                 return session_tenant
             
             # For development/admin: use first active tenant
@@ -47,7 +47,7 @@ class TenantValidator:
                     order_by='creation'
                 )
                 if first_tenant:
-                    frappe.local.tenant_id = first_tenant
+                    frappe.local.workspace_id = first_tenant
                     return first_tenant
             
             return None
@@ -81,18 +81,18 @@ class TenantValidator:
         
         # Handle new documents
         if doc.is_new():
-            if hasattr(doc, 'tenant_id'):
-                if not doc.tenant_id:
-                    doc.tenant_id = current_tenant
+            if hasattr(doc, 'workspace_id'):
+                if not doc.workspace_id:
+                    doc.workspace_id = current_tenant
                     frappe.msgprint(f"Document assigned to tenant: {current_tenant}", 
                                    alert=True, indicator='blue')
         
         # Validate existing documents
         else:
-            if hasattr(doc, 'tenant_id') and doc.tenant_id:
-                if doc.tenant_id != current_tenant:
+            if hasattr(doc, 'workspace_id') and doc.workspace_id:
+                if doc.workspace_id != current_tenant:
                     frappe.throw(
-                        _("Access denied. Document belongs to different tenant: {0}").format(doc.tenant_id),
+                        _("Access denied. Document belongs to different tenant: {0}").format(doc.workspace_id),
                         PermissionError
                     )
     
@@ -112,23 +112,23 @@ class TenantValidator:
             # Restrictive: no tenant = no data
             if isinstance(filters, dict):
                 filters = filters or {}
-                filters['tenant_id'] = '__no_tenant_access__'  # Impossible value
+                filters['workspace_id'] = '__no_tenant_access__'  # Impossible value
             else:
                 filters = filters or []
                 if isinstance(filters, list):
-                    filters.append(['tenant_id', '=', '__no_tenant_access__'])
+                    filters.append(['workspace_id', '=', '__no_tenant_access__'])
             return filters
         
         # Apply tenant filter
         if isinstance(filters, dict):
             filters = filters or {}
-            filters['tenant_id'] = current_tenant
+            filters['workspace_id'] = current_tenant
         elif isinstance(filters, list):
             filters = filters or []
-            filters.append(['tenant_id', '=', current_tenant])
+            filters.append(['workspace_id', '=', current_tenant])
         else:
             # Handle string filters or other formats
-            filters = {'tenant_id': current_tenant}
+            filters = {'workspace_id': current_tenant}
         
         return filters
     

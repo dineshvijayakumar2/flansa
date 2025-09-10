@@ -3,7 +3,7 @@
  * Main entry point for the no-code platform showing only applications
  */
 
-frappe.pages['flansa-workspace'].on_page_load = function(wrapper) {
+frappe.pages['flansa-workspace-builder'].on_page_load = function(wrapper) {
     var page = frappe.ui.make_app_page({
         parent: wrapper,
         title: 'Flansa Applications',
@@ -32,12 +32,12 @@ class FlansaApplicationsWorkspace {
         
         // Load data after DOM is ready
         setTimeout(() => {
-            this.load_tenant_info().then(() => {
+            this.load_workspace_info().then(() => {
                 console.log('✅ Tenant info loaded successfully');
             }).catch((error) => {
                 console.warn('❌ Failed to load tenant info:', error);
                 // Set immediate fallback
-                this.set_fallback_tenant_info();
+                this.set_fallback_workspace_info();
             });
             this.load_applications();
         }, 100);
@@ -1138,13 +1138,13 @@ class FlansaApplicationsWorkspace {
         $('#empty-state').hide();
         $('#no-results-state').hide();
         
-        // Get current tenant_id from workspace context
-        const current_tenant_id = this.get_current_workspace_id();
+        // Get current workspace_id from workspace context
+        const current_workspace_id = this.get_current_workspace_id();
         
         frappe.call({
             method: 'flansa.flansa_core.api.workspace_api.get_user_applications',
             args: {
-                tenant_id: current_tenant_id
+                workspace_id: current_workspace_id
             },
             callback: (response) => {
                 $('#loading-state').hide();
@@ -1572,10 +1572,10 @@ class FlansaApplicationsWorkspace {
                 const doc_values = {...values};
                 delete doc_values.create_samples;  // Remove non-DocType field
                 
-                // Add current tenant_id
-                const current_tenant_id = self.get_current_workspace_id();
-                if (current_tenant_id) {
-                    doc_values.tenant_id = current_tenant_id;
+                // Add current workspace_id
+                const current_workspace_id = self.get_current_workspace_id();
+                if (current_workspace_id) {
+                    doc_values.workspace_id = current_workspace_id;
                 }
                 
                 frappe.call({
@@ -2215,7 +2215,7 @@ class FlansaApplicationsWorkspace {
                 break;
                 
             case 'switch-workspace':
-                frappe.set_route('tenant-switcher');
+                frappe.set_route('workspace-manager');
                 break;
                 
             case 'workspace-settings':
@@ -2296,13 +2296,13 @@ class FlansaApplicationsWorkspace {
         });
     }
     
-    async load_tenant_info() {
+    async load_workspace_info() {
         try {
-            const response = await this.call_tenant_api('get_current_tenant_info');
+            const response = await this.call_workspace_api('get_current_workspace_info');
             const tenantInfo = response;
             
             // Store tenant info for later use
-            this.tenant_info = tenantInfo;
+            this.workspace_info = tenantInfo;
             
             // Update workspace context in section controls only
             const workspaceContextName = document.getElementById('workspace-context-name');
@@ -2325,7 +2325,7 @@ class FlansaApplicationsWorkspace {
         }
     }
     
-    set_fallback_tenant_info() {
+    set_fallback_workspace_info() {
         const workspaceContextName = document.getElementById('workspace-context-name');
         if (workspaceContextName) {
             workspaceContextName.textContent = 'My Workspace';
@@ -2333,10 +2333,10 @@ class FlansaApplicationsWorkspace {
         console.log('✅ Fallback tenant info set');
     }
     
-    async call_tenant_api(method, args = {}) {
+    async call_workspace_api(method, args = {}) {
         return new Promise((resolve, reject) => {
             frappe.call({
-                method: `flansa.flansa_core.page.tenant_switcher.tenant_switcher.${method}`,
+                method: `flansa.flansa_core.page.workspace_manager.workspace_manager.${method}`,
                 args: args,
                 callback: (response) => {
                     if (response && response.message !== undefined) {
@@ -2385,15 +2385,15 @@ class FlansaApplicationsWorkspace {
     update_banner_info() {
         // Update workspace title if needed
         const workspaceTitle = document.getElementById('workspace-title');
-        if (workspaceTitle && this.tenant_info?.tenant_name) {
-            workspaceTitle.textContent = this.tenant_info.tenant_name;
+        if (workspaceTitle && this.workspace_info?.tenant_name) {
+            workspaceTitle.textContent = this.workspace_info.tenant_name;
         }
     }
     
     get_current_workspace_id() {
-        // Try multiple sources to get workspace/tenant ID
-        if (this.tenant_info?.tenant_id) {
-            return this.tenant_info.tenant_id;
+        // Try multiple sources to get workspace/workspace ID
+        if (this.workspace_info?.workspace_id) {
+            return this.workspace_info.workspace_id;
         }
         
         // Try URL parameters
@@ -2417,7 +2417,7 @@ class FlansaApplicationsWorkspace {
         }
         
         // Try to get from local storage - check both keys
-        const storedTenantId = localStorage.getItem('flansa_current_tenant_id');
+        const storedTenantId = localStorage.getItem('flansa_current_workspace_id');
         if (storedTenantId) {
             return storedTenantId;
         }

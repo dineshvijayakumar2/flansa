@@ -26,10 +26,10 @@ class FlansaLogicField(Document):
         if not self.field_name.replace("_", "").isalnum():
             frappe.throw("Field Name must contain only letters, numbers, and underscores")
             
-        # Set tenant_id if not set
-        if not self.tenant_id:
+        # Set workspace_id if not set
+        if not self.workspace_id:
             from flansa.flansa_core.tenant_service import TenantContext
-            self.tenant_id = TenantContext.get_current_tenant_id()
+            self.workspace_id = TenantContext.get_current_workspace_id()
             
     def before_save(self):
         """Test logic expression before saving"""

@@ -10,40 +10,40 @@ from typing import Optional, Dict, Any
 class TenantContext:
     """Manages tenant context throughout the application"""
     
-    _current_tenant_id = None
+    _current_workspace_id = None
     _tenant_cache = {}
     
     @classmethod
-    def get_current_tenant_id(cls) -> str:
-        """Get the current active tenant ID"""
+    def get_current_workspace_id(cls) -> str:
+        """Get the current active workspace ID"""
         
-        if cls._current_tenant_id:
-            return cls._current_tenant_id
+        if cls._current_workspace_id:
+            return cls._current_workspace_id
             
         # Try to resolve from various sources
-        tenant_id = (
+        workspace_id = (
             cls._resolve_from_domain() or 
             cls._resolve_from_session() or
             cls._resolve_from_user() or
             cls._get_default_tenant()
         )
         
-        cls._current_tenant_id = tenant_id
-        return tenant_id
+        cls._current_workspace_id = workspace_id
+        return workspace_id
     
     @classmethod
     def get_current_tenant(cls) -> Dict[str, Any]:
         """Get full tenant details for current tenant"""
         
-        tenant_id = cls.get_current_tenant_id()
+        workspace_id = cls.get_current_workspace_id()
         
-        if tenant_id in cls._tenant_cache:
-            return cls._tenant_cache[tenant_id]
+        if workspace_id in cls._tenant_cache:
+            return cls._tenant_cache[workspace_id]
             
         try:
-            tenant_doc = frappe.get_doc("Flansa Tenant Registry", tenant_id)
+            tenant_doc = frappe.get_doc("Flansa Tenant Registry", workspace_id)
             tenant_data = {
-                "tenant_id": tenant_doc.tenant_id,
+                "workspace_id": tenant_doc.workspace_id,
                 "tenant_name": tenant_doc.tenant_name,
                 "primary_domain": tenant_doc.primary_domain,
                 "status": tenant_doc.status,
@@ -52,7 +52,7 @@ class TenantContext:
                 "max_tables": getattr(tenant_doc, 'max_tables', 50)  # Use max_tables instead of max_apps
             }
             
-            cls._tenant_cache[tenant_id] = tenant_data
+            cls._tenant_cache[workspace_id] = tenant_data
             return tenant_data
             
         except frappe.DoesNotExistError:
@@ -60,16 +60,16 @@ class TenantContext:
             return cls._get_default_tenant_data()
     
     @classmethod
-    def set_tenant_context(cls, tenant_id: str):
+    def set_tenant_context(cls, workspace_id: str):
         """Manually set tenant context (for testing/admin purposes)"""
-        cls._current_tenant_id = tenant_id
-        if tenant_id in cls._tenant_cache:
-            del cls._tenant_cache[tenant_id]  # Refresh cache
+        cls._current_workspace_id = workspace_id
+        if workspace_id in cls._tenant_cache:
+            del cls._tenant_cache[workspace_id]  # Refresh cache
     
     @classmethod
     def clear_context(cls):
         """Clear tenant context"""
-        cls._current_tenant_id = None
+        cls._current_workspace_id = None
         cls._tenant_cache = {}
     
     @classmethod 
@@ -104,8 +104,8 @@ class TenantContext:
                 if len(parts) >= 2:
                     subdomain = parts[0]
                     
-                    # Look for tenant with this subdomain as tenant_id
-                    tenant = frappe.db.get_value("Flansa Tenant Registry", {"tenant_id": subdomain}, "name")
+                    # Look for tenant with this subdomain as workspace_id
+                    tenant = frappe.db.get_value("Flansa Tenant Registry", {"workspace_id": subdomain}, "name")
                     if tenant:
                         return tenant
             
@@ -120,7 +120,7 @@ class TenantContext:
         
         try:
             if hasattr(frappe.local, 'session') and frappe.local.session:
-                return frappe.local.session.get('tenant_id')
+                return frappe.local.session.get('workspace_id')
         except Exception:
             pass
         
@@ -138,10 +138,10 @@ class TenantContext:
     
     @classmethod
     def _get_default_tenant(cls) -> str:
-        """Get the default tenant ID"""
+        """Get the default workspace ID"""
         
         try:
-            default_tenant = frappe.db.get_value("Flansa Tenant Registry", {"tenant_id": "default"}, "name")
+            default_tenant = frappe.db.get_value("Flansa Tenant Registry", {"workspace_id": "default"}, "name")
             if default_tenant:
                 return default_tenant
                 
@@ -162,7 +162,7 @@ class TenantContext:
         """Get default tenant data when tenant not found"""
         
         return {
-            "tenant_id": "default",
+            "workspace_id": "default",
             "tenant_name": "Default Tenant", 
             "primary_domain": frappe.local.site or "localhost",
             "status": "Active",
@@ -176,25 +176,25 @@ def resolve_tenant_from_request():
     try:
         if hasattr(frappe.local, 'request') and frappe.local.request:
             # Get current tenant from domain
-            tenant_id = TenantContext.get_current_tenant_id()
+            workspace_id = TenantContext.get_current_workspace_id()
             
             # Set in frappe.local for easy access throughout request
-            frappe.local.tenant_id = tenant_id
+            frappe.local.workspace_id = workspace_id
             
             # Optional: Set in session for persistence
             if hasattr(frappe.local, 'session') and frappe.local.session:
-                frappe.local.session.tenant_id = tenant_id
+                frappe.local.session.workspace_id = workspace_id
                 
     except Exception as e:
         # Fail silently to not break requests
-        frappe.local.tenant_id = "default"
+        frappe.local.workspace_id = "default"
 
 
 def get_tenant_filter() -> Dict[str, str]:
     """Get filter for current tenant - use in all queries"""
     
-    tenant_id = TenantContext.get_current_tenant_id()
-    return {"tenant_id": tenant_id}
+    workspace_id = TenantContext.get_current_workspace_id()
+    return {"workspace_id": workspace_id}
 
 
 def apply_tenant_filter(filters: Dict[str, Any]) -> Dict[str, Any]:
@@ -210,29 +210,29 @@ def apply_tenant_filter(filters: Dict[str, Any]) -> Dict[str, Any]:
     
     # For list filters, append tenant filter
     if isinstance(filters, list):
-        filters.append(["tenant_id", "=", tenant_filter["tenant_id"]])
+        filters.append(["workspace_id", "=", tenant_filter["workspace_id"]])
         return filters
     
     return filters
 
 
 def set_tenant_on_doc(doc) -> None:
-    """Set tenant_id on document before save"""
+    """Set workspace_id on document before save"""
     
-    if hasattr(doc, 'tenant_id') and not doc.tenant_id:
-        tenant_id = None
+    if hasattr(doc, 'workspace_id') and not doc.workspace_id:
+        workspace_id = None
         
-        # For Flansa Table, inherit tenant_id from parent application
+        # For Flansa Table, inherit workspace_id from parent application
         if doc.doctype == "Flansa Table" and doc.application:
-            app_tenant_id = frappe.db.get_value("Flansa Application", doc.application, "tenant_id")
-            if app_tenant_id:
-                tenant_id = app_tenant_id
+            app_workspace_id = frappe.db.get_value("Flansa Application", doc.application, "workspace_id")
+            if app_workspace_id:
+                workspace_id = app_workspace_id
         
-        # If no inherited tenant_id, use current tenant context
-        if not tenant_id:
-            tenant_id = TenantContext.get_current_tenant_id()
+        # If no inherited workspace_id, use current tenant context
+        if not workspace_id:
+            workspace_id = TenantContext.get_current_workspace_id()
         
-        doc.tenant_id = tenant_id
+        doc.workspace_id = workspace_id
 
 
 # Hook functions for Frappe events
@@ -240,42 +240,42 @@ def before_insert(doc, method):
     """Before insert hook to set tenant context"""
     
     # Only apply to Flansa metadata doctypes
-    if doc.doctype.startswith("Flansa ") and hasattr(doc, 'tenant_id'):
+    if doc.doctype.startswith("Flansa ") and hasattr(doc, 'workspace_id'):
         set_tenant_on_doc(doc)
 
 
 def validate_tenant_access(doc, method):
     """Validate user has access to the tenant"""
     
-    if doc.doctype.startswith("Flansa ") and hasattr(doc, 'tenant_id'):
-        current_tenant = TenantContext.get_current_tenant_id()
+    if doc.doctype.startswith("Flansa ") and hasattr(doc, 'workspace_id'):
+        current_tenant = TenantContext.get_current_workspace_id()
         
-        if doc.tenant_id and doc.tenant_id != current_tenant:
+        if doc.workspace_id and doc.workspace_id != current_tenant:
             frappe.throw(f"Access denied: Document belongs to different tenant", frappe.PermissionError)
 
 
 # Utility functions
-def get_tenant_apps(tenant_id: Optional[str] = None) -> list:
+def get_tenant_apps(workspace_id: Optional[str] = None) -> list:
     """Get all applications for a tenant"""
     
-    if not tenant_id:
-        tenant_id = TenantContext.get_current_tenant_id()
+    if not workspace_id:
+        workspace_id = TenantContext.get_current_workspace_id()
     
     return frappe.get_all("Flansa Application", 
-                         filters={"tenant_id": tenant_id},
+                         filters={"workspace_id": workspace_id},
                          fields=["name", "app_title", "status"])
 
 
-def get_tenant_tables(app_id: str, tenant_id: Optional[str] = None) -> list:
+def get_tenant_tables(app_id: str, workspace_id: Optional[str] = None) -> list:
     """Get all tables for an app within tenant context"""
     
-    if not tenant_id:
-        tenant_id = TenantContext.get_current_tenant_id()
+    if not workspace_id:
+        workspace_id = TenantContext.get_current_workspace_id()
     
     return frappe.get_all("Flansa Table",
                          filters={
                              "application": app_id,
-                             "tenant_id": tenant_id
+                             "workspace_id": workspace_id
                          },
                          fields=["name", "table_label", "status"])
 
@@ -287,47 +287,47 @@ def is_multi_tenant_enabled() -> bool:
     return tenant_count > 1
 
 
-def get_tenant_stats(tenant_id: Optional[str] = None) -> Dict[str, int]:
+def get_tenant_stats(workspace_id: Optional[str] = None) -> Dict[str, int]:
     """Get usage statistics for a tenant"""
     
-    if not tenant_id:
-        tenant_id = TenantContext.get_current_tenant_id()
+    if not workspace_id:
+        workspace_id = TenantContext.get_current_workspace_id()
     
     return {
-        "apps": frappe.db.count("Flansa Application", {"tenant_id": tenant_id}),
-        "tables": frappe.db.count("Flansa Table", {"tenant_id": tenant_id}), 
-        "relationships": frappe.db.count("Flansa Relationship", {"tenant_id": tenant_id}),
-        "reports": frappe.db.count("Flansa Saved Report", {"tenant_id": tenant_id})
+        "apps": frappe.db.count("Flansa Application", {"workspace_id": workspace_id}),
+        "tables": frappe.db.count("Flansa Table", {"workspace_id": workspace_id}), 
+        "relationships": frappe.db.count("Flansa Relationship", {"workspace_id": workspace_id}),
+        "reports": frappe.db.count("Flansa Saved Report", {"workspace_id": workspace_id})
     }
 
 @frappe.whitelist()
-def get_workspace_logo(tenant_id=None):
+def get_workspace_logo(workspace_id=None):
     """Get workspace logo configuration"""
     try:
-        if not tenant_id:
-            # Try to get tenant_id from session first
-            tenant_id = frappe.session.get('tenant_id')
-            if not tenant_id:
+        if not workspace_id:
+            # Try to get workspace_id from session first
+            workspace_id = frappe.session.get('workspace_id')
+            if not workspace_id:
                 # Try to get from TenantContext if available
                 try:
-                    tenant_id = TenantContext.get_current_tenant_id()
+                    workspace_id = TenantContext.get_current_workspace_id()
                 except:
                     # Fallback: get the first active tenant
                     first_tenant = frappe.db.get_value(
                         "Flansa Tenant Registry", 
                         {"status": "Active"}, 
-                        "tenant_id", 
+                        "workspace_id", 
                         order_by="creation"
                     )
-                    tenant_id = first_tenant
+                    workspace_id = first_tenant
             
-        if not tenant_id:
+        if not workspace_id:
             return {"logo": None, "workspace_name": None, "error": "No tenant context found"}
         
         # Check if tenant has custom workspace logo configured
         tenant_settings = frappe.db.get_value(
             "Flansa Tenant Registry", 
-            tenant_id, 
+            workspace_id, 
             ["workspace_logo", "tenant_name"], 
             as_dict=True
         )
@@ -347,35 +347,35 @@ def get_workspace_logo(tenant_id=None):
 
 # Backward compatibility alias
 @frappe.whitelist()
-def get_tenant_logo(tenant_id=None):
+def get_tenant_logo(workspace_id=None):
     """Backward compatibility - use get_workspace_logo instead"""
-    return get_workspace_logo(tenant_id)
+    return get_workspace_logo(workspace_id)
 
 @frappe.whitelist()
 def set_workspace_logo(workspace_logo=None):
     """Set workspace logo for current workspace"""
     try:
-        # Try to get tenant_id from session first
-        tenant_id = frappe.session.get('tenant_id')
-        if not tenant_id:
+        # Try to get workspace_id from session first
+        workspace_id = frappe.session.get('workspace_id')
+        if not workspace_id:
             # Try to get from TenantContext if available
             try:
-                tenant_id = TenantContext.get_current_tenant_id()
+                workspace_id = TenantContext.get_current_workspace_id()
             except:
                 # Fallback: get the first active tenant
                 first_tenant = frappe.db.get_value(
                     "Flansa Tenant Registry", 
                     {"status": "Active"}, 
-                    "tenant_id", 
+                    "workspace_id", 
                     order_by="creation"
                 )
-                tenant_id = first_tenant
+                workspace_id = first_tenant
         
-        if not tenant_id:
+        if not workspace_id:
             return {"success": False, "message": "No active workspace"}
             
         # Update workspace logo
-        frappe.db.set_value("Flansa Tenant Registry", tenant_id, "workspace_logo", workspace_logo)
+        frappe.db.set_value("Flansa Tenant Registry", workspace_id, "workspace_logo", workspace_logo)
         frappe.db.commit()
         
         return {"success": True, "message": "Workspace logo updated successfully"}

@@ -11,7 +11,7 @@ def get_desk_sidebar_items():
     # Add Flansa workspace at the top
     flansa_items = [
         {
-            "route": "flansa-workspace",
+            "route": "flansa-workspace-builder",
             "type": "page",
             "icon": "fa fa-th-large",
             "color": "#2196F3",
@@ -47,7 +47,7 @@ def get_home_page():
     flansa_roles = ["System Manager", "Flansa Admin", "Flansa User", "Flansa Builder"]
     
     if any(role in user_roles for role in flansa_roles):
-        return "flansa-workspace"
+        return "flansa-workspace-builder"
     
     # Default Frappe home page for non-Flansa users
     return "desk"

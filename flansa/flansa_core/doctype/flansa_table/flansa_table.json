@@ -52,9 +52,9 @@
    "reqd": 1
   },
   {
-   "fieldname": "tenant_id",
+   "fieldname": "workspace_id",
    "fieldtype": "Data",
-   "label": "Tenant ID",
+   "label": "Workspace ID",
    "read_only": 1,
    "hidden": 1
   },

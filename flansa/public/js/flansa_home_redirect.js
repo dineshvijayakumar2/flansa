@@ -7,11 +7,11 @@ function initFlansaRedirect() {
             frappe.call({
                 method: 'flansa.overrides.get_home_page',
                 callback: function(r) {
-                    if (r.message === 'flansa') {
-                        // Only redirect if not already on flansa
-                        if (!window.location.href.includes('flansa')) {
+                    if (r.message === 'flansa-workspace-builder') {
+                        // Only redirect if not already on flansa workspace builder
+                        if (!window.location.href.includes('flansa-workspace-builder')) {
                             if (frappe.set_route) {
-                                frappe.set_route('flansa');
+                                frappe.set_route('flansa-workspace-builder');
                             }
                         }
                     }
@@ -101,8 +101,8 @@ function setupRouterOverride() {
                     frappe.call({
                         method: 'flansa.overrides.get_home_page',
                         callback: function(r) {
-                            if (r.message === 'flansa') {
-                                frappe.set_route('flansa');
+                            if (r.message === 'flansa-workspace-builder') {
+                                frappe.set_route('flansa-workspace-builder');
                             }
                         }
                     });
