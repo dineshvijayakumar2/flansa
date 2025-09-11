@@ -92,7 +92,7 @@
  "modified": "2025-08-20 19:10:23.982394",
  "modified_by": "Administrator",
  "module": "Flansa Core",
- "name": "Flansa Tenant Domain",
+ "name": "Flansa Workspace Domain",
  "owner": "Administrator",
  "permissions": [],
  "row_format": "Dynamic",

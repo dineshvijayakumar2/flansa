@@ -1,4 +1,4 @@
-from flansa.flansa_core.tenant_service import apply_tenant_filter, get_workspace_filter, TenantContext
+from flansa.flansa_core.workspace_service import apply_tenant_filter, get_workspace_filter, TenantContext
 from flansa.flansa_core.role_service import FlansaRoleService
 """
 Workspace API - Role-based access for the Flansa workspace

@@ -28,7 +28,7 @@ class FlansaLogicField(Document):
             
         # Set workspace_id if not set
         if not self.workspace_id:
-            from flansa.flansa_core.tenant_service import TenantContext
+            from flansa.flansa_core.workspace_service import TenantContext
             self.workspace_id = TenantContext.get_current_workspace_id()
             
     def before_save(self):
@@ -157,7 +157,7 @@ def test_logic_field(logic_field_name, test_data=None):
 def get_logic_fields_for_table(table_name):
     """Get all active logic fields for a table"""
     
-    from flansa.flansa_core.tenant_service import apply_tenant_filter
+    from flansa.flansa_core.workspace_service import apply_tenant_filter
     
     filters = apply_tenant_filter({
         "table_name": table_name,

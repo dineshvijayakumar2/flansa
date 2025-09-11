@@ -5,7 +5,7 @@ from frappe.model.document import Document
 import hashlib
 import time
 
-class FlansaTenantDomain(Document):
+class FlansaWorkspaceDomain(Document):
     def validate(self):
         """Validate domain before saving"""
         

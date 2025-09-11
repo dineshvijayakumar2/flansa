@@ -202,28 +202,28 @@ doc_events = {
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
     },
     "Flansa Application": {
-        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
-        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+        "before_insert": "flansa.flansa_core.workspace_service.before_insert",
+        "validate": "flansa.flansa_core.workspace_service.validate_tenant_access"
     },
     "Flansa Table": {
-        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
-        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+        "before_insert": "flansa.flansa_core.workspace_service.before_insert",
+        "validate": "flansa.flansa_core.workspace_service.validate_tenant_access"
     },
     "Flansa Relationship": {
-        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
-        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+        "before_insert": "flansa.flansa_core.workspace_service.before_insert",
+        "validate": "flansa.flansa_core.workspace_service.validate_tenant_access"
     },
     "Flansa Saved Report": {
-        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
-        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+        "before_insert": "flansa.flansa_core.workspace_service.before_insert",
+        "validate": "flansa.flansa_core.workspace_service.validate_tenant_access"
     },
     "Flansa Form Config": {
-        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
-        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+        "before_insert": "flansa.flansa_core.workspace_service.before_insert",
+        "validate": "flansa.flansa_core.workspace_service.validate_tenant_access"
     },
     "Flansa Computed Field": {
-        "before_insert": "flansa.flansa_core.tenant_service.before_insert",
-        "validate": "flansa.flansa_core.tenant_service.validate_tenant_access"
+        "before_insert": "flansa.flansa_core.workspace_service.before_insert",
+        "validate": "flansa.flansa_core.workspace_service.validate_tenant_access"
     }
 }
 
@@ -278,7 +278,7 @@ doc_events = {
 
 # Request Events
 # ----------------
-before_request = ["flansa.flansa_core.tenant_service.resolve_tenant_from_request"]
+before_request = ["flansa.flansa_core.workspace_service.resolve_tenant_from_request"]
 # after_request = ["flansa.utils.after_request"]
 
 # Boot Session

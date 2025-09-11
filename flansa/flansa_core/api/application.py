@@ -3,7 +3,7 @@ import frappe
 import yaml
 import json
 from frappe import _
-from flansa.flansa_core.tenant_service import apply_tenant_filter, get_tenant_filter
+from flansa.flansa_core.workspace_service import apply_tenant_filter, get_tenant_filter
 
 
 def normalize_app_name(name):
