@@ -2334,7 +2334,7 @@ class ReportManagerPage {
         try {
             // Get workspace logo from Flansa Tenant Registry
             const result = await frappe.call({
-                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                method: 'flansa.flansa_core.workspace_service.get_workspace_logo',
                 args: {},
                 freeze: false,
                 quiet: false // Show errors for debugging

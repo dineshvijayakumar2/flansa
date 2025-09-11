@@ -2211,7 +2211,7 @@ class FlansaAppBuilder {
         try {
             // Try to get workspace logo if workspace system is available
             const result = await frappe.call({
-                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                method: 'flansa.flansa_core.workspace_service.get_workspace_logo',
                 args: {},
                 freeze: false,
                 quiet: true // Don't show errors if method doesn't exist

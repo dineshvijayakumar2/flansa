@@ -2355,7 +2355,7 @@ class FlansaApplicationsWorkspace {
     async load_workspace_logo() {
         try {
             await frappe.call({
-                method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                method: 'flansa.flansa_core.workspace_service.get_workspace_logo',
                 callback: (r) => {
                     if (r.message && r.message.logo) {
                         const logoContainer = document.getElementById('workspace-logo-container');

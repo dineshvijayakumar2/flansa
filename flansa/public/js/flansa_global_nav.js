@@ -320,7 +320,7 @@ window.FlansaGlobalNav = {
             // Try to fetch current workspace settings
             if (frappe.boot && frappe.boot.workspace_id) {
                 const result = await frappe.call({
-                    method: 'flansa.flansa_core.tenant_service.get_workspace_logo',
+                    method: 'flansa.flansa_core.workspace_service.get_workspace_logo',
                     args: {
                         workspace_id: frappe.boot.workspace_id
                     },
