@@ -175,10 +175,11 @@ class WorkspaceManager {
             this.render_current_workspace(currentWorkspace);
             
             // Load available workspaces
-            const workspaces = await this.call_api('get_available_workspaces');
-            // Ensure workspaces is an array
-            const workspaceArray = Array.isArray(workspaces) ? workspaces : 
-                                   (workspaces && workspaces.message ? workspaces.message : []);
+            const response = await this.call_api('get_available_workspaces');
+            // Extract workspaces array from response
+            const workspaceArray = Array.isArray(response) ? response : 
+                                   (response && response.workspaces ? response.workspaces : 
+                                   (response && response.message ? response.message : []));
             this.render_workspace_list(workspaceArray, currentWorkspace.workspace_id);
             
         } catch (error) {

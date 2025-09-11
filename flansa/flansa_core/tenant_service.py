@@ -324,18 +324,18 @@ def get_workspace_logo(workspace_id=None):
         if not workspace_id:
             return {"logo": None, "workspace_name": None, "error": "No tenant context found"}
         
-        # Check if tenant has custom workspace logo configured
-        tenant_settings = frappe.db.get_value(
+        # Check if workspace has custom workspace logo configured
+        workspace_settings = frappe.db.get_value(
             "Flansa Workspace", 
             workspace_id, 
-            ["workspace_logo", "tenant_name"], 
+            ["workspace_logo", "workspace_name"], 
             as_dict=True
         )
         
-        if tenant_settings:
+        if workspace_settings:
             return {
-                "logo": tenant_settings.get("workspace_logo"),
-                "workspace_name": tenant_settings.get("tenant_name"),
+                "logo": workspace_settings.get("workspace_logo"),
+                "workspace_name": workspace_settings.get("workspace_name"),
                 "success": True
             }
         
@@ -347,7 +347,7 @@ def get_workspace_logo(workspace_id=None):
 
 # Backward compatibility alias
 @frappe.whitelist()
-def get_workspace_logo(workspace_id=None):
+def get_tenant_logo(workspace_id=None):
     """Backward compatibility - use get_workspace_logo instead"""
     return get_workspace_logo(workspace_id)
 
