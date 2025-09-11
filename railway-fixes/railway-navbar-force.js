@@ -60,7 +60,7 @@ function createManualNavbar() {
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end">
                             <li><a class="dropdown-item" href="/app/user">My Profile</a></li>
-                            <li><a class="dropdown-item" href="/app/flansa-workspace">Workspace</a></li>
+                            <li><a class="dropdown-item" href="/app/flansa-workspace-builder">Workspace</a></li>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item" href="/api/method/logout">Logout</a></li>
                         </ul>

@@ -1662,7 +1662,7 @@ class FlansaReportViewer {
     
     setup_initial_breadcrumbs() {
         frappe.breadcrumbs.clear();
-        frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace");
+        frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace-builder");
         frappe.breadcrumbs.add("Reports", this.getReportManagerUrl());
         frappe.breadcrumbs.add("Loading...");
         
@@ -1673,7 +1673,7 @@ class FlansaReportViewer {
         const breadcrumbContainer = document.getElementById('dynamic-breadcrumbs');
         if (breadcrumbContainer) {
             breadcrumbContainer.innerHTML = `
-                <a href="/app/flansa-workspace" class="breadcrumb-link">
+                <a href="/app/flansa-workspace-builder" class="breadcrumb-link">
                     <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                     </svg>
@@ -1701,7 +1701,7 @@ class FlansaReportViewer {
     
     async update_breadcrumbs(report) {
         frappe.breadcrumbs.clear();
-        frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace");
+        frappe.breadcrumbs.add("Workspace", "/app/flansa-workspace-builder");
         
         // Initialize cache if not exists (cache for current session)
         if (!window.flansaBreadcrumbCache) {
@@ -1853,7 +1853,7 @@ class FlansaReportViewer {
         const breadcrumbs = [];
         
         // Always start with Workspace
-        breadcrumbs.push({ text: "🏠 Workspace", url: "/app/flansa-workspace" });
+        breadcrumbs.push({ text: "🏠 Workspace", url: "/app/flansa-workspace-builder" });
         
         // Add dynamic breadcrumbs based on source context
         if (this.source_context.source) {
@@ -2104,14 +2104,14 @@ class FlansaReportViewer {
                     
                     // Add standard navigation buttons (same as Report Builder)
                     this.page.add_button('🏠 Workspace', () => {
-                        window.location.href = '/app/flansa-workspace';
+                        window.location.href = '/app/flansa-workspace-builder';
                     }, 'btn-default');
                 }
             });
         } else {
             // Fallback: add standard navigation (same as Report Builder)
             this.page.add_button('🏠 Workspace', () => {
-                window.location.href = '/app/flansa-workspace';
+                window.location.href = '/app/flansa-workspace-builder';
             }, 'btn-default');
         }
         

@@ -299,7 +299,7 @@ class EnhancedVisualBuilder {
         }, 'btn-default');
         
         this.page.add_button('🏠 Workspace', () => {
-            window.location.href = '/app/flansa-workspace';
+            window.location.href = '/app/flansa-workspace-builder';
         }, 'btn-default');
         
         // Add activate table button if needed
@@ -531,7 +531,7 @@ class EnhancedVisualBuilder {
                             <i class="fa fa-cube" style="font-size: 48px; color: var(--flansa-text-secondary, var(--flansa-gray-400)); margin-bottom: var(--flansa-spacing-md);"></i>
                             <h3>No Applications Found</h3>
                             <p>Create an application from the Flansa Workspace to get started.</p>
-                            <a href="/app/flansa-workspace" class="btn btn-primary" style="margin-top: var(--flansa-spacing-md);">
+                            <a href="/app/flansa-workspace-builder" class="btn btn-primary" style="margin-top: var(--flansa-spacing-md);">
                                 <i class="fa fa-home"></i> Go to Workspace
                             </a>
                         </div>
@@ -5871,7 +5871,7 @@ class EnhancedVisualBuilder {
                 } else {
                     // Fallback to workspace
                     setTimeout(() => {
-                        window.location.href = '/app/flansa-workspace';
+                        window.location.href = '/app/flansa-workspace-builder';
                     }, 1000);
                 }
             },
@@ -6383,7 +6383,7 @@ class EnhancedVisualBuilder {
         const breadcrumbs = [];
         
         // Home breadcrumb
-        breadcrumbs.push({ text: "🏠 Workspace", url: "/app/flansa-workspace" });
+        breadcrumbs.push({ text: "🏠 Workspace", url: "/app/flansa-workspace-builder" });
         
         // App breadcrumb if available
         if (this.app_name) {

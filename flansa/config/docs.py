@@ -10,7 +10,7 @@ sub_heading = "Build powerful applications without coding"
 def get_context(context):
     context.brand_html = "Flansa"
     context.top_bar_items = [
-        {"label": "Workspace", "url": "/app/flansa-workspace"},
+        {"label": "Workspace", "url": "/app/flansa-workspace-builder"},
         {"label": "Visual Builder", "url": "/app/List/Flansa Table"},
         {"label": "Documentation", "url": "https://flansa.io/docs"},
     ]

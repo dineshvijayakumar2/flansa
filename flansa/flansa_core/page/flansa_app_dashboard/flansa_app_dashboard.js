@@ -141,7 +141,7 @@ class FlansaApplicationDashboard {
                 
                 <!-- Modern Breadcrumb Navigation -->
                 <div class="flansa-breadcrumb-bar" style="background: rgba(255,255,255,0.95); padding: 8px 20px; margin: 0 -20px 0 -20px; font-weight: 600; border-bottom: 1px solid rgba(0,0,0,0.08); display: flex; align-items: center; gap: 8px; font-size: 14px;" id="breadcrumb-container">
-                    <a href="/app/flansa-workspace" style="color: #2d3748; text-decoration: none; font-weight: 600; font-weight: 500;">🏠 Workspace</a>
+                    <a href="/app/flansa-workspace-builder" style="color: #2d3748; text-decoration: none; font-weight: 600; font-weight: 500;">🏠 Workspace</a>
                     <i class="fa fa-chevron-right" style="opacity: 0.5; margin: 0 8px;"></i>
                     <span style="color: #333; font-weight: 500;">📱 ${app.app_title}</span>
                 </div>
@@ -436,7 +436,7 @@ class FlansaApplicationDashboard {
             <div class="text-center" style="padding: 50px;">
                 <h4><i class="fa fa-exclamation-triangle text-warning"></i> Error</h4>
                 <p>${message}</p>
-                <button class="btn btn-primary" onclick="window.location.href='/app/flansa-workspace'">
+                <button class="btn btn-primary" onclick="window.location.href='/app/flansa-workspace-builder'">
                     <i class="fa fa-home"></i> Back to Home
                 </button>
             </div>

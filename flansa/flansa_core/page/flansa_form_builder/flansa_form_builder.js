@@ -132,7 +132,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         if (app_id) {
             window.location.href = `/app/flansa-app-dashboard/${app_id}`;
         } else {
-            window.location.href = '/app/flansa-workspace';
+            window.location.href = '/app/flansa-workspace-builder';
         }
     }
     
@@ -855,7 +855,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
         
         // Table selector and error buttons
         $(document).on('click', '#back-to-workspace-btn', function() {
-            window.location.href = '/app/flansa-workspace';
+            window.location.href = '/app/flansa-workspace-builder';
         });
         
         $(document).on('click', '#retry-btn', function() {

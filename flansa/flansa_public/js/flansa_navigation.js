@@ -11,7 +11,7 @@ window.FlansaNavigation = {
      */
     addHomeButton(page) {
         page.set_secondary_action('🏠 Flansa Home', () => {
-            window.location.href = '/app/flansa-workspace';
+            window.location.href = '/app/flansa-workspace-builder';
         }, 'octicon octicon-home');
     },
     

@@ -326,7 +326,7 @@ class ContextualRoleManager:
     def get_contextual_breadcrumbs(context: Dict) -> List[Dict]:
         """Generate breadcrumbs based on context"""
         breadcrumbs = [
-            {'label': 'Home', 'route': '/app/flansa-workspace', 'icon': 'home'}
+            {'label': 'Home', 'route': '/app/flansa-workspace-builder', 'icon': 'home'}
         ]
         
         if context['scope'] == 'application' and context.get('application_id'):
@@ -334,7 +334,7 @@ class ContextualRoleManager:
             try:
                 app_doc = frappe.get_doc('Flansa Application', context['application_id'])
                 breadcrumbs.extend([
-                    {'label': app_doc.app_title, 'route': f'/app/flansa-workspace?app={context["application_id"]}', 'icon': 'mobile'},
+                    {'label': app_doc.app_title, 'route': f'/app/flansa-workspace-builder?app={context["application_id"]}', 'icon': 'mobile'},
                     {'label': 'Role Manager', 'route': '#', 'icon': 'users', 'current': True}
                 ])
             except:
@@ -343,7 +343,7 @@ class ContextualRoleManager:
         elif context['scope'] == 'workspace' and context.get('workspace_id'):
             # Workspace level: Home > Workspace > Role Manager
             breadcrumbs.extend([
-                {'label': f'Workspace: {context["workspace_id"]}', 'route': f'/app/flansa-workspace?tenant={context["workspace_id"]}', 'icon': 'building'},
+                {'label': f'Workspace: {context["workspace_id"]}', 'route': f'/app/flansa-workspace-builder?tenant={context["workspace_id"]}', 'icon': 'building'},
                 {'label': 'Role Manager', 'route': '#', 'icon': 'users', 'current': True}
             ])
         
