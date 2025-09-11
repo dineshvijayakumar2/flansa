@@ -4,6 +4,22 @@ This folder contains scripts and fixes that can be deployed to AWS containers.
 
 ## Scripts
 
+### recover_workspace_data.py
+**NEW**: Recovers workspace data from old tenant registry table to Flansa Workspace DocType in AWS PostgreSQL.
+
+**Purpose**: During the tenant → workspace migration, workspace data may exist in the old registry but be missing from the new Flansa Workspace table.
+
+**Usage in AWS container:**
+```bash
+# SSH into the container
+aws ecs execute-command --cluster flansa-simple-cluster --task <task-id> --container flansa-app --interactive --command "/bin/bash"
+
+# Run the workspace recovery script
+cd /home/frappe/frappe-bench
+bench --site flansa.production console
+exec(open('/home/frappe/frappe-bench/apps/flansa/aws-fixes/recover_workspace_data.py').read())
+```
+
 ### sync_db_to_json.py
 Detects and syncs database schema differences to DocType JSON files.
 
@@ -12,10 +28,10 @@ Detects and syncs database schema differences to DocType JSON files.
 # SSH into the container
 aws ecs execute-command --cluster flansa-simple-cluster --task <task-id> --container flansa-app --interactive --command "/bin/bash"
 
-# Run the script
+# Run the schema sync script
 cd /home/frappe/frappe-bench
 bench --site flansa.production console
-exec(open('/home/frappe/frappe-bench/apps/flansa/aws-docker-setup/aws-fixes/sync_db_to_json.py').read())
+exec(open('/home/frappe/frappe-bench/apps/flansa/aws-fixes/sync_db_to_json.py').read())
 ```
 
 The script will:
