@@ -1023,9 +1023,10 @@ class ReportManagerPage {
         // Set up navigation
         this.setup_navigation();
         
-        // Load data
-        this.load_table_options();
-        this.load_reports();
+        // Load data in sequence - tables first, then reports
+        this.load_table_options().then(() => {
+            this.load_reports();
+        });
     }
     
     setup_page_context() {
@@ -2325,7 +2326,7 @@ class ReportManagerPage {
         if (emptyState) emptyState.style.display = 'block';
     }
     
-    load_initial_data() {
+    async load_initial_data() {
         console.log('Saved Reports page initialized');
     }
     
