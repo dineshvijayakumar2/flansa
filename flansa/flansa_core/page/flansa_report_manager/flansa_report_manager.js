@@ -1203,9 +1203,15 @@ class ReportManagerPage {
             }
             
             // Load reports with role-based filtering
+            const args = {};
+            if (this.filter_table) {
+                args.base_table = this.filter_table;
+                console.log(`Loading reports for table: ${this.filter_table}`);
+            }
+            
             const response = await frappe.call({
                 method: 'flansa.flansa_core.doctype.flansa_saved_report.flansa_saved_report.get_user_reports',
-                args: {} // No base_table filter - load all accessible reports
+                args: args
             });
             
             if (response.message) {
