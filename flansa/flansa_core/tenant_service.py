@@ -41,7 +41,7 @@ class TenantContext:
             return cls._tenant_cache[workspace_id]
             
         try:
-            tenant_doc = frappe.get_doc("Flansa Tenant Registry", workspace_id)
+            tenant_doc = frappe.get_doc("Flansa Workspace", workspace_id)
             tenant_data = {
                 "workspace_id": tenant_doc.workspace_id,
                 "tenant_name": tenant_doc.tenant_name,
@@ -85,7 +85,7 @@ class TenantContext:
                 return None
             
             # Check exact domain match first
-            tenant = frappe.db.get_value("Flansa Tenant Registry", {"primary_domain": host}, "name")
+            tenant = frappe.db.get_value("Flansa Workspace", {"primary_domain": host}, "name")
             if tenant:
                 return tenant
             
@@ -105,7 +105,7 @@ class TenantContext:
                     subdomain = parts[0]
                     
                     # Look for tenant with this subdomain as workspace_id
-                    tenant = frappe.db.get_value("Flansa Tenant Registry", {"workspace_id": subdomain}, "name")
+                    tenant = frappe.db.get_value("Flansa Workspace", {"workspace_id": subdomain}, "name")
                     if tenant:
                         return tenant
             
@@ -141,17 +141,17 @@ class TenantContext:
         """Get the default workspace ID"""
         
         try:
-            default_tenant = frappe.db.get_value("Flansa Tenant Registry", {"workspace_id": "default"}, "name")
+            default_tenant = frappe.db.get_value("Flansa Workspace", {"workspace_id": "default"}, "name")
             if default_tenant:
                 return default_tenant
                 
             # If no default, get the first active tenant
-            first_tenant = frappe.db.get_value("Flansa Tenant Registry", {"status": "Active"}, "name")
+            first_tenant = frappe.db.get_value("Flansa Workspace", {"status": "Active"}, "name")
             if first_tenant:
                 return first_tenant
                 
             # Last resort - get any tenant
-            any_tenant = frappe.db.get_value("Flansa Tenant Registry", {}, "name")
+            any_tenant = frappe.db.get_value("Flansa Workspace", {}, "name")
             return any_tenant or "default"
             
         except Exception:
@@ -190,7 +190,7 @@ def resolve_tenant_from_request():
         frappe.local.workspace_id = "default"
 
 
-def get_tenant_filter() -> Dict[str, str]:
+def get_workspace_filter() -> Dict[str, str]:
     """Get filter for current tenant - use in all queries"""
     
     workspace_id = TenantContext.get_current_workspace_id()
@@ -200,7 +200,7 @@ def get_tenant_filter() -> Dict[str, str]:
 def apply_tenant_filter(filters: Dict[str, Any]) -> Dict[str, Any]:
     """Apply tenant filter to existing filter dict"""
     
-    tenant_filter = get_tenant_filter()
+    tenant_filter = get_workspace_filter()
     if filters is None:
         return tenant_filter
     
@@ -255,7 +255,7 @@ def validate_tenant_access(doc, method):
 
 
 # Utility functions
-def get_tenant_apps(workspace_id: Optional[str] = None) -> list:
+def get_workspace_apps(workspace_id: Optional[str] = None) -> list:
     """Get all applications for a tenant"""
     
     if not workspace_id:
@@ -266,7 +266,7 @@ def get_tenant_apps(workspace_id: Optional[str] = None) -> list:
                          fields=["name", "app_title", "status"])
 
 
-def get_tenant_tables(app_id: str, workspace_id: Optional[str] = None) -> list:
+def get_workspace_tables(app_id: str, workspace_id: Optional[str] = None) -> list:
     """Get all tables for an app within tenant context"""
     
     if not workspace_id:
@@ -283,11 +283,11 @@ def get_tenant_tables(app_id: str, workspace_id: Optional[str] = None) -> list:
 def is_multi_tenant_enabled() -> bool:
     """Check if multi-tenant mode is enabled"""
     
-    tenant_count = frappe.db.count("Flansa Tenant Registry")
+    tenant_count = frappe.db.count("Flansa Workspace")
     return tenant_count > 1
 
 
-def get_tenant_stats(workspace_id: Optional[str] = None) -> Dict[str, int]:
+def get_workspace_stats(workspace_id: Optional[str] = None) -> Dict[str, int]:
     """Get usage statistics for a tenant"""
     
     if not workspace_id:
@@ -314,7 +314,7 @@ def get_workspace_logo(workspace_id=None):
                 except:
                     # Fallback: get the first active tenant
                     first_tenant = frappe.db.get_value(
-                        "Flansa Tenant Registry", 
+                        "Flansa Workspace", 
                         {"status": "Active"}, 
                         "workspace_id", 
                         order_by="creation"
@@ -326,7 +326,7 @@ def get_workspace_logo(workspace_id=None):
         
         # Check if tenant has custom workspace logo configured
         tenant_settings = frappe.db.get_value(
-            "Flansa Tenant Registry", 
+            "Flansa Workspace", 
             workspace_id, 
             ["workspace_logo", "tenant_name"], 
             as_dict=True
@@ -347,7 +347,7 @@ def get_workspace_logo(workspace_id=None):
 
 # Backward compatibility alias
 @frappe.whitelist()
-def get_tenant_logo(workspace_id=None):
+def get_workspace_logo(workspace_id=None):
     """Backward compatibility - use get_workspace_logo instead"""
     return get_workspace_logo(workspace_id)
 
@@ -364,7 +364,7 @@ def set_workspace_logo(workspace_logo=None):
             except:
                 # Fallback: get the first active tenant
                 first_tenant = frappe.db.get_value(
-                    "Flansa Tenant Registry", 
+                    "Flansa Workspace", 
                     {"status": "Active"}, 
                     "workspace_id", 
                     order_by="creation"
@@ -375,7 +375,7 @@ def set_workspace_logo(workspace_logo=None):
             return {"success": False, "message": "No active workspace"}
             
         # Update workspace logo
-        frappe.db.set_value("Flansa Tenant Registry", workspace_id, "workspace_logo", workspace_logo)
+        frappe.db.set_value("Flansa Workspace", workspace_id, "workspace_logo", workspace_logo)
         frappe.db.commit()
         
         return {"success": True, "message": "Workspace logo updated successfully"}

@@ -58,8 +58,8 @@ def generate_id_based_doctype_name(workspace_id, application_id, table_id):
 def get_workspace_id_from_context():
     """Get workspace_id from current context or default"""
     try:
-        from flansa.flansa_core.tenant_security import get_current_tenant
-        workspace_id = get_current_tenant()
+        from flansa.flansa_core.workspace_security import get_current_workspace
+        workspace_id = get_current_workspace()
         return workspace_id if workspace_id else "default"
     except Exception:
         return "default"
