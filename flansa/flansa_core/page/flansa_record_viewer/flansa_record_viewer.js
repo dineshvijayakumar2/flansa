@@ -4053,7 +4053,7 @@ class FlansaRecordViewer {
                             console.log('✅ Record deleted successfully');
                             
                             // Navigate back to the table view
-                            const table_url = `/app/flansa-record-viewer?table=${this.table_id}&mode=list`;
+                            const table_url = `/app/flansa-report-viewer/${this.table_name}?type=table`;
                             window.location.href = table_url;
                         } else {
                             console.error('❌ Delete failed:', response.message);
