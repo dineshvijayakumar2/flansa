@@ -1,0 +1,52 @@
+# Python
+*.pyc
+*.pyo
+*.pyd
+__pycache__/
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+.eggs/
+*.manifest
+*.spec
+
+# Frappe/ERPNext
+*.log
+*.pid
+*.seed
+*.log.*
+.bench
+.python-version
+
+# Development
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+.coverage
+htmlcov/
+.tox/
+.pytest_cache/
+
+# Documentation
+docs/_build/
+
+# Virtual environments
+venv/
+ENV/
+env/
+
+# Node
+node_modules/
+
+# Misc
+*.bak
+.cache
+tags
