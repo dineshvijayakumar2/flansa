@@ -6,30 +6,12 @@ import frappe
 from frappe.exceptions import PermissionError
 
 def get_current_workspace():
-    """Get the current user's workspace_id"""
+    """Get the current user's workspace_id using unified WorkspaceContext"""
     try:
-        # For now, use session tenant or default to first tenant
-        if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
-            return frappe.local.workspace_id
-        
-        # Fallback: get from user session or first available tenant
-        session_workspace = frappe.session.get('workspace_id')
-        if session_workspace:
-            return session_workspace
-            
-        # For development: use first workspace from workspace registry
-        first_workspace = frappe.db.get_value('Flansa Workspace', 
-                                         filters={'status': 'Active'}, 
-                                         fieldname='name', 
-                                         order_by='creation')
-        if first_workspace:
-            frappe.local.workspace_id = first_workspace
-            return first_workspace
-            
-        return None
-        
+        from flansa.flansa_core.workspace_service import WorkspaceContext
+        return WorkspaceContext.get_current_workspace_id()
     except Exception as e:
-        frappe.log_error(f"Error getting current workspace: {str(e)}")
+        frappe.log_error(f"Error getting current workspace: {str(e)}", "workspace_security")
         return None
 
 def apply_workspace_filter(doctype, filters=None):

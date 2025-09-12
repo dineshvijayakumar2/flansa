@@ -20,13 +20,35 @@ class WorkspaceContext:
         if cls._current_workspace_id:
             return cls._current_workspace_id
             
-        # Try to resolve from various sources
-        workspace_id = (
-            cls._resolve_from_domain() or 
-            cls._resolve_from_session() or
-            cls._resolve_from_user() or
-            cls._get_default_tenant()
-        )
+        # Simple, direct approach - prioritize user workspace preference
+        workspace_id = None
+        
+        # First: Try user workspace preference
+        try:
+            if frappe.session and frappe.session.user and frappe.session.user != "Guest":
+                user_workspace_id = frappe.db.get_value("Flansa User Workspace", 
+                                                       {"user": frappe.session.user}, 
+                                                       "workspace_id")
+                if user_workspace_id:
+                    workspace_id = user_workspace_id
+        except:
+            pass
+            
+        # Second: Try session
+        if not workspace_id:
+            try:
+                if hasattr(frappe.local, 'session') and frappe.local.session:
+                    workspace_id = frappe.local.session.get('workspace_id')
+            except:
+                pass
+        
+        # Third: Try domain resolution
+        if not workspace_id:
+            workspace_id = cls._resolve_from_domain()
+        
+        # Fourth: Use default
+        if not workspace_id:
+            workspace_id = cls._get_default_tenant()
         
         cls._current_workspace_id = workspace_id
         return workspace_id
@@ -134,11 +156,9 @@ class WorkspaceContext:
             # Check Flansa User Workspace for current user's workspace preference
             if frappe.session and frappe.session.user and frappe.session.user != "Guest":
                 from flansa.flansa_core.page.workspace_manager.workspace_manager import load_user_workspace
-                user_workspace_info = load_user_workspace()
+                workspace_id = load_user_workspace()
                 
-                if user_workspace_info and user_workspace_info.get("workspace_id"):
-                    workspace_id = user_workspace_info["workspace_id"]
-                    
+                if workspace_id:
                     # Verify the workspace exists in Flansa Workspace DocType
                     if frappe.db.exists("Flansa Workspace", {"workspace_id": workspace_id}):
                         return workspace_id

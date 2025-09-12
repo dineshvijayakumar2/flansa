@@ -247,7 +247,7 @@ class FlansaRoleService:
             tables = frappe.get_all(
                 'Flansa Table',
                 filters=filters,
-                fields=['name', 'table_name', 'table_label', 'description', 'created_by', 'creation']
+                fields=['name', 'table_name', 'table_label', 'description', 'owner', 'creation']
             )
             
             # Filter based on role permissions
