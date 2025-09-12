@@ -9,12 +9,12 @@ def get_tables_list(app_name=None):
     
     try:
         # Build filters
-        filters = {"status": ["!=", "Deleted"]}
+        filters = {}
         if app_name:
             filters["application"] = app_name
             
         tables = frappe.get_all("Flansa Table", 
-            fields=["name", "table_name", "table_label", "description", "status", "application"],
+            fields=["name", "table_name", "table_label", "description", "application"],
             filters=apply_tenant_filter(filters),
             order_by="table_label asc"
         )
@@ -26,8 +26,7 @@ def get_tables_list(app_name=None):
                 "value": table.name,
                 "label": table.table_label or table.table_name,
                 "description": table.description or '',
-                "table_name": table.table_name,
-                "status": table.status
+                "table_name": table.table_name
             })
         
         return {
@@ -68,7 +67,6 @@ def get_table_info(table_name):
                 "table_name": table_doc.table_name,
                 "table_label": table_doc.table_label,
                 "description": table_doc.description,
-                "status": table_doc.status,
                 "doctype_name": getattr(table_doc, "doctype_name", ""),
                 "application": getattr(table_doc, "application", "")
             }
@@ -1094,7 +1092,7 @@ def get_available_link_targets(table_id, scope='all'):
         if scope in ['all', 'flansa']:
             # Get Flansa tables
             flansa_tables = frappe.get_all("Flansa Table",
-                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                filters=apply_tenant_filter({}),
                 fields=["name", "table_label", "table_name"]
             )
             for table in flansa_tables:
@@ -1212,7 +1210,6 @@ def get_child_tables(table_id):
         # In a real implementation, you might want to check for actual relationships
         child_tables = frappe.get_all("Flansa Table",
             filters=apply_tenant_filter({
-                "status": ["!=", "Deleted"],
                 "name": ["!=", table_id]
             }),
             fields=["name", "table_label", "table_name"]
@@ -1496,7 +1493,7 @@ def get_available_link_targets(table_id, scope='all'):
         if scope in ['all', 'flansa']:
             # Get Flansa tables
             flansa_tables = frappe.get_all("Flansa Table",
-                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                filters=apply_tenant_filter({}),
                 fields=["name", "table_label", "table_name"]
             )
             for table in flansa_tables:
@@ -1614,7 +1611,6 @@ def get_child_tables(table_id):
         # In a real implementation, you might want to check for actual relationships
         child_tables = frappe.get_all("Flansa Table",
             filters=apply_tenant_filter({
-                "status": ["!=", "Deleted"],
                 "name": ["!=", table_id]
             }),
             fields=["name", "table_label", "table_name"]
@@ -2135,7 +2131,7 @@ def test_logic_field(expression, sample_data=None):
     """Test a Logic Field expression with sample data"""
     try:
         if not sample_data:
-            sample_data = {"price": 100, "quantity": 2, "status": "Active"}
+            sample_data = {"price": 100, "quantity": 2, "description": "Sample"}
         
         if isinstance(sample_data, str):
             import json
@@ -2484,7 +2480,7 @@ def get_available_link_targets(table_id, scope='all'):
         if scope in ['all', 'flansa']:
             # Get Flansa tables
             flansa_tables = frappe.get_all("Flansa Table",
-                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                filters=apply_tenant_filter({}),
                 fields=["name", "table_label", "table_name"]
             )
             for table in flansa_tables:
@@ -2602,7 +2598,6 @@ def get_child_tables(table_id):
         # In a real implementation, you might want to check for actual relationships
         child_tables = frappe.get_all("Flansa Table",
             filters=apply_tenant_filter({
-                "status": ["!=", "Deleted"],
                 "name": ["!=", table_id]
             }),
             fields=["name", "table_label", "table_name"]
@@ -2724,7 +2719,7 @@ def get_available_link_targets(table_id, scope='all'):
         if scope in ['all', 'flansa']:
             # Get Flansa tables
             flansa_tables = frappe.get_all("Flansa Table",
-                filters=apply_tenant_filter({"status": ["!=", "Deleted"]}),
+                filters=apply_tenant_filter({}),
                 fields=["name", "table_label", "table_name"]
             )
             for table in flansa_tables:
@@ -2842,7 +2837,6 @@ def get_child_tables(table_id):
         # In a real implementation, you might want to check for actual relationships
         child_tables = frappe.get_all("Flansa Table",
             filters=apply_tenant_filter({
-                "status": ["!=", "Deleted"],
                 "name": ["!=", table_id]
             }),
             fields=["name", "table_label", "table_name"]

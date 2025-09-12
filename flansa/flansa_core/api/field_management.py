@@ -528,7 +528,6 @@ def get_table_schema(table_name):
                 "table": {
                     "name": table_name,
                     "label": table_doc.table_label,
-                    "status": table_doc.status,
                     "doctype_name": table_doc.doctype_name
                 },
                 "fields": fields,
@@ -697,8 +696,7 @@ def save_table_fields_seamless(table_name, fields_data):
             except Exception as e:
                 frappe.logger().warning(f"Could not get actual field count for {table_doc.doctype_name}: {str(e)}")
             
-            # Update status and field count directly in DB to avoid timestamp conflicts
-            frappe.db.set_value("Flansa Table", table_name, "status", "Active")
+            # Update field count directly in DB to avoid timestamp conflicts
             frappe.db.set_value("Flansa Table", table_name, "fields_count", actual_fields_count)
             frappe.db.commit()
             
@@ -970,8 +968,6 @@ def recreate_doctype(table_name):
         doctype_result = create_or_update_doctype(table_doc, fields_data)
         
         if doctype_result["success"]:
-            # Update table status to Active
-            frappe.db.set_value("Flansa Table", table_name, "status", "Active")
             frappe.db.commit()
             
             return {

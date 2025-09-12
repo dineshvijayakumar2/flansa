@@ -263,7 +263,7 @@ def get_workspace_apps(workspace_id: Optional[str] = None) -> list:
     
     return frappe.get_all("Flansa Application", 
                          filters={"workspace_id": workspace_id},
-                         fields=["name", "app_title", "status"])
+                         fields=["name", "app_title"])
 
 
 def get_workspace_tables(app_id: str, workspace_id: Optional[str] = None) -> list:
@@ -277,7 +277,7 @@ def get_workspace_tables(app_id: str, workspace_id: Optional[str] = None) -> lis
                              "application": app_id,
                              "workspace_id": workspace_id
                          },
-                         fields=["name", "table_label", "status"])
+                         fields=["name", "table_label"])
 
 
 def is_multi_tenant_enabled() -> bool:

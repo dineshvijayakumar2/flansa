@@ -1097,13 +1097,13 @@ def get_relationships_with_fields(app_name=None):
                     ["from_table", "in", app_table_names],
                     ["to_table", "in", app_table_names]
                 ],
-                fields=["name", "relationship_name", "relationship_type", "parent_table", "child_table", "from_table", "to_table", "status"],
+                fields=["name", "relationship_name", "relationship_type", "parent_table", "child_table", "from_table", "to_table"],
                 order_by="creation desc"
             )
         else:
             # Get all relationships if no app filter
             relationships = frappe.get_all("Flansa Relationship", 
-                fields=["name", "relationship_name", "relationship_type", "parent_table", "child_table", "from_table", "to_table", "status"],
+                fields=["name", "relationship_name", "relationship_type", "parent_table", "child_table", "from_table", "to_table"],
                 order_by="creation desc"
             )
         
