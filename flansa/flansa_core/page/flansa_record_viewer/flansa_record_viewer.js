@@ -10,17 +10,8 @@ frappe.pages['flansa-record-viewer'].on_page_load = function(wrapper) {
         single_column: true
     });
     
-    // Add standardized Back button
-    setTimeout(() => {
-        if (window.FlansaNav && typeof window.FlansaNav.addBackButton === 'function') {
-            window.FlansaNav.addBackButton(page);
-        } else {
-            // Fallback: Add back button directly
-            page.add_button('← Back', () => {
-                window.history.back();
-            }, 'btn-default');
-        }
-    }, 100);
+    // Hide the default page header to keep only our sleek banner
+    $(page.wrapper).find('.page-head').hide();
     
     window.recordViewer = new FlansaRecordViewer(wrapper);
 };
@@ -49,7 +40,67 @@ class FlansaRecordViewer {
             this.setup_html();
             this.bind_events();
             this.load_data();
+            
+            // Fix breadcrumb navigation after HTML is fully rendered
+            setTimeout(() => {
+                this.fix_breadcrumb_navigation();
+            }, 200);
         }
+    }
+
+    fix_breadcrumb_navigation() {
+        // Apply click handler to ALL breadcrumb links after they're rendered
+        const attempts = [100, 300, 500, 1000];
+        let attemptIndex = 0;
+        
+        const tryFix = () => {
+            const selectors = [
+                'a[href*="/app/flansa-table-builder"]',
+                'a[href*="/app/flansa-report-manager"]',
+                'a[href*="/app/flansa-report-viewer"]',
+                'a[href*="/app/flansa-app-builder"]',
+                'a[href*="/app/flansa-workspace-builder"]',
+                '.breadcrumb a[href*="/app/flansa-"]'
+            ];
+            
+            let totalFixed = 0;
+            // Apply click handlers to preserve query strings
+            for (const selector of selectors) {
+                const links = $(selector);
+                if (links.length > 0) {
+                    totalFixed += links.length;
+                    
+                    links.each(function() {
+                        const $link = $(this);
+                        
+                        // Remove ALL event handlers and add our handler  
+                        $link.parents().addBack().off('click.frappe');
+                        $link.unbind('click').off('click');
+                        $link.on('click.flansa-fix', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            const targetUrl = $(this).attr('href');
+                            window.location.assign(targetUrl);
+                            return false;
+                        });
+                        
+                        // Add capturing phase handler as backup
+                        this.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                        }, true);
+                    });
+                }
+            }
+            
+            if (totalFixed === 0 && attemptIndex < attempts.length) {
+                setTimeout(tryFix, attempts[attemptIndex]);
+                attemptIndex++;
+            }
+        };
+        
+        tryFix();
     }
     
     // Helper method for API calls
@@ -146,6 +197,10 @@ class FlansaRecordViewer {
         const urlParams = new URLSearchParams(window.location.search);
         this.mode = urlParams.get('mode') || 'view';
         
+        // Check if we came from a report (for breadcrumb context)
+        this.from_report = urlParams.get('from_report') || urlParams.get('report') || null;
+        this.report_name = urlParams.get('report_name') || null;
+        
         if (!this.table_name) {
             frappe.show_alert({
                 message: 'No table specified in route',
@@ -172,6 +227,134 @@ class FlansaRecordViewer {
         });
     }
     
+    generate_action_buttons() {
+        // Generate appropriate action buttons based on current mode
+        if (this.mode === 'new') {
+            return `
+                <div class="action-dropdown">
+                    <button class="sleek-btn primary" id="save-record">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z" />
+                            <path d="M3 14a1 1 0 011-1h1V9a1 1 0 012 0v4h4V9a1 1 0 012 0v4h1a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                        </svg>
+                        <span>Save</span>
+                    </button>
+                </div>
+                <div class="action-dropdown">
+                    <button class="sleek-btn secondary" id="cancel-record">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Cancel</span>
+                    </button>
+                </div>`;
+        } else if (this.mode === 'edit') {
+            return `
+                <div class="action-dropdown">
+                    <button class="sleek-btn primary" id="save-record">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z" />
+                            <path d="M3 14a1 1 0 011-1h1V9a1 1 0 012 0v4h4V9a1 1 0 012 0v4h1a1 1 0 110 2H4a1 1 0 01-1-1z" />
+                        </svg>
+                        <span>Save</span>
+                    </button>
+                </div>
+                <div class="action-dropdown">
+                    <button class="sleek-btn secondary" id="cancel-record">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                        <span>Cancel</span>
+                    </button>
+                </div>`;
+        } else {
+            // View mode - show context menu with edit, duplicate, delete options
+            return `
+                <div class="action-dropdown">
+                    <button class="sleek-btn secondary" id="context-menu">
+                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+                        </svg>
+                    </button>
+                    <div class="dropdown-panel" id="context-dropdown">
+                        <a href="#" class="dropdown-option" id="edit-record-menu">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                            </svg>
+                            <span>Edit Record</span>
+                        </a>
+                        <a href="#" class="dropdown-option" id="duplicate-record-menu">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                                <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm8 8v2a1 1 0 001 1h3a1 1 0 001-1v-9a1 1 0 00-1-1h-2a1 1 0 000 2h1v7h-3z" clip-rule="evenodd"></path>
+                            </svg>
+                            <span>Duplicate Record</span>
+                        </a>
+                        <a href="#" class="dropdown-option" id="delete-record-menu">
+                            <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                            <span>Delete Record</span>
+                        </a>
+                    </div>
+                </div>`;
+        }
+    }
+
+    generate_breadcrumb_html() {
+        // Generate dynamic breadcrumb HTML based on access path
+        let breadcrumbHtml = `
+            <a href="/app/flansa-workspace-builder" class="breadcrumb-link">
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+                </svg>
+                <span>Workspace</span>
+            </a>
+            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+            <a href="/app/flansa-app-builder" class="breadcrumb-link" id="app-breadcrumb-link">
+                <span>App Builder</span>
+            </a>
+            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+            <a href="/app/flansa-table-builder?table=${encodeURIComponent(this.table_name)}" class="breadcrumb-link" id="table-breadcrumb-link">
+                <span>Table Builder</span>
+            </a>`;
+        
+        // Add report breadcrumb if accessed from a report
+        if (this.from_report || this.report_name) {
+            breadcrumbHtml += `
+                <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                </svg>
+                <a href="/app/flansa-report-manager?table=${encodeURIComponent(this.table_name)}" class="breadcrumb-link">
+                    <span>Reports</span>
+                </a>`;
+            
+            // Add specific report name if available
+            if (this.report_name) {
+                breadcrumbHtml += `
+                    <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+                    </svg>
+                    <a href="/app/flansa-report-viewer/${encodeURIComponent(this.table_name)}?report=${encodeURIComponent(this.from_report)}" class="breadcrumb-link" id="report-breadcrumb-link">
+                        <span>${this.report_name}</span>
+                    </a>`;
+            }
+        }
+        
+        // Final breadcrumb (current page)
+        breadcrumbHtml += `
+            <svg class="breadcrumb-divider" width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
+            </svg>
+            <span class="breadcrumb-current">📋 Record Viewer</span>`;
+        
+        return breadcrumbHtml;
+    }
+    
     setup_html() {
         const modeTitle = this.mode === 'new' ? 'Create New Record' : 
                          this.mode === 'edit' ? 'Edit Record' : 'View Record';
@@ -186,72 +369,41 @@ class FlansaRecordViewer {
                     <div class="header-content">
                         <!-- Breadcrumb Trail -->
                         <nav class="breadcrumb-trail">
-                            <a href="/app/flansa-workspace-builder" class="breadcrumb-link">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M9.293 2.293a1 1 0 011.414 0l7 7A1 1 0 0117 10h-1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-3a1 1 0 00-1-1H9a1 1 0 00-1 1v3a1 1 0 01-1 1H3a1 1 0 01-1-1v-6H1a1 1 0 01-.707-1.707l7-7z" clip-rule="evenodd" />
-                                </svg>
-                                Workspace
-                            </a>
-                            <svg width="8" height="8" viewBox="0 0 20 20" fill="currentColor" class="breadcrumb-separator">
-                                <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
-                            </svg>
-                            <a href="#" class="breadcrumb-link current">
-                                <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v8a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2H4zm0 2v8h12V6H4z" clip-rule="evenodd" />
-                                </svg>
-                                ${modeTitle}
-                            </a>
+                            ${this.generate_breadcrumb_html()}
                         </nav>
                         
-                        <!-- Single Row Header Section -->
-                        <div class="header-main">
-                            <div class="header-left">
+                        <!-- Application Banner below breadcrumbs -->
+                        <div class="app-banner">
+                            <div class="banner-left">
                                 <!-- Optional Workspace Logo -->
-                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none;">
+                                <div class="workspace-logo-container" id="workspace-logo-container" style="display: none; margin-right: 8px;">
                                     <img src="" alt="Workspace Logo" class="workspace-logo" id="workspace-logo" />
                                 </div>
-                                
-                                <div class="header-title-inline">
-                                    <h1 class="header-title">
-                                        <span class="title-text" id="app-name-display">${modeTitle}</span>
-                                    </h1>
-                                    <span class="header-separator">•</span>
-                                    <p class="header-subtitle-inline">Table: ${this.table_name || 'Unknown'}</p>
+                                <!-- App Info Section -->
+                                <div class="app-info">
+                                    <div class="app-details">
+                                        <h1 class="app-name title-text" id="app-name-display">${modeTitle}</h1>
+                                        <div class="app-type">
+                                            <div class="counter-pill">
+                                                <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"></path>
+                                                    <path fill-rule="evenodd" d="M4 5a2 2 0 012-2v1a1 1 0 001 1h6a1 1 0 001-1V3a2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"></path>
+                                                </svg>
+                                                <span class="counter-text">Record ${this.mode.charAt(0).toUpperCase() + this.mode.slice(1)}</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            
                             <!-- Action Buttons -->
-                            <div class="header-actions">
-                                <span class="sleek-badge mode-badge">${this.mode.toUpperCase()}</span>
+                            <div class="banner-right">
+                                <div class="action-dropdown">
+                                    <span class="sleek-badge mode-badge">${this.mode.toUpperCase()}</span>
+                                </div>
+                                
+                                ${this.generate_action_buttons()}
                             </div>
                         </div>
-                    </div>
-                </div>
-
-                <!-- Navigation Breadcrumbs -->
-                <div class="flansa-breadcrumbs" style="padding: 12px 0; margin-bottom: 16px; border-bottom: 1px solid #f0f3f7;">
-                    <nav style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #6c757d;">
-                        <a href="/app/flansa-dashboard" id="dashboard-link" style="color: #667eea; text-decoration: none; display: flex; align-items: center; gap: 4px;">
-                            <i class="fa fa-home"></i> Dashboard
-                        </a>
-                        <span style="color: #dee2e6;">→</span>
-                        <a href="/app/flansa-report-viewer/${this.table_name}" style="color: #667eea; text-decoration: none;">
-                            ${this.table_name}
-                        </a>
-                        <span style="color: #dee2e6;">→</span>
-                        <span style="color: #6c757d;">${this.record_id ? 'Record ' + this.record_id : 'New Record'}</span>
-                    </nav>
-                </div>
-
-                <!-- Action Bar -->
-                <div class="flansa-action-bar" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding: 12px 16px; background: #f8f9fc; border-radius: 6px; border: 1px solid #e3e6f0;">
-                    <div class="action-left" style="display: flex; align-items: center; gap: 12px;">
-                        <button type="button" class="btn btn-sm btn-outline-secondary back-to-list" style="display: flex; align-items: center; gap: 6px;">
-                            <i class="fa fa-arrow-left"></i> Back to List
-                        </button>
-                    </div>
-                    <div class="action-right" id="record-actions">
-                        <!-- Action buttons will be populated dynamically -->
                     </div>
                 </div>
 
@@ -262,22 +414,274 @@ class FlansaRecordViewer {
                         <p class="text-muted" style="margin-top: 20px;">Loading record...</p>
                     </div>
                 </div>
-                
-                <!-- Status Bar -->
-                <div class="flansa-status-bar" style="position: fixed; bottom: 0; left: 0; right: 0; background: #ffffff; border-top: 1px solid #e3e6f0; padding: 8px 20px; font-size: 12px; color: #6c757d; display: flex; justify-content: space-between; align-items: center; z-index: 99;">
-                    <div class="status-left">
-                        <span id="status-message">Ready</span>
-                    </div>
-                    <div class="status-right">
-                        <span>Flansa Platform</span>
-                    </div>
-                </div>
             </div>
             
             <style>
                 @keyframes spin {
                     0% { transform: rotate(0deg); }
                     100% { transform: rotate(360deg); }
+                }
+                
+                /* Ultra-modern Sleek Header */
+                .sleek-header {
+                    position: sticky;
+                    top: 0;
+                    z-index: 100;
+                    background: white;
+                    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+                    backdrop-filter: blur(20px);
+                    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+                }
+                
+                .header-backdrop {
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: rgba(255, 255, 255, 0.95);
+                    backdrop-filter: blur(20px);
+                    z-index: -1;
+                }
+                
+                .header-content {
+                    max-width: 1400px;
+                    margin: 0 auto;
+                    padding: 1rem 1.5rem;
+                }
+                
+                /* Breadcrumb Trail */
+                .breadcrumb-trail {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    font-size: 0.875rem;
+                    margin-bottom: 0.75rem;
+                }
+                
+                .breadcrumb-link {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.375rem;
+                    color: #6b7280;
+                    text-decoration: none;
+                    padding: 0.25rem 0.5rem;
+                    border-radius: 0.375rem;
+                    transition: all 0.15s ease;
+                }
+                
+                .breadcrumb-link:hover {
+                    color: #4f46e5;
+                    background: rgba(79, 70, 229, 0.05);
+                }
+                
+                .breadcrumb-link span {
+                    font-weight: 500;
+                }
+                
+                .breadcrumb-divider {
+                    color: #d1d5db;
+                    flex-shrink: 0;
+                }
+                
+                .breadcrumb-current {
+                    color: #111827;
+                    font-weight: 600;
+                    padding: 0.25rem 0.5rem;
+                }
+                
+                /* Application Banner */
+                .app-banner {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    margin-top: 12px;
+                }
+                
+                .banner-left {
+                    display: flex;
+                    align-items: center;
+                    gap: 16px;
+                }
+                
+                .workspace-logo-container {
+                    display: none;
+                }
+                
+                .workspace-logo {
+                    height: 40px;
+                    width: auto;
+                    max-width: 120px;
+                    object-fit: contain;
+                    border-radius: 4px;
+                    border: 1px solid rgba(0, 0, 0, 0.1);
+                }
+                
+                .app-info {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                .app-details h1.app-name {
+                    margin: 0;
+                    font-size: 20px;
+                    font-weight: 600;
+                    color: #111827;
+                    line-height: 1.2;
+                }
+                
+                .title-text {
+                    font-size: 1.375rem;
+                    font-weight: 700;
+                    color: #111827;
+                    letter-spacing: -0.025em;
+                    line-height: 1.2;
+                }
+                
+                .app-type {
+                    margin-top: 2px;
+                    margin-bottom: 16px;
+                }
+                
+                .counter-pill {
+                    background: rgba(102, 126, 234, 0.1);
+                    color: #667eea;
+                    padding: 4px 12px;
+                    border-radius: 8px;
+                    border: 1px solid rgba(255, 255, 255, 0.25);
+                    backdrop-filter: blur(10px);
+                    display: flex;
+                    align-items: center;
+                    gap: 6px;
+                    font-size: 12px;
+                    font-weight: 500;
+                }
+                
+                .counter-text {
+                    font-weight: 500;
+                    color: #374151;
+                }
+                
+                .counter-pill .counter-text {
+                    color: #667eea;
+                    font-weight: 600;
+                }
+                
+                .banner-right {
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                }
+                
+                /* Modern Buttons */
+                .sleek-btn {
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 0.5rem;
+                    padding: 0.625rem 1rem;
+                    border: none;
+                    border-radius: 10px;
+                    font-size: 0.875rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+                    white-space: nowrap;
+                }
+                
+                .sleek-btn.primary {
+                    background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+                    color: white;
+                    box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);
+                }
+                
+                .sleek-btn.primary:hover {
+                    transform: translateY(-1px);
+                    box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+                }
+                
+                .sleek-btn.secondary {
+                    background: white;
+                    color: #6b7280;
+                    border: 1px solid #e5e7eb;
+                    padding: 0.5rem;
+                    min-width: 36px;
+                    justify-content: center;
+                }
+                
+                .sleek-btn.secondary:hover {
+                    background: #f9fafb;
+                    color: #4f46e5;
+                    border-color: #4f46e5;
+                }
+                
+                .sleek-btn svg {
+                    flex-shrink: 0;
+                }
+                
+                /* Modern Dropdown */
+                .action-dropdown {
+                    position: relative;
+                }
+                
+                .dropdown-panel {
+                    position: absolute;
+                    top: calc(100% + 8px);
+                    right: 0;
+                    background: white;
+                    border: 1px solid rgba(0, 0, 0, 0.08);
+                    border-radius: 12px;
+                    padding: 0.5rem;
+                    min-width: 200px;
+                    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+                    display: none;
+                    z-index: 1000;
+                }
+                
+                .dropdown-option {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    padding: 0.75rem;
+                    color: #374151;
+                    text-decoration: none;
+                    border-radius: 8px;
+                    transition: all 0.15s ease;
+                    font-size: 0.875rem;
+                    font-weight: 500;
+                }
+                
+                .dropdown-option:hover {
+                    background: #f3f4f6;
+                    color: #111827;
+                    text-decoration: none;
+                }
+                
+                .dropdown-option svg {
+                    color: #6b7280;
+                    flex-shrink: 0;
+                }
+                
+                .dropdown-option:hover svg {
+                    color: #4f46e5;
+                }
+                
+                /* Badge Styling */
+                .sleek-badge {
+                    display: inline-flex;
+                    align-items: center;
+                    padding: 0.25rem 0.625rem;
+                    border-radius: 6px;
+                    font-size: 0.75rem;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    letter-spacing: 0.05em;
+                }
+                
+                .mode-badge {
+                    background: rgba(34, 197, 94, 0.1);
+                    color: #166534;
+                    border: 1px solid rgba(34, 197, 94, 0.2);
                 }
                 
                 /* Logic Field Styling */
@@ -303,9 +707,9 @@ class FlansaRecordViewer {
                     position: relative;
                 }
                 
-                
                 .flansa-record-viewer-page {
-                    padding-bottom: 60px; /* Space for status bar */
+                    background: #f8f9fa;
+                    min-height: calc(100vh - 60px);
                 }
                 
                 .btn:hover {
@@ -490,6 +894,170 @@ class FlansaRecordViewer {
                     border-bottom: none;
                 }
                 
+                /* Enhanced awesomplete dropdown styling */
+                .awesomplete {
+                    position: relative;
+                    z-index: 1000;
+                }
+                
+                .awesomplete > ul {
+                    position: fixed !important;
+                    z-index: 9999 !important;
+                    background: white;
+                    border: 1px solid #d1d8dd;
+                    border-radius: 4px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    max-height: 300px;
+                    overflow-y: auto;
+                    min-width: 200px;
+                }
+                
+                .awesomplete > ul > li {
+                    padding: 8px 12px;
+                    border-bottom: 1px solid #f0f0f0;
+                    cursor: pointer;
+                    line-height: 1.4;
+                }
+                
+                .awesomplete > ul > li:hover,
+                .awesomplete > ul > li[aria-selected="true"] {
+                    background-color: #f8f9fa;
+                }
+                
+                .awesomplete > ul > li strong {
+                    color: #333;
+                    font-weight: 500;
+                }
+                
+                .awesomplete > ul > li small {
+                    color: #6c757d;
+                    font-size: 12px;
+                }
+                
+                /* Ensure parent containers don't clip dropdown */
+                .content-container,
+                .form-container,
+                .fields-grid,
+                .form-group {
+                    overflow: visible !important;
+                }
+                
+                /* Custom dropdown styling */
+                .flansa-custom-dropdown {
+                    position: relative;
+                }
+                
+                .flansa-custom-dropdown .dropdown-clear-btn {
+                    position: absolute;
+                    right: 8px;
+                    top: 50%;
+                    transform: translateY(-50%);
+                    width: 20px;
+                    height: 20px;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border-radius: 50%;
+                    background-color: #f8f9fa;
+                    color: #6c757d;
+                    transition: all 0.2s ease;
+                    z-index: 10;
+                }
+                
+                .flansa-custom-dropdown .dropdown-clear-btn:hover {
+                    background-color: #e9ecef;
+                    color: #495057;
+                    transform: translateY(-50%) scale(1.1);
+                }
+                
+                .flansa-custom-dropdown .dropdown-clear-btn svg {
+                    width: 12px;
+                    height: 12px;
+                }
+                
+                .flansa-custom-dropdown .dropdown-list {
+                    background: white;
+                    border: 1px solid #d1d8dd;
+                    border-radius: 6px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    max-height: 300px;
+                    overflow-y: auto;
+                    z-index: 9999;
+                }
+                
+                .flansa-custom-dropdown .dropdown-item {
+                    padding: 12px 16px;
+                    border-bottom: 1px solid #f0f3f4;
+                    cursor: pointer;
+                    transition: background-color 0.2s ease;
+                }
+                
+                .flansa-custom-dropdown .dropdown-item:last-child {
+                    border-bottom: none;
+                }
+                
+                .flansa-custom-dropdown .dropdown-item:hover,
+                .flansa-custom-dropdown .dropdown-item.selected {
+                    background-color: #f8f9fa;
+                }
+                
+                .flansa-custom-dropdown .dropdown-item-main {
+                    font-weight: 500;
+                    color: #333;
+                    margin-bottom: 4px;
+                }
+                
+                .flansa-custom-dropdown .dropdown-item-description {
+                    font-size: 12px;
+                    color: #6c757d;
+                }
+                
+                .flansa-custom-dropdown .dropdown-loading,
+                .flansa-custom-dropdown .dropdown-no-results,
+                .flansa-custom-dropdown .dropdown-error {
+                    padding: 12px 16px;
+                    text-align: center;
+                    color: #6c757d;
+                    font-style: italic;
+                }
+                
+                .flansa-custom-dropdown .dropdown-error {
+                    color: #dc3545;
+                }
+                
+                /* Create new option styling */
+                .flansa-custom-dropdown .dropdown-create-new {
+                    background-color: #f8f9fa;
+                    border: 1px dashed #dee2e6;
+                    margin-bottom: 4px;
+                    border-radius: 4px;
+                }
+                
+                .flansa-custom-dropdown .dropdown-create-new:hover {
+                    background-color: #e9ecef;
+                    border-color: #adb5bd;
+                }
+                
+                .flansa-custom-dropdown .dropdown-create-new .dropdown-item-main {
+                    color: #007bff;
+                    font-weight: 500;
+                    display: flex;
+                    align-items: center;
+                }
+                
+                .flansa-custom-dropdown .dropdown-create-new .dropdown-item-description {
+                    color: #6c757d;
+                    font-size: 11px;
+                }
+                
+                /* Separator styling */
+                .flansa-custom-dropdown .dropdown-separator {
+                    height: 1px;
+                    background-color: #dee2e6;
+                    margin: 4px 0;
+                }
+                
                 /* Frappe control container styling */
                 .frappe-link-field-container .form-group {
                     margin-bottom: 0;
@@ -603,6 +1171,14 @@ class FlansaRecordViewer {
                         this.application = metaResponse.application;
                         this.naming_config = metaResponse.naming_config || {};
                         
+                                // Update banner title with real app/table name
+                        this.update_banner_title();
+                        
+                        // Fix breadcrumb navigation after URLs are set
+                        setTimeout(() => {
+                            this.fix_breadcrumb_navigation();
+                        }, 500);
+                        
                         // Check if table is readonly for this user
                         const tableInfo = accessibleTables.find(t => t.name === this.table_name);
                         this.is_readonly = tableInfo && tableInfo.readonly;
@@ -620,7 +1196,7 @@ class FlansaRecordViewer {
                             this.mode = 'view';
                         }
                         
-                        this.update_dashboard_link();
+                        // Dashboard link no longer needed - using modern breadcrumb structure
                         await this.render_new_record_form();
                     } else {
                         this.show_error('Failed to load table structure: ' + (metaResponse.error || 'Unknown error'));
@@ -644,7 +1220,10 @@ class FlansaRecordViewer {
                 this.table_fields = recordResponse.fields || [];
                 this.doctype_name = recordResponse.doctype_name;
                 this.application = recordResponse.application;
-                this.update_dashboard_link();
+                
+                // Update banner title with real app/table name
+                this.update_banner_title();
+                this.update_mode_display(); // Ensure mode display is consistent
                 await this.render_record();
             } else {
                 this.show_error('Record not found: ' + (recordResponse.error || 'Unknown error'));
@@ -734,10 +1313,14 @@ class FlansaRecordViewer {
         
         content.innerHTML = html;
         
-        // Small delay to ensure DOM is ready
+        // Small delay to ensure DOM is ready, then bind events
         setTimeout(() => {
             this.bind_record_events();
             this.apply_form_builder_styles();
+            // Extra retry for context menu binding
+            setTimeout(() => {
+                this.bind_context_menu_events();
+            }, 100);
         }, 50);
     }
     
@@ -1182,16 +1765,16 @@ class FlansaRecordViewer {
                        class="form-control frappe-link-field" 
                        id="${uniqueId}"
                        name="${fieldName}" 
-                       value="${this.escapeHtml(showDisplayValue ? displayValue : fieldValue)}" 
+                       value="${this.escapeHtml(fieldValue)}" 
                        data-raw-value="${this.escapeHtml(fieldValue)}"
                        data-display-value="${this.escapeHtml(displayValue)}"
-                       placeholder="${showDisplayValue ? `Search ${tableLabel}...` : `Search ${tableLabel}...`}"
+                       placeholder="Search ${tableLabel}..."
                        data-field-name="${fieldName}"
                        data-link-doctype="${linkDoctype}"
                        data-fieldtype="Link"
                        data-options="${linkDoctype}">
                 ${showDisplayValue ? 
-                    `<small class="text-success">Showing: ${this.escapeHtml(displayValue)}</small>` :
+                    `<small class="text-success">Current: ${this.escapeHtml(displayValue)}</small>` :
                     `<small class="text-muted">Search and select from ${tableLabel} records</small>`
                 }
             </div>
@@ -1199,10 +1782,7 @@ class FlansaRecordViewer {
     }
     
     async getDisplayValueForLinkField(field, fieldValue, linkDoctype) {
-        console.log(`🔍 Getting display value for ${field.fieldname}:`, { fieldValue, linkDoctype, table_name: this.table_name });
-        
         if (!fieldValue) {
-            console.log(`⚠️  No field value provided for ${field.fieldname}`);
             return '';
         }
         
@@ -1229,6 +1809,7 @@ class FlansaRecordViewer {
                 if (logicField.link_display_field) {
                     console.log(`✅ Found display field config: ${logicField.link_display_field} for ${field.fieldname}`);
                     // Fetch the display value from the linked record
+                    console.log(`🎯 CALLING fetchDisplayValue with fieldValue: ${fieldValue}`);
                     const displayValue = await this.fetchDisplayValue(fieldValue, linkDoctype, logicField.link_display_field);
                     console.log(`🎯 Display value result for ${field.fieldname}:`, { displayValue, fallback: displayValue || fieldValue });
                     return displayValue || fieldValue; // Fallback to raw value if display value not found
@@ -1246,17 +1827,19 @@ class FlansaRecordViewer {
     
     async fetchDisplayValue(recordId, linkDoctype, displayField) {
         try {
+            // Use get_list instead of get_value for better reliability
             const result = await frappe.call({
-                method: 'frappe.client.get_value',
+                method: 'frappe.client.get_list',
                 args: {
                     doctype: linkDoctype,
-                    name: recordId,
-                    fieldname: displayField
+                    filters: { name: recordId },
+                    fields: [displayField],
+                    limit_page_length: 1
                 }
             });
             
-            if (result.message && result.message[displayField]) {
-                return result.message[displayField];
+            if (result.message && result.message.length > 0 && result.message[0][displayField]) {
+                return result.message[0][displayField];
             }
         } catch (error) {
             console.error(`Error fetching display value for ${recordId}:`, error);
@@ -1478,16 +2061,16 @@ class FlansaRecordViewer {
             return;
         }
         
-        // Bind action bar button events (these are in the action bar, not content)
-        if (actionsContainer) {
-            console.log('Binding action bar events...');
-            
-            // Edit button
-            const editBtn = actionsContainer.querySelector('.edit-record');
-            console.log('Edit button found:', !!editBtn);
+        // Context menu binding is now handled by dedicated bind_context_menu_events() method
+        console.log('Context menu binding delegated to dedicated method');
+        
+        // Legacy action bar compatibility (if any old elements exist)
+        const legacyActionsContainer = document.getElementById('record-actions');
+        if (legacyActionsContainer) {
+            const editBtn = legacyActionsContainer.querySelector('.edit-record');
             if (editBtn) {
                 editBtn.addEventListener('click', (e) => {
-                    console.log('Edit button clicked!');
+                    console.log('Legacy edit button clicked!');
                     e.preventDefault();
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('mode', 'edit');
@@ -1496,7 +2079,7 @@ class FlansaRecordViewer {
             }
             
             // Save button
-            const saveBtn = actionsContainer.querySelector('.save-record');
+            const saveBtn = legacyActionsContainer.querySelector('.save-record');
             console.log('Save button found:', !!saveBtn);
             if (saveBtn) {
                 saveBtn.addEventListener('click', (e) => {
@@ -1507,7 +2090,7 @@ class FlansaRecordViewer {
             }
             
             // Cancel buttons
-            const cancelEdit = actionsContainer.querySelector('.cancel-edit');
+            const cancelEdit = legacyActionsContainer.querySelector('.cancel-edit');
             console.log('Cancel edit button found:', !!cancelEdit);
             if (cancelEdit) {
                 cancelEdit.addEventListener('click', (e) => {
@@ -1519,7 +2102,7 @@ class FlansaRecordViewer {
                 });
             }
             
-            const cancelCreate = actionsContainer.querySelector('.cancel-create');
+            const cancelCreate = legacyActionsContainer.querySelector('.cancel-create');
             console.log('Cancel create button found:', !!cancelCreate);
             if (cancelCreate) {
                 cancelCreate.addEventListener('click', (e) => {
@@ -1529,7 +2112,7 @@ class FlansaRecordViewer {
                 });
             }
         } else {
-            console.error('Actions container not found!');
+            console.log('No legacy actions container found - using modern header actions');
         }
         
         // Bind navigation events (these are in the page container)
@@ -1687,11 +2270,12 @@ class FlansaRecordViewer {
                             indicator: 'green'
                         });
                         
-                        // Go back to previous page (typically the report view)
-                        if (window.history.length > 1) {
-                            window.history.back();
+                        // Redirect to view mode of the newly created record
+                        const newRecordId = response.message.record_name || response.message.name;
+                        if (newRecordId) {
+                            window.location.href = `/app/flansa-record-viewer/${this.table_name}/${newRecordId}?mode=view`;
                         } else {
-                            // Fallback: redirect to the table's report view
+                            // Fallback: redirect to the table's report view if no record ID returned
                             window.location.href = `/app/flansa-report-viewer/${this.table_name}?type=table`;
                         }
                     } else {
@@ -1725,10 +2309,8 @@ class FlansaRecordViewer {
                             indicator: 'green'
                         });
                         
-                        // Switch to view mode
-                        const currentUrl = new URL(window.location);
-                        currentUrl.searchParams.set('mode', 'view');
-                        window.location.href = currentUrl.toString();
+                        // Switch to view mode of the current record
+                        window.location.href = `/app/flansa-record-viewer/${this.table_name}/${this.record_id}?mode=view`;
                     } else {
                         frappe.show_alert({
                             message: 'Failed to update record: ' + (response.message?.error || 'Unknown error'),
@@ -1744,6 +2326,24 @@ class FlansaRecordViewer {
                     });
                 }
             });
+        }
+    }
+    
+    cancel_edit() {
+        // Handle cancel action based on current mode
+        if (this.mode === 'new') {
+            // For new records, go back to previous page or table report
+            if (window.history.length > 1) {
+                window.history.back();
+            } else {
+                // Fallback: redirect to the table's report view
+                window.location.href = `/app/flansa-report-viewer/${this.table_name}?type=table`;
+            }
+        } else if (this.mode === 'edit') {
+            // For edit mode, switch back to view mode
+            const currentUrl = new URL(window.location);
+            currentUrl.searchParams.set('mode', 'view');
+            window.location.href = currentUrl.toString();
         }
     }
     
@@ -2226,7 +2826,7 @@ class FlansaRecordViewer {
                         background: rgba(0, 0, 0, 0.8);
                         color: white;
                     ">
-                        <span class="lightbox-title" style="font-weight: 600; font-size: 16px;">${this.record_name || 'Image Gallery'}</span>
+                        <span class="lightbox-title" style="font-weight: 600; font-size: 16px;">${this.record_id || 'Image Gallery'}</span>
                         <div style="display: flex; align-items: center; gap: 20px;">
                             <span class="lightbox-counter" style="font-size: 14px; color: rgba(255,255,255,0.8);">
                                 <span class="current-img">1</span> / <span class="total-imgs">${allImages.length}</span>
@@ -2488,29 +3088,59 @@ class FlansaRecordViewer {
     bind_link_field_events(content) {
         // Initialize Frappe's native link fields
         const linkInputs = content.querySelectorAll('.frappe-link-field');
-        linkInputs.forEach(input => {
-            this.init_frappe_link_field(input);
+        linkInputs.forEach(async (input) => {
+            await this.init_frappe_link_field(input);
         });
     }
     
-    init_frappe_link_field(input) {
+    async init_frappe_link_field(input) {
         const linkDoctype = input.dataset.linkDoctype;
         const fieldName = input.dataset.fieldName;
         
         if (!linkDoctype || !window.frappe) return;
         
         try {
+            console.log(`🔍 Initializing link field: ${fieldName} -> ${linkDoctype}`);
+            
+            // Check if this field has display field configuration
+            const displayFieldConfig = await this.getDisplayFieldConfig(fieldName);
+            
             // Create Frappe link field using frappe.ui.form.make_control
+            let fieldDef = {
+                fieldtype: 'Link',
+                fieldname: fieldName,
+                options: linkDoctype,
+                placeholder: `Search ${linkDoctype}...`
+            };
+            
+            // If display field is configured, add custom query to field definition
+            if (displayFieldConfig && displayFieldConfig.link_display_field) {
+                console.log(`🎯 Adding custom query to field definition`);
+                fieldDef.get_query = () => {
+                    console.log(`🎯 Field def get_query called for ${fieldName}`);
+                    return {
+                        query: 'flansa.flansa_core.api.link_search.search_with_display_field',
+                        filters: {
+                            'display_field': displayFieldConfig.link_display_field,
+                            'doctype': linkDoctype
+                        }
+                    };
+                };
+            }
+            
             const linkField = frappe.ui.form.make_control({
-                df: {
-                    fieldtype: 'Link',
-                    fieldname: fieldName,
-                    options: linkDoctype,
-                    placeholder: `Search ${linkDoctype}...`
-                },
+                df: fieldDef,
                 parent: input.parentElement,
                 render_input: true
             });
+            
+            // If display field is configured, override the search behavior
+            if (displayFieldConfig && displayFieldConfig.link_display_field) {
+                console.log(`🎯 Found display field config: ${displayFieldConfig.link_display_field}`);
+                this.customizeLinkFieldSearch(linkField, linkDoctype, displayFieldConfig.link_display_field);
+            } else {
+                console.log(`ℹ️ No display field configuration found for ${fieldName}`);
+            }
             
             // Set initial value
             if (input.value) {
@@ -2578,22 +3208,567 @@ class FlansaRecordViewer {
         if (!searchTerm || searchTerm.length < 2) return;
         
         try {
-            // Use Frappe's native search API
-            const response = await frappe.call({
-                method: 'frappe.desk.search.search_link',
-                args: {
-                    doctype: linkDoctype,
-                    txt: searchTerm,
-                    page_length: 10
-                }
-            });
+            // Check if this field has a display field configured
+            const fieldName = input.dataset.fieldName;
+            const displayFieldConfig = await this.getDisplayFieldConfig(fieldName);
             
-            if (response.message && response.message.length > 0) {
-                this.show_link_suggestions(input, response.message);
+            if (displayFieldConfig && displayFieldConfig.link_display_field) {
+                // Use enhanced search with display values
+                const response = await this.searchWithDisplayValues(linkDoctype, searchTerm, displayFieldConfig.link_display_field);
+                if (response && response.length > 0) {
+                    this.show_enhanced_link_suggestions(input, response, displayFieldConfig.link_display_field);
+                }
+            } else {
+                // Fallback to Frappe's native search API
+                const response = await frappe.call({
+                    method: 'frappe.desk.search.search_link',
+                    args: {
+                        doctype: linkDoctype,
+                        txt: searchTerm,
+                        page_length: 10
+                    }
+                });
+                
+                if (response.message && response.message.length > 0) {
+                    this.show_link_suggestions(input, response.message);
+                }
             }
         } catch (error) {
             console.warn('Error fetching link suggestions:', error);
         }
+    }
+    
+    customizeLinkFieldSearch(linkField, linkDoctype, displayField) {
+        console.log(`🎯 Creating custom dropdown for ${linkField.df.fieldname}`);
+        
+        // Hide the original Frappe awesomplete dropdown
+        if (linkField.awesomplete && linkField.awesomplete.ul) {
+            linkField.awesomplete.ul.style.display = 'none';
+        }
+        
+        // Create our custom dropdown container
+        this.createCustomDropdown(linkField, linkDoctype, displayField);
+        
+        console.log(`✅ Custom dropdown created for ${linkField.df.fieldname}`);
+    }
+    
+    createCustomDropdown(linkField, linkDoctype, displayField) {
+        const input = linkField.$input[0];
+        const container = input.parentElement;
+        
+        // Create dropdown container with clear button
+        const dropdownContainer = document.createElement('div');
+        dropdownContainer.className = 'flansa-custom-dropdown';
+        dropdownContainer.innerHTML = `
+            <div class="dropdown-clear-btn" title="Clear selection" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+            </div>
+            <div class="dropdown-list" style="display: none;">
+                <div class="dropdown-loading">Searching...</div>
+            </div>
+        `;
+        
+        container.appendChild(dropdownContainer);
+        const dropdownList = dropdownContainer.querySelector('.dropdown-list');
+        const loadingEl = dropdownContainer.querySelector('.dropdown-loading');
+        const clearBtn = dropdownContainer.querySelector('.dropdown-clear-btn');
+        
+        let searchTimeout;
+        let currentSelectedIndex = -1;
+        
+        // Show/hide clear button based on input value
+        const updateClearButton = () => {
+            if (input.value && input.value.trim()) {
+                clearBtn.style.display = 'block';
+            } else {
+                clearBtn.style.display = 'none';
+            }
+        };
+        
+        // Handle clear button click
+        clearBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            console.log(`🗑️ Clearing selection`);
+            
+            input.value = '';
+            linkField.set_value('');
+            this.hideCustomDropdown(dropdownList);
+            updateClearButton();
+            
+            // Trigger change events
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.focus();
+        });
+        
+        // Update clear button on input changes
+        input.addEventListener('input', updateClearButton);
+        
+        // Initial clear button state
+        updateClearButton();
+        
+        // Handle focus event to show initial suggestions
+        input.addEventListener('focus', (e) => {
+            console.log(`🔍 Custom dropdown focus - showing initial suggestions`);
+            
+            // Show loading
+            this.showCustomDropdown(dropdownList, input);
+            dropdownList.innerHTML = '<div class="dropdown-loading">Loading suggestions...</div>';
+            
+            // Load initial suggestions (first 10 records)
+            setTimeout(async () => {
+                await this.performCustomSearch('', linkDoctype, displayField, dropdownList, input, linkField);
+            }, 100);
+        });
+        
+        // Handle input events
+        input.addEventListener('input', (e) => {
+            const query = e.target.value.trim();
+            console.log(`🔍 Custom dropdown search: "${query}"`);
+            
+            // Clear previous timeout
+            clearTimeout(searchTimeout);
+            
+            // Show loading
+            this.showCustomDropdown(dropdownList, input);
+            loadingEl.style.display = 'block';
+            dropdownList.innerHTML = '<div class="dropdown-loading">Searching...</div>';
+            
+            // Debounce search
+            searchTimeout = setTimeout(async () => {
+                await this.performCustomSearch(query, linkDoctype, displayField, dropdownList, input, linkField);
+            }, 300);
+        });
+        
+        // Handle keyboard navigation
+        input.addEventListener('keydown', (e) => {
+            const items = dropdownList.querySelectorAll('.dropdown-item:not(.dropdown-loading)');
+            
+            switch (e.key) {
+                case 'ArrowDown':
+                    e.preventDefault();
+                    currentSelectedIndex = Math.min(currentSelectedIndex + 1, items.length - 1);
+                    this.updateSelection(items, currentSelectedIndex);
+                    break;
+                    
+                case 'ArrowUp':
+                    e.preventDefault();
+                    currentSelectedIndex = Math.max(currentSelectedIndex - 1, -1);
+                    this.updateSelection(items, currentSelectedIndex);
+                    break;
+                    
+                case 'Enter':
+                    e.preventDefault();
+                    if (currentSelectedIndex >= 0 && items[currentSelectedIndex]) {
+                        this.selectCustomDropdownItem(items[currentSelectedIndex], input, linkField, dropdownList);
+                    }
+                    break;
+                    
+                case 'Escape':
+                    this.hideCustomDropdown(dropdownList);
+                    break;
+            }
+        });
+        
+        // Hide dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!container.contains(e.target)) {
+                this.hideCustomDropdown(dropdownList);
+            }
+        });
+    }
+    
+    async performCustomSearch(query, linkDoctype, displayField, dropdownList, input, linkField) {
+        try {
+            console.log(`🎯 Performing search: ${query} in ${linkDoctype}.${displayField}`);
+            
+            const response = await frappe.call({
+                method: 'flansa.flansa_core.api.link_search.search_with_display_field',
+                args: {
+                    doctype: linkDoctype,
+                    txt: query,
+                    searchfield: 'name',
+                    start: 0,
+                    page_len: 10,
+                    filters: {
+                        'display_field': displayField,
+                        'doctype': linkDoctype
+                    }
+                }
+            });
+            
+            const results = response.message || [];
+            console.log(`✅ Search results:`, results);
+            
+            // Clear loading and populate results
+            dropdownList.innerHTML = '';
+            
+            // Add existing results first
+            results.forEach((result, index) => {
+                const [value, label, description] = result;
+                
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.dataset.value = value;
+                item.innerHTML = `
+                    <div class="dropdown-item-main">${label}</div>
+                    <div class="dropdown-item-description">${description}</div>
+                `;
+                
+                item.addEventListener('click', () => {
+                    this.selectCustomDropdownItem(item, input, linkField, dropdownList);
+                });
+                
+                dropdownList.appendChild(item);
+            });
+            
+            // Add separator before "Create New" if we have results
+            if (results.length > 0) {
+                const separator = document.createElement('div');
+                separator.className = 'dropdown-separator';
+                dropdownList.appendChild(separator);
+            }
+            
+            // Always add "Create New" option at the end
+            const createText = query && query.trim() ? query : 'New Record';
+            const createNewItem = document.createElement('div');
+            createNewItem.className = 'dropdown-item dropdown-create-new';
+            createNewItem.innerHTML = `
+                <div class="dropdown-item-main">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom;">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    ${query && query.trim() ? `Create "${query}"` : `Create New ${this.getDocTypeDisplayName(linkDoctype)}`}
+                </div>
+                <div class="dropdown-item-description">Opens form in new tab</div>
+            `;
+            
+            createNewItem.addEventListener('click', async () => {
+                await this.createNewLinkedRecord(linkDoctype, createText, input, linkField, dropdownList);
+            });
+            
+            dropdownList.appendChild(createNewItem);
+            
+            // Show message only if no results and no query (initial state)
+            if (results.length === 0 && (!query || !query.trim())) {
+                // Replace the dropdown content with just the message and create option
+                dropdownList.innerHTML = '<div class="dropdown-no-results">Start typing to search or select from options</div>';
+                
+                // Add separator
+                const separator = document.createElement('div');
+                separator.className = 'dropdown-separator';
+                dropdownList.appendChild(separator);
+                
+                // Re-add the create new option
+                const createNewItem = document.createElement('div');
+                createNewItem.className = 'dropdown-item dropdown-create-new';
+                createNewItem.innerHTML = `
+                    <div class="dropdown-item-main">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 6px; vertical-align: text-bottom;">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Create New ${this.getDocTypeDisplayName(linkDoctype)}
+                    </div>
+                    <div class="dropdown-item-description">Opens form in new tab</div>
+                `;
+                
+                createNewItem.addEventListener('click', async () => {
+                    await this.createNewLinkedRecord(linkDoctype, 'New Record', input, linkField, dropdownList);
+                });
+                
+                dropdownList.appendChild(createNewItem);
+            }
+            
+        } catch (error) {
+            console.error('❌ Search error:', error);
+            dropdownList.innerHTML = '<div class="dropdown-error">Search failed</div>';
+        }
+    }
+    
+    selectCustomDropdownItem(item, input, linkField, dropdownList) {
+        const value = item.dataset.value;
+        const label = item.querySelector('.dropdown-item-main').textContent;
+        
+        console.log(`✅ Selected: ${value} (${label})`);
+        
+        // Update input value
+        input.value = value;
+        linkField.set_value(value);
+        
+        // Hide dropdown
+        this.hideCustomDropdown(dropdownList);
+        
+        // Trigger change events
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+    
+    showCustomDropdown(dropdownList, input) {
+        const inputRect = input.getBoundingClientRect();
+        
+        dropdownList.style.display = 'block';
+        dropdownList.style.position = 'fixed';
+        dropdownList.style.top = (inputRect.bottom + 2) + 'px';
+        dropdownList.style.left = inputRect.left + 'px';
+        dropdownList.style.minWidth = inputRect.width + 'px';
+        dropdownList.style.zIndex = '9999';
+    }
+    
+    hideCustomDropdown(dropdownList) {
+        dropdownList.style.display = 'none';
+    }
+    
+    updateSelection(items, selectedIndex) {
+        items.forEach((item, index) => {
+            item.classList.toggle('selected', index === selectedIndex);
+        });
+    }
+    
+    getDocTypeDisplayName(linkDoctype) {
+        // Convert DocType name to user-friendly display name
+        // e.g., "FLS_0kb10t59kc_f41h2vd9_gljvedbl" -> "Category"
+        if (linkDoctype.includes('_')) {
+            // For generated DocTypes, try to get a friendly name
+            return "record";
+        }
+        return linkDoctype.replace(/([A-Z])/g, ' $1').trim();
+    }
+    
+    async createNewLinkedRecord(linkDoctype, suggestedName, input, linkField, dropdownList) {
+        console.log(`🪟 Opening new ${linkDoctype} form in new tab with suggested name: ${suggestedName}`);
+        
+        try {
+            // Hide dropdown first
+            this.hideCustomDropdown(dropdownList);
+            
+            // Build the new record URL using Flansa record-viewer
+            // We need to get the table name from the linked DocType
+            let newRecordUrl = await this.getFlansaRecordViewerUrl(linkDoctype, suggestedName);
+            
+            if (!newRecordUrl) {
+                throw new Error('Could not determine table name for linked DocType');
+            }
+            
+            console.log(`🔗 Opening URL: ${newRecordUrl}`);
+            
+            // Open in new tab
+            const newWindow = window.open(newRecordUrl, '_blank');
+            
+            if (newWindow) {
+                // Show helpful message
+                frappe.show_alert({
+                    message: `Opening new ${this.getDocTypeDisplayName(linkDoctype)} form in new tab`,
+                    indicator: 'blue'
+                });
+                
+                // Focus on the new window
+                newWindow.focus();
+                
+                // Optional: Add event listener to detect when the new tab is closed
+                // and refresh the dropdown to show the newly created record
+                this.monitorNewRecordCreation(newWindow, linkDoctype, input, linkField, dropdownList);
+                
+            } else {
+                // Popup blocked
+                frappe.show_alert({
+                    message: 'Please allow popups to create new records',
+                    indicator: 'orange'
+                });
+            }
+            
+        } catch (error) {
+            console.error('❌ Error opening new record form:', error);
+            frappe.show_alert({
+                message: `Failed to open new record form: ${error.message}`,
+                indicator: 'red'
+            });
+        }
+    }
+    
+    monitorNewRecordCreation(newWindow, linkDoctype, input, linkField, dropdownList) {
+        // Check if the new window is closed periodically
+        const checkClosed = setInterval(() => {
+            if (newWindow.closed) {
+                clearInterval(checkClosed);
+                console.log(`🔄 New record form closed, refreshing dropdown options`);
+                
+                // Show a brief message
+                frappe.show_alert({
+                    message: 'Refreshed dropdown options',
+                    indicator: 'green'
+                });
+                
+                // Optionally refresh the dropdown with updated data
+                // You could trigger a new search here if needed
+            }
+        }, 1000);
+        
+        // Stop checking after 5 minutes to prevent memory leaks
+        setTimeout(() => {
+            clearInterval(checkClosed);
+        }, 300000);
+    }
+    
+    async getFlansaRecordViewerUrl(linkDoctype, suggestedName) {
+        try {
+            console.log(`🔍 Getting Flansa table name for DocType: ${linkDoctype}`);
+            
+            // Look up the Flansa Table that corresponds to this DocType
+            const response = await frappe.call({
+                method: 'frappe.client.get_list',
+                args: {
+                    doctype: 'Flansa Table',
+                    filters: {
+                        doctype_name: linkDoctype
+                    },
+                    fields: ['name'],
+                    limit_page_length: 1
+                }
+            });
+            
+            if (response.message && response.message.length > 0) {
+                const tableName = response.message[0].name;
+                console.log(`✅ Found Flansa table: ${tableName}`);
+                
+                // Build the Flansa record-viewer URL in new mode
+                let recordViewerUrl = `/app/flansa-record-viewer/${tableName}/new?mode=new`;
+                
+                // Add suggested name as query parameter if provided
+                if (suggestedName && suggestedName !== 'New Record') {
+                    recordViewerUrl += `&suggested_title=${encodeURIComponent(suggestedName)}`;
+                }
+                
+                return recordViewerUrl;
+            } else {
+                console.warn(`❌ No Flansa table found for DocType: ${linkDoctype}`);
+                return null;
+            }
+            
+        } catch (error) {
+            console.error('❌ Error getting Flansa table name:', error);
+            return null;
+        }
+    }
+    
+    async getDisplayFieldConfig(fieldName) {
+        try {
+            console.log(`🔍 Looking for display field config - table: ${this.table_name}, field: ${fieldName}`);
+            
+            const logicFields = await frappe.call({
+                method: 'frappe.client.get_list',
+                args: {
+                    doctype: 'Flansa Logic Field',
+                    filters: {
+                        table_name: this.table_name,
+                        field_name: fieldName,
+                        logic_type: 'link'
+                    },
+                    fields: ['link_display_field'],
+                    limit_page_length: 1
+                }
+            });
+            
+            console.log(`📋 Display field config response:`, logicFields);
+            
+            if (logicFields.message && logicFields.message.length > 0) {
+                console.log(`✅ Found display field config:`, logicFields.message[0]);
+                return logicFields.message[0];
+            }
+        } catch (error) {
+            console.error('Error loading display field config:', error);
+        }
+        return null;
+    }
+    
+    async searchWithDisplayValues(linkDoctype, searchTerm, displayField) {
+        try {
+            // Search both name and display field
+            const response = await frappe.call({
+                method: 'frappe.client.get_list',
+                args: {
+                    doctype: linkDoctype,
+                    filters: [
+                        ['name', 'like', `%${searchTerm}%`],
+                        'OR',
+                        [displayField, 'like', `%${searchTerm}%`]
+                    ],
+                    fields: ['name', displayField],
+                    limit_page_length: 10,
+                    order_by: displayField
+                }
+            });
+            
+            return response.message || [];
+        } catch (error) {
+            console.error('Error searching with display values:', error);
+            return [];
+        }
+    }
+    
+    show_enhanced_link_suggestions(input, suggestions, displayField) {
+        // Remove existing suggestions
+        this.hide_link_suggestions();
+        
+        if (!suggestions || suggestions.length === 0) return;
+        
+        const container = input.closest('.frappe-link-field-container');
+        const suggestionsList = document.createElement('div');
+        suggestionsList.className = 'link-suggestions enhanced-suggestions';
+        suggestionsList.style.cssText = `
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #d1d8dd;
+            border-radius: 4px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1050;
+        `;
+        
+        suggestions.forEach(suggestion => {
+            const item = document.createElement('div');
+            item.className = 'suggestion-item';
+            item.style.cssText = `
+                padding: 8px 12px;
+                cursor: pointer;
+                border-bottom: 1px solid #f5f5f5;
+            `;
+            item.innerHTML = `
+                <div style="font-weight: 500;">${suggestion[displayField] || suggestion.name}</div>
+                <small style="color: #6c757d;">ID: ${suggestion.name}</small>
+            `;
+            
+            item.addEventListener('click', () => {
+                input.value = suggestion.name;
+                input.dataset.value = suggestion.name;
+                input.dataset.displayValue = suggestion[displayField] || suggestion.name;
+                
+                // Update Frappe link field if it exists
+                if (input._frappe_link_field) {
+                    input._frappe_link_field.set_value(suggestion.name);
+                }
+                
+                // Trigger change events
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                
+                this.hide_link_suggestions();
+            });
+            
+            suggestionsList.appendChild(item);
+        });
+        
+        container.appendChild(suggestionsList);
+    }
+    
+    hide_link_suggestions() {
+        document.querySelectorAll('.link-suggestions').forEach(el => el.remove());
     }
     
     show_link_suggestions(input, suggestions) {
@@ -2698,33 +3873,176 @@ class FlansaRecordViewer {
         }
     }
     
-    update_dashboard_link() {
-        // Update dashboard link to point to app-specific dashboard if we have application context
-        console.log('🔍 update_dashboard_link called with application:', this.application);
-        if (this.application) {
-            const dashboardLink = document.getElementById('dashboard-link');
-            console.log('🔍 dashboard-link element found:', !!dashboardLink);
-            if (dashboardLink) {
-                const newUrl = `/app/flansa-app-dashboard?app=${encodeURIComponent(this.application)}`;
-                dashboardLink.href = newUrl;
-                
-                // Remove any existing click handlers and add our own to ensure query params are preserved
-                dashboardLink.onclick = null;
-                dashboardLink.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log('🔗 Dashboard link clicked, navigating to:', newUrl);
-                    window.location.href = newUrl;
-                });
-                
-                console.log('🔗 Updated dashboard link with custom handler:', newUrl);
-                console.log('🔍 Link href now:', dashboardLink.href);
-            } else {
-                console.warn('❌ dashboard-link element not found in DOM');
-            }
-        } else {
-            console.warn('❌ No application context available');
+    // Dashboard link functionality removed - now using modern breadcrumb structure in sleek header
+    
+    update_mode_display() {
+        // Update mode badge
+        const modeBadge = document.querySelector('.mode-badge');
+        if (modeBadge) {
+            modeBadge.textContent = this.mode.toUpperCase();
         }
+        
+        // Update action buttons based on new mode
+        const bannerRight = document.querySelector('.banner-right');
+        if (bannerRight) {
+            // Regenerate the entire banner-right section with new action buttons
+            bannerRight.innerHTML = `
+                <div class="action-dropdown">
+                    <span class="sleek-badge mode-badge">${this.mode.toUpperCase()}</span>
+                </div>
+                ${this.generate_action_buttons()}
+            `;
+            
+            // Re-bind events for the new buttons
+            setTimeout(() => {
+                this.bind_context_menu_events();
+            }, 50);
+        }
+        
+        // Keep breadcrumb current text consistent (always "Record Viewer")
+        const breadcrumbCurrent = document.querySelector('.breadcrumb-current');
+        if (breadcrumbCurrent) {
+            breadcrumbCurrent.textContent = '📋 Record Viewer';
+        }
+        
+        // Update page title
+        const modeTitle = this.mode === 'new' ? 'Create New Record' : 
+                         this.mode === 'edit' ? 'Edit Record' : 'View Record';
+        this.page.set_title(modeTitle);
+    }
+    
+    bind_save_cancel_buttons(page) {
+        // Bind save and cancel button events for new/edit modes
+        const saveBtn = page.querySelector('#save-record');
+        const cancelBtn = page.querySelector('#cancel-record');
+        
+        if (saveBtn && !saveBtn.hasAttribute('data-bound')) {
+            saveBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.save_record();
+            });
+            saveBtn.setAttribute('data-bound', 'true');
+        }
+        
+        if (cancelBtn && !cancelBtn.hasAttribute('data-bound')) {
+            cancelBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.cancel_edit();
+            });
+            cancelBtn.setAttribute('data-bound', 'true');
+        }
+    }
+
+    bind_context_menu_events() {
+        // Dedicated method to bind context menu events with retry logic
+        const page = document.querySelector('.flansa-record-viewer-page');
+        if (!page) {
+            console.log('Page not ready for context menu binding, retrying...');
+            setTimeout(() => this.bind_context_menu_events(), 200);
+            return;
+        }
+        
+        // Bind save/cancel buttons for new/edit modes
+        this.bind_save_cancel_buttons(page);
+        
+        // Bind context menu for view mode
+        const contextMenuBtn = page.querySelector('#context-menu');
+        const contextDropdown = page.querySelector('#context-dropdown');
+        
+        if (!contextMenuBtn || !contextDropdown) {
+            // Context menu not present (likely in new/edit mode)
+            return;
+        }
+        
+        console.log('Binding context menu events...');
+        
+        // Remove any existing handlers first
+        contextMenuBtn.removeEventListener('click', this.contextMenuClickHandler);
+        
+        // Store handler reference for removal
+        this.contextMenuClickHandler = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            // Toggle dropdown
+            const isVisible = contextDropdown.style.display === 'block';
+            contextDropdown.style.display = isVisible ? 'none' : 'block';
+        };
+        
+        contextMenuBtn.addEventListener('click', this.contextMenuClickHandler);
+        
+        // Close dropdown when clicking outside (only add once)
+        if (!this.outsideClickHandlerAdded) {
+            document.addEventListener('click', (e) => {
+                if (!contextMenuBtn.contains(e.target) && !contextDropdown.contains(e.target)) {
+                    contextDropdown.style.display = 'none';
+                }
+            });
+            this.outsideClickHandlerAdded = true;
+        }
+        
+        // Bind dropdown actions
+        this.bind_dropdown_actions(contextDropdown);
+    }
+    
+    bind_dropdown_actions(contextDropdown) {
+        const editRecordBtn = contextDropdown.querySelector('#edit-record-menu');
+        const duplicateRecordBtn = contextDropdown.querySelector('#duplicate-record-menu');
+        const deleteRecordBtn = contextDropdown.querySelector('#delete-record-menu');
+        
+        if (editRecordBtn && !editRecordBtn.hasAttribute('data-bound')) {
+            editRecordBtn.addEventListener('click', (e) => {
+                console.log('Edit record clicked!');
+                e.preventDefault();
+                contextDropdown.style.display = 'none';
+                
+                // Update URL to include mode=edit
+                const currentUrl = new URL(window.location);
+                currentUrl.searchParams.set('mode', 'edit');
+                window.history.pushState(null, '', currentUrl.toString());
+                
+                // Update mode and re-render
+                this.mode = 'edit';
+                this.update_mode_display();
+                this.render_record();
+            });
+            editRecordBtn.setAttribute('data-bound', 'true');
+        }
+        
+        if (duplicateRecordBtn && !duplicateRecordBtn.hasAttribute('data-bound')) {
+            duplicateRecordBtn.addEventListener('click', (e) => {
+                console.log('Duplicate record clicked!');
+                e.preventDefault();
+                contextDropdown.style.display = 'none';
+                this.duplicate_record();
+            });
+            duplicateRecordBtn.setAttribute('data-bound', 'true');
+        }
+        
+        if (deleteRecordBtn && !deleteRecordBtn.hasAttribute('data-bound')) {
+            deleteRecordBtn.addEventListener('click', (e) => {
+                console.log('Delete record clicked!');
+                e.preventDefault();
+                contextDropdown.style.display = 'none';
+                this.delete_record();
+            });
+            deleteRecordBtn.setAttribute('data-bound', 'true');
+        }
+    }
+    
+    duplicate_record() {
+        if (!this.record_data || !this.record_id) {
+            frappe.show_alert('No record to duplicate', 'red');
+            return;
+        }
+        
+        frappe.confirm('Are you sure you want to duplicate this record?', () => {
+            // Navigate to new record page with current record data as template
+            const currentUrl = new URL(window.location);
+            currentUrl.pathname = currentUrl.pathname.replace(this.record_id, 'new');
+            currentUrl.searchParams.set('duplicate_from', this.record_id);
+            window.location.href = currentUrl.toString();
+        });
     }
     
     formatDateTime(dateString) {
@@ -2757,5 +4075,86 @@ class FlansaRecordViewer {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+    
+    update_banner_title() {
+        // Update banner title and breadcrumb URLs with proper context
+        // Use a promise-based approach to handle app title priority correctly
+        let appTitlePromise = null;
+        
+        if (this.application) {
+            // Update app breadcrumb URL now that we have application context
+            const newUrl = `/app/flansa-app-builder?app=${encodeURIComponent(this.application)}`;
+            
+            // Use timeout to ensure DOM is ready
+            setTimeout(() => {
+                const $appLink = $('#app-breadcrumb-link');
+                if ($appLink.length > 0) {
+                    $appLink.attr('href', newUrl);
+                }
+            }, 100);
+            
+            // Get app name for banner display
+            appTitlePromise = new Promise((resolve) => {
+                frappe.call({
+                    method: 'frappe.client.get_value',
+                    args: {
+                        doctype: 'Flansa Application',
+                        filters: { name: this.application },
+                        fieldname: ['app_title']
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.app_title) {
+                            $('#app-name-display').text(r.message.app_title);
+                            resolve(true); // App title was set
+                        } else {
+                            resolve(false); // No app title available
+                        }
+                    },
+                    error: () => resolve(false)
+                });
+            });
+        }
+        
+        if (this.table_name) {
+            // Ensure table breadcrumb URL is correct (in case it changed)
+            $('#table-breadcrumb-link').attr('href', `/app/flansa-table-builder?table=${encodeURIComponent(this.table_name)}`);
+            
+            // Get table label as fallback only if app title is not available
+            const handleTableLabel = () => {
+                frappe.call({
+                    method: 'frappe.client.get_value',
+                    args: {
+                        doctype: 'Flansa Table',
+                        filters: { name: this.table_name },
+                        fieldname: ['table_label']
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.table_label) {
+                            // Only use table label if no app is available
+                            if (!this.application) {
+                                $('#app-name-display').text(r.message.table_label);
+                            }
+                        }
+                    }
+                });
+            };
+            
+            // If we have an app, wait for app title result, then handle table label if needed
+            if (appTitlePromise) {
+                appTitlePromise.then((appTitleSet) => {
+                    if (!appTitleSet) {
+                        // App title failed, use table label as fallback
+                        handleTableLabel();
+                    }
+                    // If app title succeeded, don't set table label
+                });
+            } else {
+                // No app available, use table label immediately
+                handleTableLabel();
+            }
+        }
+        
+        // Report breadcrumb URL already set in generated HTML
     }
 }

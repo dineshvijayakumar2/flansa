@@ -239,6 +239,76 @@ class FlansaReportViewer {
                 this.view_record(recordName);
             }
         });
+
+        // Fix breadcrumb navigation to preserve query parameters (same pattern as table-builder)
+        // This prevents Frappe's router from intercepting and stripping query strings
+        this.fix_breadcrumb_navigation();
+    }
+
+    fix_breadcrumb_navigation() {
+        // Apply click handler to ALL breadcrumb links after they're rendered
+        // Try multiple selectors as Frappe might use different containers
+        const attempts = [100, 300, 500, 1000];
+        let attemptIndex = 0;
+        
+        const tryFix = () => {
+            // Try multiple possible selectors for Frappe breadcrumbs
+            // Process each selector separately to catch all links
+            const selectors = [
+                'a[href*="/app/flansa-table-builder"]',
+                'a[href*="/app/flansa-report-manager"]',
+                'a[href*="/app/flansa-report-viewer"]',
+                'a[href*="/app/flansa-app-builder"]',
+                'a[href*="/app/flansa-workspace-builder"]',
+                '.breadcrumb a[href*="/app/flansa-"]',
+                '.breadcrumb-container a[href*="/app/flansa-"]',
+                '.page-breadcrumbs a[href*="/app/flansa-"]',
+                '.navbar-breadcrumb a[href*="/app/flansa-"]',
+                'ol.breadcrumb a[href*="/app/flansa-"]',
+                'nav.breadcrumb a[href*="/app/flansa-"]'
+            ];
+            
+            let totalFixed = 0;
+            for (const selector of selectors) {
+                const links = $(selector);
+                if (links.length > 0) {
+                    totalFixed += links.length;
+                    
+                    links.each(function() {
+                        const $link = $(this);
+                        
+                        // Remove ALL event handlers from parent elements too
+                        $link.parents().addBack().off('click.frappe');
+                        
+                        // Unbind everything and add our handler  
+                        $link.unbind('click').off('click');
+                        $link.on('click.flansa-fix', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            const targetUrl = $(this).attr('href');
+                            // Use location.assign for cleaner navigation
+                            window.location.assign(targetUrl);
+                            return false;
+                        });
+                        
+                        // Also add a capturing phase handler as backup
+                        this.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                        }, true);
+                    });
+                }
+            }
+            
+            if (totalFixed === 0 && attemptIndex < attempts.length) {
+                setTimeout(tryFix, attempts[attemptIndex]);
+                attemptIndex++;
+            }
+        };
+        
+        // Start trying immediately
+        tryFix();
     }
     
     async load_report() {
@@ -600,7 +670,7 @@ class FlansaReportViewer {
             }
             
             this.page.add_menu_item('🔧 Edit Table Structure', () => {
-                window.location.href = `/app/flansa-table-builder/${this.table_name}`;
+                window.location.href = `/app/flansa-table-builder?table=${this.table_name}`;
             });
             
             this.page.add_menu_item('📤 Export Data', () => {
@@ -1782,7 +1852,7 @@ class FlansaReportViewer {
                     // Add table context
                     frappe.breadcrumbs.add(
                         table_data.table_label || report.base_table,
-                        `/app/flansa-table-builder/${report.base_table}`
+                        `/app/flansa-table-builder?table=${report.base_table}`
                     );
                     
                     // Add reports context with table filter
@@ -1808,6 +1878,9 @@ class FlansaReportViewer {
         
         // Also populate our custom breadcrumb container
         this.render_custom_breadcrumbs(report);
+        
+        // Fix breadcrumb navigation after they're rendered
+        this.fix_breadcrumb_navigation();
     }
     
     getReportManagerUrl(tableName = null) {
@@ -1862,7 +1935,7 @@ class FlansaReportViewer {
         
         if (report && report.base_table) {
             // Add context based on the table
-            breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-table-builder/${report.base_table}` });
+            breadcrumbs.push({ text: "🔧 Table Builder", url: `/app/flansa-table-builder?table=${report.base_table}` });
             breadcrumbs.push({ text: "📊 Reports", url: `/app/flansa-report-manager?table=${report.base_table}` });
             
             // Current report
@@ -1965,7 +2038,7 @@ class FlansaReportViewer {
                     if (this.table_name) {
                         breadcrumbs.push({ 
                             text: "🔧 Table Builder", 
-                            url: `/app/flansa-table-builder/${this.table_name}` 
+                            url: `/app/flansa-table-builder?table=${this.table_name}` 
                         });
                     }
                     break;
@@ -2099,7 +2172,7 @@ class FlansaReportViewer {
                     
                     // Add Table Settings button
                     this.page.add_button('🔗 Table Settings', () => {
-                        window.location.href = `/app/flansa-table-builder/${report.base_table}`;
+                        window.location.href = `/app/flansa-table-builder?table=${report.base_table}`;
                     }, 'btn-default');
                     
                     // Add standard navigation buttons (same as Report Builder)
@@ -2248,8 +2321,25 @@ class FlansaReportViewer {
         
         console.log('🔍 Navigating to view record:', { table: tableName, record: recordName });
         
-        // Always use direct frappe.set_route for now - more reliable
-        frappe.set_route('flansa-record-viewer', tableName, recordName);
+        // Build URL with report context for breadcrumb
+        let url = `/app/flansa-record-viewer/${tableName}/${recordName}`;
+        const queryParams = new URLSearchParams();
+        
+        // Add report context if available
+        if (this.report_id) {
+            queryParams.set('from_report', this.report_id);
+        }
+        if (this.current_report_data && this.current_report_data.report_name) {
+            queryParams.set('report_name', this.current_report_data.report_name);
+        }
+        
+        // Append query string if we have parameters
+        if (queryParams.toString()) {
+            url += '?' + queryParams.toString();
+        }
+        
+        // Use window.location.href to preserve query parameters
+        window.location.href = url;
     }
     
     edit_record(recordName) {
@@ -2258,18 +2348,26 @@ class FlansaReportViewer {
         
         console.log('✏️ Navigating to edit record:', { table: tableName, record: recordName });
         
-        // Navigate to record first, then add edit mode via URL manipulation
-        frappe.set_route('flansa-record-viewer', tableName, recordName);
+        // Build URL with report context and edit mode
+        let url = `/app/flansa-record-viewer/${tableName}/${recordName}`;
+        const queryParams = new URLSearchParams();
         
-        // Add edit mode parameter after navigation
-        setTimeout(() => {
-            if (window.location.pathname.includes(recordName)) {
-                const newUrl = window.location.pathname + '?mode=edit';
-                window.history.replaceState({}, '', newUrl);
-                // Trigger a custom event to let the record viewer know about the mode change
-                $(document).trigger('flansa:mode-changed', { mode: 'edit' });
-            }
-        }, 200);
+        // Add edit mode
+        queryParams.set('mode', 'edit');
+        
+        // Add report context if available
+        if (this.report_id) {
+            queryParams.set('from_report', this.report_id);
+        }
+        if (this.current_report_data && this.current_report_data.report_name) {
+            queryParams.set('report_name', this.current_report_data.report_name);
+        }
+        
+        // Append query string
+        url += '?' + queryParams.toString();
+        
+        // Use window.location.href to preserve query parameters
+        window.location.href = url;
     }
     
     navigate_to_new_record() {
@@ -2282,12 +2380,26 @@ class FlansaReportViewer {
         
         console.log('➕ Navigating to create new record for table:', tableName);
         
-        // Use FlansaNav if available, otherwise use frappe.set_route
-        if (window.FlansaNav) {
-            window.FlansaNav.navigateToNewRecord(tableName);
-        } else {
-            frappe.set_route('flansa-record-viewer', tableName, 'new');
+        // Build URL with report context and new mode
+        let url = `/app/flansa-record-viewer/${tableName}/new`;
+        const queryParams = new URLSearchParams();
+        
+        // Add new mode
+        queryParams.set('mode', 'new');
+        
+        // Add report context if available
+        if (this.report_id) {
+            queryParams.set('from_report', this.report_id);
         }
+        if (this.current_report_data && this.current_report_data.report_name) {
+            queryParams.set('report_name', this.current_report_data.report_name);
+        }
+        
+        // Append query string
+        url += '?' + queryParams.toString();
+        
+        // Use window.location.href to preserve query parameters
+        window.location.href = url;
     }
     
     async delete_record(recordName) {

@@ -267,18 +267,18 @@ class UnifiedReportBuilder {
             breadcrumbHTML += divider;
             const tableLabel = this.table_lookup[this.current_table] || this.current_table;
             breadcrumbHTML += `
-                <a href="/app/flansa-report-viewer?table=${this.current_table}" class="breadcrumb-link">
+                <a href="/app/flansa-table-builder?table=${this.current_table}" class="breadcrumb-link">
                     <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                        <path fill-rule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clip-rule="evenodd" />
+                        <path fill-rule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clip-rule="evenodd" />
                     </svg>
-                    <span>${tableLabel}</span>
+                    <span>Table Builder</span>
                 </a>
             `;
             
             // Then add Report Manager link with table context
             breadcrumbHTML += divider;
             breadcrumbHTML += `
-                <a href="#" class="breadcrumb-link" data-route="flansa-report-manager" data-table="${this.current_table}">
+                <a href="/app/flansa-report-manager?table=${this.current_table}" class="breadcrumb-link">
                     <svg width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                         <path fill-rule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v6a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clip-rule="evenodd"/>
@@ -307,6 +307,9 @@ class UnifiedReportBuilder {
         `;
 
         breadcrumbContainer.innerHTML = breadcrumbHTML;
+        
+        // Fix breadcrumb navigation after HTML is updated
+        this.fix_breadcrumb_navigation();
     }
 
     build_report_manager_url() {
@@ -677,18 +680,62 @@ class UnifiedReportBuilder {
         // Load tables to populate the selector
         this.load_tables();
         
-        // Handle breadcrumb navigation with context
-        $(document).on('click', '.breadcrumb-link[data-route]', (e) => {
-            e.preventDefault();
-            const route = $(e.currentTarget).data('route');
-            const table = $(e.currentTarget).data('table');
+        // Fix breadcrumb navigation to preserve query parameters (same as report-viewer)
+        this.fix_breadcrumb_navigation();
+    }
+
+    fix_breadcrumb_navigation() {
+        // Apply click handler to ALL breadcrumb links after they're rendered
+        const attempts = [100, 300, 500, 1000];
+        let attemptIndex = 0;
+        
+        const tryFix = () => {
+            const selectors = [
+                'a[href*="/app/flansa-table-builder"]',
+                'a[href*="/app/flansa-report-manager"]',
+                'a[href*="/app/flansa-report-viewer"]',
+                'a[href*="/app/flansa-app-builder"]',
+                'a[href*="/app/flansa-workspace-builder"]',
+                '.breadcrumb a[href*="/app/flansa-"]'
+            ];
             
-            if (route === 'flansa-report-manager' && table) {
-                // Navigate to report manager with table context
-                const url = `/app/flansa-report-manager?table=${table}`;
-                window.location.href = url;
+            let totalFixed = 0;
+            for (const selector of selectors) {
+                const links = $(selector);
+                if (links.length > 0) {
+                    totalFixed += links.length;
+                    
+                    links.each(function() {
+                        const $link = $(this);
+                        
+                        // Remove ALL event handlers and add our handler  
+                        $link.parents().addBack().off('click.frappe');
+                        $link.unbind('click').off('click');
+                        $link.on('click.flansa-fix', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            const targetUrl = $(this).attr('href');
+                            window.location.assign(targetUrl);
+                            return false;
+                        });
+                        
+                        // Add capturing phase handler as backup
+                        this.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                        }, true);
+                    });
+                }
             }
-        });
+            
+            if (totalFixed === 0 && attemptIndex < attempts.length) {
+                setTimeout(tryFix, attempts[attemptIndex]);
+                attemptIndex++;
+            }
+        };
+        
+        tryFix();
     }
 
     load_tables() {

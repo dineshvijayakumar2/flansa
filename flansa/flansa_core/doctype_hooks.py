@@ -39,6 +39,11 @@ def calculate_logic_fields(doc, method=None):
                 # Get the full Logic Field document for calculation
                 logic_field_doc = frappe.get_doc("Flansa Logic Field", logic_field.name)
                 
+                # Skip Link fields - they should preserve user-entered values, not be calculated
+                if hasattr(logic_field_doc, 'logic_type') and logic_field_doc.logic_type == 'link':
+                    print(f"⏭️  Skipping Link field calculation for {logic_field.field_name}", flush=True)
+                    continue
+                
                 # Use the proper calculation function based on expression type
                 from flansa.flansa_core.api.table_api import calculate_field_value_by_type
                 calculated_value = calculate_field_value_by_type(doc, logic_field_doc)

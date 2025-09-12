@@ -3364,7 +3364,7 @@ class EnhancedFlansaTableBuilder {
                     const target = values.target_doctype || values.options || '';
                     await this.update_or_create_logic_field_display_setting(table_id, values.field_name, {
                         field_label: values.field_label || values.field_name.replace(/_/g, ' ').toUpperCase(), // Required field
-                        logic_expression: `LINK(${target})`, // Required field for validation
+                        logic_expression: `LINK("${target}")`, // Required field for validation
                         link_display_field: values.display_field || '',
                         link_target_doctype: target,
                         logic_type: 'link'
@@ -3497,7 +3497,7 @@ class EnhancedFlansaTableBuilder {
                     if (values.display_field || values.target_doctype) {
                         await this.update_or_create_logic_field_display_setting(table_id, field_name, {
                             field_label: values.field_label || field_name.replace(/_/g, ' ').toUpperCase(), // Required field
-                            logic_expression: `LINK(${values.target_doctype || ''})`, // Required field for validation
+                            logic_expression: `LINK("${values.target_doctype || ''}")`, // Required field for validation
                             link_display_field: values.display_field || '',
                             link_target_doctype: values.target_doctype || '',
                             logic_type: 'link'

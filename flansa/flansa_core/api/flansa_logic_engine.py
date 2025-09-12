@@ -8,8 +8,34 @@ class FlansaLogicEngine:
             'IF': lambda condition, true_val, false_val: true_val if condition else false_val,
             'UPPER': lambda s: str(s or '').upper(),
             'LOWER': lambda s: str(s or '').lower(),
-            'LINK': lambda doctype: f"LINK_{doctype}",  # Placeholder for Link fields
+            'LINK': self.create_link_function(),  # Handle Link fields
         }
+    
+    def create_link_function(self):
+        """Create a LINK function that can access doc_context when called"""
+        def link_function(field_or_doctype):
+            # Simple implementation - just return the target doctype name
+            target_doctype = str(field_or_doctype or "")
+            print(f"✅ LINK function - Target DocType: {target_doctype}", flush=True) 
+            # For link fields, return a simple identifier
+            return f"LINK_TO_{target_doctype}"
+        return link_function
+    
+    def handle_link_function(self, field_or_doctype, doc_context):
+        """Handle LINK function calls for Link fields with display functionality"""
+        try:
+            # The LINK function is used to mark link fields for special display handling
+            # field_or_doctype should be the target DocType name as a string
+            target_doctype = str(field_or_doctype or "")
+            print(f"✅ LINK function - Target DocType: {target_doctype}", flush=True) 
+            
+            # For link fields, we typically want to return the display value, not the raw ID
+            # This is handled by the frontend display logic, so we just return a placeholder
+            return f"LINK_TO_{target_doctype}"
+            
+        except Exception as e:
+            print(f"❌ LINK function error: {e}", flush=True)
+            return ""
     
     def evaluate(self, expression, doc_context):
         try:

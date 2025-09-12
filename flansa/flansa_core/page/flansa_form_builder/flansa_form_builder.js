@@ -10,17 +10,8 @@ frappe.pages['flansa-form-builder'].on_page_load = function(wrapper) {
         single_column: true
     });
     
-    // Add standardized Back button
-    setTimeout(() => {
-        if (window.FlansaNav && typeof window.FlansaNav.addBackButton === 'function') {
-            window.FlansaNav.addBackButton(page);
-        } else {
-            // Fallback: Add back button directly
-            page.add_button('← Back', () => {
-                window.history.back();
-            }, 'btn-default');
-        }
-    }, 100);
+    // Hide the default page header to keep only our sleek banner
+    $(page.wrapper).find('.page-head').hide();
     
     // Setup Flansa navigation using navigation manager
     if (window.FlansaNavigationManager) {
@@ -83,6 +74,9 @@ if (typeof FlansaFormBuilder === 'undefined') {
         this.setup_events();
         this.load_table_data();
         this.apply_theme();
+        
+        // Fix breadcrumb navigation to prevent Frappe from stripping query strings
+        this.fix_breadcrumb_navigation();
     }
     
     setup_template() {
@@ -2086,6 +2080,84 @@ if (typeof FlansaFormBuilder === 'undefined') {
         }
     }
     
+    fix_breadcrumb_navigation() {
+        // Fix breadcrumb navigation to prevent Frappe router from stripping query parameters
+        // This ensures workspace context persists across page navigation
+        
+        const maxRetries = 10;
+        const retryDelay = 500;
+        let attempts = 0;
+        
+        const attemptFix = () => {
+            attempts++;
+            
+            // Updated selectors to include form-builder and all Flansa breadcrumb variations
+            const selectors = [
+                'a[href*="/app/flansa-table-builder"]',
+                'a[href*="/app/flansa-report-viewer"]',
+                'a[href*="/app/flansa-report-builder"]', 
+                'a[href*="/app/flansa-record-viewer"]',
+                'a[href*="/app/flansa-form-builder"]',
+                'a[href*="/app/flansa-workspace-builder"]',
+                '.breadcrumb-item a[href*="flansa"]',
+                '.navbar-breadcrumbs a[href*="flansa"]'
+            ];
+            
+            let fixedCount = 0;
+            
+            selectors.forEach(selector => {
+                const $links = $(selector);
+                if ($links.length > 0) {
+                    console.log(`✅ Found ${$links.length} links with selector: ${selector}`);
+                    
+                    $links.each(function() {
+                        const $link = $(this);
+                        const href = $link.attr('href');
+                        
+                        // Skip if already processed
+                        if ($link.hasClass('flansa-breadcrumb-fixed')) {
+                            return;
+                        }
+                        
+                        console.log(`📍 Fixing: ${href}`);
+                        
+                        // Remove any existing Frappe click handlers and add our own
+                        $link.off('click.frappe').off('click.flansa-fix');
+                        
+                        $link.on('click.flansa-fix', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            e.stopImmediatePropagation();
+                            
+                            const targetUrl = $(this).attr('href');
+                            console.log(`🔗 Navigating to: ${targetUrl}`);
+                            
+                            // Use window.location.assign to navigate without triggering Frappe's router
+                            window.location.assign(targetUrl);
+                            
+                            return false;
+                        });
+                        
+                        $link.addClass('flansa-breadcrumb-fixed');
+                        fixedCount++;
+                    });
+                }
+            });
+            
+            if (fixedCount > 0) {
+                console.log(`🎉 Fixed ${fixedCount} breadcrumb links to preserve query strings`);
+            } else if (attempts < maxRetries) {
+                console.log(`⏳ No Flansa breadcrumb links found on attempt ${attempts}, retrying...`);
+                setTimeout(attemptFix, retryDelay);
+            } else {
+                console.log('⚠️ No Flansa breadcrumb links found - might need longer timeout');
+            }
+        };
+        
+        // Start the fix attempt immediately, then retry if needed
+        setTimeout(attemptFix, 100);
+    }
+    
     
 
     add_empty_section_placeholders() {
@@ -2142,7 +2214,7 @@ if (typeof FlansaFormBuilder === 'undefined') {
     
     async load_workspace_logo() {
         try {
-            const response = await frappe.call({
+            await frappe.call({
                 method: 'flansa.flansa_core.workspace_service.get_workspace_logo',
                 callback: (r) => {
                     if (r.message && r.message.logo) {
