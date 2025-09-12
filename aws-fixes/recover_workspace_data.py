@@ -44,11 +44,11 @@ try:
     # Step 3: Direct SQL query for tenant registry data
     print("\n3️⃣ Looking for tenant registry data using direct SQL...", flush=True)
     
-    # Try different table names with direct SQL
+    # Try different table names with proper PostgreSQL quoting
     possible_tables = [
-        "tabFlansa Tenant Registry",
-        "`tabFlansa Tenant Registry`",
-        "Flansa_Tenant_Registry",
+        '"tabFlansa Tenant Registry"',
+        '"tabflansa tenant registry"',  # lowercase version
+        "tabFlansa_Tenant_Registry",
         "tenant_registry"
     ]
     
@@ -57,7 +57,7 @@ try:
     
     for table_name in possible_tables:
         try:
-            # Use direct SQL to avoid DocType resolution issues
+            # Use direct SQL with proper PostgreSQL syntax
             result = frappe.db.sql(f"""
                 SELECT 
                     name,
@@ -88,10 +88,13 @@ try:
         print("❌ No tenant registry data found in any table", flush=True)
         print("   Trying to list all tables with 'tenant' in name...", flush=True)
         
-        # List all tables containing 'tenant'
+        # List all tables containing 'tenant' (PostgreSQL syntax)
         try:
             tables_result = frappe.db.sql("""
-                SHOW TABLES LIKE '%tenant%'
+                SELECT table_name 
+                FROM information_schema.tables 
+                WHERE table_name LIKE '%tenant%' 
+                AND table_schema = 'public'
             """)
             
             if tables_result:
@@ -131,9 +134,9 @@ try:
                 custom_branding = tenant.get('custom_branding') or 0
                 workspace_logo = tenant.get('workspace_logo') or ''
                 
-                # Check if workspace already exists using direct SQL
+                # Check if workspace already exists using direct SQL (PostgreSQL)
                 exists_check = frappe.db.sql("""
-                    SELECT name FROM `tabFlansa Workspace` 
+                    SELECT name FROM "tabFlansa Workspace" 
                     WHERE workspace_id = %s
                 """, (tenant_id,))
                 
@@ -145,9 +148,9 @@ try:
                 # Generate a proper document name
                 doc_name = frappe.generate_hash(length=10)
                 
-                # Direct SQL insert to avoid DocType resolution
+                # Direct SQL insert for PostgreSQL
                 frappe.db.sql("""
-                    INSERT INTO `tabFlansa Workspace` (
+                    INSERT INTO "tabFlansa Workspace" (
                         name, workspace_id, workspace_name, status, 
                         primary_domain, created_date, custom_branding, 
                         workspace_logo, docstatus, idx, creation, 
