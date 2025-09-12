@@ -4030,6 +4030,42 @@ class FlansaRecordViewer {
         }
     }
     
+    delete_record() {
+        if (!this.record_data || !this.record_id) {
+            frappe.show_alert('No record to delete', 'red');
+            return;
+        }
+        
+        const record_title = this.record_data.title || this.record_data.name || this.record_id;
+        frappe.confirm(
+            `Are you sure you want to delete "${record_title}"?<br><br><strong>This action cannot be undone.</strong>`, 
+            () => {
+                console.log('🗑️ Deleting record:', this.record_id);
+                frappe.call({
+                    method: 'frappe.client.delete',
+                    args: {
+                        doctype: this.table_name,
+                        name: this.record_id
+                    },
+                    callback: (response) => {
+                        if (response.message) {
+                            frappe.show_alert(`Record "${record_title}" deleted successfully`, 'green');
+                            console.log('✅ Record deleted successfully');
+                            
+                            // Navigate back to the table view
+                            const table_url = `/app/flansa-record-viewer?table=${this.table_id}&mode=list`;
+                            window.location.href = table_url;
+                        }
+                    },
+                    error: (error) => {
+                        console.error('❌ Delete failed:', error);
+                        frappe.show_alert('Failed to delete record: ' + (error.message || 'Unknown error'), 'red');
+                    }
+                });
+            }
+        );
+    }
+    
     duplicate_record() {
         if (!this.record_data || !this.record_id) {
             frappe.show_alert('No record to duplicate', 'red');
