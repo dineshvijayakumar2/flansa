@@ -2308,7 +2308,7 @@ class FlansaApplicationsWorkspace {
             const workspaceContextName = document.getElementById('workspace-context-name');
             
             if (workspaceContextName && tenantInfo) {
-                workspaceContextName.textContent = tenantInfo.tenant_name || 'Unknown';
+                workspaceContextName.textContent = tenantInfo.workspace_name || tenantInfo.tenant_name || 'Unknown';
             }
             
             // Load tenant logo using the proper logo service

@@ -241,12 +241,21 @@ def create_flansa_table(app_id, table_name, table_label, description=None,
     try:
         print(f"🎯 Creating Flansa Table: {table_name} for app: {app_id}", flush=True)
         
-        # Validate inputs
+        # Validate inputs - get app_id from context if not provided
         if not app_id:
-            return {
-                "success": False,
-                "error": "Application ID is required"
-            }
+            # Try to get default app from workspace
+            apps = frappe.get_all("Flansa Application", 
+                                 filters=apply_workspace_filter({}), 
+                                 limit=1,
+                                 fields=["name"])
+            if apps:
+                app_id = apps[0].name
+                print(f"Using default app from workspace: {app_id}", flush=True)
+            else:
+                return {
+                    "success": False,
+                    "error": "Application ID is required or no applications found in workspace"
+                }
             
         if not table_name or not table_label:
             return {
