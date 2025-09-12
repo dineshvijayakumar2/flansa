@@ -4042,19 +4042,22 @@ class FlansaRecordViewer {
             () => {
                 console.log('🗑️ Deleting record:', this.record_id);
                 frappe.call({
-                    method: 'frappe.client.delete',
+                    method: 'flansa.flansa_core.api.table_api.delete_record',
                     args: {
-                        doctype: this.table_name,
-                        name: this.record_id
+                        table_name: this.table_name,
+                        record_name: this.record_id
                     },
                     callback: (response) => {
-                        if (response.message) {
+                        if (response.message && response.message.success) {
                             frappe.show_alert(`Record "${record_title}" deleted successfully`, 'green');
                             console.log('✅ Record deleted successfully');
                             
                             // Navigate back to the table view
                             const table_url = `/app/flansa-record-viewer?table=${this.table_id}&mode=list`;
                             window.location.href = table_url;
+                        } else {
+                            console.error('❌ Delete failed:', response.message);
+                            frappe.show_alert('Failed to delete record: ' + (response.message?.error || 'Unknown error'), 'red');
                         }
                     },
                     error: (error) => {
