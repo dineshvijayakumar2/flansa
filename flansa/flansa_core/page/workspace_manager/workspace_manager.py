@@ -1,5 +1,86 @@
 import frappe
 
+
+# Workspace Persistence Functions
+def save_user_workspace(workspace_id, workspace_name=None):
+    """Save user's workspace preference to Flansa User Workspace"""
+    try:
+        user = frappe.session.user
+        if not user or user == "Guest":
+            return False
+        
+        # Check if user setting exists
+        if frappe.db.exists("Flansa User Workspace", {"user": user}):
+            # Update existing
+            doc = frappe.get_doc("Flansa User Workspace", {"user": user})
+            doc.workspace_id = workspace_id
+            doc.workspace_name = workspace_name or workspace_id
+            doc.last_switched = frappe.utils.now()
+            doc.save(ignore_permissions=True)
+        else:
+            # Create new
+            doc = frappe.get_doc({
+                "doctype": "Flansa User Workspace",
+                "user": user,
+                "workspace_id": workspace_id,
+                "workspace_name": workspace_name or workspace_id,
+                "last_switched": frappe.utils.now()
+            })
+            doc.insert(ignore_permissions=True)
+        
+        frappe.db.commit()
+        return True
+        
+    except Exception as e:
+        frappe.log_error(f"Error saving user workspace: {str(e)}", "Flansa Workspace Persistence")
+        return False
+
+def load_user_workspace():
+    """Load user's workspace preference from Flansa User Workspace"""
+    try:
+        user = frappe.session.user
+        if not user or user == "Guest":
+            return None
+        
+        workspace_id = frappe.db.get_value(
+            "Flansa User Workspace",
+            {"user": user},
+            "workspace_id"
+        )
+        
+        return workspace_id
+        
+    except Exception as e:
+        frappe.log_error(f"Error loading user workspace: {str(e)}", "Flansa Workspace Persistence")
+        return None
+
+def clear_user_workspace():
+    """Clear user's workspace preference"""
+    try:
+        user = frappe.session.user
+        if not user or user == "Guest":
+            return False
+        
+        if frappe.db.exists("Flansa User Workspace", {"user": user}):
+            frappe.delete_doc("Flansa User Workspace", {"user": user})
+            frappe.db.commit()
+        
+        return True
+        
+    except Exception as e:
+        frappe.log_error(f"Error clearing user workspace: {str(e)}", "Flansa Workspace Persistence")
+        return False
+
+def get_all_user_workspaces():
+    """Get all user workspace assignments (for admin view)"""
+    try:
+        return frappe.get_all("Flansa User Workspace",
+                            fields=["user", "workspace_id", "workspace_name", "last_switched"],
+                            order_by="last_switched desc")
+    except Exception as e:
+        frappe.log_error(f"Error getting all user workspaces: {str(e)}", "Flansa Workspace Persistence")
+        return []
+
 @frappe.whitelist()
 def get_available_workspaces():
     """Get list of all workspaces for management"""
@@ -34,12 +115,10 @@ def switch_workspace_context(workspace_id):
     if workspace.status == "Inactive":
         frappe.throw(f"Workspace {workspace_id} is inactive")
     
-    # Store workspace context in session
-    frappe.session.workspace_id = workspace_id
-    frappe.session.workspace_name = workspace.workspace_name
+        # Store workspace context in user settings for persistence
     
-    # Persist session changes
-    frappe.local.session_obj.update(force=True)
+    save_user_workspace(workspace_id, workspace.workspace_name)
+    
     frappe.db.commit()
     
     # Clear cache for user
@@ -57,8 +136,9 @@ def get_current_workspace_info():
     """Get information about current workspace"""
     
     try:
-        # Get current workspace from session, or default to first available
-        current_workspace_id = getattr(frappe.session, 'workspace_id', None)
+        # Get current workspace from user settings
+        
+        current_workspace_id = load_user_workspace()
         
         # Get workspace details - try multiple approaches
         workspace_info = None
@@ -375,3 +455,5 @@ def delete_workspace(workspace_id):
     except Exception as e:
         frappe.db.rollback()
         return {"status": "error", "message": str(e)}
+
+    

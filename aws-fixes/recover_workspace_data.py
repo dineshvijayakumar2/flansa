@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
-AWS Workspace Data Recovery Script
+AWS Workspace Data Recovery Script - Direct SQL Copy
 
 This script recovers workspace data from the old tenant registry table
-and migrates it to the new Flansa Workspace DocType in AWS PostgreSQL.
+and migrates it to the new Flansa Workspace DocType using direct SQL operations
+to avoid deleted DocType issues.
 
 Usage:
 exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/recover_workspace_data.py').read())
@@ -13,7 +14,7 @@ import frappe
 import json
 from datetime import datetime
 
-print("🔄 AWS Workspace Data Recovery", flush=True)
+print("🔄 AWS Workspace Data Recovery - Direct SQL", flush=True)
 print("=" * 60, flush=True)
 
 try:
@@ -23,6 +24,7 @@ try:
     if not frappe.db.exists("DocType", "Flansa Workspace"):
         print("❌ Flansa Workspace DocType not found", flush=True)
         print("   Please ensure the DocType is installed first", flush=True)
+        raise Exception("DocType not found")
     else:
         print("✅ Flansa Workspace DocType exists", flush=True)
     
@@ -39,15 +41,15 @@ try:
     else:
         print("⚠️  No existing workspaces found", flush=True)
     
-    # Step 3: Check for tenant registry data (various possible table names)
-    print("\n3️⃣ Looking for tenant registry data...", flush=True)
+    # Step 3: Direct SQL query for tenant registry data
+    print("\n3️⃣ Looking for tenant registry data using direct SQL...", flush=True)
     
-    # Possible table names to check
+    # Try different table names with direct SQL
     possible_tables = [
         "tabFlansa Tenant Registry",
-        "Flansa Tenant Registry", 
-        "tenant_registry",
-        "flansa_tenant_registry"
+        "`tabFlansa Tenant Registry`",
+        "Flansa_Tenant_Registry",
+        "tenant_registry"
     ]
     
     tenant_data = []
@@ -55,11 +57,21 @@ try:
     
     for table_name in possible_tables:
         try:
-            # Try direct SQL query since table might not be a DocType anymore
+            # Use direct SQL to avoid DocType resolution issues
             result = frappe.db.sql(f"""
-                SELECT * FROM `{table_name}` 
+                SELECT 
+                    name,
+                    tenant_id,
+                    tenant_name,
+                    status,
+                    primary_domain,
+                    creation,
+                    modified,
+                    custom_branding,
+                    workspace_logo
+                FROM {table_name} 
                 WHERE docstatus != 2 
-                LIMIT 10
+                ORDER BY creation
             """, as_dict=True)
             
             if result:
@@ -69,73 +81,92 @@ try:
                 break
                 
         except Exception as e:
-            print(f"   Table {table_name}: Not found", flush=True)
+            print(f"   Table {table_name}: Not found ({str(e)[:50]}...)", flush=True)
             continue
     
     if not tenant_data:
         print("❌ No tenant registry data found in any table", flush=True)
-        print("   Checked tables:", flush=True)
-        for table in possible_tables:
-            print(f"   - {table}", flush=True)
+        print("   Trying to list all tables with 'tenant' in name...", flush=True)
+        
+        # List all tables containing 'tenant'
+        try:
+            tables_result = frappe.db.sql("""
+                SHOW TABLES LIKE '%tenant%'
+            """)
+            
+            if tables_result:
+                print("   Found tables with 'tenant' in name:", flush=True)
+                for table in tables_result:
+                    print(f"   - {table[0]}", flush=True)
+            else:
+                print("   No tables found with 'tenant' in name", flush=True)
+        except Exception as e:
+            print(f"   Error listing tables: {str(e)}", flush=True)
     else:
         print(f"\n4️⃣ Found {len(tenant_data)} tenant record(s) to migrate:", flush=True)
         
         for i, tenant in enumerate(tenant_data[:5], 1):  # Show first 5
-            tenant_id = tenant.get('tenant_id') or tenant.get('workspace_id') or tenant.get('name')
-            tenant_name = tenant.get('tenant_name') or tenant.get('workspace_name') or 'Unknown'
+            tenant_id = tenant.get('tenant_id') or tenant.get('name')
+            tenant_name = tenant.get('tenant_name') or 'Unknown'
             print(f"   {i}. {tenant_name} (ID: {tenant_id})", flush=True)
         
         if len(tenant_data) > 5:
             print(f"   ... and {len(tenant_data) - 5} more", flush=True)
     
-    # Step 4: Migrate data
+    # Step 4: Direct SQL migration to avoid DocType issues
     if tenant_data:
-        print(f"\n5️⃣ Migrating {len(tenant_data)} workspace record(s)...", flush=True)
+        print(f"\n5️⃣ Migrating {len(tenant_data)} workspace record(s) using direct SQL...", flush=True)
         
         migrated_count = 0
         skipped_count = 0
         
         for tenant in tenant_data:
             try:
-                # Extract relevant fields (handle different possible field names)
-                workspace_id = (tenant.get('tenant_id') or 
-                              tenant.get('workspace_id') or 
-                              tenant.get('name'))
-                
-                workspace_name = (tenant.get('tenant_name') or 
-                                tenant.get('workspace_name') or 
-                                workspace_id)
-                
+                # Extract relevant fields
+                tenant_id = tenant.get('tenant_id') or tenant.get('name')
+                workspace_name = tenant.get('tenant_name') or tenant_id
                 status = tenant.get('status') or 'Active'
-                primary_domain = tenant.get('primary_domain') or tenant.get('domain')
-                created_date = tenant.get('creation') or tenant.get('created_date')
+                primary_domain = tenant.get('primary_domain') or ''
+                created_date = tenant.get('creation') or frappe.utils.now()
                 custom_branding = tenant.get('custom_branding') or 0
-                workspace_logo = tenant.get('workspace_logo') or tenant.get('logo')
+                workspace_logo = tenant.get('workspace_logo') or ''
                 
-                # Check if workspace already exists
-                if frappe.db.exists("Flansa Workspace", {"workspace_id": workspace_id}):
+                # Check if workspace already exists using direct SQL
+                exists_check = frappe.db.sql("""
+                    SELECT name FROM `tabFlansa Workspace` 
+                    WHERE workspace_id = %s
+                """, (tenant_id,))
+                
+                if exists_check:
                     print(f"   ⚠️  Skipping {workspace_name} - already exists", flush=True)
                     skipped_count += 1
                     continue
                 
-                # Create new workspace record
-                workspace_doc = frappe.get_doc({
-                    "doctype": "Flansa Workspace",
-                    "workspace_id": workspace_id,
-                    "workspace_name": workspace_name,
-                    "status": status,
-                    "primary_domain": primary_domain,
-                    "created_date": created_date or frappe.utils.now(),
-                    "custom_branding": custom_branding,
-                    "workspace_logo": workspace_logo
-                })
+                # Generate a proper document name
+                doc_name = frappe.generate_hash(length=10)
                 
-                workspace_doc.insert(ignore_permissions=True)
-                print(f"   ✅ Migrated: {workspace_name}", flush=True)
+                # Direct SQL insert to avoid DocType resolution
+                frappe.db.sql("""
+                    INSERT INTO `tabFlansa Workspace` (
+                        name, workspace_id, workspace_name, status, 
+                        primary_domain, created_date, custom_branding, 
+                        workspace_logo, docstatus, idx, creation, 
+                        modified, modified_by, owner
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s, 0, 0, %s, %s, %s, %s
+                    )
+                """, (
+                    doc_name, tenant_id, workspace_name, status,
+                    primary_domain, created_date, custom_branding,
+                    workspace_logo, created_date, frappe.utils.now(),
+                    frappe.session.user, frappe.session.user
+                ))
+                
+                print(f"   ✅ Migrated: {workspace_name} ({tenant_id})", flush=True)
                 migrated_count += 1
                 
             except Exception as e:
-                print(f"   ❌ Error migrating {workspace_id}: {str(e)}", flush=True)
+                print(f"   ❌ Error migrating {tenant_id}: {str(e)}", flush=True)
                 continue
         
         # Commit changes
@@ -156,12 +187,26 @@ try:
     for ws in final_workspaces:
         print(f"   - {ws.workspace_name} ({ws.workspace_id}) - {ws.status}", flush=True)
     
+    # Step 8: Update any existing Flansa User Workspace records
+    print(f"\n8️⃣ Checking Flansa User Workspace records...", flush=True)
+    
+    user_workspaces = frappe.get_all("Flansa User Workspace",
+                                   fields=["name", "user", "workspace_id"])
+    
+    if user_workspaces:
+        print(f"   Found {len(user_workspaces)} user workspace assignments", flush=True)
+        for uw in user_workspaces:
+            print(f"   - User: {uw.user} -> Workspace: {uw.workspace_id}", flush=True)
+    else:
+        print("   No user workspace assignments found", flush=True)
+    
     print("\n" + "=" * 60, flush=True)
     print("🎉 AWS Workspace Recovery Completed!", flush=True)
     
     if tenant_data:
         print("✅ Workspace data has been successfully recovered from tenant registry", flush=True)
         print("✅ AWS PostgreSQL database now has proper workspace records", flush=True)
+        print("✅ Used direct SQL operations to avoid deleted DocType issues", flush=True)
     else:
         print("ℹ️  No tenant registry data found to migrate", flush=True)
     

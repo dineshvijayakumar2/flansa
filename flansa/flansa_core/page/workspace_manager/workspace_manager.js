@@ -288,9 +288,6 @@ class WorkspaceManager {
                 indicator: 'blue'
             });
             
-            // Store in localStorage for workspace
-            localStorage.setItem('flansa_current_workspace_id', workspaceId);
-            
             const result = await this.call_api('switch_workspace_context', { workspace_id: workspaceId });
             
             if (result.status === 'success') {

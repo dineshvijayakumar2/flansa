@@ -9,31 +9,16 @@ from typing import Dict, List, Optional
 from frappe import _
 
 def get_current_workspace_id():
-    """Get the current workspace_id from session or workspace context"""
-    # Use the same logic as workspace manager for consistency
-    try:
-        from flansa.flansa_core.page.workspace_manager.workspace_manager import get_current_workspace_info
-        workspace_info = get_current_workspace_info()
-        if workspace_info and workspace_info.get('workspace_id'):
-            return workspace_info['workspace_id']
-    except:
-        pass
+    """Get the current workspace_id from user settings"""
+    # Get from user workspace settings
+    from flansa.flansa_core.page.workspace_manager.workspace_manager import load_user_workspace
+    workspace_id = load_user_workspace()
     
-    # Fallback to original logic
-    if hasattr(frappe.local, 'current_workspace_id'):
-        return frappe.local.current_workspace_id
-    
-    # Try to get from request headers or params
-    if frappe.request and frappe.request.headers:
-        workspace_id = frappe.request.headers.get('X-Tenant-Id')
-        if workspace_id:
-            return workspace_id
-    
-    # Try to get from form dict (passed from frontend)
-    if frappe.form_dict and frappe.form_dict.get('workspace_id'):
+    # If no workspace set, try to get from form dict (for initial setup)
+    if not workspace_id and frappe.form_dict and frappe.form_dict.get('workspace_id'):
         return frappe.form_dict.get('workspace_id')
     
-    return None
+    return workspace_id
 
 @frappe.whitelist()
 def get_user_applications():
