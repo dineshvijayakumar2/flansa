@@ -121,6 +121,13 @@ def switch_workspace_context(workspace_id):
     
     frappe.db.commit()
     
+    # Clear WorkspaceContext cache to ensure immediate effect
+    try:
+        from flansa.flansa_core.workspace_service import WorkspaceContext
+        WorkspaceContext.clear_context()
+    except:
+        pass
+    
     # Clear cache for user
     frappe.clear_cache(user=frappe.session.user)
     
