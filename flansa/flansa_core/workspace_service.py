@@ -8,7 +8,7 @@ import re
 from typing import Optional, Dict, Any
 
 class WorkspaceContext:
-    """Manages tenant context throughout the application"""
+    """Manages workspace context throughout the application"""
     
     _current_workspace_id = None
     _tenant_cache = {}

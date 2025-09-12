@@ -28,8 +28,8 @@ class FlansaLogicField(Document):
             
         # Set workspace_id if not set
         if not self.workspace_id:
-            from flansa.flansa_core.workspace_service import TenantContext
-            self.workspace_id = TenantContext.get_current_workspace_id()
+            from flansa.flansa_core.workspace_service import WorkspaceContext
+            self.workspace_id = WorkspaceContext.get_current_workspace_id()
             
     def before_save(self):
         """Test logic expression before saving"""
