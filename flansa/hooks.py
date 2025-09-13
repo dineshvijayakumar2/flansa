@@ -283,7 +283,7 @@ before_request = ["flansa.flansa_core.workspace_service.resolve_tenant_from_requ
 
 # Boot Session
 # ------------
-# boot_session = "flansa.boot.boot_session"
+boot_session = "flansa.boot.auto_configure_s3_on_boot"
 
 # Override Home Page
 # ------------------

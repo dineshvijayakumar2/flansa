@@ -55,3 +55,20 @@ def boot_session(bootinfo):
     #     
     #     if any(role in user_roles for role in flansa_roles):
     #         bootinfo["user_home_page"] = "flansa-workspace"
+
+def auto_configure_s3_on_boot():
+    """Auto-configure S3 settings from environment variables on boot"""
+    try:
+        # Import the auto config function
+        import sys
+        import os
+        sys.path.append(os.path.join(frappe.get_app_path('flansa'), 'aws-fixes'))
+        
+        # Import and run auto S3 configuration
+        from auto_s3_config import auto_configure_s3
+        return auto_configure_s3()
+        
+    except Exception as e:
+        frappe.log_error(f"Auto S3 config error: {str(e)}", "S3 Auto Configuration")
+        # Don't fail boot if S3 config fails
+        return True
