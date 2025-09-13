@@ -18,6 +18,7 @@
   "use_s3": 1,
   "use_s3_for_private_files": true,
   "use_s3_for_public_files": true,
+  "max_file_size": 52428800,
   
   "comment_for_credentials": "Add these from SSM Parameter Store or environment variables",
   "s3_access_key_id": "GET_FROM_SSM_/flansa/s3/access_key_id",

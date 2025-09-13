@@ -83,6 +83,26 @@ try:
     max_file_size = site_config.get('max_file_size', 10485760)  # Default 10MB
     print(f"Max File Size: {max_file_size / (1024*1024):.2f} MB", flush=True)
     
+    # S3 file size recommendations
+    if s3_private_bucket or s3_public_bucket:
+        print("\n💡 S3 FILE SIZE RECOMMENDATIONS:", flush=True)
+        print("-" * 50, flush=True)
+        print("For S3 storage, consider these best practices:", flush=True)
+        print("• Standard uploads: 50MB max (good performance)", flush=True)
+        print("• Large files: 100MB max (may require multipart upload)", flush=True)
+        print("• Multipart threshold: 5GB (AWS limit for single PUT)", flush=True)
+        if max_file_size < 52428800:  # 50MB
+            print("✅ Current setting is optimal for S3", flush=True)
+        elif max_file_size < 104857600:  # 100MB
+            print("⚠️  Consider enabling multipart uploads for better performance", flush=True)
+        else:
+            print("🔧 Recommend: Enable multipart uploads for files > 50MB", flush=True)
+    else:
+        print("\n💡 RECOMMENDED S3 FILE SIZE SETTINGS:", flush=True)
+        print("-" * 50, flush=True)
+        print("When enabling S3, update site_config.json:", flush=True)
+        print('{"max_file_size": 52428800}  # 50MB for optimal S3 performance', flush=True)
+    
     # Check current file storage location
     import os
     private_files_path = frappe.get_site_path('private', 'files')
@@ -94,17 +114,25 @@ try:
     print(f"Public Files: {public_files_path}", flush=True)
     
     # Count local files
-    if os.path.exists(private_files_path):
-        private_count = len([f for f in os.listdir(private_files_path) if os.path.isfile(os.path.join(private_files_path, f))])
-        print(f"Private Files Count: {private_count}", flush=True)
-    else:
-        print(f"Private Files Count: 0 (path not found)", flush=True)
+    try:
+        if os.path.exists(private_files_path):
+            private_files = os.listdir(private_files_path)
+            private_count = len([f for f in private_files if os.path.isfile(os.path.join(private_files_path, f))])
+            print(f"Private Files Count: {private_count}", flush=True)
+        else:
+            print(f"Private Files Count: 0 (path not found)", flush=True)
+    except Exception as e:
+        print(f"Private Files Count: Error - {str(e)}", flush=True)
     
-    if os.path.exists(public_files_path):
-        public_count = len([f for f in os.listdir(public_files_path) if os.path.isfile(os.path.join(public_files_path, f))])
-        print(f"Public Files Count: {public_count}", flush=True)
-    else:
-        print(f"Public Files Count: 0 (path not found)", flush=True)
+    try:
+        if os.path.exists(public_files_path):
+            public_files = os.listdir(public_files_path)
+            public_count = len([f for f in public_files if os.path.isfile(os.path.join(public_files_path, f))])
+            print(f"Public Files Count: {public_count}", flush=True)
+        else:
+            print(f"Public Files Count: 0 (path not found)", flush=True)
+    except Exception as e:
+        print(f"Public Files Count: Error - {str(e)}", flush=True)
     
     print("\n💡 RECOMMENDATION:", flush=True)
     print("-" * 50, flush=True)

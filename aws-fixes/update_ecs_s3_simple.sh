@@ -56,7 +56,8 @@ NEW_TASK_DEF=$(echo $CURRENT_TASK_DEF | jq '
         {"name": "S3_FOLDER_PATH", "value": "flansa-files"},
         {"name": "USE_S3", "value": "1"},
         {"name": "USE_S3_FOR_PRIVATE_FILES", "value": "1"},
-        {"name": "USE_S3_FOR_PUBLIC_FILES", "value": "1"}
+        {"name": "USE_S3_FOR_PUBLIC_FILES", "value": "1"},
+        {"name": "MAX_FILE_SIZE", "value": "52428800"}
     ] |
     
     # Remove duplicate environment variables (keep last occurrence)
