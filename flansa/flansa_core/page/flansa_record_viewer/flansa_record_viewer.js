@@ -33,7 +33,7 @@ class FlansaRecordViewer {
     }
     
     init() {
-        console.log('🚀 Initializing Flansa Record Viewer');
+
         this.get_route_params();
         
         if (this.table_name) {
@@ -134,7 +134,7 @@ class FlansaRecordViewer {
             if (formConfigResponse.success) {
                 this.form_config = formConfigResponse.form_config || {};
                 this.form_sections = formConfigResponse.form_config?.sections || [];
-                console.log('📋 Loaded form builder configuration:', this.form_config);
+
                 return true;
             } else {
                 console.warn('⚠️ No form builder configuration found, using default layout');
@@ -184,9 +184,7 @@ class FlansaRecordViewer {
         
         // If context changed, clear cached data
         if (is_different_context && (this.table_name || this.record_id)) {
-            console.log('🔄 Route parameters changed, clearing cached data');
-            console.log('   Previous:', { table: this.table_name, record: this.record_id });
-            console.log('   New:', { table: new_table_name, record: new_record_id });
+
             this.clear_cached_data();
         }
         
@@ -215,16 +213,11 @@ class FlansaRecordViewer {
             this.record_id = null;
         } else if (!this.record_id) {
             // No record ID provided - redirect to report viewer for list view
-            console.log('📋 No record ID provided, redirecting to report viewer');
+
             frappe.set_route('flansa-report-viewer', this.table_name);
             return;
         }
-        
-        console.log('📋 Record viewer params:', {
-            table: this.table_name,
-            record_id: this.record_id,
-            mode: this.mode
-        });
+
     }
     
     generate_action_buttons() {
@@ -1086,20 +1079,18 @@ class FlansaRecordViewer {
         `);
     }
 
-    
     bind_events() {
         // Event handlers will be added here as needed
-        console.log('🔗 Binding events for record viewer');
-        
+
         // Listen for route changes to handle navigation between records
         $(window).on('hashchange.record-viewer', () => {
-            console.log('🔄 Hash changed, checking for route changes');
+
             this.handle_route_change();
         });
         
         // Also listen for Frappe route changes
         frappe.router.on('change', () => {
-            console.log('🔄 Frappe route changed, checking parameters');
+
             this.handle_route_change();
         });
     }
@@ -1115,7 +1106,7 @@ class FlansaRecordViewer {
             
             // If context changed, reload
             if (this.table_name !== new_table || this.record_id !== new_record) {
-                console.log('🔄 Record viewer context changed, reloading');
+
                 this.get_route_params();
                 this.load_data();
             }
@@ -1123,8 +1114,7 @@ class FlansaRecordViewer {
     }
     
     load_data() {
-        console.log('📊 Loading data for record viewer');
-        
+
         // Clear any existing cached data first, but only for existing records
         // New records need to keep the loading state until table structure is loaded
         if (this.mode !== 'new') {
@@ -1141,7 +1131,6 @@ class FlansaRecordViewer {
         });
     }
 
-    
     load_table_structure() {
         // For new records, clear previous record data but show loading state
         this.record_data = {};
@@ -1182,15 +1171,7 @@ class FlansaRecordViewer {
                         // Check if table is readonly for this user
                         const tableInfo = accessibleTables.find(t => t.name === this.table_name);
                         this.is_readonly = tableInfo && tableInfo.readonly;
-                        
-                        console.log('📋 Loaded table structure:', { 
-                            fields_count: this.table_fields.length, 
-                            doctype: this.doctype_name,
-                            application: this.application,
-                            naming_type: this.naming_config.naming_type,
-                            readonly: this.is_readonly
-                        });
-                        
+
                         if (this.is_readonly && (this.mode === 'edit' || this.mode === 'new')) {
                             frappe.show_alert('This table is read-only for your role', 'orange');
                             this.mode = 'view';
@@ -1280,7 +1261,6 @@ class FlansaRecordViewer {
                 `;
             }
             actionsContainer.innerHTML = actionHtml;
-            
 
         }
         
@@ -1323,7 +1303,6 @@ class FlansaRecordViewer {
             }, 100);
         }, 50);
     }
-    
 
     async render_form_header() {
         // Add form title and description from form builder config
@@ -1420,7 +1399,7 @@ class FlansaRecordViewer {
     
     clear_cached_data() {
         // Clear all cached record data to prevent showing previous record's data
-        console.log('🧹 Clearing cached record data');
+
         this.record_data = {};
         this.table_fields = [];
         this.doctype_name = null;
@@ -1461,7 +1440,7 @@ class FlansaRecordViewer {
                     try {
                         input._frappe_link_field.set_value('');
                     } catch (e) {
-                        console.log('Could not clear Frappe link field:', e);
+
                     }
                 }
             });
@@ -1471,7 +1450,7 @@ class FlansaRecordViewer {
     async render_new_record_form() {
         // Use the same render_record method but with empty data
         // Only clear record data, but keep table_fields and doctype_name for rendering
-        console.log('🆕 Rendering new record form');
+
         this.record_data = {}; // Clear only record data for empty form
         await this.render_record();
     }
@@ -1732,7 +1711,6 @@ class FlansaRecordViewer {
         
         return style;
     }
-    
 
     async render_link_field(field, fieldValue, fieldName) {
         const linkDoctype = field.options || field.link_doctype || '';
@@ -1748,13 +1726,7 @@ class FlansaRecordViewer {
         const showDisplayValue = displayValue !== fieldValue; // Only show display format if different from raw value
         
         // Debug logging
-        console.log(`🔗 Link field ${fieldName}:`, {
-            fieldValue,
-            displayValue,
-            showDisplayValue,
-            linkDoctype
-        });
-        
+
         // Get table label for better user experience
         const tableLabel = await this.getTableLabelForDoctype(linkDoctype);
         
@@ -1801,20 +1773,18 @@ class FlansaRecordViewer {
                     limit_page_length: 1
                 }
             });
-            
-            console.log(`📋 Logic field lookup result for ${field.fieldname}:`, logicFields);
-            
+
             if (logicFields.message && logicFields.message.length > 0) {
                 const logicField = logicFields.message[0];
                 if (logicField.link_display_field) {
-                    console.log(`✅ Found display field config: ${logicField.link_display_field} for ${field.fieldname}`);
+
                     // Fetch the display value from the linked record
-                    console.log(`🎯 CALLING fetchDisplayValue with fieldValue: ${fieldValue}`);
+
                     const displayValue = await this.fetchDisplayValue(fieldValue, linkDoctype, logicField.link_display_field);
-                    console.log(`🎯 Display value result for ${field.fieldname}:`, { displayValue, fallback: displayValue || fieldValue });
+
                     return displayValue || fieldValue; // Fallback to raw value if display value not found
                 } else {
-                    console.log(`⚠️  Logic field found but no display field configured for ${field.fieldname}`);
+
                 }
             }
         } catch (error) {
@@ -1972,7 +1942,6 @@ class FlansaRecordViewer {
         return html;
     }
 
-    
     // Helper methods for gallery functionality
     parseGalleryData(value) {
         if (!value) return [];
@@ -2048,29 +2017,25 @@ class FlansaRecordViewer {
     }
     
     bind_record_events() {
-        console.log('🔗 Binding record events...');
-        
+
         const content = document.getElementById('record-content');
         const actionsContainer = document.getElementById('record-actions');
         const page = document.querySelector('.flansa-record-viewer-page');
-        
-        console.log('Elements found:', { content: !!content, actionsContainer: !!actionsContainer, page: !!page });
-        
+
         if (!content) {
             console.error('Record content not found!');
             return;
         }
         
         // Context menu binding is now handled by dedicated bind_context_menu_events() method
-        console.log('Context menu binding delegated to dedicated method');
-        
+
         // Legacy action bar compatibility (if any old elements exist)
         const legacyActionsContainer = document.getElementById('record-actions');
         if (legacyActionsContainer) {
             const editBtn = legacyActionsContainer.querySelector('.edit-record');
             if (editBtn) {
                 editBtn.addEventListener('click', (e) => {
-                    console.log('Legacy edit button clicked!');
+
                     e.preventDefault();
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('mode', 'edit');
@@ -2080,10 +2045,10 @@ class FlansaRecordViewer {
             
             // Save button
             const saveBtn = legacyActionsContainer.querySelector('.save-record');
-            console.log('Save button found:', !!saveBtn);
+
             if (saveBtn) {
                 saveBtn.addEventListener('click', (e) => {
-                    console.log('Save button clicked!');
+
                     e.preventDefault();
                     this.save_record();
                 });
@@ -2091,10 +2056,10 @@ class FlansaRecordViewer {
             
             // Cancel buttons
             const cancelEdit = legacyActionsContainer.querySelector('.cancel-edit');
-            console.log('Cancel edit button found:', !!cancelEdit);
+
             if (cancelEdit) {
                 cancelEdit.addEventListener('click', (e) => {
-                    console.log('Cancel edit clicked!');
+
                     e.preventDefault();
                     const currentUrl = new URL(window.location);
                     currentUrl.searchParams.set('mode', 'view');
@@ -2103,25 +2068,25 @@ class FlansaRecordViewer {
             }
             
             const cancelCreate = legacyActionsContainer.querySelector('.cancel-create');
-            console.log('Cancel create button found:', !!cancelCreate);
+
             if (cancelCreate) {
                 cancelCreate.addEventListener('click', (e) => {
-                    console.log('Cancel create clicked!');
+
                     e.preventDefault();
                     frappe.set_route('flansa-report-viewer', this.table_name);
                 });
             }
         } else {
-            console.log('No legacy actions container found - using modern header actions');
+
         }
         
         // Bind navigation events (these are in the page container)
         if (page) {
             const backToListBtn = page.querySelector('.back-to-list');
-            console.log('Back to list button found:', !!backToListBtn);
+
             if (backToListBtn) {
                 backToListBtn.addEventListener('click', (e) => {
-                    console.log('Back to list clicked!');
+
                     e.preventDefault();
                     frappe.set_route('flansa-report-viewer', this.table_name);
                 });
@@ -2130,12 +2095,12 @@ class FlansaRecordViewer {
         
         // Bind lightbox events for gallery images
         const lightboxImages = content.querySelectorAll('.gallery-lightbox-trigger, .gallery-view img, .gallery-edit-item img');
-        console.log('Lightbox images found:', lightboxImages.length);
+
         lightboxImages.forEach(img => {
             img.addEventListener('click', (e) => {
                 e.preventDefault();
                 const imageUrl = img.src;
-                console.log('Image clicked for lightbox:', imageUrl);
+
                 this.show_image_lightbox(imageUrl);
             });
         });
@@ -2145,8 +2110,7 @@ class FlansaRecordViewer {
         
         // Link field event handlers
         this.bind_link_field_events(content);
-        
-        console.log('✅ Event binding completed');
+
     }
     
     bind_gallery_events(content) {
@@ -2185,8 +2149,6 @@ class FlansaRecordViewer {
         });
     }
 
-    
-
     validate_form_data_before_save() {
         const content = document.getElementById('record-content');
         if (!content) return true;
@@ -2198,7 +2160,7 @@ class FlansaRecordViewer {
                 const linkValue = input._frappe_link_field.get_value();
                 input.value = linkValue;
                 input.dataset.value = linkValue;
-                console.log(`🔄 Pre-save sync for ${input.name}: ${linkValue}`);
+
             }
         });
         
@@ -2248,8 +2210,7 @@ class FlansaRecordViewer {
         }
         
         const formData = this.collect_form_data();
-        
-        console.log('💾 Saving record with form data:', formData);
+
         frappe.show_alert({
             message: 'Saving record...',
             indicator: 'blue'
@@ -2363,15 +2324,15 @@ class FlansaRecordViewer {
                         // Get value from the Frappe control
                         const linkValue = input._frappe_link_field.get_value();
                         formData[input.name] = linkValue || input.value;
-                        console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]}`);
+
                     } else {
                         // For link fields with display values, use the raw ID value
                         if (input.dataset.rawValue) {
                             formData[input.name] = input.dataset.rawValue;
-                            console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]} (using raw value)`);
+
                         } else {
                             formData[input.name] = input.dataset.value || input.value;
-                            console.log(`📊 Collecting link field ${input.name}: ${formData[input.name]} (fallback)`);
+
                         }
                     }
                 } else {
@@ -2379,16 +2340,13 @@ class FlansaRecordViewer {
                 }
             }
         });
-        
-        console.log('📊 Collected form data:', formData);
+
         return formData;
     }
-    
 
     // Gallery action methods
     add_gallery_images(fieldName) {
-        console.log('🖼️ Adding images to gallery field:', fieldName);
-        
+
         // Create file input dialog
         const fileInput = document.createElement('input');
         fileInput.type = 'file';
@@ -2406,8 +2364,7 @@ class FlansaRecordViewer {
     }
     
     async upload_gallery_images(fieldName, files) {
-        console.log(`📤 Uploading ${files.length} images for field:`, fieldName);
-        
+
         try {
             frappe.show_alert({
                 message: `Uploading ${files.length} image(s)...`,
@@ -2418,8 +2375,7 @@ class FlansaRecordViewer {
             
             for (let i = 0; i < files.length; i++) {
                 const file = files[i];
-                console.log(`Uploading file ${i + 1}:`, file.name);
-                
+
                 const uploadResult = await this.upload_single_file(file);
                 if (uploadResult && uploadResult.file_url) {
                     uploadedImages.push({
@@ -2497,11 +2453,8 @@ class FlansaRecordViewer {
         });
     }
 
-
-    
     async clear_gallery_images(fieldName) {
-        console.log('🧹 Clearing gallery field:', fieldName);
-        
+
         const currentValue = this.record_data[fieldName] || '';
         const images = this.parseGalleryData(currentValue);
         
@@ -2557,8 +2510,7 @@ class FlansaRecordViewer {
     }
     
     async remove_gallery_image(fieldName, imageIndex) {
-        console.log(`🗑️ Removing image ${imageIndex} from field:`, fieldName);
-        
+
         try {
             const currentValue = this.record_data[fieldName] || '';
             const images = this.parseGalleryData(currentValue);
@@ -2661,12 +2613,12 @@ class FlansaRecordViewer {
     organize_fields_into_sections(fields) {
         // If we have form builder sections, use only those fields
         if (this.form_sections && this.form_sections.length > 0) {
-            console.log('📋 Using form builder sections exclusively');
+
             return this.organize_fields_with_form_config(fields);
         }
         
         // If no form builder configuration, show empty state
-        console.log('📋 No form builder configuration - showing empty state');
+
         return [];
     }
     
@@ -2792,12 +2744,10 @@ class FlansaRecordViewer {
     show_image_lightbox(startingIndex = 0) {
         const allImages = this.getAllImagesFromCurrentRecord();
         if (!allImages || allImages.length === 0) {
-            console.log('No images found for lightbox');
+
             return;
         }
-        
-        console.log('📷 Showing advanced lightbox, starting at index:', startingIndex);
-        
+
         // Create lightbox HTML
         const lightboxHtml = `
             <div class="image-lightbox-overlay" id="record-image-lightbox" style="
@@ -3076,14 +3026,12 @@ class FlansaRecordViewer {
             styleElement.textContent = this.form_config.custom_css;
             try {
                 document.head.appendChild(styleElement);
-                console.log('🎨 Applied custom CSS from form builder');
+
             } catch (error) {
                 console.error('Error applying custom CSS:', error);
             }
         }
     }
-    
-
 
     bind_link_field_events(content) {
         // Initialize Frappe's native link fields
@@ -3100,8 +3048,7 @@ class FlansaRecordViewer {
         if (!linkDoctype || !window.frappe) return;
         
         try {
-            console.log(`🔍 Initializing link field: ${fieldName} -> ${linkDoctype}`);
-            
+
             // Check if this field has display field configuration
             const displayFieldConfig = await this.getDisplayFieldConfig(fieldName);
             
@@ -3115,9 +3062,9 @@ class FlansaRecordViewer {
             
             // If display field is configured, add custom query to field definition
             if (displayFieldConfig && displayFieldConfig.link_display_field) {
-                console.log(`🎯 Adding custom query to field definition`);
+
                 fieldDef.get_query = () => {
-                    console.log(`🎯 Field def get_query called for ${fieldName}`);
+
                     return {
                         query: 'flansa.flansa_core.api.link_search.search_with_display_field',
                         filters: {
@@ -3136,7 +3083,7 @@ class FlansaRecordViewer {
             
             // Override the search behavior for all link fields
             const displayField = (displayFieldConfig && displayFieldConfig.link_display_field) || 'name';
-            console.log(`🎯 Creating custom dropdown with display field: ${displayField}`);
+
             this.customizeLinkFieldSearch(linkField, linkDoctype, displayField);
             
             // Set initial value
@@ -3160,8 +3107,7 @@ class FlansaRecordViewer {
                 // Trigger both change and input events for better compatibility
                 input.dispatchEvent(new Event('change', { bubbles: true }));
                 input.dispatchEvent(new Event('input', { bubbles: true }));
-                
-                console.log(`🔄 Link field ${fieldName} value updated to: ${newValue}`);
+
             };
             
             // Bind to multiple events to catch all value changes
@@ -3175,9 +3121,7 @@ class FlansaRecordViewer {
                     updateValue();
                 };
             }
-            
-            console.log(`✅ Initialized Frappe link field for ${fieldName} -> ${linkDoctype}`);
-            
+
         } catch (error) {
             console.warn('Failed to initialize Frappe link field, falling back to simple input:', error);
             // Fallback: add basic autocomplete
@@ -3221,8 +3165,7 @@ class FlansaRecordViewer {
     }
     
     customizeLinkFieldSearch(linkField, linkDoctype, displayField) {
-        console.log(`🎯 Creating custom dropdown for ${linkField.df.fieldname}`);
-        
+
         // Hide the original Frappe awesomplete dropdown
         if (linkField.awesomplete && linkField.awesomplete.ul) {
             linkField.awesomplete.ul.style.display = 'none';
@@ -3230,8 +3173,7 @@ class FlansaRecordViewer {
         
         // Create our custom dropdown container
         this.createCustomDropdown(linkField, linkDoctype, displayField);
-        
-        console.log(`✅ Custom dropdown created for ${linkField.df.fieldname}`);
+
     }
     
     createCustomDropdown(linkField, linkDoctype, displayField) {
@@ -3273,8 +3215,7 @@ class FlansaRecordViewer {
         // Handle clear button click
         clearBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            console.log(`🗑️ Clearing selection`);
-            
+
             input.value = '';
             linkField.set_value('');
             this.hideCustomDropdown(dropdownList);
@@ -3293,8 +3234,7 @@ class FlansaRecordViewer {
         
         // Handle focus event to show initial suggestions
         input.addEventListener('focus', (e) => {
-            console.log(`🔍 Custom dropdown focus - showing initial suggestions`);
-            
+
             // Show loading
             this.showCustomDropdown(dropdownList, input);
             dropdownList.innerHTML = '<div class="dropdown-loading">Loading suggestions...</div>';
@@ -3308,8 +3248,7 @@ class FlansaRecordViewer {
         // Handle input events
         input.addEventListener('input', (e) => {
             const query = e.target.value.trim();
-            console.log(`🔍 Custom dropdown search: "${query}"`);
-            
+
             // Clear previous timeout
             clearTimeout(searchTimeout);
             
@@ -3364,8 +3303,7 @@ class FlansaRecordViewer {
     
     async performCustomSearch(query, linkDoctype, displayField, dropdownList, input, linkField) {
         try {
-            console.log(`🎯 Performing search: ${query} in ${linkDoctype}.${displayField}`);
-            
+
             const response = await frappe.call({
                 method: 'flansa.flansa_core.api.link_search.search_with_display_field',
                 args: {
@@ -3382,8 +3320,7 @@ class FlansaRecordViewer {
             });
             
             const results = response.message || [];
-            console.log(`✅ Search results:`, results);
-            
+
             // Clear loading and populate results
             dropdownList.innerHTML = '';
             
@@ -3474,9 +3411,7 @@ class FlansaRecordViewer {
     selectCustomDropdownItem(item, input, linkField, dropdownList) {
         const value = item.dataset.value;
         const label = item.querySelector('.dropdown-item-main').textContent;
-        
-        console.log(`✅ Selected: ${value} (${label})`);
-        
+
         // Update input value
         input.value = value;
         linkField.set_value(value);
@@ -3520,8 +3455,7 @@ class FlansaRecordViewer {
     }
     
     async createNewLinkedRecord(linkDoctype, suggestedName, input, linkField, dropdownList) {
-        console.log(`🪟 Opening new ${linkDoctype} form in new tab with suggested name: ${suggestedName}`);
-        
+
         try {
             // Hide dropdown first
             this.hideCustomDropdown(dropdownList);
@@ -3533,9 +3467,7 @@ class FlansaRecordViewer {
             if (!newRecordUrl) {
                 throw new Error('Could not determine table name for linked DocType');
             }
-            
-            console.log(`🔗 Opening URL: ${newRecordUrl}`);
-            
+
             // Open in new tab
             const newWindow = window.open(newRecordUrl, '_blank');
             
@@ -3575,8 +3507,7 @@ class FlansaRecordViewer {
         const checkClosed = setInterval(() => {
             if (newWindow.closed) {
                 clearInterval(checkClosed);
-                console.log(`🔄 New record form closed, refreshing dropdown options`);
-                
+
                 // Show a brief message
                 frappe.show_alert({
                     message: 'Refreshed dropdown options',
@@ -3596,8 +3527,7 @@ class FlansaRecordViewer {
     
     async getFlansaRecordViewerUrl(linkDoctype, suggestedName) {
         try {
-            console.log(`🔍 Getting Flansa table name for DocType: ${linkDoctype}`);
-            
+
             // Look up the Flansa Table that corresponds to this DocType
             const response = await frappe.call({
                 method: 'frappe.client.get_list',
@@ -3613,8 +3543,7 @@ class FlansaRecordViewer {
             
             if (response.message && response.message.length > 0) {
                 const tableName = response.message[0].name;
-                console.log(`✅ Found Flansa table: ${tableName}`);
-                
+
                 // Build the Flansa record-viewer URL in new mode
                 let recordViewerUrl = `/app/flansa-record-viewer/${tableName}/new?mode=new`;
                 
@@ -3637,8 +3566,7 @@ class FlansaRecordViewer {
     
     async getDisplayFieldConfig(fieldName) {
         try {
-            console.log(`🔍 Looking for display field config - table: ${this.table_name}, field: ${fieldName}`);
-            
+
             const logicFields = await frappe.call({
                 method: 'frappe.client.get_list',
                 args: {
@@ -3652,11 +3580,9 @@ class FlansaRecordViewer {
                     limit_page_length: 1
                 }
             });
-            
-            console.log(`📋 Display field config response:`, logicFields);
-            
+
             if (logicFields.message && logicFields.message.length > 0) {
-                console.log(`✅ Found display field config:`, logicFields.message[0]);
+
                 return logicFields.message[0];
             }
         } catch (error) {
@@ -3805,7 +3731,7 @@ class FlansaRecordViewer {
                 input.dispatchEvent(new Event('input', { bubbles: true }));
                 
                 suggestionsEl.remove();
-                console.log(`🔄 Link suggestion selected: ${newValue}`);
+
             });
             
             item.addEventListener('mouseenter', () => {
@@ -3833,13 +3759,7 @@ class FlansaRecordViewer {
             });
         }, 100);
     }
-    
-    
-    
-    
-    
-    
-    
+
     show_error(message) {
         const content = document.getElementById('record-content');
         if (content) {
@@ -3919,7 +3839,7 @@ class FlansaRecordViewer {
         // Dedicated method to bind context menu events with retry logic
         const page = document.querySelector('.flansa-record-viewer-page');
         if (!page) {
-            console.log('Page not ready for context menu binding, retrying...');
+
             setTimeout(() => this.bind_context_menu_events(), 200);
             return;
         }
@@ -3935,9 +3855,7 @@ class FlansaRecordViewer {
             // Context menu not present (likely in new/edit mode)
             return;
         }
-        
-        console.log('Binding context menu events...');
-        
+
         // Remove any existing handlers first
         contextMenuBtn.removeEventListener('click', this.contextMenuClickHandler);
         
@@ -3974,7 +3892,7 @@ class FlansaRecordViewer {
         
         if (editRecordBtn && !editRecordBtn.hasAttribute('data-bound')) {
             editRecordBtn.addEventListener('click', (e) => {
-                console.log('Edit record clicked!');
+
                 e.preventDefault();
                 contextDropdown.style.display = 'none';
                 
@@ -3993,7 +3911,7 @@ class FlansaRecordViewer {
         
         if (duplicateRecordBtn && !duplicateRecordBtn.hasAttribute('data-bound')) {
             duplicateRecordBtn.addEventListener('click', (e) => {
-                console.log('Duplicate record clicked!');
+
                 e.preventDefault();
                 contextDropdown.style.display = 'none';
                 this.duplicate_record();
@@ -4003,7 +3921,7 @@ class FlansaRecordViewer {
         
         if (deleteRecordBtn && !deleteRecordBtn.hasAttribute('data-bound')) {
             deleteRecordBtn.addEventListener('click', (e) => {
-                console.log('Delete record clicked!');
+
                 e.preventDefault();
                 contextDropdown.style.display = 'none';
                 this.delete_record();
@@ -4022,7 +3940,7 @@ class FlansaRecordViewer {
         frappe.confirm(
             `Are you sure you want to delete "${record_title}"?<br><br><strong>This action cannot be undone.</strong>`, 
             () => {
-                console.log('🗑️ Deleting record:', this.record_id);
+
                 frappe.call({
                     method: 'flansa.flansa_core.api.table_api.delete_record',
                     args: {
@@ -4032,8 +3950,7 @@ class FlansaRecordViewer {
                     callback: (response) => {
                         if (response.message && response.message.success) {
                             frappe.show_alert(`Record "${record_title}" deleted successfully`, 'green');
-                            console.log('✅ Record deleted successfully');
-                            
+
                             // Navigate back to the table view
                             const table_url = `/app/flansa-report-viewer/${this.table_name}?type=table`;
                             window.location.href = table_url;

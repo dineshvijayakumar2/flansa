@@ -61,7 +61,7 @@ class EnhancedFlansaTableBuilder {
             });
             
             this.all_tables = result.message || [];
-            console.log('📊 Loaded all tables for label resolution:', this.all_tables.length);
+
         } catch (error) {
             console.error('Error loading all tables:', error);
             this.all_tables = [];
@@ -405,8 +405,7 @@ class EnhancedFlansaTableBuilder {
                     align-items: center;
                     gap: 12px;
                 }
-                
-                
+
                 .title-text {
                     font-size: 1.375rem;
                     font-weight: 700;
@@ -1573,7 +1572,7 @@ class EnhancedFlansaTableBuilder {
                 cssClass += ' logic-link';
                 
                 // Debug logging for table label resolution
-                console.log(`🏷️ Link field ${field.fieldname || field.field_name}: ${targetDoctype} → ${readableName}`);
+
             } else {
                 logicInfo.push(`<span class="logic-type-link">🔗 Link Field (No Target)</span>`);
                 cssClass += ' logic-link';
@@ -1842,7 +1841,7 @@ class EnhancedFlansaTableBuilder {
                 return { isLogic: true, type: logicType, display: `${fieldType} (${logicType})` };
             }
         } catch (error) {
-            console.log('No logic field found for:', field.field_name);
+
         }
         
         return { isLogic: false, type: fieldType, display: fieldType };
@@ -1936,19 +1935,17 @@ class EnhancedFlansaTableBuilder {
     
     async load_fields() {
         try {
-            console.log('Loading fields for table:', this.table_id);
+
             const result = await frappe.call({
                 method: 'flansa.flansa_core.api.field_management.get_visual_builder_fields',
                 args: {
                     table_name: this.table_id
                 }
             });
-            
-            console.log('Fields API result:', result);
-            
+
             if (result.message && result.message.success) {
                 this.fields = result.message.fields || [];
-                console.log('Loaded fields:', this.fields);
+
                 this.render_fields();
                 this.update_counters();
             } else {
@@ -2751,8 +2748,7 @@ class EnhancedFlansaTableBuilder {
                     // Map logic_type to template_type for consistent routing
                     const logic_type = r.message.logic_type || 'Calculation';
                     logic_field_template = this.map_logic_type_to_template(logic_type, field);
-                    
-                    console.log(`Detected Logic Field: ${field.field_name} (${logic_type} → ${logic_field_template})`);
+
                 }
                 
                 // Now create the dialog with proper context
@@ -2790,14 +2786,7 @@ class EnhancedFlansaTableBuilder {
         
         // Debug logging for Link field detection
         if (is_edit_mode) {
-            console.log('🔍 Field Detection Debug:', {
-                field_name: field.field_name,
-                field_type: field.field_type,
-                is_logic_field: is_logic_field,
-                logic_field_template: logic_field_template,
-                is_link_field: is_link_field,
-                show_link_controls: show_link_controls
-            });
+
         }
         
         const dialog = new frappe.ui.Dialog({
@@ -3175,8 +3164,7 @@ class EnhancedFlansaTableBuilder {
         
         // Simple Link field loading - always load for all fields
         setTimeout(() => {
-            console.log('🔍 Loading target tables for all fields');
-            
+
             // Always load target tables - let user decide if they need Link functionality
             this.load_target_tables(dialog, table_id);
             
@@ -3185,8 +3173,7 @@ class EnhancedFlansaTableBuilder {
                 // Use centralized scope detection
                 const proper_scope = this.determine_link_scope(field?.options, field?.fieldname);
                 dialog.set_value('link_scope', proper_scope);
-                console.log('Set link scope for edit mode:', proper_scope);
-                
+
                 if (field && field.options) {
                     // Pre-populate target doctype for existing Link fields
                     setTimeout(() => {
@@ -3198,8 +3185,7 @@ class EnhancedFlansaTableBuilder {
                         if (table_info) {
                             // Set the label in the dropdown
                             dialog.set_value('target_doctype', table_info.label);
-                            console.log('Pre-populated target doctype - label:', table_info.label, 'from doctype:', field.options);
-                            
+
                             // Also load display fields for this target
                             setTimeout(() => {
                                 this.load_display_fields(dialog);
@@ -3211,8 +3197,7 @@ class EnhancedFlansaTableBuilder {
                             const fallback_table_info = table_data.find(t => t.value === field.options);
                             if (fallback_table_info) {
                                 dialog.set_value('target_doctype', fallback_table_info.label);
-                                console.log('Pre-populated target doctype (fallback) - label:', fallback_table_info.label);
-                                
+
                                 // Also load display fields for this target
                                 setTimeout(() => {
                                     this.load_display_fields(dialog);
@@ -3220,7 +3205,7 @@ class EnhancedFlansaTableBuilder {
                                     this.prePopulateDisplayField(dialog, table_id, field.fieldname);
                                 }, 500);
                             } else {
-                                console.log('Pre-populated target doctype (no match found):', field.options);
+
                             }
                         }
                     }, 500);
@@ -3231,7 +3216,7 @@ class EnhancedFlansaTableBuilder {
         // Load fetch source fields if template is fetch
         if (logic_field_template === 'fetch') {
             setTimeout(async () => {
-                console.log('🔍 Loading fetch source fields for fetch template');
+
                 this.load_unified_fetch_source_fields(dialog, table_id);
                 
                 if (is_edit_mode && field) {
@@ -3239,14 +3224,14 @@ class EnhancedFlansaTableBuilder {
                     const expression = await this.fetch_logic_field_expression(field.field_name, table_id);
                     
                     if (expression) {
-                        console.log('✅ Found Logic Field expression:', expression);
+
                         const source_field = this.parse_fetch_source_field(expression);
                         const target_field = this.parse_fetch_target_field(expression);
                         
                         if (source_field) {
                             setTimeout(() => {
                                 dialog.set_value('fetch_source_field', source_field);
-                                console.log('✅ Pre-populated fetch source field:', source_field);
+
                                 this.load_unified_target_fields(dialog, table_id);
                                 
                                 if (target_field) {
@@ -3270,13 +3255,13 @@ class EnhancedFlansaTableBuilder {
                                         }
                                         
                                         dialog.set_value('fetch_target_field', field_to_set);
-                                        console.log('✅ Pre-populated fetch target field:', field_to_set, 'from:', target_field);
+
                                     }, 700); // Wait longer for target fields to fully load
                                 }
                             }, 300);
                         }
                     } else {
-                        console.log('⚠️ No Logic Field expression found for field:', field.field_name);
+
                     }
                 }
             }, 100);
@@ -3318,7 +3303,7 @@ class EnhancedFlansaTableBuilder {
             if (table_info) {
                 // Replace the label with the actual DocType name (not Flansa Table ID)
                 values.target_doctype = table_info.doctype_name || table_info.value;
-                console.log("Converted target_doctype label to DocType:", table_info.label, "→", values.target_doctype);
+
             }
         }
         
@@ -3340,7 +3325,7 @@ class EnhancedFlansaTableBuilder {
             
             if (is_logic_field) {
                 // Create logic field using template system
-                console.log('Creating logic field with template:', logic_field_template);
+
                 result = await frappe.call({
                     method: 'flansa.logic_templates.create_field_from_template',
                     args: {
@@ -3351,7 +3336,7 @@ class EnhancedFlansaTableBuilder {
                 });
             } else {
                 // Create standard field using table API
-                console.log('Creating standard field');
+
                 result = await frappe.call({
                     method: 'flansa.flansa_core.api.table_api.add_field_to_table',
                     args: {
@@ -3377,7 +3362,7 @@ class EnhancedFlansaTableBuilder {
                         link_target_doctype: target,
                         logic_type: 'link'
                     });
-                    console.log('Created Logic Field record for standard Link field:', values.field_name);
+
                 }
             }
             
@@ -3470,14 +3455,13 @@ class EnhancedFlansaTableBuilder {
                 const target_value = values.target_doctype || values.options;
                 if (target_value) {
                     field_updates.options = target_value;
-                    console.log("Setting Link field options to:", target_value);
+
                 }
             }
             
             // For logic fields, handle special updates
             if (is_logic_field) {
-                console.log('Updating logic field with template:', logic_field_template);
-                
+
                 // Add logic-specific updates based on template
                 if (logic_field_template === 'fetch') {
                     // Generate new FETCH expression from form values
@@ -3491,7 +3475,7 @@ class EnhancedFlansaTableBuilder {
                         
                         // Use 'logic_expression' to match DocType field name
                         field_updates.logic_expression = `FETCH(${source_field}, ${target_fieldname})`;
-                        console.log('Generated FETCH logic_expression:', field_updates.logic_expression);
+
                     }
                 } else if (logic_field_template === 'formula') {
                     // Use 'logic_expression' to match DocType field name
@@ -3499,8 +3483,7 @@ class EnhancedFlansaTableBuilder {
                 } else if (logic_field_template === 'link') {
                     // For link fields, the target_doctype should be the actual DocType name
                     field_updates.options = values.target_doctype;
-                    console.log('Setting link field target doctype:', values.target_doctype);
-                    
+
                     // Also update or create the Flansa Logic Field with display field setting
                     if (values.display_field || values.target_doctype) {
                         await this.update_or_create_logic_field_display_setting(table_id, field_name, {
@@ -3510,7 +3493,7 @@ class EnhancedFlansaTableBuilder {
                             link_target_doctype: values.target_doctype || '',
                             logic_type: 'link'
                         });
-                        console.log('Updated link display field setting:', values.display_field);
+
                     }
                 }
                 
@@ -3519,14 +3502,7 @@ class EnhancedFlansaTableBuilder {
                     field_updates.field_type = values.result_type;
                 }
             }
-            
-            console.log('🔧 Updating field with data:', field_updates);
-            console.log('🔧 API call parameters:', {
-                table_name: table_id,
-                field_name: field_name,
-                field_updates: field_updates
-            });
-            
+
             const result = await frappe.call({
                 method: 'flansa.native_fields.update_doctype_field_native',
                 args: {
@@ -3535,9 +3511,7 @@ class EnhancedFlansaTableBuilder {
                     field_updates: field_updates
                 }
             });
-            
-            console.log('🔧 Update API result:', result);
-            
+
             if (result.message && result.message.success) {
                 dialog.hide();
                 frappe.show_alert({
@@ -3605,8 +3579,7 @@ class EnhancedFlansaTableBuilder {
     
     async delete_field(fieldName) {
         // Skip initial confirmation - let the backend API handle all confirmation logic
-        console.log('🗑️ Initiating delete for field:', fieldName);
-        
+
         try {
             // First, try smart delete to check for dependencies
             const result = await frappe.call({
@@ -3617,12 +3590,10 @@ class EnhancedFlansaTableBuilder {
                     force_cascade: false
                 }
             });
-            
-            console.log('🔍 Delete result:', result.message);
-            
+
             if (result.message && result.message.success) {
                 // Successful deletion
-                console.log('✅ Field deleted successfully');
+
                 frappe.show_alert({
                     message: '✅ ' + result.message.message,
                     indicator: 'green'
@@ -3631,14 +3602,14 @@ class EnhancedFlansaTableBuilder {
                 this.render_fields();
             } else if (result.message && result.message.dependents && result.message.dependents.length > 0) {
                 // Field has dependencies, ask for cascade confirmation
-                console.log('⚠️ Field has dependencies, showing cascade dialog');
+
                 this.show_cascade_delete_dialog(fieldName, result.message.dependents);
             } else if (result.message && result.message.requires_confirmation) {
                 // Standard field without dependencies - show simple confirmation
-                console.log('⚠️ Standard field requires confirmation');
+
                 this.show_simple_delete_confirmation(fieldName, result.message.message);
             } else {
-                console.log('❌ Delete failed:', result.message);
+
                 frappe.msgprint('Failed to delete field: ' + (result.message?.error || result.message?.message || 'Unknown error'));
             }
         } catch (error) {
@@ -3679,8 +3650,7 @@ class EnhancedFlansaTableBuilder {
 
     async execute_confirmed_delete(fieldName) {
         try {
-            console.log('🗑️ Executing confirmed delete for field:', fieldName);
-            
+
             const result = await frappe.call({
                 method: 'flansa.flansa_core.api.table_api.smart_delete_field',
                 args: {
@@ -4043,7 +4013,7 @@ class EnhancedFlansaTableBuilder {
             $(dialog.$wrapper).on('click', '.template-card', function(e) {
                 e.preventDefault();
                 const templateId = $(this).data('template');
-                console.log("Logic template selected:", templateId);
+
                 dialog.hide();
                 self.show_unified_field_dialog(self.table_id, null, templateId);
             });
@@ -4142,16 +4112,13 @@ class EnhancedFlansaTableBuilder {
             onshow: function() {
                 // Auto-populate field name from label
                 setTimeout(() => {
-                    console.log('🔧 Setting up auto-population for standard field dialog');
-                    
+
                     // Check if fields exist
                     if (dialog.fields_dict.field_label && dialog.fields_dict.field_name) {
-                        console.log('✅ Found field_label and field_name fields');
-                        
+
                         dialog.fields_dict.field_label.$input.on('input', function() {
                             const label = $(this).val();
-                            console.log('📝 Field label changed to:', label);
-                            
+
                             if (label) {
                                 // Convert to lowercase, replace spaces with underscores, remove special characters
                                 let fieldName = label.toLowerCase()
@@ -4163,29 +4130,25 @@ class EnhancedFlansaTableBuilder {
                                 if (fieldName && !fieldName.match(/^[a-z]/)) {
                                     fieldName = 'field_' + fieldName;
                                 }
-                                
-                                console.log('🔄 Generated field name:', fieldName);
-                                
+
                                 // Set the field name only if it hasn't been manually edited
                                 const currentFieldName = dialog.fields_dict.field_name.get_value();
-                                console.log('📋 Current field name:', currentFieldName);
-                                
+
                                 if (!currentFieldName || 
                                     currentFieldName.startsWith('field_') ||
                                     currentFieldName.replace(/_/g, ' ').toLowerCase() === 
                                     label.slice(0, -1).toLowerCase()) {
                                     dialog.fields_dict.field_name.set_value(fieldName);
-                                    console.log('✅ Set field name to:', fieldName);
+
                                 } else {
-                                    console.log('⚠️ Field name manually edited, not overriding');
+
                                 }
                             }
                         });
-                        
-                        console.log('✅ Auto-population event handler bound');
+
                     } else {
                         console.error('❌ Could not find field_label or field_name fields in dialog');
-                        console.log('Available fields:', Object.keys(dialog.fields_dict));
+
                     }
                 }, 200); // Increased timeout for better reliability
             }
@@ -4563,7 +4526,7 @@ class EnhancedFlansaTableBuilder {
     }
     
     async load_workspace_logo() {
-        console.log('🔍 Table Builder: Loading workspace logo...');
+
         try {
             // Get workspace logo from Flansa Tenant Registry
             const result = await frappe.call({
@@ -4572,30 +4535,23 @@ class EnhancedFlansaTableBuilder {
                 freeze: false,
                 quiet: false // Show errors for debugging
             });
-            
-            console.log('🔍 Table Builder: API response:', result);
-            
+
             if (result.message && result.message.logo) {
                 const logoContainer = document.getElementById('workspace-logo-container');
                 const logoImg = document.getElementById('workspace-logo');
-                
-                console.log('🔍 Table Builder: DOM elements found:', {
-                    logoContainer: !!logoContainer,
-                    logoImg: !!logoImg
-                });
-                
+
                 if (logoContainer && logoImg) {
                     logoImg.src = result.message.logo;
                     logoContainer.style.display = 'flex';
-                    console.log('✅ Table Builder: Workspace logo loaded:', result.message.logo);
+
                 } else {
-                    console.log('❌ Table Builder: Logo DOM elements not found');
+
                 }
             } else {
-                console.log('⚠️ Table Builder: No workspace logo in API response');
+
             }
         } catch (error) {
-            console.log('❌ Table Builder: Workspace logo error:', error);
+
         }
     }
     
@@ -4639,38 +4595,32 @@ class EnhancedFlansaTableBuilder {
         
         const appTitle = this.getApplicationTitle();
         const appDescription = this.getApplicationDescription();
-        
-        console.log('🔍 Updating banner with:', { appTitle, appDescription, application_data: this.application_data, table_data: this.table_data });
-        console.log('🔍 Found elements:', { 
-            titleElements: titleElements.length,
-            descriptionElements: descriptionElements.length
-        });
-        
+
         // Update ALL title elements found
         if (titleElements.length > 0) {
             titleElements.forEach((titleElement, index) => {
-                console.log(`📝 Title element ${index + 1}: updating from "${titleElement.textContent}" to "${appTitle}"`);
+
                 titleElement.textContent = appTitle;
-                console.log(`✅ Title element ${index + 1} updated, now shows: "${titleElement.textContent}"`);
+
             });
         } else {
-            console.log('❌ No title elements (.title-text) found in DOM');
+
         }
         
         // Update ALL description elements found
         if (descriptionElements.length > 0) {
             descriptionElements.forEach((descElement, index) => {
-                console.log(`📝 Description element ${index + 1}: updating from "${descElement.textContent}" to "${appDescription}"`);
+
                 descElement.textContent = appDescription;
-                console.log(`✅ Description element ${index + 1} updated, now shows: "${descElement.textContent}"`);
+
             });
         } else {
-            console.log('❌ No description elements (.header-subtitle) found in DOM');
+
         }
         
         // Also check if Frappe's page title is interfering
         if (this.page && this.page.set_title) {
-            console.log('🔧 Also updating Frappe page title');
+
             this.page.set_title(appTitle);
         }
     }
@@ -4758,8 +4708,7 @@ class EnhancedFlansaTableBuilder {
             }
             
             const actual_doctype = table_info.value;
-            console.log("Creating link field - Target label:", target_label, "→ doctype:", actual_doctype);
-            
+
             const result = await frappe.call({
                 method: 'flansa.logic_templates.create_field_from_template',
                 args: {
@@ -5013,37 +4962,25 @@ class EnhancedFlansaTableBuilder {
     
     async load_display_fields(dialog) {
         try {
-            console.log("🔍 load_display_fields called");
+
             const target_label = dialog.get_value('target_doctype');
-            console.log("Target label selected:", target_label);
-            
+
             if (!target_label) {
-                console.log("❌ No target label, returning");
+
                 return;
             }
             
             // Get actual doctype from stored data using the label (same as create_link_field)
             const table_data = dialog._table_data || [];
-            console.log("Available table data:", table_data.length, "tables");
-            
+
             const table_info = table_data.find(t => t.label === target_label);
             
             if (!table_info) {
                 console.error('❌ Target table info not found for label:', target_label);
-                console.log("Available labels:", table_data.map(t => t.label));
+
                 return;
             }
-            
-            console.log("📋 Table info found:", table_info);
-            console.log("🔍 Table info properties:", {
-                name: table_info.name,
-                table_name: table_info.table_name,
-                table_label: table_info.table_label,
-                doctype_name: table_info.doctype_name,
-                value: table_info.value,
-                label: table_info.label
-            });
-            
+
             // Determine correct identifier based on table type
             let table_name;
             if (table_info.type === 'system') {
@@ -5053,8 +4990,7 @@ class EnhancedFlansaTableBuilder {
                 // For Flansa Tables, use the Flansa Table ID
                 table_name = table_info.name || table_info.value;  // This is the Flansa Table ID
             }
-            console.log(`✅ Loading display fields for ${table_info.type} table:`, table_name);
-            
+
             const result = await frappe.call({
                 method: 'flansa.flansa_core.api.table_api.get_table_fields',
                 args: {
@@ -5063,8 +4999,7 @@ class EnhancedFlansaTableBuilder {
             });
             
             if (result.message && result.message.success) {
-                console.log("📊 API response:", result.message.fields.length, "fields received");
-                
+
                 // Add empty option and common display fields
                 let options = ['', 'name', 'title', 'label', 'display_name'];
                 
@@ -5074,11 +5009,10 @@ class EnhancedFlansaTableBuilder {
                         options.push(field.fieldname);
                     }
                 });
-                
-                console.log("✅ Setting display field options:", options);
+
                 dialog.set_df_property('display_field', 'options', options.join('\n'));
                 dialog.fields_dict.display_field.refresh();
-                console.log("✅ Display field dropdown updated");
+
             } else {
                 console.error("❌ API call failed:", result.message);
             }
@@ -5211,7 +5145,7 @@ class EnhancedFlansaTableBuilder {
         if (source_field && target_field) {
             const expression = `FETCH(${source_field}, ${target_field})`;
             dialog.set_value('formula', expression);
-            console.log('Updated FETCH expression:', expression);
+
         }
     }
 
@@ -5219,12 +5153,10 @@ class EnhancedFlansaTableBuilder {
         try {
             const source_field_value = dialog.get_value('fetch_source_field');
             if (!source_field_value) {
-                console.log('No source field selected');
+
                 return;
             }
-            
-            console.log(`Loading target fields for source: ${source_field_value}`);
-            
+
             // Find the source field data from stored options to get target doctype
             const source_fields_data = dialog._unified_source_fields_data || [];
             const source_field_data = source_fields_data.find(f => f.fieldname === source_field_value);
@@ -5235,8 +5167,7 @@ class EnhancedFlansaTableBuilder {
             }
             
             const target_doctype = source_field_data.options;
-            console.log(`Target doctype for source field ${source_field_value}: ${target_doctype}`);
-            
+
             // Load target fields from the target doctype
             frappe.call({
                 method: 'flansa.logic_templates.get_target_table_fields',
@@ -5250,7 +5181,7 @@ class EnhancedFlansaTableBuilder {
                             // Show field labels in dropdown (same as existing pattern)
                             const options = fields.map(f => f.label || f.fieldname).join('\n');
                             dialog.set_df_property('fetch_target_field', 'options', options);
-                            console.log(`✅ Loaded ${fields.length} target field options`);
+
                         } else {
                             dialog.set_df_property('fetch_target_field', 'options', '');
                             dialog._unified_target_fields_data = [];
@@ -5300,9 +5231,7 @@ class EnhancedFlansaTableBuilder {
     load_target_tables(dialog, table_id) {
         const scope = dialog.get_value('link_scope') || 'Current App';
         const target_app = dialog.get_value('target_app');
-        
-        console.log('Loading target tables for scope:', scope, 'app:', target_app);
-        
+
         frappe.call({
             method: 'flansa.logic_templates.get_link_wizard_data',
             args: { 
@@ -5341,7 +5270,7 @@ class EnhancedFlansaTableBuilder {
                         const options = target_tables.map(t => t.label).join('\n');
                         target_table_field.df.options = options;
                         target_table_field.refresh();
-                        console.log(`Loaded ${target_tables.length} tables for scope: ${scope}`);
+
                     }
                 } else {
                     console.error('Failed to load target tables:', r.message);
@@ -5356,9 +5285,9 @@ class EnhancedFlansaTableBuilder {
             const app_options = apps_data.map(app => app.app_name).join('\n');
             target_app_field.df.options = app_options;
             target_app_field.refresh();
-            console.log('Populated app selector with', apps_data.length, 'apps');
+
         } else {
-            console.log('No apps available for Other Flansa Apps scope');
+
         }
     }
 
@@ -5379,10 +5308,10 @@ class EnhancedFlansaTableBuilder {
                 },
                 callback: (r) => {
                     if (r.message && r.message.logic_expression) {
-                        console.log('✅ Found Logic Field expression for', field_name, ':', r.message.logic_expression);
+
                         resolve(r.message.logic_expression);
                     } else {
-                        console.log('⚠️ No Logic Field expression found for field:', field_name, 'in table:', table_name);
+
                         resolve(null);
                     }
                 }
@@ -5436,7 +5365,7 @@ class EnhancedFlansaTableBuilder {
                 // Set target after a delay to ensure tables are loaded
                 setTimeout(() => {
                     dialog.set_value('target_doctype', field_info.options);
-                    console.log(`Set system field: scope=${proper_scope}, target=${field_info.options}`);
+
                 }, 500);
             }
             
@@ -5478,8 +5407,7 @@ class EnhancedFlansaTableBuilder {
     }
 
     load_unified_fetch_source_fields(dialog, table_id) {
-        console.log('Loading unified fetch source fields for table:', table_id);
-        
+
         frappe.call({
             method: 'flansa.logic_templates.get_fetch_wizard_data',
             args: { table_name: table_id },
@@ -5496,7 +5424,7 @@ class EnhancedFlansaTableBuilder {
                     if (source_field) {
                         source_field.df.options = options;
                         source_field.refresh();
-                        console.log('✅ Loaded fetch source fields:', link_fields);
+
                     }
                 } else {
                     console.error('Failed to load fetch source fields:', r.message);
@@ -5517,16 +5445,15 @@ class EnhancedFlansaTableBuilder {
                 appBuilderLink.off('click.breadcrumb-nav').on('click.breadcrumb-nav', function(e) {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log('🔗 Table Builder: Navigating to App Builder with preserved query:', targetUrl);
+
                     window.location.href = targetUrl;
                 });
-                
-                console.log('✅ Table Builder: Fixed breadcrumb link with app parameter:', this.table_data.application);
+
             } else {
-                console.log('⚠️ Table Builder: App Builder breadcrumb link not found');
+
             }
         } else {
-            console.log('⚠️ Table Builder: No application data available for breadcrumb fix');
+
         }
     }
     
@@ -5561,13 +5488,12 @@ class EnhancedFlansaTableBuilder {
                 });
                 
                 if (result.message) {
-                    console.log('✅ Updated existing Flansa Logic Field:', updates);
+
                     return true;
                 }
             } else {
                 // Create new Flansa Logic Field record
-                console.log('Creating new Flansa Logic Field for link field:', field_name);
-                
+
                 const result = await frappe.call({
                     method: 'frappe.client.insert',
                     args: {
@@ -5582,7 +5508,7 @@ class EnhancedFlansaTableBuilder {
                 });
                 
                 if (result.message) {
-                    console.log('✅ Created new Flansa Logic Field for link configuration:', field_name);
+
                     return true;
                 }
             }
@@ -5626,7 +5552,7 @@ class EnhancedFlansaTableBuilder {
                 });
                 
                 if (result.message) {
-                    console.log('✅ Updated Flansa Logic Field display settings:', updates);
+
                     return true;
                 } else {
                     console.error('❌ Failed to update Flansa Logic Field display settings');
@@ -5664,11 +5590,11 @@ class EnhancedFlansaTableBuilder {
                     // Pre-populate the display field dropdown
                     setTimeout(() => {
                         dialog.set_value('display_field', logicField.link_display_field);
-                        console.log('✅ Pre-populated display field:', logicField.link_display_field);
+
                     }, 200); // Small delay to ensure dropdown options are loaded
                 }
             } else {
-                console.log('No Flansa Logic Field found for pre-population:', field_name);
+
             }
         } catch (error) {
             console.error('Error pre-populating display field:', error);
