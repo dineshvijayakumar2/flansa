@@ -13,6 +13,11 @@ exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/check_s3_config.py').
 ```bash
 cd /home/ubuntu/frappe-bench  
 bench --site mysite.local console
+exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/auto_s3_config_simple.py').read())
+```
+
+**Alternative (original with function-based approach):**
+```bash
 exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/auto_s3_config.py').read())
 ```
 
