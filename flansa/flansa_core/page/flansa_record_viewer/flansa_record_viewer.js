@@ -3134,13 +3134,10 @@ class FlansaRecordViewer {
                 render_input: true
             });
             
-            // If display field is configured, override the search behavior
-            if (displayFieldConfig && displayFieldConfig.link_display_field) {
-                console.log(`🎯 Found display field config: ${displayFieldConfig.link_display_field}`);
-                this.customizeLinkFieldSearch(linkField, linkDoctype, displayFieldConfig.link_display_field);
-            } else {
-                console.log(`ℹ️ No display field configuration found for ${fieldName}`);
-            }
+            // Override the search behavior for all link fields
+            const displayField = (displayFieldConfig && displayFieldConfig.link_display_field) || 'name';
+            console.log(`🎯 Creating custom dropdown with display field: ${displayField}`);
+            this.customizeLinkFieldSearch(linkField, linkDoctype, displayField);
             
             // Set initial value
             if (input.value) {
@@ -3208,30 +3205,15 @@ class FlansaRecordViewer {
         if (!searchTerm || searchTerm.length < 2) return;
         
         try {
-            // Check if this field has a display field configured
+            // Get display field configuration (use 'name' as fallback)
             const fieldName = input.dataset.fieldName;
             const displayFieldConfig = await this.getDisplayFieldConfig(fieldName);
+            const displayField = (displayFieldConfig && displayFieldConfig.link_display_field) || 'name';
             
-            if (displayFieldConfig && displayFieldConfig.link_display_field) {
-                // Use enhanced search with display values
-                const response = await this.searchWithDisplayValues(linkDoctype, searchTerm, displayFieldConfig.link_display_field);
-                if (response && response.length > 0) {
-                    this.show_enhanced_link_suggestions(input, response, displayFieldConfig.link_display_field);
-                }
-            } else {
-                // Fallback to Frappe's native search API
-                const response = await frappe.call({
-                    method: 'frappe.desk.search.search_link',
-                    args: {
-                        doctype: linkDoctype,
-                        txt: searchTerm,
-                        page_length: 10
-                    }
-                });
-                
-                if (response.message && response.message.length > 0) {
-                    this.show_link_suggestions(input, response.message);
-                }
+            // Always use enhanced search with display values
+            const response = await this.searchWithDisplayValues(linkDoctype, searchTerm, displayField);
+            if (response && response.length > 0) {
+                this.show_enhanced_link_suggestions(input, response, displayField);
             }
         } catch (error) {
             console.warn('Error fetching link suggestions:', error);
