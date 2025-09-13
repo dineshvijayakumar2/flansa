@@ -9,29 +9,20 @@ bench --site mysite.local console
 exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/check_s3_config_simple.py').read())
 ```
 
-**Alternative (original version - may have minor errors):**
-```bash
-exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/check_s3_config.py').read())
-```
-
-### 2. Auto-Configure S3 from Environment Variables
+### 2. Auto-Configure S3 from Environment Variables (Any Environment)
 ```bash
 cd /home/ubuntu/frappe-bench  
 bench --site mysite.local console
 exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/auto_s3_config_simple.py').read())
 ```
 
-**Alternative (original with function-based approach):**
-```bash
-exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/auto_s3_config.py').read())
-```
-
-### 3. Update Site Config with Required S3 Settings
+### 3. Update Site Config with S3 Settings (AWS-Only)
 ```bash
 cd /home/ubuntu/frappe-bench
 bench --site mysite.local console
-exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/update_site_config_s3.py').read())
+exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/update_site_config_s3_aws_only.py').read())
 ```
+**Note**: This script automatically detects AWS environment and skips for local development
 
 ### 4. Test S3 Integration and Upload
 ```bash
@@ -85,8 +76,8 @@ S3_SECRET_ACCESS_KEY=your_secret_key
 ### Development Scripts (In App)
 - `/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/`
   - `check_s3_config_simple.py` - Configuration checker (error-free)
-  - `auto_s3_config_simple.py` - Auto-configuration from env vars
-  - `update_site_config_s3.py` - Manual site config updater
+  - `auto_s3_config_simple.py` - Auto-configuration from env vars (any environment)
+  - `update_site_config_s3_aws_only.py` - AWS-only site config updater (safe for local)
   - `fix_s3_attachment_config.py` - S3 integration tester
 
 ### Deployment Scripts (External)
