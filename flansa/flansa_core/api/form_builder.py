@@ -336,6 +336,10 @@ def save_form_config(table_name, form_config):
         if not frappe.db.exists('Flansa Table', table_name):
             return {'success': False, 'error': f'Table {table_name} not found'}
         
+        # Get table document to get workspace_id
+        table_doc = frappe.get_doc('Flansa Table', table_name)
+        table_workspace_id = getattr(table_doc, 'workspace_id', None)
+        
         # Parse form config if it's a string
         if isinstance(form_config, str):
             form_config = json.loads(form_config)
@@ -347,6 +351,9 @@ def save_form_config(table_name, form_config):
             doc = frappe.new_doc('Flansa Form Config')
             doc.name = table_name
             doc.table_name = table_name
+            # Set workspace_id from the table to ensure proper tenant access
+            if table_workspace_id:
+                doc.workspace_id = table_workspace_id
         
         # Update form configuration
         doc.layout_type = form_config.get('layout_type', 'standard')
