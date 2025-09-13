@@ -23,9 +23,6 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
         List of [value, label, description] tuples for autocomplete
     """
     try:
-        print(f"🔍 HTTP API Call - doctype: {doctype}, txt: {txt}", flush=True)
-        print(f"🔍 filters: {filters}, type: {type(filters)}", flush=True)
-        print(f"🔍 kwargs: {kwargs}", flush=True)
         
         # Handle filters that might be passed as JSON string
         if isinstance(filters, str):
@@ -37,8 +34,6 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
         
         display_field = filters.get('display_field', 'name')
         doctype_name = filters.get('doctype', doctype)
-        
-        print(f"🔍 Using display_field: {display_field}, doctype_name: {doctype_name}", flush=True)
         
         # Verify the DocType exists
         if not frappe.db.exists("DocType", doctype_name):
@@ -65,7 +60,7 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
             search_clause = f"WHERE ({' OR '.join(search_conditions)})"
         else:
             # If no search term, show first 10 records ordered by display field
-            print(f"🔍 No search term - showing initial suggestions", flush=True)
+            pass
         
         # Execute the search - use database-agnostic query
         # Build query using Frappe's database abstraction
@@ -88,9 +83,6 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
                 LIMIT {start}, {page_len}
             """
         
-        print(f"🔍 Link search query: {query}", flush=True)
-        print(f"🔍 Values: {values}", flush=True)
-        
         results = frappe.db.sql(query, values, as_dict=True)
         
         # Format results for Frappe autocomplete
@@ -109,10 +101,8 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
                 description                     # description (additional info)
             ])
         
-        print(f"✅ Link search results: {len(formatted_results)} items", flush=True)
         return formatted_results
         
     except Exception as e:
-        print(f"❌ Link search error: {str(e)}", flush=True)
         frappe.log_error(f"Link search error: {str(e)}", "Link Search")
         return []

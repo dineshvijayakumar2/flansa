@@ -1432,6 +1432,8 @@ class EnhancedFlansaTableBuilder {
         if (!this.fields || this.fields.length === 0) {
             container.hide();
             emptyState.show();
+            // Still update counters even when there are no fields
+            this.update_counters();
             return;
         }
         
@@ -1493,6 +1495,9 @@ class EnhancedFlansaTableBuilder {
         
         // Setup sorting functionality
         this.setup_sorting();
+        
+        // Update counters after rendering
+        this.update_counters();
     }
     
     render_field_rows() {
@@ -1712,6 +1717,9 @@ class EnhancedFlansaTableBuilder {
         }).join('');
         
         container.html(`<div class="tile-container">${tilesHtml}</div>`);
+        
+        // Update counters after rendering
+        this.update_counters();
     }
     
     setup_sorting() {
@@ -1964,7 +1972,7 @@ class EnhancedFlansaTableBuilder {
     
     update_counters() {
         let displayedCount = 0;
-        const totalCount = this.fields.length;
+        const totalCount = this.fields ? this.fields.length : 0;
         
         // Count visible items based on current view mode
         if (this.view_mode === 'list') {
@@ -4716,6 +4724,10 @@ class EnhancedFlansaTableBuilder {
             } else {
                 this.fields = [];
             }
+            
+            // Update the field counters after loading fields
+            this.update_counters();
+            
         } catch (error) {
             console.error('Error loading table:', error);
             frappe.msgprint('Error loading table data');
