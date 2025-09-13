@@ -6,6 +6,11 @@
 ```bash
 cd /home/ubuntu/frappe-bench
 bench --site mysite.local console
+exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/check_s3_config_simple.py').read())
+```
+
+**Alternative (original version - may have minor errors):**
+```bash
 exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/check_s3_config.py').read())
 ```
 
