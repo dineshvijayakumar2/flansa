@@ -2140,8 +2140,8 @@ class FlansaRecordViewer {
             }
         }
         
-        // Bind lightbox events for gallery images
-        const lightboxImages = content.querySelectorAll('.gallery-lightbox-trigger, .gallery-view img, .gallery-edit-item img');
+        // Bind lightbox events for gallery and attachment images
+        const lightboxImages = content.querySelectorAll('.gallery-lightbox-trigger, .gallery-view img, .gallery-edit-item img, .attachment-view-container img, .attachment-current-container img');
 
         lightboxImages.forEach(img => {
             img.addEventListener('click', (e) => {
@@ -2859,7 +2859,7 @@ class FlansaRecordViewer {
                     <div class="attachment-preview" style="margin-bottom: 10px;">
                         <img src="${value}" alt="${fileName}" 
                              style="max-width: 300px; max-height: 200px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;"
-                             onclick="window.open('${value}', '_blank')">
+                             title="Click to view full size">
                     </div>
                     <div class="attachment-info" style="font-size: 12px; color: #6c757d;">
                         <i class="fa fa-image"></i> ${fileName}
@@ -2946,7 +2946,7 @@ class FlansaRecordViewer {
                     <div class="current-image-preview" style="text-align: center; margin-bottom: 10px;">
                         <img src="${value}" alt="${fileName}" 
                              style="max-width: 250px; max-height: 150px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;"
-                             onclick="window.open('${value}', '_blank')">
+                             title="Click to view full size">
                     </div>
                     <div class="current-file-info" style="text-align: center; font-size: 12px; color: #6c757d;">
                         <i class="fa fa-image"></i> ${fileName}
@@ -3116,11 +3116,23 @@ class FlansaRecordViewer {
         }
     }
     
-    show_image_lightbox(startingIndex = 0) {
+    show_image_lightbox(startingIndexOrUrl = 0) {
         const allImages = this.getAllImagesFromCurrentRecord();
         if (!allImages || allImages.length === 0) {
-
             return;
+        }
+
+        // Handle both index and URL parameters
+        let startingIndex = 0;
+        if (typeof startingIndexOrUrl === 'string') {
+            // It's a URL, find the index
+            startingIndex = allImages.findIndex(img => img === startingIndexOrUrl);
+            if (startingIndex === -1) {
+                startingIndex = 0; // Default to first image if URL not found
+            }
+        } else {
+            // It's an index
+            startingIndex = startingIndexOrUrl;
         }
 
         // Create lightbox HTML
@@ -3272,12 +3284,14 @@ class FlansaRecordViewer {
         const images = [];
         
         // Get all image fields from current record
-        if (this.record_data) {
-            Object.keys(this.record_data).forEach(fieldName => {
+        if (this.record_data && this.table_fields) {
+            this.table_fields.forEach(field => {
+                const fieldName = field.fieldname;
                 const value = this.record_data[fieldName];
-                if (value && typeof value === 'string') {
-                    // Check if it's an attachment field with images
-                    if (value.includes('[') || value.includes('http') || value.includes('/files/')) {
+                
+                if (value && typeof value === 'string' && value.trim() !== '') {
+                    // Handle gallery fields (Long Text with JSON data)
+                    if (this.is_gallery_field(field)) {
                         const fieldImages = this.parseGalleryData(value);
                         fieldImages.forEach(img => {
                             const imageUrl = this.safeImageUrl(img);
@@ -3285,6 +3299,15 @@ class FlansaRecordViewer {
                                 images.push(imageUrl);
                             }
                         });
+                    }
+                    // Handle attachment image fields (direct URL strings)
+                    else if (field.fieldtype === 'Attach Image' || field.fieldtype === 'Attach') {
+                        // Check if it's a valid image URL
+                        if (this.isImageFile(value) && (value.includes('http') || value.includes('/files/'))) {
+                            if (!images.includes(value)) {
+                                images.push(value);
+                            }
+                        }
                     }
                 }
             });
