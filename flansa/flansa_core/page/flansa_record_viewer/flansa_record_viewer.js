@@ -1075,6 +1075,45 @@ class FlansaRecordViewer {
                     transform: scale(1.02);
                     z-index: 10;
                 }
+                
+                /* Attachment field styling */
+                .attachment-edit-container {
+                    margin-bottom: 15px;
+                }
+                
+                .attachment-controls {
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    flex-wrap: wrap;
+                }
+                
+                .attachment-placeholder {
+                    transition: all 0.2s ease;
+                }
+                
+                .attachment-placeholder:hover {
+                    border-color: #007bff !important;
+                    background: #f8f9fa !important;
+                }
+                
+                .attachment-current-container {
+                    transition: all 0.2s ease;
+                }
+                
+                .attachment-current-container:hover {
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+                }
+                
+                .attachment-view-container img:hover {
+                    transform: scale(1.02);
+                    transition: transform 0.2s ease;
+                }
+                
+                .attachment-file:hover {
+                    background: #e9ecef !important;
+                    transition: background 0.2s ease;
+                }
             </style>
         `);
     }
@@ -1509,7 +1548,7 @@ class FlansaRecordViewer {
             const readOnlyStyle = isFieldReadOnly ? 
                 'background: #f8f9fa; border-left: 3px solid #17a2b8; padding: 8px 12px; border-radius: 4px; font-family: monospace;' : '';
             
-            // Special handling for link fields in view mode
+            // Special handling for different field types in view mode
             if ((field.fieldtype || 'Data') === 'Link') {
                 const displayValue = await this.getDisplayValueForLinkField(field, fieldValue, field.options);
                 const showDisplayValue = displayValue !== fieldValue;
@@ -1520,6 +1559,8 @@ class FlansaRecordViewer {
                         `${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}`
                     }
                 </div>`;
+            } else if (field.fieldtype === 'Attach' || field.fieldtype === 'Attach Image') {
+                html += this.render_attachment_field(field, fieldValue, fieldName, true);
             } else {
                 html += `<div class="form-control-static ${readOnlyClass}" style="${readOnlyStyle}">
                     ${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}
@@ -1546,6 +1587,10 @@ class FlansaRecordViewer {
                 case 'Int':
                 case 'Float':
                     html += `<input type="number" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
+                    break;
+                case 'Attach':
+                case 'Attach Image':
+                    html += this.render_attachment_field(field, fieldValue, fieldName, isReadonly);
                     break;
                 default:
                     html += `<input type="text" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
@@ -1696,6 +1741,8 @@ class FlansaRecordViewer {
         const fieldType = field.fieldtype || field.field_type;
         if (this.is_gallery_field(field)) {
             style += `border-left: 3px solid #6f42c1;`;
+        } else if (fieldType === 'Attach' || fieldType === 'Attach Image') {
+            style += `border-left: 3px solid #e83e8c;`;
         } else if (fieldType === 'Long Text' || fieldType === 'Text Editor') {
             style += `border-left: 3px solid #17a2b8;`;
         } else if (fieldType === 'Date' || fieldType === 'Datetime') {
@@ -2107,6 +2154,9 @@ class FlansaRecordViewer {
         
         // Gallery event handlers (these are in the content area)
         this.bind_gallery_events(content);
+        
+        // Attachment field event handlers
+        this.bind_attachment_events(content);
         
         // Link field event handlers
         this.bind_link_field_events(content);
@@ -2607,6 +2657,331 @@ class FlansaRecordViewer {
         html += `<div class="text-muted mt-2" style="font-size: 12px;">${images.length} image(s) - Click <i class="fa fa-trash"></i> to remove</div>`;
         
         return html;
+    }
+    
+    bind_attachment_events(content) {
+        // Upload attachment button
+        const uploadBtns = content.querySelectorAll('.upload-attachment');
+        uploadBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const container = btn.closest('.attachment-edit-container');
+                const fieldName = container.dataset.fieldName;
+                this.upload_attachment(fieldName);
+            });
+        });
+        
+        // Clear attachment button
+        const clearBtns = content.querySelectorAll('.clear-attachment');
+        clearBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const container = btn.closest('.attachment-edit-container');
+                const fieldName = container.dataset.fieldName;
+                this.clear_attachment(fieldName);
+            });
+        });
+    }
+    
+    upload_attachment(fieldName) {
+        const container = document.querySelector(`.attachment-edit-container[data-field-name="${fieldName}"]`);
+        if (!container) return;
+        
+        const fileInput = container.querySelector('.attachment-file-input');
+        if (!fileInput) return;
+        
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            // Validate file size (25MB limit)
+            if (file.size > 25 * 1024 * 1024) {
+                frappe.show_alert({
+                    message: 'File size too large. Maximum 25MB allowed.',
+                    indicator: 'red'
+                });
+                return;
+            }
+            
+            this.upload_attachment_file(fieldName, file);
+        }, { once: true }); // Use once to prevent multiple listeners
+        
+        fileInput.click();
+    }
+    
+    async upload_attachment_file(fieldName, file) {
+        try {
+            // Show progress
+            frappe.show_alert({
+                message: 'Uploading file...',
+                indicator: 'blue'
+            });
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('is_private', 0);
+            formData.append('folder', 'Home/Attachments');
+            formData.append('doctype', this.doctype_name || '');
+            formData.append('docname', this.record_id || '');
+            
+            const response = await fetch('/api/method/upload_file', {
+                method: 'POST',
+                headers: {
+                    'X-Frappe-CSRF-Token': frappe.csrf_token
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Upload failed: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            
+            if (result.message && result.message.file_url) {
+                // Update the field value
+                this.record_data[fieldName] = result.message.file_url;
+                
+                // Update the hidden input
+                const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+                if (hiddenInput) {
+                    hiddenInput.value = result.message.file_url;
+                }
+                
+                // Refresh the attachment display
+                this.refresh_attachment_display(fieldName, result.message.file_url);
+                
+                frappe.show_alert({
+                    message: 'File uploaded successfully',
+                    indicator: 'green'
+                });
+            } else {
+                throw new Error('Upload failed - no file URL returned');
+            }
+            
+        } catch (error) {
+            console.error('Error uploading file:', error);
+            frappe.show_alert({
+                message: 'Error uploading file: ' + error.message,
+                indicator: 'red'
+            });
+        }
+    }
+    
+    clear_attachment(fieldName) {
+        // Confirm before clearing
+        frappe.confirm('Are you sure you want to remove this attachment?', () => {
+            // Update the field value
+            this.record_data[fieldName] = '';
+            
+            // Update the hidden input
+            const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+            if (hiddenInput) {
+                hiddenInput.value = '';
+            }
+            
+            // Refresh the attachment display
+            this.refresh_attachment_display(fieldName, '');
+            
+            frappe.show_alert({
+                message: 'Attachment removed',
+                indicator: 'green'
+            });
+        });
+    }
+    
+    refresh_attachment_display(fieldName, newValue) {
+        const container = document.querySelector(`.attachment-edit-container[data-field-name="${fieldName}"]`);
+        if (!container) return;
+        
+        const previewArea = container.querySelector('.attachment-preview-area');
+        const controlsArea = container.querySelector('.attachment-controls');
+        
+        if (!previewArea || !controlsArea) return;
+        
+        // Get field info for rendering
+        const field = this.table_fields.find(f => f.fieldname === fieldName);
+        if (!field) return;
+        
+        const isImage = field.fieldtype === 'Attach Image';
+        
+        // Re-render the preview area
+        previewArea.innerHTML = this.render_attachment_current(newValue, isImage);
+        
+        // Update controls (show/hide Remove button)
+        const hasFile = newValue && newValue.trim() !== '';
+        const uploadBtn = controlsArea.querySelector('.upload-attachment');
+        let clearBtn = controlsArea.querySelector('.clear-attachment');
+        
+        if (uploadBtn) {
+            uploadBtn.innerHTML = `<i class="fa fa-upload"></i> ${hasFile ? 'Change' : 'Upload'} ${isImage ? 'Image' : 'File'}`;
+        }
+        
+        if (hasFile && !clearBtn) {
+            // Add remove button
+            clearBtn = document.createElement('button');
+            clearBtn.type = 'button';
+            clearBtn.className = 'btn btn-sm btn-secondary clear-attachment';
+            clearBtn.innerHTML = '<i class="fa fa-times"></i> Remove';
+            uploadBtn.parentNode.insertBefore(clearBtn, uploadBtn.nextSibling);
+            
+            // Bind event to the new button
+            clearBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                this.clear_attachment(fieldName);
+            });
+        } else if (!hasFile && clearBtn) {
+            // Remove the button
+            clearBtn.remove();
+        }
+    }
+    
+    // Attachment field rendering methods
+    render_attachment_field(field, value, fieldName, isReadonly) {
+        if (isReadonly) {
+            return this.render_attachment_view(value, field);
+        } else {
+            return this.render_attachment_edit(value, fieldName, field);
+        }
+    }
+    
+    render_attachment_view(value, field) {
+        if (!value) {
+            return '<div class="text-muted">No attachment</div>';
+        }
+        
+        const isImage = field.fieldtype === 'Attach Image' || this.isImageFile(value);
+        const fileName = this.getFileNameFromUrl(value);
+        
+        if (isImage) {
+            return `
+                <div class="attachment-view-container">
+                    <div class="attachment-preview" style="margin-bottom: 10px;">
+                        <img src="${value}" alt="${fileName}" 
+                             style="max-width: 300px; max-height: 200px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;"
+                             onclick="window.open('${value}', '_blank')">
+                    </div>
+                    <div class="attachment-info" style="font-size: 12px; color: #6c757d;">
+                        <i class="fa fa-image"></i> ${fileName}
+                        <a href="${value}" target="_blank" class="btn btn-xs btn-default" style="margin-left: 8px;">
+                            <i class="fa fa-external-link"></i> Open
+                        </a>
+                    </div>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="attachment-view-container">
+                    <div class="attachment-file" style="padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center;">
+                        <i class="fa fa-file-o" style="font-size: 24px; color: #6c757d; margin-right: 12px;"></i>
+                        <div>
+                            <div style="font-weight: 500;">${fileName}</div>
+                            <div style="font-size: 11px; color: #6c757d;">Click to download</div>
+                        </div>
+                    </div>
+                    <div class="attachment-actions" style="margin-top: 8px;">
+                        <a href="${value}" target="_blank" class="btn btn-sm btn-primary">
+                            <i class="fa fa-download"></i> Download
+                        </a>
+                        <a href="${value}" target="_blank" class="btn btn-sm btn-default">
+                            <i class="fa fa-external-link"></i> Open
+                        </a>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    render_attachment_edit(value, fieldName, field) {
+        const isImage = field.fieldtype === 'Attach Image';
+        const acceptTypes = isImage ? 'image/*' : '*';
+        const currentFile = value ? this.getFileNameFromUrl(value) : null;
+        const isImageCurrent = value && this.isImageFile(value);
+        
+        let html = `
+            <div class="attachment-edit-container" data-field-name="${fieldName}">
+                <div class="attachment-controls" style="margin-bottom: 15px;">
+                    <button type="button" class="btn btn-sm btn-primary upload-attachment">
+                        <i class="fa fa-upload"></i> ${currentFile ? 'Change' : 'Upload'} ${isImage ? 'Image' : 'File'}
+                    </button>
+                    ${currentFile ? `
+                        <button type="button" class="btn btn-sm btn-secondary clear-attachment">
+                            <i class="fa fa-times"></i> Remove
+                        </button>
+                    ` : ''}
+                    <small class="text-muted" style="margin-left: 10px;">
+                        ${isImage ? 'JPG, PNG, GIF supported' : 'Any file type supported'} • Max 25MB
+                    </small>
+                </div>
+                
+                <div class="attachment-preview-area">
+                    ${this.render_attachment_current(value, isImage)}
+                </div>
+                
+                <input type="hidden" name="${fieldName}" value="${this.escapeHtml(value || '')}">
+                <input type="file" class="attachment-file-input" accept="${acceptTypes}" style="display: none;">
+            </div>
+        `;
+        
+        return html;
+    }
+    
+    render_attachment_current(value, isImage) {
+        if (!value) {
+            return `
+                <div class="attachment-placeholder" style="padding: 40px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa; color: #6c757d;">
+                    <i class="fa fa-${isImage ? 'image' : 'file-o'}" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                    <div>No ${isImage ? 'image' : 'file'} selected</div>
+                    <div style="font-size: 12px; margin-top: 5px;">Click "${isImage ? 'Upload Image' : 'Upload File'}" to select</div>
+                </div>
+            `;
+        }
+        
+        const fileName = this.getFileNameFromUrl(value);
+        const isImageFile = this.isImageFile(value);
+        
+        if (isImage && isImageFile) {
+            return `
+                <div class="attachment-current-container" style="padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background: white;">
+                    <div class="current-image-preview" style="text-align: center; margin-bottom: 10px;">
+                        <img src="${value}" alt="${fileName}" 
+                             style="max-width: 250px; max-height: 150px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;"
+                             onclick="window.open('${value}', '_blank')">
+                    </div>
+                    <div class="current-file-info" style="text-align: center; font-size: 12px; color: #6c757d;">
+                        <i class="fa fa-image"></i> ${fileName}
+                    </div>
+                </div>
+            `;
+        } else {
+            return `
+                <div class="attachment-current-container" style="padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background: white;">
+                    <div class="current-file-display" style="display: flex; align-items: center;">
+                        <i class="fa fa-file-o" style="font-size: 32px; color: #6c757d; margin-right: 15px;"></i>
+                        <div>
+                            <div style="font-weight: 500; margin-bottom: 4px;">${fileName}</div>
+                            <div style="font-size: 11px; color: #6c757d;">
+                                <a href="${value}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                    <i class="fa fa-external-link"></i> View file
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    // Utility methods for attachment handling
+    isImageFile(url) {
+        if (!url) return false;
+        const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp|svg)$/i;
+        return imageExtensions.test(url);
+    }
+    
+    getFileNameFromUrl(url) {
+        if (!url) return '';
+        return url.split('/').pop().split('?')[0] || 'Unknown file';
     }
     
 // Organize fields into sections using only form builder configuration
