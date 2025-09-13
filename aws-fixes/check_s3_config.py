@@ -97,10 +97,14 @@ try:
     if os.path.exists(private_files_path):
         private_count = len([f for f in os.listdir(private_files_path) if os.path.isfile(os.path.join(private_files_path, f))])
         print(f"Private Files Count: {private_count}", flush=True)
+    else:
+        print(f"Private Files Count: 0 (path not found)", flush=True)
     
     if os.path.exists(public_files_path):
         public_count = len([f for f in os.listdir(public_files_path) if os.path.isfile(os.path.join(public_files_path, f))])
         print(f"Public Files Count: {public_count}", flush=True)
+    else:
+        print(f"Public Files Count: 0 (path not found)", flush=True)
     
     print("\n💡 RECOMMENDATION:", flush=True)
     print("-" * 50, flush=True)
