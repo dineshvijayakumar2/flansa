@@ -36,10 +36,10 @@ exec(open('/home/ubuntu/frappe-bench/apps/flansa/aws-fixes/fix_s3_attachment_con
 ## AWS ECS Deployment Scripts
 
 ### Update ECS with S3 Environment Variables
-Located in `/home/ubuntu/frappe-bench/aws-docker-setup/`:
+Located in `/home/ubuntu/frappe-bench/claude-code/aws-docker-setup/`:
 
 ```bash
-cd /home/ubuntu/frappe-bench/aws-docker-setup
+cd /home/ubuntu/frappe-bench/claude-code/aws-docker-setup
 chmod +x update_ecs_s3_simple.sh
 ./update_ecs_s3_simple.sh
 ```
@@ -82,7 +82,7 @@ S3_SECRET_ACCESS_KEY=your_secret_key
   - `fix_s3_attachment_config.py` - S3 integration tester
 
 ### Deployment Scripts (External)
-- `/home/ubuntu/frappe-bench/aws-docker-setup/`
+- `/home/ubuntu/frappe-bench/claude-code/aws-docker-setup/`
   - `update_ecs_s3_simple.sh` - ECS task definition updater
   - `aws_site_config_s3.json` - Site configuration template
   - `update_s3_live.py` - Manual update instructions

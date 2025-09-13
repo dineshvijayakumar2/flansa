@@ -12,7 +12,7 @@
 Run the ECS update script to add S3 environment variables:
 
 ```bash
-cd /home/ubuntu/frappe-bench/aws-fixes
+cd /home/ubuntu/frappe-bench/claude-code/aws-docker-setup
 chmod +x update_ecs_s3_simple.sh
 ./update_ecs_s3_simple.sh
 ```
@@ -140,7 +140,7 @@ If S3 causes issues, you can quickly rollback:
 Run the ECS update script when you're ready to proceed:
 
 ```bash
-cd /home/ubuntu/frappe-bench/aws-fixes
+cd /home/ubuntu/frappe-bench/claude-code/aws-docker-setup
 ./update_ecs_s3_simple.sh
 ```
 
