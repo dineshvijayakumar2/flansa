@@ -1,0 +1,25 @@
+{
+  "db_host": "flansa-db.cqxpvfdcdjye.us-east-1.rds.amazonaws.com",
+  "db_port": 5432,
+  "db_type": "postgres",
+  "db_user": "flansa_db",
+  "db_name": "flansa_db",
+  "default_site": "flansa.local",
+  "developer_mode": 0,
+  "maintenance_mode": 0,
+  "redis_cache": "redis://localhost:6379/0",
+  "redis_queue": "redis://localhost:6379/1",
+  "redis_socketio": "redis://localhost:6379/2",
+  "serve_default_site": true,
+  
+  "s3_bucket": "flansa",
+  "s3_region": "us-east-1",
+  "s3_folder_path": "flansa-files",
+  "use_s3": 1,
+  "use_s3_for_private_files": true,
+  "use_s3_for_public_files": true,
+  
+  "comment_for_credentials": "Add these from SSM Parameter Store or environment variables",
+  "s3_access_key_id": "GET_FROM_SSM_/flansa/s3/access_key_id",
+  "s3_secret_access_key": "GET_FROM_SSM_/flansa/s3/secret_access_key"
+}
