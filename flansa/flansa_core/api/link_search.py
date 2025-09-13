@@ -48,12 +48,15 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
         search_conditions = []
         values = []
         
+        # Use appropriate quote character based on database type
+        quote_char = '"' if frappe.db.db_type == 'postgres' else '`'
+        
         if txt and txt.strip():
-            search_conditions.append(f"`name` LIKE %s")
+            search_conditions.append(f"{quote_char}name{quote_char} LIKE %s")
             values.append(f"%{txt}%")
             
             if display_field != 'name':
-                search_conditions.append(f"`{display_field}` LIKE %s")
+                search_conditions.append(f"{quote_char}{display_field}{quote_char} LIKE %s")
                 values.append(f"%{txt}%")
         
         # Build the query
@@ -64,14 +67,26 @@ def search_with_display_field(doctype, txt, searchfield="name", start=0, page_le
             # If no search term, show first 10 records ordered by display field
             print(f"🔍 No search term - showing initial suggestions", flush=True)
         
-        # Execute the search
-        query = f"""
-            SELECT `name`, `{display_field}` as display_value
-            FROM `tab{doctype_name}`
-            {search_clause}
-            ORDER BY `{display_field}`, `name`
-            LIMIT {start}, {page_len}
-        """
+        # Execute the search - use database-agnostic query
+        # Build query using Frappe's database abstraction
+        if frappe.db.db_type == 'postgres':
+            # PostgreSQL syntax
+            query = f"""
+                SELECT "name", "{display_field}" as display_value
+                FROM "tab{doctype_name}"
+                {search_clause}
+                ORDER BY "{display_field}", "name"
+                LIMIT {page_len} OFFSET {start}
+            """
+        else:
+            # MySQL/MariaDB syntax
+            query = f"""
+                SELECT `name`, `{display_field}` as display_value
+                FROM `tab{doctype_name}`
+                {search_clause}
+                ORDER BY `{display_field}`, `name`
+                LIMIT {start}, {page_len}
+            """
         
         print(f"🔍 Link search query: {query}", flush=True)
         print(f"🔍 Values: {values}", flush=True)
