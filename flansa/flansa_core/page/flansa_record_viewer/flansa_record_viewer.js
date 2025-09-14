@@ -2717,12 +2717,11 @@ class FlansaRecordViewer {
                 indicator: 'blue'
             });
             
+            // Use direct fetch to Frappe's upload endpoint - works with both local and S3
             const formData = new FormData();
             formData.append('file', file);
             formData.append('is_private', 0);
             formData.append('folder', 'Home/Attachments');
-            formData.append('doctype', this.doctype_name || '');
-            formData.append('docname', this.record_id || '');
             
             const response = await fetch('/api/method/upload_file', {
                 method: 'POST',
@@ -2733,7 +2732,8 @@ class FlansaRecordViewer {
             });
             
             if (!response.ok) {
-                throw new Error(`Upload failed: ${response.statusText}`);
+                const errorText = await response.text();
+                throw new Error(`Upload failed: ${response.statusText} - ${errorText}`);
             }
             
             const result = await response.json();
