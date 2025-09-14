@@ -7,6 +7,9 @@ def boot_session(bootinfo):
     # Auto-configure S3 if needed
     auto_configure_s3_on_boot(bootinfo)
     
+    # Auto-restore missing DocTypes if needed (commented out until tested)
+    # restore_missing_doctypes_on_boot()
+    
     # Don't override the default home page - let Frappe handle it
     # bootinfo["home_page"] = "flansa-workspace"
     
@@ -82,3 +85,4 @@ def auto_configure_s3_on_boot(bootinfo):
         frappe.log_error(f"Auto S3 config error: {str(e)}", "S3 Auto Configuration")
         # Don't fail boot if S3 config fails
         return True
+
