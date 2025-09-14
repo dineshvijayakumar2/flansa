@@ -15,7 +15,7 @@ try:
     
     # Get all Flansa Tables that have doctype_name references
     flansa_tables = frappe.db.sql("""
-        SELECT name, table_name, doctype_name, status, application
+        SELECT name, table_name, doctype_name, application
         FROM `tabFlansa Table`
         WHERE doctype_name IS NOT NULL 
         AND doctype_name != ''
@@ -37,14 +37,14 @@ try:
         if all_tables > 0:
             print("\n📊 Flansa Tables without DocType references:", flush=True)
             tables_without_doctype = frappe.db.sql("""
-                SELECT name, table_name, status
+                SELECT name, table_name
                 FROM `tabFlansa Table`
                 WHERE (doctype_name IS NULL OR doctype_name = '')
                 LIMIT 5
             """, as_dict=True)
             
             for table in tables_without_doctype:
-                print(f"   • {table.name} ({table.table_name}) - Status: {table.status}", flush=True)
+                print(f"   • {table.name} ({table.table_name})", flush=True)
     else:
         print(f"✅ Found {len(flansa_tables)} Flansa Tables with DocType references:", flush=True)
         frappe.msgprint(f"✅ Found {len(flansa_tables)} Flansa Tables with DocTypes")
@@ -54,7 +54,6 @@ try:
         for i, table in enumerate(flansa_tables[:preview_count]):
             print(f"   {i+1}. Table: {table.table_name}", flush=True)
             print(f"      DocType: {table.doctype_name}", flush=True)
-            print(f"      Status: {table.status}", flush=True)
         
         if len(flansa_tables) > preview_count:
             print(f"   ... and {len(flansa_tables) - preview_count} more", flush=True)
