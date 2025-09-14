@@ -208,9 +208,8 @@ def restore_missing_doctypes():
             'details': details
         }
 
-# Execute the function if script is run directly
-if __name__ == "__main__":
-    result = restore_missing_doctypes()
-    print("\n" + "=" * 60, flush=True)
-    print("🔄 RESTORATION COMPLETE", flush=True)
-    frappe.msgprint("🔄 DocType metadata restoration complete")
+# Execute the function when script is loaded
+result = restore_missing_doctypes()
+print("\n" + "=" * 60, flush=True)
+print("🔄 RESTORATION COMPLETE", flush=True)
+frappe.msgprint("🔄 DocType metadata restoration complete")
