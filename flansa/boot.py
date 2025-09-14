@@ -4,6 +4,9 @@ from frappe import _
 def boot_session(bootinfo):
     """Add Flansa-specific boot information"""
     
+    # Auto-configure S3 if needed
+    auto_configure_s3_on_boot(bootinfo)
+    
     # Don't override the default home page - let Frappe handle it
     # bootinfo["home_page"] = "flansa-workspace"
     
@@ -63,7 +66,7 @@ def boot_session(bootinfo):
     #     if any(role in user_roles for role in flansa_roles):
     #         bootinfo["user_home_page"] = "flansa-workspace"
 
-def auto_configure_s3_on_boot():
+def auto_configure_s3_on_boot(bootinfo):
     """Auto-configure S3 settings from environment variables on boot"""
     try:
         # Import the auto config function
