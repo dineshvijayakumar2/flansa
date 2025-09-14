@@ -2931,34 +2931,65 @@ def add_field_to_table(table_id, field_name, field_type, label=None, description
         # Validate field name
         if not field_name or not field_name.replace('_', '').replace('-', '').isalnum():
             return {"success": False, "error": "Invalid field name. Use only letters, numbers, underscores and hyphens."}
-            
-        # Check if field already exists
-        existing_field = frappe.db.exists("Custom Field", {
-            "dt": doctype_name,
-            "fieldname": field_name
-        })
+        
+        # Get the DocType document
+        doctype_doc = frappe.get_doc("DocType", doctype_name)
+        
+        # Check if field already exists in DocType fields
+        existing_field = None
+        for field in doctype_doc.fields:
+            if field.fieldname == field_name:
+                existing_field = field
+                break
         
         if existing_field:
             return {"success": False, "error": f"Field '{field_name}' already exists"}
         
-        # Create the custom field
-        custom_field = frappe.get_doc({
-            "doctype": "Custom Field",
-            "dt": doctype_name,
-            "fieldname": field_name,
-            "fieldtype": field_type,
-            "label": label or field_name.replace('_', ' ').title(),
-            "description": description or '',
-            "reqd": int(required),
-            "options": options or '',
-            "insert_after": "title"  # Insert after the title field by default
-        })
-        
-        custom_field.insert()
-        frappe.db.commit()
+        # For custom DocTypes, add field directly to DocType document
+        if doctype_doc.custom:
+            # Find the highest idx to place new field at the end
+            max_idx = 0
+            for field in doctype_doc.fields:
+                if field.idx and field.idx > max_idx:
+                    max_idx = field.idx
+            
+            # Create new field row
+            new_field = doctype_doc.append("fields", {
+                "fieldname": field_name,
+                "fieldtype": field_type,
+                "label": label or field_name.replace('_', ' ').title(),
+                "description": description or '',
+                "reqd": int(required),
+                "options": options or '',
+                "idx": max_idx + 1
+            })
+            
+            print(f"✅ Adding field {field_name} ({field_type}) to DocType {doctype_name}", flush=True)
+            
+            # Save the DocType document
+            doctype_doc.save()
+            frappe.db.commit()
+            
+        else:
+            # For standard DocTypes, use Custom Field approach
+            custom_field = frappe.get_doc({
+                "doctype": "Custom Field",
+                "dt": doctype_name,
+                "fieldname": field_name,
+                "fieldtype": field_type,
+                "label": label or field_name.replace('_', ' ').title(),
+                "description": description or '',
+                "reqd": int(required),
+                "options": options or '',
+                "insert_after": "title"
+            })
+            
+            custom_field.insert()
+            frappe.db.commit()
         
         # Clear cache to reflect changes
         frappe.clear_cache(doctype=doctype_name)
+        frappe.clear_cache()
         
         return {
             "success": True,
@@ -2968,6 +2999,7 @@ def add_field_to_table(table_id, field_name, field_type, label=None, description
         
     except Exception as e:
         frappe.log_error(f"Error adding field to table: {str(e)}", "Table API Error")
+        frappe.msgprint(f"❌ Error adding field: {str(e)}")
         return {"success": False, "error": str(e)}
 
 @frappe.whitelist() 
