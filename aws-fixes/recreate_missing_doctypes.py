@@ -120,7 +120,7 @@ try:
             perm.print = 1
             perm.email = 1
             perm.export = 1
-            perm.import = 1
+            setattr(perm, 'import', 1)  # import is a reserved keyword
             perm.share = 1
             perm.report = 1
             
