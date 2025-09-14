@@ -8,17 +8,23 @@ def boot_session(bootinfo):
     # bootinfo["home_page"] = "flansa-workspace"
     
     # Add Flansa workspace to modules
-            "route": "flansa-workspace",
-            "icon": "fa fa-th-large",
-            "color": "#2196F3",
-            "description": _("No-code application builder")
-        }
+    flansa_module = {
+        "module_name": "Flansa",
+        "label": _("Flansa"),
+        "route": "flansa-workspace",
+        "icon": "fa fa-th-large",
+        "color": "#2196F3",
+        "description": _("No-code application builder")
+    }
     
     # Add custom desk items
     if not bootinfo.get("desk_items"):
         bootinfo["desk_items"] = []
     
     # Add Flansa workspace as primary item
+    flansa_desk_item = {
+        "module_name": "Flansa",
+        "label": _("Flansa"),
         "route": "flansa-workspace", 
         "type": "page",
         "icon": "fa fa-th-large",
@@ -30,6 +36,7 @@ def boot_session(bootinfo):
     }
     
     # Insert at the beginning of desk items
+    bootinfo["desk_items"].insert(0, flansa_desk_item)
     
     # Add Visual Builder
     visual_builder_item = {
