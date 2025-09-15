@@ -180,20 +180,11 @@ def check_s3_storage_status():
         return False
 
 
-if __name__ == "__main__":
-    # Initialize Frappe
-    import sys
-    import os
-
-    # Get site name from command line or use default
-    site = sys.argv[1] if len(sys.argv) > 1 else 'mysite.local'
-
-    print(f"🔧 Configuring S3 storage for site: {site}", flush=True)
+# When running in bench console, frappe is already initialized
+# Just run the functions directly
+try:
+    print(f"🔧 Configuring S3 storage for site: {frappe.local.site}", flush=True)
     print("")
-
-    # Initialize frappe
-    frappe.init(site=site)
-    frappe.connect()
 
     # Check current status first
     check_s3_storage_status()
@@ -209,4 +200,7 @@ if __name__ == "__main__":
     else:
         print("\n❌ S3 storage configuration failed. Please check the errors above.", flush=True)
 
-    frappe.destroy()
+except Exception as e:
+    print(f"❌ Script execution error: {str(e)}", flush=True)
+    import traceback
+    print(f"🔍 Full traceback: {traceback.format_exc()}", flush=True)

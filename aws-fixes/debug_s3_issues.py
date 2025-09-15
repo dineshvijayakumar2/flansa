@@ -187,19 +187,11 @@ def debug_s3_issues():
         return False
 
 
-if __name__ == "__main__":
-    # Initialize Frappe
-    import sys
-
-    # Get site name from command line or use default
-    site = sys.argv[1] if len(sys.argv) > 1 else 'mysite.local'
-
-    print(f"🔧 Debugging S3 issues for site: {site}", flush=True)
+# When running in bench console, frappe is already initialized
+# Just run the function directly
+try:
+    print(f"🔧 Debugging S3 issues for site: {frappe.local.site}", flush=True)
     print("")
-
-    # Initialize frappe
-    frappe.init(site=site)
-    frappe.connect()
 
     # Run debug
     result = debug_s3_issues()
@@ -209,4 +201,7 @@ if __name__ == "__main__":
     else:
         print("\n❌ Debug failed", flush=True)
 
-    frappe.destroy()
+except Exception as e:
+    print(f"❌ Script execution error: {str(e)}", flush=True)
+    import traceback
+    print(f"🔍 Full traceback: {traceback.format_exc()}", flush=True)

@@ -32,7 +32,10 @@ bench pip install boto3
 3. **Run configuration script**:
 ```bash
 cd /home/frappe/frappe-bench
-python apps/flansa/aws-fixes/configure_s3_storage.py flansa.production
+bench --site flansa.production console
+
+# Then in the console, run:
+exec(open('/home/frappe/frappe-bench/apps/flansa/aws-fixes/configure_s3_storage.py').read())
 ```
 
 4. **Restart services**:
@@ -54,7 +57,10 @@ aws ecs execute-command --cluster flansa-simple-cluster --task <task-id> --conta
 
 # Run the S3 configuration script
 cd /home/frappe/frappe-bench
-python apps/flansa/aws-fixes/configure_s3_storage.py flansa.production
+bench --site flansa.production console
+
+# Then in the console:
+exec(open('/home/frappe/frappe-bench/apps/flansa/aws-fixes/configure_s3_storage.py').read())
 ```
 
 ### debug_s3_issues.py
@@ -69,7 +75,10 @@ aws ecs execute-command --cluster flansa-simple-cluster --task <task-id> --conta
 
 # Run the debug script
 cd /home/frappe/frappe-bench
-python apps/flansa/aws-fixes/debug_s3_issues.py flansa.production
+bench --site flansa.production console
+
+# Then in the console:
+exec(open('/home/frappe/frappe-bench/apps/flansa/aws-fixes/debug_s3_issues.py').read())
 ```
 
 ### recover_workspace_data.py
