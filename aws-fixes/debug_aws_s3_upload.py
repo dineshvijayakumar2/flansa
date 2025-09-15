@@ -4,13 +4,13 @@ Debug AWS S3 Upload Integration
 Check why S3 integration isn't working on AWS deployment
 """
 
-import frappe
-
 print("🔍 DEBUGGING AWS S3 UPLOAD INTEGRATION", flush=True)
 print("=" * 50, flush=True)
 
 def debug_aws_s3_integration():
     """Debug S3 integration status on AWS"""
+    import frappe
+
     try:
         print("📋 Step 1: Checking site configuration...", flush=True)
 
