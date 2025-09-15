@@ -160,10 +160,17 @@ class FlansaRoleService:
                     fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'workspace_id']
                 )
             else:
-                # Regular users: filter by tenant if workspace_id is set
+                # Regular users: filter by tenant using WorkspaceContext
                 filters = {}
-                if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
-                    filters['workspace_id'] = frappe.local.workspace_id
+                try:
+                    from flansa.flansa_core.workspace_service import WorkspaceContext
+                    workspace_id = WorkspaceContext.get_current_workspace_id()
+                    if workspace_id:
+                        filters['workspace_id'] = workspace_id
+                except:
+                    # Fallback to frappe.local if WorkspaceContext fails
+                    if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                        filters['workspace_id'] = frappe.local.workspace_id
                 
                 applications = frappe.get_all(
                     'Flansa Application',
@@ -235,10 +242,17 @@ class FlansaRoleService:
         try:
             user_permissions = FlansaRoleService.get_user_permissions(user_email, application_id)
             
-            # Base filter for tenant
+            # Base filter for tenant - use WorkspaceContext for reliable workspace resolution
             filters = {}
-            if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
-                filters['workspace_id'] = frappe.local.workspace_id
+            try:
+                from flansa.flansa_core.workspace_service import WorkspaceContext
+                workspace_id = WorkspaceContext.get_current_workspace_id()
+                if workspace_id:
+                    filters['workspace_id'] = workspace_id
+            except:
+                # Fallback to frappe.local if WorkspaceContext fails
+                if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                    filters['workspace_id'] = frappe.local.workspace_id
             
             # If application_id provided, filter by application
             if application_id:
