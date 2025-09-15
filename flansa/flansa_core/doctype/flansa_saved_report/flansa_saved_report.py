@@ -68,31 +68,60 @@ class FlansaSavedReport(Document):
 
 @frappe.whitelist()
 def get_user_reports(base_table=None):
-    """Get reports accessible to current user"""
+    """Get reports accessible to current user with workspace-aware filtering"""
     filters = {}
-    
+
     # Add base table filter if specified
     if base_table:
         filters['base_table'] = base_table
-    
-    # Get all reports user can access
+
+    # Get current workspace for filtering
+    try:
+        from flansa.flansa_core.workspace_service import WorkspaceContext
+        current_workspace = WorkspaceContext.get_current_workspace_id()
+    except:
+        current_workspace = None
+
+    # Get all reports that could match
     all_reports = frappe.get_all(
         "Flansa Saved Report",
         fields=[
-            "name", "report_title", "description", "base_table", 
-            "report_type", "is_public", "created_by_user", "created_on"
+            "name", "report_title", "description", "base_table",
+            "report_type", "is_public", "created_by_user", "created_on", "workspace_id"
         ],
         filters=filters,
         order_by="created_on desc"
     )
-    
-    # Filter by access permissions
+
+    # Filter by access permissions and workspace
     accessible_reports = []
     for report in all_reports:
+        # Check user access first
         report_doc = frappe.get_doc("Flansa Saved Report", report.name)
-        if report_doc.can_user_access():
+        if not report_doc.can_user_access():
+            continue
+
+        # Workspace filtering with fallback to base_table workspace
+        report_workspace = report.workspace_id
+
+        # If report has no workspace_id, get it from base_table
+        if not report_workspace and report.base_table:
+            try:
+                table_workspace = frappe.db.get_value('Flansa Table', report.base_table, 'workspace_id')
+                if table_workspace:
+                    report_workspace = table_workspace
+            except:
+                pass
+
+        # Include report if:
+        # 1. No workspace filtering needed (System Manager, etc.)
+        # 2. Report workspace matches current workspace
+        # 3. Report is public
+        if (not current_workspace or
+            report_workspace == current_workspace or
+            report.is_public):
             accessible_reports.append(report)
-    
+
     return accessible_reports
 
 @frappe.whitelist()
