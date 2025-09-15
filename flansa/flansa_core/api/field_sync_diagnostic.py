@@ -12,13 +12,9 @@ def diagnose_field_sync(table_name):
     try:
         table_doc = frappe.get_doc("Flansa Table", table_name)
         
-        # Get fields from all three sources
-        json_fields = get_fields_from_json(table_doc)
-        flansa_fields = get_fields_from_flansa_field_table(table_name)
+        # Current architecture: fields are stored only in DocType.fields
+        # JSON and Flansa Field storage methods are deprecated
         doctype_fields = get_fields_from_doctype(table_doc.doctype_name) if table_doc.doctype_name else []
-        
-        # Analyze discrepancies
-        analysis = analyze_field_discrepancies(json_fields, flansa_fields, doctype_fields)
         
         return {
             "success": True,
@@ -26,17 +22,21 @@ def diagnose_field_sync(table_name):
             "table_label": table_doc.table_label,
             "doctype_name": table_doc.doctype_name,
             "counts": {
-                "json_fields": len(json_fields),
-                "flansa_fields": len(flansa_fields),
                 "doctype_fields": len(doctype_fields)
             },
             "fields": {
-                "json": json_fields,
-                "flansa": flansa_fields,
                 "doctype": doctype_fields
             },
-            "analysis": analysis,
-            "recommendations": generate_recommendations(analysis)
+            "analysis": {
+                "sync_status": "in_sync",
+                "message": "Fields are stored directly in DocType - no sync needed"
+            },
+            "recommendations": [{
+                "priority": "info",
+                "action": "no_action_needed", 
+                "description": "Current architecture stores fields directly in DocType",
+                "fields": []
+            }]
         }
         
     except Exception as e:
@@ -55,10 +55,9 @@ def get_fields_from_json(table_doc):
 
 def get_fields_from_flansa_field_table(table_name):
     """Extract fields from Flansa Field table"""
-    return frappe.get_all("Flansa Field",
-                         filters={"flansa_table": table_name},
-                         fields=["field_name", "field_label", "field_type", "options", 
-                                "is_required", "is_unique", "default_value", "description"])
+    # Flansa Field DocType doesn't exist - fields are stored directly in DocType.fields
+    # Return empty list as this storage method is not used
+    return []
 
 def get_fields_from_doctype(doctype_name):
     """Extract fields from DocType"""
@@ -87,7 +86,7 @@ def get_fields_from_doctype(doctype_name):
 def analyze_field_discrepancies(json_fields, flansa_fields, doctype_fields):
     """Analyze discrepancies between field sources"""
     json_names = {f.get("field_name") for f in json_fields if f.get("field_name")}
-    flansa_names = {f.field_name for f in flansa_fields if f.field_name}
+    flansa_names = {f.get("field_name") for f in flansa_fields if f.get("field_name")}  # Now handles dict format
     doctype_names = {f.get("field_name") for f in doctype_fields if f.get("field_name")}
     
     analysis = {
