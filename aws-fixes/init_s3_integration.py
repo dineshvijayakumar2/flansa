@@ -14,6 +14,7 @@ def initialize_s3_integration():
     try:
         print("📋 Step 1: Checking S3 configuration...", flush=True)
 
+        import frappe
         site_config = frappe.get_site_config()
 
         if not site_config.get('use_s3'):
