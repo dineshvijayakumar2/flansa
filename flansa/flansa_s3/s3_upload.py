@@ -55,27 +55,33 @@ def upload_file_to_s3(file_doc, file_content):
         # Set content type based on file extension
         content_type = get_content_type(file_doc.file_name)
 
-        # Upload to S3
+        # Upload to S3 (without ACL since bucket doesn't support it)
         s3_client.put_object(
             Bucket=bucket_name,
             Key=s3_key,
             Body=file_content,
-            ContentType=content_type,
-            # Set ACL based on is_private flag
-            ACL='private' if file_doc.is_private else 'public-read'
+            ContentType=content_type
+            # Note: ACL removed because bucket has ACLs disabled
         )
 
         # Generate S3 URL
+        # Since bucket has ACLs disabled, all files are private by default
+        # Always use presigned URLs for security
         if file_doc.is_private:
-            # For private files, generate a presigned URL that expires
+            # For private files, generate a presigned URL that expires in 1 hour
             s3_url = s3_client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': bucket_name, 'Key': s3_key},
                 ExpiresIn=3600  # 1 hour
             )
         else:
-            # For public files, use direct S3 URL
-            s3_url = f"https://{bucket_name}.s3.{region}.amazonaws.com/{s3_key}"
+            # For "public" files, generate a longer-lived presigned URL (24 hours)
+            # since we can't make them truly public due to ACL restrictions
+            s3_url = s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': bucket_name, 'Key': s3_key},
+                ExpiresIn=86400  # 24 hours
+            )
 
         frappe.logger().info(f"File uploaded to S3: {s3_url}")
         return s3_url
