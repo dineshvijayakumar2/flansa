@@ -15,6 +15,10 @@ class FlansaRoleService:
     
     # Define role hierarchy and permissions
     ROLE_HIERARCHY = {
+        'App Owner': {
+            'level': 5,
+            'permissions': ['create', 'read', 'update', 'delete', 'admin', 'manage_users', 'manage_roles', 'super_admin']
+        },
         'App Admin': {
             'level': 4,
             'permissions': ['create', 'read', 'update', 'delete', 'admin', 'manage_users', 'manage_roles']
@@ -286,16 +290,34 @@ class FlansaRoleService:
                 fields=['name', 'table_name', 'table_label', 'description', 'owner', 'creation']
             )
             
+            # SAFETY NET: Check if user is System Manager (emergency override)
+            current_user = frappe.session.user
+            user_doc = frappe.get_doc('User', current_user)
+            user_roles = [role.role for role in user_doc.roles]
+            is_system_manager = 'System Manager' in user_roles
+
             # Filter based on role permissions
             filtered_tables = []
             for table in tables:
-                # App Admin and App Editor can see all tables
-                if 'admin' in user_permissions or 'delete' in user_permissions:
+                # EMERGENCY OVERRIDE: System Manager always gets full access
+                if is_system_manager:
+                    # Remove readonly flag for system managers
+                    if 'readonly' in table:
+                        del table['readonly']
                     filtered_tables.append(table)
-                # App User can see all tables (remove status filter for now)
-                elif 'update' in user_permissions:
+                # App Admin and App Editor can see all tables (full permissions)
+                elif 'admin' in user_permissions or 'delete' in user_permissions:
+                    # Ensure readonly is NOT set for admins
+                    if 'readonly' in table:
+                        del table['readonly']
                     filtered_tables.append(table)
-                # App Viewer can see all tables (read-only, remove status filter for now)
+                # App User can see all tables (create/update permissions)
+                elif 'update' in user_permissions or 'create' in user_permissions:
+                    # Ensure readonly is NOT set for users with create/update
+                    if 'readonly' in table:
+                        del table['readonly']
+                    filtered_tables.append(table)
+                # App Viewer can see all tables (read-only)
                 elif 'read' in user_permissions:
                     table['readonly'] = True
                     filtered_tables.append(table)
