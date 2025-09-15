@@ -106,7 +106,10 @@ default_workspace = "Flansa"
 # after_install = "flansa.install.after_install"
 
 # App startup
-after_migrate = "flansa.doctype_overrides.setup_doctype_overrides"
+after_migrate = [
+    "flansa.doctype_overrides.setup_doctype_overrides",
+    "flansa.flansa_s3.hooks.init_s3_integration"
+]
 
 # Uninstallation
 # ------------
@@ -199,6 +202,9 @@ doc_events = {
         "validate": "flansa.flansa_core.doctype_hooks.validate_logic_fields",
         "before_save": "flansa.flansa_core.doctype_hooks.calculate_logic_fields",
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
+    },
+    "File": {
+        "on_trash": "flansa.flansa_s3.hooks.on_file_delete"
     },
     "Flansa Application": {
         "before_insert": "flansa.flansa_core.workspace_service.before_insert",
