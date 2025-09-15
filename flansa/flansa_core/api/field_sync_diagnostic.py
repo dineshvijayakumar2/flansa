@@ -48,13 +48,10 @@ def diagnose_field_sync(table_name):
 
 def get_fields_from_json(table_doc):
     """Extract fields from JSON storage"""
-    if not table_doc.fields_json:
-        return []
-    
-    try:
-        return json.loads(table_doc.fields_json)
-    except:
-        return []
+    # fields_json no longer exists in Flansa Table
+    # Fields are now stored in the Flansa Field DocType
+    # Return empty list as JSON storage is deprecated
+    return []
 
 def get_fields_from_flansa_field_table(table_name):
     """Extract fields from Flansa Field table"""
@@ -193,10 +190,10 @@ def sync_json_to_flansa_fields(table_name):
     try:
         table_doc = frappe.get_doc("Flansa Table", table_name)
         
-        if not table_doc.fields_json:
-            return {"success": False, "error": "No JSON fields to sync"}
+        # fields_json no longer exists - skip JSON sync
+        return {"success": True, "synced": 0, "message": "JSON storage deprecated - using Flansa Field records"}
         
-        fields_data = json.loads(table_doc.fields_json)
+        fields_data = []  # Empty since no JSON storage
         synced_count = 0
         
         for field_data in fields_data:
@@ -321,10 +318,9 @@ def remove_orphaned_flansa_fields(table_name):
     try:
         table_doc = frappe.get_doc("Flansa Table", table_name)
         
-        json_field_names = set()
-        if table_doc.fields_json:
-            fields_data = json.loads(table_doc.fields_json)
-            json_field_names = {f.get("field_name") for f in fields_data if f.get("field_name")}
+        # fields_json no longer exists - don't remove any fields
+        # All Flansa Field records are now the source of truth
+        return {"success": True, "removed": 0, "message": "No orphaned fields - JSON storage deprecated"}
         
         # Get all Flansa Field records
         flansa_fields = frappe.get_all("Flansa Field", 
