@@ -26,7 +26,7 @@ def initialize_s3_integration():
         print("📋 Step 2: Importing S3 integration modules...", flush=True)
 
         # Import the S3 integration
-        from flansa.flansa_s3.hooks import init_s3_integration
+        from flansa.flansa_core.s3_integration.hooks import init_s3_integration
 
         print("✅ S3 modules imported successfully", flush=True)
 

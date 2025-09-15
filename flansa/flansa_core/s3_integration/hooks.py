@@ -6,7 +6,7 @@ Hooks to integrate S3 upload with Frappe's file system
 
 import frappe
 from frappe.utils.file_manager import save_file_on_filesystem
-from .s3_upload import upload_file_to_s3, delete_file_from_s3
+from flansa.flansa_core.s3_integration.s3_upload import upload_file_to_s3, delete_file_from_s3
 
 def override_file_save():
     """Override Frappe's file save to include S3 upload"""
@@ -83,7 +83,7 @@ def init_s3_integration():
             override_file_save()
 
             # Also override the upload_file API endpoint
-            from .api_hooks import override_upload_api
+            from flansa.flansa_core.s3_integration.api_hooks import override_upload_api
             override_upload_api()
 
             frappe.logger().info("Flansa S3 integration initialized (file manager + API)")

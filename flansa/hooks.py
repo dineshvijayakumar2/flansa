@@ -108,7 +108,7 @@ default_workspace = "Flansa"
 # App startup
 after_migrate = [
     "flansa.doctype_overrides.setup_doctype_overrides",
-    "flansa.flansa_s3.hooks.init_s3_integration"
+    "flansa.flansa_core.s3_integration.hooks.init_s3_integration"
 ]
 
 # Uninstallation
@@ -204,7 +204,7 @@ doc_events = {
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
     },
     "File": {
-        "on_trash": "flansa.flansa_s3.hooks.on_file_delete"
+        "on_trash": "flansa.flansa_core.s3_integration.hooks.on_file_delete"
     },
     "Flansa Application": {
         "before_insert": "flansa.flansa_core.workspace_service.before_insert",
@@ -262,7 +262,7 @@ doc_events = {
 # ------------------------------
 # Override Frappe's upload_file method to include S3 upload
 override_whitelisted_methods = {
-    "frappe.handler.upload_file": "flansa.flansa_s3.api_hooks.upload_file_with_s3"
+    "frappe.handler.upload_file": "flansa.flansa_core.s3_integration.api_hooks.upload_file_with_s3"
 }
 #
 # each overriding function accepts a `data` argument;

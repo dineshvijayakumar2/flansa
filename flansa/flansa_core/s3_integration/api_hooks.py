@@ -6,7 +6,7 @@ Override Frappe's upload_file API to include S3 upload
 
 import frappe
 from frappe.handler import upload_file as original_upload_file
-from .s3_upload import upload_file_to_s3
+from flansa.flansa_core.s3_integration.s3_upload import upload_file_to_s3
 
 @frappe.whitelist()
 def upload_file_with_s3():
