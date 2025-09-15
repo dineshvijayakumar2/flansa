@@ -28,7 +28,10 @@ class FlansaRecordViewer {
         this.doctype_name = null;
         this.form_config = {};
         this.form_sections = [];
-        
+
+        // Track uploaded files for new records (before save)
+        this.uploaded_files = [];
+
         this.init();
     }
     
@@ -2280,11 +2283,20 @@ class FlansaRecordViewer {
                             message: 'Record created successfully',
                             indicator: 'green'
                         });
-                        
-                        // Redirect to view mode of the newly created record
+
+                        // Get the newly created record ID
                         const newRecordId = response.message.record_name || response.message.name;
+
                         if (newRecordId) {
-                            window.location.href = `/app/flansa-record-viewer/${this.table_name}/${newRecordId}?mode=view`;
+                            // Handle attachment of uploaded files for new records
+                            this.attach_uploaded_files_to_record(newRecordId).then(() => {
+                                // Redirect to view mode after attaching files
+                                window.location.href = `/app/flansa-record-viewer/${this.table_name}/${newRecordId}?mode=view`;
+                            }).catch((error) => {
+                                console.warn('Error attaching files, but record was created:', error);
+                                // Still redirect even if file attachment fails
+                                window.location.href = `/app/flansa-record-viewer/${this.table_name}/${newRecordId}?mode=view`;
+                            });
                         } else {
                             // Fallback: redirect to the table's report view if no record ID returned
                             window.location.href = `/app/flansa-report-viewer/${this.table_name}?type=table`;
@@ -2440,10 +2452,21 @@ class FlansaRecordViewer {
                 // Get current gallery data
                 const currentValue = this.record_data[fieldName] || '';
                 const currentImages = this.parseGalleryData(currentValue);
-                
+
+                // Track uploaded images for new records
+                if (this.mode === 'new') {
+                    uploadedImages.forEach(image => {
+                        this.uploaded_files.push({
+                            field_name: fieldName,
+                            file_url: image.file_url,
+                            file_name: image.file_name
+                        });
+                    });
+                }
+
                 // Add new images
                 const allImages = [...currentImages, ...uploadedImages];
-                
+
                 // Update the field value
                 const newValue = JSON.stringify(allImages);
                 this.record_data[fieldName] = newValue;
@@ -2475,10 +2498,19 @@ class FlansaRecordViewer {
         return new Promise((resolve, reject) => {
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('is_private', 0);
+            formData.append('is_private', 1); // Fix: Upload as private file
             formData.append('folder', 'Home/Attachments');
-            formData.append('doctype', this.doctype_name || '');
-            formData.append('docname', this.record_id || '');
+
+            // Fix: Handle attachment for both new and existing records
+            if (this.mode === 'edit' && this.record_id) {
+                // For existing records, attach to the record
+                formData.append('attached_to_doctype', this.table_name);
+                formData.append('attached_to_name', this.record_id);
+            } else {
+                // For new records, don't attach yet - will be handled on save
+                formData.append('attached_to_doctype', '');
+                formData.append('attached_to_name', '');
+            }
             
             // Use the correct Frappe upload API endpoint
             fetch('/api/method/upload_file', {
@@ -2720,8 +2752,21 @@ class FlansaRecordViewer {
             // Use direct fetch to Frappe's upload endpoint - works with both local and S3
             const formData = new FormData();
             formData.append('file', file);
-            formData.append('is_private', 0);
+            formData.append('is_private', 1); // Fix: Upload as private file
             formData.append('folder', 'Home/Attachments');
+
+            // Fix: Handle attachment for both new and existing records
+            if (this.mode === 'edit' && this.record_id) {
+                // For existing records, attach to the record
+                formData.append('attached_to_doctype', this.table_name);
+                formData.append('attached_to_name', this.record_id);
+                formData.append('attached_to_field', fieldName);
+            } else {
+                // For new records, don't attach yet - will be handled on save
+                // This prevents the "Attached To Name must be a string or an integer" error
+                formData.append('attached_to_doctype', '');
+                formData.append('attached_to_name', '');
+            }
             
             const response = await fetch('/api/method/upload_file', {
                 method: 'POST',
@@ -2741,13 +2786,22 @@ class FlansaRecordViewer {
             if (result.message && result.message.file_url) {
                 // Update the field value
                 this.record_data[fieldName] = result.message.file_url;
-                
+
+                // Track uploaded file for new records
+                if (this.mode === 'new') {
+                    this.uploaded_files.push({
+                        field_name: fieldName,
+                        file_url: result.message.file_url,
+                        file_name: result.message.file_name || file.name
+                    });
+                }
+
                 // Update the hidden input
                 const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
                 if (hiddenInput) {
                     hiddenInput.value = result.message.file_url;
                 }
-                
+
                 // Refresh the attachment display
                 this.refresh_attachment_display(fieldName, result.message.file_url);
                 
@@ -4492,5 +4546,37 @@ class FlansaRecordViewer {
         }
         
         // Report breadcrumb URL already set in generated HTML
+    }
+
+    // Function to attach uploaded files to a saved record
+    async attach_uploaded_files_to_record(recordId) {
+        if (!this.uploaded_files || this.uploaded_files.length === 0) {
+            return; // No files to attach
+        }
+
+        try {
+            // Collect all file URLs
+            const fileUrls = this.uploaded_files.map(file => file.file_url);
+
+            // Call the attachment API
+            const result = await frappe.call({
+                method: 'flansa.flansa_core.api.attachment_api.attach_uploaded_files',
+                args: {
+                    doctype: this.table_name,
+                    docname: recordId,
+                    file_urls_json: JSON.stringify(fileUrls)
+                }
+            });
+
+            if (result.message && result.message.success) {
+                console.log(`Successfully attached ${result.message.attached_count} files to record ${recordId}`);
+            } else {
+                console.warn('Failed to attach files:', result.message?.error);
+            }
+
+        } catch (error) {
+            console.error('Error attaching uploaded files:', error);
+            throw error;
+        }
     }
 }
