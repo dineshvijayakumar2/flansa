@@ -50,7 +50,6 @@ app_include_js = [
     
     # Utilities
     "/assets/flansa/js/datetime_formatter.js",
-    "/assets/flansa/js/field-sync-tools.js",
 ]
 
 # include js, css files in header of web template
