@@ -75,12 +75,23 @@ def get_user_reports(base_table=None):
     if base_table:
         filters['base_table'] = base_table
 
-    # Get current workspace for filtering
-    try:
-        from flansa.flansa_core.workspace_service import WorkspaceContext
-        current_workspace = WorkspaceContext.get_current_workspace_id()
-    except:
-        current_workspace = None
+    # Get current workspace for filtering with robust resolution
+    current_workspace = None
+
+    # Try multiple sources for workspace_id
+    # 1. First try frappe.local (set by before_request hook)
+    if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+        current_workspace = frappe.local.workspace_id
+
+    # 2. If not available, use WorkspaceContext directly
+    if not current_workspace:
+        try:
+            from flansa.flansa_core.workspace_service import WorkspaceContext
+            current_workspace = WorkspaceContext.get_current_workspace_id()
+            # Also set it in frappe.local for subsequent calls
+            frappe.local.workspace_id = current_workspace
+        except:
+            pass
 
     # Get all reports that could match
     all_reports = frappe.get_all(
@@ -114,10 +125,12 @@ def get_user_reports(base_table=None):
                 pass
 
         # Include report if:
-        # 1. No workspace filtering needed (System Manager, etc.)
+        # 1. No workspace filtering needed (current_workspace is None or "default")
         # 2. Report workspace matches current workspace
         # 3. Report is public
+        # 4. Current workspace is "default" (for backward compatibility)
         if (not current_workspace or
+            current_workspace == "default" or
             report_workspace == current_workspace or
             report.is_public):
             accessible_reports.append(report)

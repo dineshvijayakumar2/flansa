@@ -160,17 +160,28 @@ class FlansaRoleService:
                     fields=['name', 'app_name', 'app_title', 'description', 'status', 'theme_color', 'icon', 'is_public', 'workspace_id']
                 )
             else:
-                # Regular users: filter by tenant using WorkspaceContext
+                # Regular users: filter by tenant with robust workspace resolution
                 filters = {}
-                try:
-                    from flansa.flansa_core.workspace_service import WorkspaceContext
-                    workspace_id = WorkspaceContext.get_current_workspace_id()
-                    if workspace_id:
-                        filters['workspace_id'] = workspace_id
-                except:
-                    # Fallback to frappe.local if WorkspaceContext fails
-                    if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
-                        filters['workspace_id'] = frappe.local.workspace_id
+                workspace_id = None
+
+                # Try multiple sources for workspace_id
+                # 1. First try frappe.local (set by before_request hook)
+                if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                    workspace_id = frappe.local.workspace_id
+
+                # 2. If not available, use WorkspaceContext directly
+                if not workspace_id:
+                    try:
+                        from flansa.flansa_core.workspace_service import WorkspaceContext
+                        workspace_id = WorkspaceContext.get_current_workspace_id()
+                        # Also set it in frappe.local for subsequent calls
+                        frappe.local.workspace_id = workspace_id
+                    except:
+                        pass
+
+                # 3. Apply workspace filter if we have a workspace_id
+                if workspace_id and workspace_id != "default":
+                    filters['workspace_id'] = workspace_id
                 
                 applications = frappe.get_all(
                     'Flansa Application',
@@ -241,18 +252,29 @@ class FlansaRoleService:
         """Get tables filtered by user's role and permissions"""
         try:
             user_permissions = FlansaRoleService.get_user_permissions(user_email, application_id)
-            
-            # Base filter for tenant - use WorkspaceContext for reliable workspace resolution
+
+            # Base filter for tenant - ensure workspace context is available
             filters = {}
-            try:
-                from flansa.flansa_core.workspace_service import WorkspaceContext
-                workspace_id = WorkspaceContext.get_current_workspace_id()
-                if workspace_id:
-                    filters['workspace_id'] = workspace_id
-            except:
-                # Fallback to frappe.local if WorkspaceContext fails
-                if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
-                    filters['workspace_id'] = frappe.local.workspace_id
+            workspace_id = None
+
+            # Try multiple sources for workspace_id
+            # 1. First try frappe.local (set by before_request hook)
+            if hasattr(frappe.local, 'workspace_id') and frappe.local.workspace_id:
+                workspace_id = frappe.local.workspace_id
+
+            # 2. If not available, use WorkspaceContext directly
+            if not workspace_id:
+                try:
+                    from flansa.flansa_core.workspace_service import WorkspaceContext
+                    workspace_id = WorkspaceContext.get_current_workspace_id()
+                    # Also set it in frappe.local for subsequent calls
+                    frappe.local.workspace_id = workspace_id
+                except:
+                    pass
+
+            # 3. Apply workspace filter if we have a workspace_id
+            if workspace_id and workspace_id != "default":
+                filters['workspace_id'] = workspace_id
             
             # If application_id provided, filter by application
             if application_id:
@@ -270,11 +292,11 @@ class FlansaRoleService:
                 # App Admin and App Editor can see all tables
                 if 'admin' in user_permissions or 'delete' in user_permissions:
                     filtered_tables.append(table)
-                # App User can see active tables only
-                elif 'update' in user_permissions and table.status == 'Active':
+                # App User can see all tables (remove status filter for now)
+                elif 'update' in user_permissions:
                     filtered_tables.append(table)
-                # App Viewer can see active tables only (read-only)
-                elif 'read' in user_permissions and table.status == 'Active':
+                # App Viewer can see all tables (read-only, remove status filter for now)
+                elif 'read' in user_permissions:
                     table['readonly'] = True
                     filtered_tables.append(table)
             

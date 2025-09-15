@@ -210,17 +210,36 @@ def resolve_tenant_from_request():
         if hasattr(frappe.local, 'request') and frappe.local.request:
             # Get current tenant from domain
             workspace_id = WorkspaceContext.get_current_workspace_id()
-            
+
             # Set in frappe.local for easy access throughout request
             frappe.local.workspace_id = workspace_id
-            
+
             # Optional: Set in session for persistence
             if hasattr(frappe.local, 'session') and frappe.local.session:
                 frappe.local.session.workspace_id = workspace_id
-                
+        else:
+            # No request context, try to get from session or use default
+            if hasattr(frappe.local, 'session') and frappe.local.session:
+                workspace_id = frappe.local.session.get('workspace_id')
+                if workspace_id:
+                    frappe.local.workspace_id = workspace_id
+                    return
+
+            # Fall back to getting default workspace
+            workspace_id = WorkspaceContext._get_default_tenant()
+            frappe.local.workspace_id = workspace_id
+
     except Exception as e:
-        # Fail silently to not break requests
-        frappe.local.workspace_id = "default"
+        # Log error for debugging but don't break requests
+        frappe.log_error(f"Error resolving workspace from request: {str(e)}", "resolve_tenant_from_request")
+
+        # Try to get default workspace as fallback
+        try:
+            workspace_id = WorkspaceContext._get_default_tenant()
+            frappe.local.workspace_id = workspace_id
+        except:
+            # Last resort fallback
+            frappe.local.workspace_id = "default"
 
 
 def get_workspace_filter() -> Dict[str, str]:
