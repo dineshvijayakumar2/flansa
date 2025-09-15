@@ -153,9 +153,9 @@ class ContextualRoleManager:
     @staticmethod
     def _get_workspace_users(workspace_id: str) -> List[Dict]:
         """Get users associated with a specific workspace"""
-        # Get users with workspace roles in this workspace
+        # Get users with workspace access in this workspace
         workspace_users = frappe.get_all(
-            'Flansa Workspace User',
+            'Flansa User Workspace',
             filters={'workspace_id': workspace_id},
             fields=['user']
         )

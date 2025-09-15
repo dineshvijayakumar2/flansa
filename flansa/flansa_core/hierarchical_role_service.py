@@ -175,17 +175,20 @@ class HierarchicalRoleService:
     def _get_workspace_roles(user_email: str, workspace_id: str) -> List[str]:
         """Get workspace-level roles for a user in a specific tenant"""
         try:
-            # Check if workspace roles are stored in a separate DocType
-            workspace_users = frappe.get_all(
-                'Flansa Workspace User',
+            # Check if user has workspace preference (simplified approach)
+            user_workspace = frappe.get_all(
+                'Flansa User Workspace',
                 filters={
                     'user': user_email,
                     'workspace_id': workspace_id
                 },
-                fields=['workspace_role']
+                fields=['workspace_status']
             )
-            
-            return [user.workspace_role for user in workspace_users if user.workspace_role]
+
+            # If user has access to workspace, grant basic workspace role
+            if user_workspace:
+                return ['Workspace Manager']  # Default workspace role
+            return []
         except:
             # Fallback: Check if user is workspace admin based on tenant ownership
             tenant_doc = frappe.get_value('Flansa Tenant Registry', workspace_id, 'owner')
@@ -387,15 +390,28 @@ class HierarchicalRoleService:
                 if 'manage_users' not in assigner_perms and '*' not in assigner_perms:
                     frappe.throw("You don't have permission to assign workspace roles")
                 
-                # Create workspace user entry
-                workspace_user = frappe.get_doc({
-                    'doctype': 'Flansa Workspace User',
-                    'user': user_email,
-                    'workspace_role': role_name,
-                    'workspace_id': context_id,
-                    'assigned_by': assigned_by
-                })
-                workspace_user.insert()
+                # Create or update user workspace entry
+                existing_user_workspace = frappe.get_value(
+                    'Flansa User Workspace',
+                    {'user': user_email},
+                    'name'
+                )
+
+                if existing_user_workspace:
+                    # Update existing entry
+                    workspace_doc = frappe.get_doc('Flansa User Workspace', existing_user_workspace)
+                    workspace_doc.workspace_id = context_id
+                    workspace_doc.save()
+                else:
+                    # Create new user workspace entry
+                    workspace_user = frappe.get_doc({
+                        'doctype': 'Flansa User Workspace',
+                        'user': user_email,
+                        'workspace_id': context_id,
+                        'workspace_name': frappe.get_value('Flansa Workspace', context_id, 'workspace_name'),
+                        'workspace_status': 'Active'
+                    })
+                    workspace_user.insert()
                 
             elif scope == 'application':
                 # App owners/admins can assign application roles

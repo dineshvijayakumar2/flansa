@@ -66,11 +66,11 @@ class WorkspaceContext:
             tenant_doc = frappe.get_doc("Flansa Workspace", workspace_id)
             tenant_data = {
                 "workspace_id": tenant_doc.workspace_id,
-                "tenant_name": tenant_doc.tenant_name,
+                "tenant_name": tenant_doc.workspace_name,  # Use workspace_name field
                 "primary_domain": tenant_doc.primary_domain,
                 "status": tenant_doc.status,
                 "type": "Production",  # Default type since tenant_type field doesn't exist
-                "max_users": tenant_doc.max_users,
+                "max_users": getattr(tenant_doc, 'max_users', 100),  # Default max_users
                 "max_tables": getattr(tenant_doc, 'max_tables', 50)  # Use max_tables instead of max_apps
             }
             

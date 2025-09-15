@@ -21,13 +21,12 @@ def apply_workspace_filter(doctype, filters=None):
     workspace_enabled_doctypes = [
         'Flansa Application',
         'Flansa Table',
-        'Flansa Form Config', 
+        'Flansa Form Config',
         'Flansa Relationship',
         'Flansa Saved Report',
         'Flansa Logic Field',
         'Flansa Computed Field',
         'Flansa Workspace',
-        'Flansa Workspace Domain',
         'Flansa Application Role',
         'Flansa Application User'
     ]
@@ -73,14 +72,13 @@ def validate_workspace_access(doc, method=None):
     # Check if DocType has workspace_id field
     workspace_enabled_doctypes = [
         'Flansa Application',
-        'Flansa Table', 
+        'Flansa Table',
         'Flansa Form Config',
         'Flansa Relationship',
         'Flansa Saved Report',
         'Flansa Logic Field',
         'Flansa Computed Field',
         'Flansa Workspace',
-        'Flansa Workspace Domain',
         'Flansa Application Role',
         'Flansa Application User'
     ]

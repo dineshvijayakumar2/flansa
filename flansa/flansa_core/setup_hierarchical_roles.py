@@ -8,9 +8,9 @@ def setup_hierarchical_role_system():
     print("=" * 60, flush=True)
 
     try:
-        # 1. Create Flansa Workspace User DocType
-        print("Step 1: Creating Flansa Workspace User DocType...", flush=True)
-        if not frappe.db.exists("DocType", "Flansa Workspace User"):
+        # 1. Skip Flansa Workspace User DocType (consolidated into Flansa User Workspace)
+        print("Step 1: Skipping Flansa Workspace User DocType (consolidated)...", flush=True)
+        if False:  # Disabled - using Flansa User Workspace instead
             workspace_user = frappe.get_doc({
                 "doctype": "DocType",
                 "name": "Flansa Workspace User",
