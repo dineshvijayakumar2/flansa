@@ -81,6 +81,11 @@ def init_s3_integration():
         site_config = frappe.get_site_config()
         if site_config.get('use_s3'):
             override_file_save()
-            frappe.logger().info("Flansa S3 integration initialized")
+
+            # Also override the upload_file API endpoint
+            from .api_hooks import override_upload_api
+            override_upload_api()
+
+            frappe.logger().info("Flansa S3 integration initialized (file manager + API)")
     except Exception as e:
         frappe.log_error(f"Failed to initialize S3 integration: {str(e)}", "Flansa S3 Init")

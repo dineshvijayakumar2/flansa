@@ -260,10 +260,10 @@ doc_events = {
 
 # Overriding Methods
 # ------------------------------
-#
-# override_whitelisted_methods = {
-#     "frappe.desk.doctype.event.event.get_events": "flansa.event.get_events"
-# }
+# Override Frappe's upload_file method to include S3 upload
+override_whitelisted_methods = {
+    "frappe.handler.upload_file": "flansa.flansa_s3.api_hooks.upload_file_with_s3"
+}
 #
 # each overriding function accepts a `data` argument;
 # generated from the base implementation of the doctype dashboard,
