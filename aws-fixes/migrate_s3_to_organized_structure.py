@@ -64,7 +64,7 @@ def migrate_s3_to_organized_structure():
         print("📋 Step 4: Importing migration functions...", flush=True)
 
         try:
-            from flansa.flansa_core.s3_integration.s3_upload import _generate_s3_key, _get_file_category
+            from flansa.flansa_core.s3_integration.s3_upload import _generate_s3_key
             print("✅ Migration functions imported successfully", flush=True)
         except ImportError as e:
             print(f"❌ Migration function import failed: {e}", flush=True)
@@ -176,9 +176,11 @@ def migrate_s3_to_organized_structure():
 
         print("📋 Step 9: Migration benefits...", flush=True)
         print("✅ After migration, files will be organized as:", flush=True)
-        print("  • flansa-files/{workspace_id}/{category}/{doctype}/{year}/{month}/file", flush=True)
+        print("  • flansa-files/{workspace_id}/attachments/{table_id_or_doctype}/{year}/{month}/file", flush=True)
+        print("  • Direct correlation with Flansa table structure", flush=True)
+        print("  • Multi-tenant isolation by workspace", flush=True)
+        print("  • Organization by actual Flansa table IDs", flush=True)
         print("  • Better scalability and performance", flush=True)
-        print("  • Multi-tenant isolation", flush=True)
         print("  • Easier file management and cleanup", flush=True)
 
         print("💡 To run actual migration:", flush=True)
