@@ -100,7 +100,7 @@ def delete_file_from_s3(file_url):
     Delete file from S3
 
     Args:
-        file_url: S3 URL of the file to delete
+        file_url: S3 URL of the file to delete (presigned or direct)
     """
     try:
         site_config = frappe.get_site_config()
@@ -108,12 +108,18 @@ def delete_file_from_s3(file_url):
         if not site_config.get('use_s3') or not file_url:
             return
 
-        # Extract S3 key from URL
+        # Handle both presigned URLs and direct S3 URLs
         if 's3.amazonaws.com' not in file_url and 's3.' not in file_url:
             return
 
+        # Parse presigned URL to extract bucket and key
+        if '?' in file_url:  # Presigned URL with query parameters
+            base_url = file_url.split('?')[0]
+        else:
+            base_url = file_url
+
         # Parse S3 URL to get bucket and key
-        parts = file_url.replace('https://', '').split('/')
+        parts = base_url.replace('https://', '').split('/')
         bucket_name = parts[0].split('.')[0]  # Extract bucket from subdomain
         s3_key = '/'.join(parts[1:])  # Rest is the key
 

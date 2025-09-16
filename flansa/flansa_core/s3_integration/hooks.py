@@ -68,11 +68,15 @@ def on_file_delete(doc, method):
     try:
         site_config = frappe.get_site_config()
         if site_config.get('use_s3') and doc.file_url:
-            # Delete from S3 if it's an S3 file
+            # Delete from S3 if it's an S3 file (both presigned and direct URLs)
             if 's3.amazonaws.com' in doc.file_url or 's3.' in doc.file_url:
+                frappe.logger().info(f"Deleting S3 file: {doc.file_name}")
                 delete_file_from_s3(doc.file_url)
+                frappe.logger().info(f"Successfully deleted S3 file: {doc.file_name}")
     except Exception as e:
-        frappe.log_error(f"Error deleting S3 file: {str(e)}", "Flansa S3 Delete Hook")
+        error_msg = f"Error deleting S3 file {doc.file_name}: {str(e)}"
+        frappe.log_error(error_msg, "Flansa S3 Delete Hook")
+        frappe.logger().error(error_msg)
 
 
 def init_s3_integration():
