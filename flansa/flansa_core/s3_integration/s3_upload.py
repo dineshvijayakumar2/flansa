@@ -64,12 +64,15 @@ def upload_file_to_s3(file_doc, file_content):
             # Note: ACL removed because bucket has ACLs disabled
         )
 
-        # Store the S3 object key in a standard format
-        # Format: s3://bucket/key for easy identification
-        # We'll generate presigned URLs on-demand when files are accessed
-        s3_url = f"s3://{bucket_name}/{s3_key}"
+        # Generate a presigned URL that's compatible with Frappe
+        # Use longer expiry for storage, we'll refresh as needed
+        s3_url = s3_client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': bucket_name, 'Key': s3_key},
+            ExpiresIn=604800  # 7 days - longer expiry for stability
+        )
 
-        frappe.logger().info(f"File uploaded to S3 with key: {s3_key}")
+        frappe.logger().info(f"File uploaded to S3 with presigned URL (7 day expiry)")
         return s3_url
 
     except ClientError as e:
