@@ -204,6 +204,7 @@ doc_events = {
         "on_update": "flansa.flansa_core.doctype_hooks.calculate_logic_fields"
     },
     "File": {
+        "after_insert": "flansa.flansa_core.s3_integration.doc_events.upload_to_s3_after_insert",
         "on_trash": "flansa.flansa_core.s3_integration.hooks.on_file_delete"
     },
     "Flansa Application": {
