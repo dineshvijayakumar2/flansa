@@ -35,7 +35,7 @@ def upload_file_to_s3(file_doc, file_content):
         aws_secret_access_key = site_config.get('s3_secret_access_key') or site_config.get('aws_secret_access_key')
         bucket_name = site_config.get('s3_bucket') or site_config.get('s3_bucket_name')
         region = site_config.get('s3_region') or site_config.get('aws_s3_region_name')
-        folder_path = site_config.get('s3_folder_path') or site_config.get('s3_folder') or 'flansa-files'
+        base_folder = site_config.get('s3_folder_path') or site_config.get('s3_folder') or 'flansa-files'
 
         if not all([aws_access_key_id, aws_secret_access_key, bucket_name, region]):
             frappe.log_error("S3 credentials incomplete", "Flansa S3 Upload")
@@ -49,8 +49,8 @@ def upload_file_to_s3(file_doc, file_content):
             aws_secret_access_key=aws_secret_access_key
         )
 
-        # Create S3 key (file path)
-        s3_key = f"{folder_path}/{file_doc.name}_{file_doc.file_name}"
+        # Create organized S3 key with multi-tenant structure
+        s3_key = _generate_s3_key(base_folder, file_doc)
 
         # Set content type based on file extension
         content_type = get_content_type(file_doc.file_name)
@@ -88,6 +88,88 @@ def upload_file_to_s3(file_doc, file_content):
         return None
 
 
+def _generate_s3_key(base_folder, file_doc):
+    """
+    Generate organized S3 key with best practices for multi-tenant structure
+
+    Structure: base_folder/workspace_id/attachments/doctype/year/month/file_id_filename
+    Example: flansa-files/demo-workspace/attachments/file/2025/01/abc123_document.pdf
+    """
+    try:
+        # Get workspace context
+        workspace_id = "default"
+        try:
+            from flansa.flansa_core.workspace_service import WorkspaceContext
+            workspace_id = WorkspaceContext.get_current_workspace_id() or "default"
+        except:
+            pass
+
+        # Get file type category
+        file_category = _get_file_category(file_doc.file_name)
+
+        # Get creation date parts for organization
+        from datetime import datetime
+        creation_date = file_doc.creation or datetime.now()
+        year = creation_date.strftime('%Y')
+        month = creation_date.strftime('%m')
+
+        # Get parent doctype for better organization
+        parent_type = "general"
+        if file_doc.attached_to_doctype:
+            parent_type = file_doc.attached_to_doctype.lower().replace(' ', '_')
+
+        # Build organized path: base/tenant/category/parent_type/year/month/file
+        s3_key = f"{base_folder}/{workspace_id}/{file_category}/{parent_type}/{year}/{month}/{file_doc.name}_{file_doc.file_name}"
+
+        frappe.logger().info(f"Generated S3 key: {s3_key}")
+        return s3_key
+
+    except Exception as e:
+        # Fallback to simple structure if anything fails
+        frappe.logger().error(f"Error generating S3 key: {e}, falling back to simple structure")
+        return f"{base_folder}/{file_doc.name}_{file_doc.file_name}"
+
+
+def _get_file_category(filename):
+    """Categorize file by extension for better organization"""
+    if not filename:
+        return "misc"
+
+    ext = filename.lower().split('.')[-1] if '.' in filename else ''
+
+    # Image files
+    if ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico']:
+        return "images"
+
+    # Document files
+    elif ext in ['pdf', 'doc', 'docx', 'txt', 'rtf']:
+        return "documents"
+
+    # Spreadsheet files
+    elif ext in ['xls', 'xlsx', 'csv']:
+        return "spreadsheets"
+
+    # Archive files
+    elif ext in ['zip', 'rar', '7z', 'tar', 'gz']:
+        return "archives"
+
+    # Video files
+    elif ext in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm']:
+        return "videos"
+
+    # Audio files
+    elif ext in ['mp3', 'wav', 'flac', 'aac', 'ogg']:
+        return "audio"
+
+    # Presentation files
+    elif ext in ['ppt', 'pptx']:
+        return "presentations"
+
+    # Other files
+    else:
+        return "misc"
+
+
 def get_content_type(filename):
     """Get content type based on file extension"""
     import mimetypes
@@ -122,6 +204,9 @@ def delete_file_from_s3(file_url):
         parts = base_url.replace('https://', '').split('/')
         bucket_name = parts[0].split('.')[0]  # Extract bucket from subdomain
         s3_key = '/'.join(parts[1:])  # Rest is the key
+
+        # Remove any empty parts
+        s3_key = s3_key.strip('/')
 
         # Get S3 credentials
         aws_access_key_id = site_config.get('s3_access_key_id') or site_config.get('aws_access_key_id')
