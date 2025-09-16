@@ -94,10 +94,16 @@ def debug_s3_deletion_issues():
             parts = base_url.replace('https://', '').split('/')
             parsed_bucket = parts[0].split('.')[0]  # Extract bucket from subdomain
             parsed_s3_key = '/'.join(parts[1:])  # Rest is the key
-            parsed_s3_key = parsed_s3_key.strip('/')
 
             print(f"  ✅ Parsed bucket: {parsed_bucket}", flush=True)
-            print(f"  ✅ Parsed S3 key: {parsed_s3_key}", flush=True)
+            print(f"  Raw S3 key: {parsed_s3_key}", flush=True)
+
+            # URL decode the S3 key to handle special characters and spaces
+            import urllib.parse
+            decoded_s3_key = urllib.parse.unquote(parsed_s3_key)
+            decoded_s3_key = decoded_s3_key.strip('/')
+
+            print(f"  ✅ Decoded S3 key: {decoded_s3_key}", flush=True)
 
             # Verify bucket matches configuration
             if parsed_bucket == bucket_name:
@@ -144,15 +150,28 @@ def debug_s3_deletion_issues():
                 base_url = test_url
 
             parts = base_url.replace('https://', '').split('/')
-            s3_key = '/'.join(parts[1:]).strip('/')
+            raw_s3_key = '/'.join(parts[1:]).strip('/')
 
-            # Check if file exists
+            # URL decode the S3 key
+            import urllib.parse
+            s3_key = urllib.parse.unquote(raw_s3_key)
+
+            print(f"  Testing with raw key: {raw_s3_key}", flush=True)
+            print(f"  Testing with decoded key: {s3_key}", flush=True)
+
+            # Check if file exists with decoded key
             s3_client.head_object(Bucket=bucket_name, Key=s3_key)
             print(f"  ✅ File exists in S3: {test_file.file_name}", flush=True)
 
         except s3_client.exceptions.NoSuchKey:
             print(f"  ❌ File not found in S3: {test_file.file_name}", flush=True)
-            print(f"    Tried key: {s3_key}", flush=True)
+            print(f"    Tried decoded key: {s3_key}", flush=True)
+            # Try with raw key as fallback
+            try:
+                s3_client.head_object(Bucket=bucket_name, Key=raw_s3_key)
+                print(f"  ✅ File found with raw key: {test_file.file_name}", flush=True)
+            except:
+                print(f"    Raw key also not found: {raw_s3_key}", flush=True)
         except Exception as e:
             print(f"  ❌ Error checking file existence: {e}", flush=True)
 

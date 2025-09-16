@@ -177,6 +177,10 @@ def delete_file_from_s3(file_url):
         bucket_name = parts[0].split('.')[0]  # Extract bucket from subdomain
         s3_key = '/'.join(parts[1:])  # Rest is the key
 
+        # URL decode the S3 key to handle special characters and spaces
+        import urllib.parse
+        s3_key = urllib.parse.unquote(s3_key)
+
         # Remove any empty parts
         s3_key = s3_key.strip('/')
 
