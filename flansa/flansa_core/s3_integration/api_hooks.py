@@ -61,26 +61,26 @@ def upload_file_with_s3():
             frappe.logger().info(f"🔍 DEBUG: File content loaded, size: {len(file_content)} bytes")
             print(f"🔍 DEBUG: File loaded, {len(file_content)} bytes", flush=True)
 
-            # Upload to S3
-            frappe.logger().info("🔍 DEBUG: Calling upload_file_to_s3")
-            s3_url = upload_file_to_s3(file_doc, file_content)
+            # Use the new S3 processing with organized structure
+            frappe.logger().info("🔍 DEBUG: Calling process_s3_upload_safe with new structure")
+            from flansa.flansa_core.s3_integration.doc_events import process_s3_upload_safe
 
-            if s3_url:
-                frappe.logger().info(f"🔍 DEBUG: S3 upload successful: {s3_url}")
-                print(f"🔍 DEBUG: S3 upload successful!", flush=True)
+            process_s3_upload_safe(file_doc)
 
-                # Update file document with S3 URL
-                file_doc.file_url = s3_url
-                file_doc.save(ignore_permissions=True)
-                frappe.db.commit()
+            # Reload the file doc to get the updated S3 URL
+            file_doc.reload()
 
-                # Update result
-                result['file_url'] = s3_url
+            if file_doc.file_url and ('s3://' in file_doc.file_url or 'amazonaws' in file_doc.file_url.lower()):
+                frappe.logger().info(f"🔍 DEBUG: S3 upload successful with new structure")
+                print(f"🔍 DEBUG: S3 upload successful with new organized structure!", flush=True)
 
-                frappe.logger().info(f"🔍 DEBUG: File document updated with S3 URL")
-                print("🔍 DEBUG: File document updated with S3 URL", flush=True)
+                # Update result with new S3 URL
+                result['file_url'] = file_doc.file_url
+
+                frappe.logger().info(f"🔍 DEBUG: File now in organized S3 structure")
+                print("🔍 DEBUG: File organized in new S3 structure", flush=True)
             else:
-                error_msg = "🔍 DEBUG: S3 upload returned None"
+                error_msg = "🔍 DEBUG: S3 upload with new structure failed"
                 frappe.logger().error(error_msg)
                 print(error_msg, flush=True)
 
