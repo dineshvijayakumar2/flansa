@@ -16,32 +16,14 @@ def test_improved_s3_structure():
         print("📋 Step 1: Testing S3 key generation function...", flush=True)
 
         try:
-            from flansa.flansa_core.s3_integration.s3_upload import _generate_s3_key, _get_file_category
-            print("✅ S3 key generation functions imported successfully", flush=True)
+            from flansa.flansa_core.s3_integration.s3_upload import _generate_s3_key
+            print("✅ S3 key generation function imported successfully", flush=True)
         except ImportError as e:
             print(f"❌ S3 key generation function import failed: {e}", flush=True)
             return False
 
-        print("📋 Step 2: Testing file categorization...", flush=True)
-
-        # Test different file types
-        test_files = [
-            ("document.pdf", "documents"),
-            ("image.jpg", "images"),
-            ("logo.svg", "images"),
-            ("data.xlsx", "spreadsheets"),
-            ("video.mp4", "videos"),
-            ("archive.zip", "archives"),
-            ("presentation.pptx", "presentations"),
-            ("unknown.xyz", "misc")
-        ]
-
-        for filename, expected_category in test_files:
-            actual_category = _get_file_category(filename)
-            if actual_category == expected_category:
-                print(f"  ✅ {filename} -> {actual_category}", flush=True)
-            else:
-                print(f"  ❌ {filename} -> {actual_category} (expected {expected_category})", flush=True)
+        print("📋 Step 2: Skipping file categorization (as requested)...", flush=True)
+        print("✅ Files will be organized by Flansa table ID/doctype name only", flush=True)
 
         print("📋 Step 3: Testing workspace context integration...", flush=True)
 
@@ -60,7 +42,7 @@ def test_improved_s3_structure():
                 self.name = "test-file-12345"
                 self.file_name = "sample_document.pdf"
                 self.creation = datetime(2025, 1, 15, 10, 30, 0)
-                self.attached_to_doctype = "Flansa Table"
+                self.attached_to_doctype = "test407835_customers_tbl"
 
         mock_file = MockFileDoc()
         base_folder = "flansa-files"
@@ -73,20 +55,20 @@ def test_improved_s3_structure():
         print(f"Key structure analysis:", flush=True)
         print(f"  Base folder: {key_parts[0] if len(key_parts) > 0 else 'N/A'}", flush=True)
         print(f"  Workspace: {key_parts[1] if len(key_parts) > 1 else 'N/A'}", flush=True)
-        print(f"  Category: {key_parts[2] if len(key_parts) > 2 else 'N/A'}", flush=True)
-        print(f"  Parent type: {key_parts[3] if len(key_parts) > 3 else 'N/A'}", flush=True)
+        print(f"  Attachments: {key_parts[2] if len(key_parts) > 2 else 'N/A'}", flush=True)
+        print(f"  Table/DocType: {key_parts[3] if len(key_parts) > 3 else 'N/A'}", flush=True)
         print(f"  Year: {key_parts[4] if len(key_parts) > 4 else 'N/A'}", flush=True)
         print(f"  Month: {key_parts[5] if len(key_parts) > 5 else 'N/A'}", flush=True)
         print(f"  Filename: {key_parts[6] if len(key_parts) > 6 else 'N/A'}", flush=True)
 
         print("📋 Step 5: Testing various file scenarios...", flush=True)
 
-        # Test different scenarios
+        # Test different scenarios with Flansa-specific doctypes/table IDs
         scenarios = [
-            ("Image file", "logo.png", "Flansa Application"),
-            ("Excel sheet", "data.xlsx", "Flansa Table"),
-            ("PDF document", "report.pdf", None),
-            ("Video file", "tutorial.mp4", "File"),
+            ("Customer table attachment", "logo.png", "test407835_customers_tbl"),
+            ("Product table attachment", "data.xlsx", "test407835_products_tbl"),
+            ("General file", "report.pdf", None),
+            ("Orders table attachment", "invoice.pdf", "test407835_orders_tbl"),
         ]
 
         for scenario_name, filename, doctype in scenarios:
@@ -127,9 +109,9 @@ def test_improved_s3_structure():
 
         print("✅ Improved S3 folder structure provides:", flush=True)
         print("  • Multi-tenant isolation by workspace_id", flush=True)
-        print("  • File type categorization (images, documents, etc.)", flush=True)
-        print("  • Parent DocType organization", flush=True)
+        print("  • Flansa table ID/doctype organization (no file type categorization)", flush=True)
         print("  • Date-based organization (year/month)", flush=True)
+        print("  • Logical attachment grouping by table/doctype", flush=True)
         print("  • Better scalability and searchability", flush=True)
         print("  • Improved S3 performance with distributed prefixes", flush=True)
 

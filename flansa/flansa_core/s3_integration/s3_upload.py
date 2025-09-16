@@ -90,10 +90,10 @@ def upload_file_to_s3(file_doc, file_content):
 
 def _generate_s3_key(base_folder, file_doc):
     """
-    Generate organized S3 key with best practices for multi-tenant structure
+    Generate organized S3 key with Flansa-specific structure
 
-    Structure: base_folder/workspace_id/attachments/doctype/year/month/file_id_filename
-    Example: flansa-files/demo-workspace/attachments/file/2025/01/abc123_document.pdf
+    Structure: base_folder/workspace_id/attachments/table_id_or_doctype/year/month/file_id_filename
+    Example: flansa-files/demo-workspace/attachments/tbl_customers_abc123/2025/01/xyz789_document.pdf
     """
     try:
         # Get workspace context
@@ -104,22 +104,32 @@ def _generate_s3_key(base_folder, file_doc):
         except:
             pass
 
-        # Get file type category
-        file_category = _get_file_category(file_doc.file_name)
-
         # Get creation date parts for organization
         from datetime import datetime
         creation_date = file_doc.creation or datetime.now()
         year = creation_date.strftime('%Y')
         month = creation_date.strftime('%m')
 
-        # Get parent doctype for better organization
-        parent_type = "general"
+        # Get parent doctype - use actual table ID or Flansa doctype name
+        parent_identifier = "general"
         if file_doc.attached_to_doctype:
-            parent_type = file_doc.attached_to_doctype.lower().replace(' ', '_')
+            # Use the actual Flansa table ID or doctype name as-is
+            parent_identifier = file_doc.attached_to_doctype.lower().replace(' ', '_')
 
-        # Build organized path: base/tenant/category/parent_type/year/month/file
-        s3_key = f"{base_folder}/{workspace_id}/{file_category}/{parent_type}/{year}/{month}/{file_doc.name}_{file_doc.file_name}"
+            # For Flansa generated doctypes, keep the full name for better identification
+            if file_doc.attached_to_doctype.startswith('test') or '_' in file_doc.attached_to_doctype:
+                # This looks like a Flansa generated table ID - keep it as-is
+                parent_identifier = file_doc.attached_to_doctype
+
+        # If we have the specific record ID, we could include it too
+        if hasattr(file_doc, 'attached_to_name') and file_doc.attached_to_name:
+            # Optional: include record ID for even more specific organization
+            # parent_identifier = f"{parent_identifier}_{file_doc.attached_to_name}"
+            pass
+
+        # Build organized path: base/tenant/attachments/table_or_doctype/year/month/file
+        # Skip file type categorization as requested
+        s3_key = f"{base_folder}/{workspace_id}/attachments/{parent_identifier}/{year}/{month}/{file_doc.name}_{file_doc.file_name}"
 
         frappe.logger().info(f"Generated S3 key: {s3_key}")
         return s3_key
@@ -130,44 +140,6 @@ def _generate_s3_key(base_folder, file_doc):
         return f"{base_folder}/{file_doc.name}_{file_doc.file_name}"
 
 
-def _get_file_category(filename):
-    """Categorize file by extension for better organization"""
-    if not filename:
-        return "misc"
-
-    ext = filename.lower().split('.')[-1] if '.' in filename else ''
-
-    # Image files
-    if ext in ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg', 'ico']:
-        return "images"
-
-    # Document files
-    elif ext in ['pdf', 'doc', 'docx', 'txt', 'rtf']:
-        return "documents"
-
-    # Spreadsheet files
-    elif ext in ['xls', 'xlsx', 'csv']:
-        return "spreadsheets"
-
-    # Archive files
-    elif ext in ['zip', 'rar', '7z', 'tar', 'gz']:
-        return "archives"
-
-    # Video files
-    elif ext in ['mp4', 'avi', 'mov', 'wmv', 'flv', 'webm']:
-        return "videos"
-
-    # Audio files
-    elif ext in ['mp3', 'wav', 'flac', 'aac', 'ogg']:
-        return "audio"
-
-    # Presentation files
-    elif ext in ['ppt', 'pptx']:
-        return "presentations"
-
-    # Other files
-    else:
-        return "misc"
 
 
 def get_content_type(filename):
