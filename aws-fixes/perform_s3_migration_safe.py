@@ -60,18 +60,24 @@ def perform_s3_migration_safe():
                 print(f"📋 Processing: {filename}", flush=True)
 
                 # Find the file in database
-                file_doc = frappe.db.sql("""
-                    SELECT name, file_name, file_url, creation, attached_to_doctype
-                    FROM `tabFile`
-                    WHERE file_name = %s AND file_url LIKE '%amazonaws%'
-                    LIMIT 1
-                """, (filename,), as_dict=True)
+                try:
+                    file_doc = frappe.db.sql("""
+                        SELECT name, file_name, file_url, creation, attached_to_doctype
+                        FROM `tabFile`
+                        WHERE file_name = %s AND file_url LIKE '%amazonaws%'
+                        LIMIT 1
+                    """, (filename,), as_dict=True)
 
-                if not file_doc:
-                    print(f"  ⚠️  File not found in database: {filename}", flush=True)
+                    if not file_doc or len(file_doc) == 0:
+                        print(f"  ⚠️  File not found in database: {filename}", flush=True)
+                        continue
+
+                    file_info = file_doc[0]
+                    print(f"  ✅ Found in database: {file_info.name}", flush=True)
+
+                except Exception as e:
+                    print(f"  ❌ Database query error for {filename}: {e}", flush=True)
                     continue
-
-                file_info = file_doc[0]
 
                 # Generate new S3 key
                 from flansa.flansa_core.s3_integration.s3_upload import _generate_s3_key
