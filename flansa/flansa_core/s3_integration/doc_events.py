@@ -10,76 +10,77 @@ from flansa.flansa_core.s3_integration.s3_upload import upload_file_to_s3
 def upload_to_s3_after_insert(doc, method):
     """Upload file to S3 after it's inserted in the database"""
 
-    # Check if S3 is enabled
-    site_config = frappe.get_site_config()
-    if not site_config.get('use_s3'):
-        return
-
-    try:
-        # Skip if already on S3 (check for both s3:// and https:// S3 URLs)
-        if doc.file_url and ('s3://' in doc.file_url or 's3' in doc.file_url.lower() or 'amazonaws' in doc.file_url.lower()):
-            frappe.logger().info(f"File {doc.name} already on S3, skipping")
-            return
-
-        # Skip if no local file
-        if not doc.file_url or not doc.file_url.startswith('/'):
-            frappe.logger().info(f"File {doc.name} has no local URL, skipping")
-            return
-
-        frappe.logger().info(f"Processing file {doc.name} for S3 upload")
-
-        # Get the file content from local path
+    # Use deferred processing to avoid conflicts during file creation
+    def process_s3_upload():
         try:
-            file_path = doc.get_full_path()
-
-            if not file_path or not frappe.utils.os.path.exists(file_path):
-                frappe.logger().error(f"File path not found: {file_path}")
+            # Check if S3 is enabled
+            site_config = frappe.get_site_config()
+            if not site_config.get('use_s3'):
                 return
 
-            with open(file_path, 'rb') as f:
-                file_content = f.read()
+            # Reload the document to get the latest state
+            doc.reload()
 
-            frappe.logger().info(f"Uploading {doc.file_name} to S3 ({len(file_content)} bytes)")
+            # Skip if already on S3 (check for both s3:// and https:// S3 URLs)
+            if doc.file_url and ('s3://' in doc.file_url or 's3' in doc.file_url.lower() or 'amazonaws' in doc.file_url.lower()):
+                frappe.logger().info(f"File {doc.name} already on S3, skipping")
+                return
 
-            # Upload to S3
-            s3_url = upload_file_to_s3(doc, file_content)
+            # Skip if no local file
+            if not doc.file_url or not doc.file_url.startswith('/'):
+                frappe.logger().info(f"File {doc.name} has no local URL, skipping")
+                return
+
+            frappe.logger().info(f"Processing file {doc.name} for S3 upload")
+
+            # Get the file content from local path
+            try:
+                file_path = doc.get_full_path()
+
+                if not file_path or not frappe.utils.os.path.exists(file_path):
+                    frappe.logger().error(f"File path not found: {file_path}")
+                    return
+
+                with open(file_path, 'rb') as f:
+                    file_content = f.read()
+
+                frappe.logger().info(f"Uploading {doc.file_name} to S3 ({len(file_content)} bytes)")
+
+                # Upload to S3
+                s3_url = upload_file_to_s3(doc, file_content)
+
+                if s3_url:
+                    # Update file document with S3 URL
+                    frappe.db.set_value('File', doc.name, 'file_url', s3_url, update_modified=False)
+
+                    # IMPORTANT: Update parent record's attachment field if this file is attached
+                    if doc.attached_to_doctype and doc.attached_to_name and doc.attached_to_field:
+                        try:
+                            # Update the parent record's attachment field with the S3 URL
+                            frappe.db.set_value(doc.attached_to_doctype, doc.attached_to_name,
+                                              doc.attached_to_field, s3_url, update_modified=False)
+                            frappe.logger().info(f"✅ Updated parent record {doc.attached_to_doctype}/{doc.attached_to_name} field {doc.attached_to_field}")
+                        except Exception as e:
+                            frappe.logger().error(f"Failed to update parent record: {str(e)}")
+
+                    frappe.db.commit()
+                    frappe.logger().info(f"✅ File {doc.name} uploaded to S3: {s3_url}")
+                else:
+                    frappe.logger().error(f"Failed to upload {doc.name} to S3")
+
+            except Exception as e:
+                # If we can't access the file path (maybe it's already S3), skip
+                if 's3://' in str(e) or 'Cannot access file path s3://' in str(e):
+                    frappe.logger().info(f"File {doc.name} appears to already be on S3, skipping")
+                    return
+                else:
+                    # Log error but don't break the file creation process
+                    frappe.logger().error(f"S3 upload error for {doc.name}: {str(e)}")
+
         except Exception as e:
-            # If we can't access the file path (maybe it's already S3), skip
-            if 's3://' in str(e) or 'Cannot access file path s3://' in str(e):
-                frappe.logger().info(f"File {doc.name} appears to already be on S3, skipping")
-                return
-            else:
-                # Re-raise other errors
-                raise
+            # Log error but don't fail the upload - file is still saved locally
+            frappe.log_error(f"S3 upload failed for file {doc.name}: {str(e)}", "Flansa S3 Doc Event")
+            frappe.logger().error(f"S3 doc event failed: {str(e)}")
 
-        if s3_url:
-            # Update file document with S3 URL
-            frappe.db.set_value('File', doc.name, 'file_url', s3_url, update_modified=False)
-
-            # IMPORTANT: Update parent record's attachment field if this file is attached
-            if doc.attached_to_doctype and doc.attached_to_name and doc.attached_to_field:
-                try:
-                    # Update the parent record's attachment field with the S3 URL
-                    frappe.db.set_value(doc.attached_to_doctype, doc.attached_to_name,
-                                      doc.attached_to_field, s3_url, update_modified=False)
-                    frappe.logger().info(f"✅ Updated parent record {doc.attached_to_doctype}/{doc.attached_to_name} field {doc.attached_to_field}")
-                except Exception as e:
-                    frappe.logger().error(f"Failed to update parent record: {str(e)}")
-
-            frappe.db.commit()
-
-            frappe.logger().info(f"✅ File {doc.name} uploaded to S3: {s3_url}")
-
-            # Optionally delete local file after successful S3 upload
-            # import os
-            # if os.path.exists(file_path):
-            #     os.remove(file_path)
-            #     frappe.logger().info(f"Deleted local file: {file_path}")
-        else:
-            frappe.logger().error(f"Failed to upload {doc.name} to S3")
-
-    except Exception as e:
-        frappe.log_error(f"S3 upload failed for file {doc.name}: {str(e)}", "Flansa S3 Doc Event")
-        frappe.logger().error(f"S3 doc event failed: {str(e)}")
-        import traceback
-        frappe.logger().error(f"Traceback: {traceback.format_exc()}")
+    # Execute S3 processing after current transaction completes
+    frappe.enqueue(process_s3_upload, queue='default', timeout=300)
