@@ -46,6 +46,17 @@ def upload_to_s3_after_insert(doc, method):
         if s3_url:
             # Update file document with S3 URL
             frappe.db.set_value('File', doc.name, 'file_url', s3_url, update_modified=False)
+
+            # IMPORTANT: Update parent record's attachment field if this file is attached
+            if doc.attached_to_doctype and doc.attached_to_name and doc.attached_to_field:
+                try:
+                    # Update the parent record's attachment field with the S3 URL
+                    frappe.db.set_value(doc.attached_to_doctype, doc.attached_to_name,
+                                      doc.attached_to_field, s3_url, update_modified=False)
+                    frappe.logger().info(f"✅ Updated parent record {doc.attached_to_doctype}/{doc.attached_to_name} field {doc.attached_to_field}")
+                except Exception as e:
+                    frappe.logger().error(f"Failed to update parent record: {str(e)}")
+
             frappe.db.commit()
 
             frappe.logger().info(f"✅ File {doc.name} uploaded to S3: {s3_url}")
