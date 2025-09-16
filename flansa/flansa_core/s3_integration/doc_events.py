@@ -16,8 +16,8 @@ def upload_to_s3_after_insert(doc, method):
         return
 
     try:
-        # Skip if already on S3
-        if doc.file_url and ('s3' in doc.file_url.lower() or 'amazonaws' in doc.file_url.lower()):
+        # Skip if already on S3 (check for both s3:// and https:// S3 URLs)
+        if doc.file_url and ('s3://' in doc.file_url or 's3' in doc.file_url.lower() or 'amazonaws' in doc.file_url.lower()):
             frappe.logger().info(f"File {doc.name} already on S3, skipping")
             return
 
@@ -28,20 +28,29 @@ def upload_to_s3_after_insert(doc, method):
 
         frappe.logger().info(f"Processing file {doc.name} for S3 upload")
 
-        # Get the file content
-        file_path = doc.get_full_path()
+        # Get the file content from local path
+        try:
+            file_path = doc.get_full_path()
 
-        if not file_path or not frappe.utils.os.path.exists(file_path):
-            frappe.logger().error(f"File path not found: {file_path}")
-            return
+            if not file_path or not frappe.utils.os.path.exists(file_path):
+                frappe.logger().error(f"File path not found: {file_path}")
+                return
 
-        with open(file_path, 'rb') as f:
-            file_content = f.read()
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
 
-        frappe.logger().info(f"Uploading {doc.file_name} to S3 ({len(file_content)} bytes)")
+            frappe.logger().info(f"Uploading {doc.file_name} to S3 ({len(file_content)} bytes)")
 
-        # Upload to S3
-        s3_url = upload_file_to_s3(doc, file_content)
+            # Upload to S3
+            s3_url = upload_file_to_s3(doc, file_content)
+        except Exception as e:
+            # If we can't access the file path (maybe it's already S3), skip
+            if 's3://' in str(e) or 'Cannot access file path s3://' in str(e):
+                frappe.logger().info(f"File {doc.name} appears to already be on S3, skipping")
+                return
+            else:
+                # Re-raise other errors
+                raise
 
         if s3_url:
             # Update file document with S3 URL
