@@ -8,7 +8,7 @@ import frappe
 from flansa.flansa_core.s3_integration.s3_upload import upload_file_to_s3
 
 def upload_to_s3_after_insert(doc, method):
-    """Upload file to S3 after it's inserted in the database - SAFE VERSION"""
+    """Upload file to S3 after it's inserted in the database - DIRECT VERSION"""
 
     try:
         # Quick checks first - never let S3 processing break file uploads
@@ -24,17 +24,64 @@ def upload_to_s3_after_insert(doc, method):
         if not doc.file_url or not doc.file_url.startswith('/'):
             return
 
-        # Process in background to avoid blocking file creation
-        frappe.enqueue(
-            'flansa.flansa_core.s3_integration.doc_events.process_s3_upload_background',
-            doc_name=doc.name,
-            queue='default',
-            timeout=300
-        )
+        # Process S3 upload directly but safely
+        process_s3_upload_safe(doc)
 
     except Exception as e:
         # Never let S3 processing break file uploads
         frappe.logger().error(f"S3 hook error (non-blocking): {str(e)}")
+
+
+def process_s3_upload_safe(doc):
+    """Safe S3 processing that won't break file uploads"""
+
+    try:
+        frappe.logger().info(f"Processing file {doc.name} for S3 upload")
+
+        # Get file content safely
+        try:
+            file_path = doc.get_full_path()
+
+            if not file_path or not frappe.utils.os.path.exists(file_path):
+                frappe.logger().error(f"File not found for S3 upload: {file_path}")
+                return
+
+            with open(file_path, 'rb') as f:
+                file_content = f.read()
+
+            frappe.logger().info(f"Uploading {doc.file_name} to S3 ({len(file_content)} bytes)")
+
+            # Upload to S3
+            s3_url = upload_file_to_s3(doc, file_content)
+
+            if s3_url:
+                # Update file document
+                frappe.db.set_value('File', doc.name, 'file_url', s3_url, update_modified=False)
+
+                # Update parent record if attached
+                if doc.attached_to_doctype and doc.attached_to_name and doc.attached_to_field:
+                    try:
+                        frappe.db.set_value(
+                            doc.attached_to_doctype,
+                            doc.attached_to_name,
+                            doc.attached_to_field,
+                            s3_url,
+                            update_modified=False
+                        )
+                        frappe.logger().info(f"Updated parent record with S3 URL: {doc.attached_to_doctype}/{doc.attached_to_name}")
+                    except Exception as e:
+                        frappe.logger().error(f"Failed to update parent record: {str(e)}")
+
+                frappe.db.commit()
+                frappe.logger().info(f"✅ File {doc.name} successfully uploaded to S3")
+            else:
+                frappe.logger().error(f"S3 upload returned None for {doc.name}")
+
+        except Exception as e:
+            frappe.logger().error(f"Error processing file {doc.name}: {str(e)}")
+
+    except Exception as e:
+        frappe.logger().error(f"S3 upload processing failed: {str(e)}")
 
 
 def process_s3_upload_background(doc_name):
