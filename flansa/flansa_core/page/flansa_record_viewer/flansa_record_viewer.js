@@ -1558,6 +1558,9 @@ class FlansaRecordViewer {
                 </div>`;
             } else if (field.fieldtype === 'Attach' || field.fieldtype === 'Attach Image') {
                 html += this.render_attachment_field(field, fieldValue, fieldName, isReadonly);
+            } else if (field.fieldtype === 'Button') {
+                // Only show button in view mode
+                html += this.render_button_field(field, fieldValue, fieldName);
             } else {
                 html += `<div class="form-control-static ${readOnlyClass}" style="${readOnlyStyle}">
                     ${this.escapeHtml(fieldValue) || '<em class="text-muted">No value</em>'}
@@ -1590,7 +1593,13 @@ class FlansaRecordViewer {
                     html += this.render_attachment_field(field, fieldValue, fieldName, isReadonly);
                     break;
                 case 'Button':
-                    html += this.render_button_field(field, fieldValue, fieldName);
+                    // Button fields don't store values and shouldn't be editable
+                    // In edit mode, show a disabled field explaining it's a button
+                    html += `
+                        <div class="form-control-static text-muted" style="background: #f8f9fa; padding: 8px 12px; border-radius: 4px;">
+                            <i class="fa fa-info-circle"></i> Button field - triggers actions only (no value stored)
+                        </div>
+                    `;
                     break;
                 default:
                     // Check if this is a URL field (Data field with URL subtype)
