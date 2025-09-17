@@ -2129,6 +2129,21 @@ class EnhancedFlansaTableBuilder {
                                         <div class="field-type-name">Dropdown</div>
                                         <div class="field-type-desc">Select from options</div>
                                     </div>
+                                    <div class="field-type-card" data-type="Attach">
+                                        <div class="field-type-icon">📎</div>
+                                        <div class="field-type-name">Attachment</div>
+                                        <div class="field-type-desc">File upload field</div>
+                                    </div>
+                                    <div class="field-type-card" data-type="Data" data-subtype="url">
+                                        <div class="field-type-icon">🔗</div>
+                                        <div class="field-type-name">URL</div>
+                                        <div class="field-type-desc">Website links</div>
+                                    </div>
+                                    <div class="field-type-card" data-type="Button">
+                                        <div class="field-type-icon">🔘</div>
+                                        <div class="field-type-name">Button</div>
+                                        <div class="field-type-desc">Action buttons</div>
+                                    </div>
                                 </div>
                             </div>
                             
@@ -2217,21 +2232,23 @@ class EnhancedFlansaTableBuilder {
         // Handle field type selection
         dialog.$wrapper.on('click', '.field-type-card', (e) => {
             const fieldType = $(e.currentTarget).data('type');
+            const subtype = $(e.currentTarget).data('subtype');
             dialog.hide();
-            
+
             // Route all field types through unified dialog for consistency
             if (['Link', 'Fetch', 'Formula', 'Rollup'].includes(fieldType)) {
                 // Map logic field types to templates
                 const template_map = {
                     'Link': 'link',
-                    'Fetch': 'fetch', 
+                    'Fetch': 'fetch',
                     'Formula': 'formula',
                     'Rollup': 'rollup'
                 };
                 this.show_unified_field_dialog(this.table_id, null, template_map[fieldType]);
             } else {
                 // Route standard fields through unified dialog too
-                this.show_unified_field_dialog(this.table_id, null);
+                // Pass subtype for special handling (like URL)
+                this.show_unified_field_dialog(this.table_id, null, null, fieldType, subtype);
             }
         });
         
@@ -2843,7 +2860,7 @@ class EnhancedFlansaTableBuilder {
                     label: 'Field Type',
                     fieldname: 'field_type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach\nButton',
                     default: is_edit_mode ? field.field_type : (logic_field_template === 'link' ? 'Link' : 'Data'),
                     reqd: 1,
                     read_only: (logic_field_template === 'link' || (is_edit_mode && is_link_field)) ? 1 : 0
@@ -4065,7 +4082,7 @@ class EnhancedFlansaTableBuilder {
                     fieldname: 'field_type',
                     label: 'Field Type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach',
+                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach\nButton',
                     default: 'Data',
                     reqd: 1,
                     description: 'Type of data this field will store'

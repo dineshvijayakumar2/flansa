@@ -1589,8 +1589,16 @@ class FlansaRecordViewer {
                 case 'Attach Image':
                     html += this.render_attachment_field(field, fieldValue, fieldName, isReadonly);
                     break;
+                case 'Button':
+                    html += this.render_button_field(field, fieldValue, fieldName);
+                    break;
                 default:
-                    html += `<input type="text" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
+                    // Check if this is a URL field (Data field with URL subtype)
+                    if (fieldType === 'Data' && this.isUrlField(field, fieldValue)) {
+                        html += this.render_url_field(field, fieldValue, fieldName, isReadonly);
+                    } else {
+                        html += `<input type="text" class="form-control" name="${fieldName}" value="${this.escapeHtml(fieldValue)}">`;
+                    }
             }
         }
         
@@ -3071,6 +3079,71 @@ class FlansaRecordViewer {
         };
 
         return iconMap[ext] || 'fa-file-o';
+    }
+
+    // URL field helper methods
+    isUrlField(field, value) {
+        // Check if field is marked as URL type or if value looks like a URL
+        if (field && field.field_name && field.field_name.toLowerCase().includes('url')) {
+            return true;
+        }
+        if (field && field.field_label && field.field_label.toLowerCase().includes('url')) {
+            return true;
+        }
+        if (value && typeof value === 'string') {
+            // Basic URL pattern check
+            const urlPattern = /^https?:\/\//i;
+            return urlPattern.test(value.trim());
+        }
+        return false;
+    }
+
+    render_url_field(field, value, fieldName, isReadonly) {
+        if (isReadonly) {
+            // View mode - display as clickable link
+            if (value && value.trim()) {
+                const url = value.trim();
+                const displayUrl = url.length > 50 ? url.substring(0, 47) + '...' : url;
+                return `
+                    <div class="url-field-view" style="padding: 8px 0;">
+                        <a href="${url}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">
+                            <i class="fa fa-external-link" style="margin-right: 6px;"></i>
+                            ${this.escapeHtml(displayUrl)}
+                        </a>
+                    </div>
+                `;
+            } else {
+                return '<div class="text-muted">No URL provided</div>';
+            }
+        } else {
+            // Edit mode - input field with URL validation
+            return `
+                <div class="url-field-edit">
+                    <input type="url" class="form-control" name="${fieldName}"
+                           value="${this.escapeHtml(value || '')}"
+                           placeholder="https://example.com"
+                           pattern="https?://.*">
+                    <small class="form-text text-muted">Enter a valid URL starting with http:// or https://</small>
+                </div>
+            `;
+        }
+    }
+
+    render_button_field(field, value, fieldName) {
+        // Button fields don't store values, they trigger actions
+        const buttonLabel = field.field_label || field.field_name || 'Click Me';
+        const buttonId = `btn_${fieldName}_${Math.random().toString(36).substr(2, 9)}`;
+
+        return `
+            <div class="button-field" style="padding: 8px 0;">
+                <button type="button" class="btn btn-primary btn-sm custom-field-button"
+                        id="${buttonId}" data-field-name="${fieldName}">
+                    <i class="fa fa-play-circle" style="margin-right: 6px;"></i>
+                    ${this.escapeHtml(buttonLabel)}
+                </button>
+                <small class="form-text text-muted">Click to perform action</small>
+            </div>
+        `;
     }
 
 // Organize fields into sections using only form builder configuration
