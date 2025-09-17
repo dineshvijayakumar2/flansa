@@ -149,6 +149,17 @@ class FlansaReportViewer {
             this.change_tile_size(size);
         });
         
+        // Force download button events for attachments
+        $(document).on('click', '.report-force-download-btn', (e) => {
+            e.preventDefault();
+            const downloadId = $(e.currentTarget).data('download-id');
+            const downloadData = window.flansaDownloadMap && window.flansaDownloadMap[downloadId];
+
+            if (downloadData) {
+                this.force_download_file(downloadData.url, downloadData.filename);
+            }
+        });
+
         // Image click events - use event delegation for dynamically created elements
         $(document).on('click', '.table-thumbnail', (e) => {
             const recordIndex = $(e.target).closest('tr').index();
@@ -156,7 +167,7 @@ class FlansaReportViewer {
             const field = this.current_report_config.selected_fields[fieldIndex];
             this.open_image_lightbox(recordIndex, field.fieldname, 0);
         });
-        
+
         $(document).on('click', '.gallery-card-image', (e) => {
             const card = $(e.target).closest('.gallery-card');
             const recordName = card.data('record-name');
@@ -1209,12 +1220,17 @@ class FlansaReportViewer {
             case 'Currency':
                 return frappe.format(value, {fieldtype: 'Currency'});
             case 'Attach':
-                // Display attachment as hyperlinked file name
+                // Display attachment as downloadable file link
                 const filename = this.getFileNameFromUrl(value);
-                return `<a href="${value}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">
-                    <i class="fa fa-paperclip" style="margin-right: 4px;"></i>
+                const downloadId = 'download_' + Math.random().toString(36).substr(2, 9);
+                // Store in a temporary map for event handling
+                if (!window.flansaDownloadMap) window.flansaDownloadMap = {};
+                window.flansaDownloadMap[downloadId] = { url: value, filename: filename };
+
+                return `<button type="button" class="report-force-download-btn" data-download-id="${downloadId}" style="color: #007bff; background: none; border: none; padding: 0; cursor: pointer; text-decoration: none;">
+                    <i class="fa fa-download" style="margin-right: 4px;"></i>
                     ${filename || 'Download File'}
-                </a>`;
+                </button>`;
             default:
                 return value;
         }
@@ -1230,6 +1246,40 @@ class FlansaReportViewer {
             return parts[parts.length - 1] || 'Download File';
         } catch (e) {
             return 'Download File';
+        }
+    }
+
+    // Force download file instead of opening in browser
+    force_download_file(url, filename) {
+        try {
+            // Use fetch to get the file as a blob
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create a blob URL and trigger download
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = filename || 'download';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                })
+                .catch(error => {
+                    console.error('Download failed:', error);
+                    // Fallback: open in new tab
+                    window.open(url, '_blank');
+                });
+        } catch (error) {
+            console.error('Force download error:', error);
+            // Fallback: open in new tab
+            window.open(url, '_blank');
         }
     }
     

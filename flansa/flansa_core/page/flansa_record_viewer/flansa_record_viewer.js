@@ -2708,6 +2708,17 @@ class FlansaRecordViewer {
                 this.clear_attachment(fieldName);
             });
         });
+
+        // Force download button
+        const downloadBtns = content.querySelectorAll('.force-download-btn');
+        downloadBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const url = btn.dataset.url;
+                const filename = btn.dataset.filename;
+                this.force_download_file(url, filename);
+            });
+        });
     }
     
     upload_attachment(fieldName) {
@@ -2870,6 +2881,50 @@ class FlansaRecordViewer {
             }
         });
     }
+
+    force_download_file(url, filename) {
+        // Create a temporary link element to force download
+        try {
+            // Use fetch to get the file as blob to force download
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('File download failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create object URL for the blob
+                    const blobUrl = window.URL.createObjectURL(blob);
+
+                    // Create temporary link and click it
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = filename || 'download';
+                    document.body.appendChild(link);
+                    link.click();
+
+                    // Clean up
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                })
+                .catch(error => {
+                    console.error('Download failed:', error);
+                    // Fallback to direct link if fetch fails
+                    const link = document.createElement('a');
+                    link.href = url;
+                    link.download = filename || 'download';
+                    link.target = '_blank';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+        } catch (error) {
+            console.error('Force download error:', error);
+            // Final fallback
+            window.open(url, '_blank');
+        }
+    }
     
     refresh_attachment_display(fieldName, newValue) {
         const container = document.querySelector(`.attachment-edit-container[data-field-name="${fieldName}"]`);
@@ -2944,9 +2999,9 @@ class FlansaRecordViewer {
                     </div>
                 </div>
                 <div class="attachment-actions" style="margin-top: 8px;">
-                    <a href="${value}" download="${fileName}" class="btn btn-sm btn-primary">
+                    <button type="button" class="btn btn-sm btn-primary force-download-btn" data-url="${value}" data-filename="${fileName}">
                         <i class="fa fa-download"></i> Download
-                    </a>
+                    </button>
                     <a href="${value}" target="_blank" class="btn btn-sm btn-default">
                         <i class="fa fa-external-link"></i> Open
                     </a>

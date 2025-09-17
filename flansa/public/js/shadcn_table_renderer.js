@@ -163,6 +163,9 @@ class FlansaShadcnTableRenderer {
         // Handle different field types
         if (this.isImageField(field)) {
             cell.appendChild(this.createImageCell(value, field, recordIndex));
+        } else if (field.fieldtype === 'Attach') {
+            // Handle attachment fields with download buttons
+            cell.appendChild(this.createAttachmentCell(value, field));
         } else if (fieldIndex === 0 || field === this.primaryField) {
             // Primary field - make it prominent
             cell.className += ' font-medium';
@@ -282,7 +285,91 @@ class FlansaShadcnTableRenderer {
         
         return container;
     }
-    
+
+    createAttachmentCell(value, field) {
+        const container = document.createElement('div');
+        container.className = 'flex items-center gap-2';
+
+        if (!value) {
+            container.className += ' text-muted-foreground italic';
+            container.textContent = '—';
+            return container;
+        }
+
+        // Extract filename from URL
+        const filename = this.getFileNameFromUrl(value);
+        const downloadId = 'download_' + Math.random().toString(36).substr(2, 9);
+
+        // Store in global download map for event handling
+        if (!window.flansaDownloadMap) window.flansaDownloadMap = {};
+        window.flansaDownloadMap[downloadId] = { url: value, filename: filename };
+
+        // Create download button
+        const downloadBtn = document.createElement('button');
+        downloadBtn.type = 'button';
+        downloadBtn.className = 'shadcn-force-download-btn inline-flex items-center gap-1 px-2 py-1 text-xs bg-blue-50 text-blue-600 rounded hover:bg-blue-100 border border-blue-200';
+        downloadBtn.dataset.downloadId = downloadId;
+        downloadBtn.innerHTML = `
+            <svg width="12" height="12" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd"/>
+            </svg>
+            ${filename || 'Download'}
+        `;
+
+        // Add click handler
+        downloadBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const downloadData = window.flansaDownloadMap[downloadId];
+            if (downloadData) {
+                this.forceDownloadFile(downloadData.url, downloadData.filename);
+            }
+        });
+
+        container.appendChild(downloadBtn);
+        return container;
+    }
+
+    getFileNameFromUrl(url) {
+        if (!url) return '';
+        try {
+            const cleanUrl = url.split('?')[0];
+            const parts = cleanUrl.split('/');
+            return parts[parts.length - 1] || 'Download File';
+        } catch (e) {
+            return 'Download File';
+        }
+    }
+
+    forceDownloadFile(url, filename) {
+        try {
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    const blobUrl = window.URL.createObjectURL(blob);
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = filename || 'download';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    window.URL.revokeObjectURL(blobUrl);
+                })
+                .catch(error => {
+                    console.error('Download failed:', error);
+                    window.open(url, '_blank');
+                });
+        } catch (error) {
+            console.error('Force download error:', error);
+            window.open(url, '_blank');
+        }
+    }
+
     createActionsCell(record, recordIndex) {
         const cell = document.createElement('td');
         cell.className = 'flansa-shadcn-table-cell text-right';
@@ -352,9 +439,12 @@ class FlansaShadcnTableRenderer {
     }
     
     isImageField(field) {
-        return ['Attach Image', 'Attach'].includes(field.fieldtype) || 
-               field.fieldname.toLowerCase().includes('image') ||
-               this.imageFields.includes(field.fieldname);
+        // Only treat Gallery fields (Long Text) as image fields for lightbox viewer
+        // Gallery fields are stored as Long Text with JSON array of image URLs
+        return field.fieldtype === 'Long Text' &&
+               (field.fieldname.toLowerCase().includes('gallery') ||
+                field.fieldname.toLowerCase().includes('image') ||
+                this.imageFields.includes(field.fieldname));
     }
     
     // EXACT copy of working Report Viewer image extraction methods
