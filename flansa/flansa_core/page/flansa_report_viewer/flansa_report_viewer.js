@@ -162,10 +162,8 @@ class FlansaReportViewer {
             const recordName = card.data('record-name');
             const recordIndex = this.current_report_data.data.findIndex(r => r.name === recordName);
             const currentImageIndex = parseInt(card.data('current-image')) || 0;
-            const image_fields = this.current_report_config.selected_fields.filter(f => 
-                ['Attach Image', 'Attach'].includes(f.fieldtype) || 
-                f.fieldname.toLowerCase().includes('image')
-            );
+            // No special image field treatment - removed image handling
+            const image_fields = [];
             if (image_fields.length > 0) {
                 this.open_image_lightbox(recordIndex, image_fields[0].fieldname, currentImageIndex);
             }
@@ -990,11 +988,8 @@ class FlansaReportViewer {
     }
     
     create_tile_card(record) {
-        // Check for image fields
-        const image_fields = this.current_report_config.selected_fields.filter(f => 
-            ['Attach Image', 'Attach'].includes(f.fieldtype) || 
-            f.fieldname.toLowerCase().includes('image')
-        );
+        // No special image field treatment - all attachments are treated as files
+        const image_fields = [];
         
         // Collect all valid image URLs from image fields
         const image_urls = [];
@@ -1011,15 +1006,15 @@ class FlansaReportViewer {
         }
         
         // Find title field
-        const title_field = this.current_report_config.selected_fields.find(f => 
-            !['Attach Image', 'Attach', 'Long Text', 'Text Editor'].includes(f.fieldtype) && 
+        const title_field = this.current_report_config.selected_fields.find(f =>
+            !['Attach', 'Long Text', 'Text Editor'].includes(f.fieldtype) &&
             f.fieldname !== 'name'
         );
         const title = title_field ? record[title_field.fieldname] : record.name || 'Untitled';
         
-        // Get metadata fields
-        const metadata_fields = this.current_report_config.selected_fields.filter(f => 
-            !['Attach Image', 'Attach', 'Long Text', 'Text Editor'].includes(f.fieldtype) && 
+        // Get metadata fields (including Attach fields for file links)
+        const metadata_fields = this.current_report_config.selected_fields.filter(f =>
+            !['Long Text', 'Text Editor'].includes(f.fieldtype) &&
             f.fieldname !== 'name' &&
             f.fieldname !== (title_field ? title_field.fieldname : null)
         ).slice(0, 4);
@@ -1205,7 +1200,7 @@ class FlansaReportViewer {
     
     format_field_value(value, fieldtype) {
         if (!value) return '';
-        
+
         switch (fieldtype) {
             case 'Date':
                 return moment(value).format('MMM DD, YYYY');
@@ -1213,8 +1208,28 @@ class FlansaReportViewer {
                 return moment(value).format('MMM DD, YYYY HH:mm');
             case 'Currency':
                 return frappe.format(value, {fieldtype: 'Currency'});
+            case 'Attach':
+                // Display attachment as hyperlinked file name
+                const filename = this.getFileNameFromUrl(value);
+                return `<a href="${value}" target="_blank" rel="noopener noreferrer" style="color: #007bff; text-decoration: none;">
+                    <i class="fa fa-paperclip" style="margin-right: 4px;"></i>
+                    ${filename || 'Download File'}
+                </a>`;
             default:
                 return value;
+        }
+    }
+
+    // Helper method to extract filename from URL
+    getFileNameFromUrl(url) {
+        if (!url) return '';
+        try {
+            // Remove query parameters and get the last part of the path
+            const cleanUrl = url.split('?')[0];
+            const parts = cleanUrl.split('/');
+            return parts[parts.length - 1] || 'Download File';
+        } catch (e) {
+            return 'Download File';
         }
     }
     
@@ -1392,11 +1407,8 @@ class FlansaReportViewer {
     
     // Helper methods for Shadcn Table Renderer
     getImageFieldNames() {
-        if (!this.current_report_config.selected_fields) return [];
-        return this.current_report_config.selected_fields
-            .filter(f => ['Attach Image', 'Attach'].includes(f.fieldtype) || 
-                        f.fieldname.toLowerCase().includes('image'))
-            .map(f => f.fieldname);
+        // No image field treatment - return empty array
+        return [];
     }
     
     getPrimaryField() {
@@ -1404,13 +1416,12 @@ class FlansaReportViewer {
             return null;
         }
         
-        // Return first non-image field as primary, or first field if all are images
-        const nonImageFields = this.current_report_config.selected_fields.filter(f => 
-            !['Attach Image', 'Attach'].includes(f.fieldtype) && 
-            !f.fieldname.toLowerCase().includes('image')
+        // Return first non-attachment field as primary, or first field if all are attachments
+        const nonAttachmentFields = this.current_report_config.selected_fields.filter(f =>
+            f.fieldtype !== 'Attach'
         );
         
-        return nonImageFields.length > 0 ? nonImageFields[0] : this.current_report_config.selected_fields[0];
+        return nonAttachmentFields.length > 0 ? nonAttachmentFields[0] : this.current_report_config.selected_fields[0];
     }
     
     /**
