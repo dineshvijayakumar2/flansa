@@ -2431,7 +2431,20 @@ class FlansaRecordViewer {
 
                 const uploadResult = await this.upload_single_file(file);
                 if (uploadResult && uploadResult.file_url) {
+                    // Enhanced Airtable-like format with more metadata
                     uploadedImages.push({
+                        id: uploadResult.name || `img_${Date.now()}_${i}`,
+                        url: uploadResult.file_url,
+                        filename: uploadResult.file_name || file.name,
+                        size: file.size,
+                        type: file.type,
+                        width: null,  // Will be populated if needed
+                        height: null, // Will be populated if needed
+                        thumbnails: {
+                            small: uploadResult.file_url,
+                            large: uploadResult.file_url
+                        },
+                        // Legacy compatibility
                         file_url: uploadResult.file_url,
                         file_name: uploadResult.file_name || file.name,
                         description: 'Gallery Image'
@@ -2481,14 +2494,14 @@ class FlansaRecordViewer {
             formData.append('is_private', 1); // Fix: Upload as private file
             formData.append('folder', 'Home/Attachments');
 
-            // Fix: Handle attachment for both new and existing records
+            // Fix: Always set doctype for proper S3 organization
+            formData.append('attached_to_doctype', this.table_name);
+
             if (this.mode === 'edit' && this.record_id) {
-                // For existing records, attach to the record
-                formData.append('attached_to_doctype', this.table_name);
+                // For existing records, attach to the specific record
                 formData.append('attached_to_name', this.record_id);
             } else {
-                // For new records, don't attach yet - will be handled on save
-                formData.append('attached_to_doctype', '');
+                // For new records, attach to doctype but no specific record yet
                 formData.append('attached_to_name', '');
             }
             
