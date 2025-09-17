@@ -121,15 +121,15 @@ def _generate_s3_key(base_folder, file_doc):
                 # This looks like a Flansa generated table ID - keep it as-is
                 parent_identifier = file_doc.attached_to_doctype
 
-        # If we have the specific record ID, we could include it too
+        # If we have the specific record ID, include it for better organization
+        record_prefix = ""
         if hasattr(file_doc, 'attached_to_name') and file_doc.attached_to_name:
-            # Optional: include record ID for even more specific organization
-            # parent_identifier = f"{parent_identifier}_{file_doc.attached_to_name}"
-            pass
+            # Use the actual record ID (like REC-00012) as prefix instead of file doc name
+            record_prefix = f"{file_doc.attached_to_name}_"
 
-        # Build organized path: base/tenant/attachments/table_or_doctype/year/month/file
-        # Skip file type categorization as requested
-        s3_key = f"{base_folder}/{workspace_id}/attachments/{parent_identifier}/{year}/{month}/{file_doc.name}_{file_doc.file_name}"
+        # Build organized path: base/tenant/attachments/table_or_doctype/year/month/record_id_filename
+        # Using record ID instead of file doc name for better identification
+        s3_key = f"{base_folder}/{workspace_id}/attachments/{parent_identifier}/{year}/{month}/{record_prefix}{file_doc.file_name}"
 
         frappe.logger().info(f"Generated S3 key: {s3_key}")
         return s3_key
@@ -137,7 +137,9 @@ def _generate_s3_key(base_folder, file_doc):
     except Exception as e:
         # Fallback to simple structure if anything fails
         frappe.logger().error(f"Error generating S3 key: {e}, falling back to simple structure")
-        return f"{base_folder}/{file_doc.name}_{file_doc.file_name}"
+        # Use attached_to_name if available, otherwise use file doc name
+        prefix = file_doc.attached_to_name if hasattr(file_doc, 'attached_to_name') and file_doc.attached_to_name else file_doc.name
+        return f"{base_folder}/{prefix}_{file_doc.file_name}"
 
 
 

@@ -2809,22 +2809,63 @@ class FlansaRecordViewer {
     clear_attachment(fieldName) {
         // Confirm before clearing
         frappe.confirm('Are you sure you want to remove this attachment?', () => {
-            // Update the field value
-            this.record_data[fieldName] = '';
-            
-            // Update the hidden input
-            const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
-            if (hiddenInput) {
-                hiddenInput.value = '';
+            const currentValue = this.record_data[fieldName];
+
+            if (currentValue) {
+                // Call server method to properly delete the File document
+                frappe.call({
+                    method: 'flansa.flansa_core.api.attachment_handler.remove_attachment',
+                    args: {
+                        doctype: this.doctype,
+                        name: this.record_id,
+                        fieldname: fieldName,
+                        file_url: currentValue
+                    },
+                    callback: (r) => {
+                        if (r.message && r.message.success) {
+                            // Update the field value locally
+                            this.record_data[fieldName] = '';
+
+                            // Update the hidden input
+                            const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+                            if (hiddenInput) {
+                                hiddenInput.value = '';
+                            }
+
+                            // Refresh the attachment display
+                            this.refresh_attachment_display(fieldName, '');
+
+                            frappe.show_alert({
+                                message: 'Attachment removed successfully',
+                                indicator: 'green'
+                            });
+                        } else {
+                            frappe.show_alert({
+                                message: r.message?.message || 'Failed to remove attachment',
+                                indicator: 'red'
+                            });
+                        }
+                    },
+                    error: (r) => {
+                        frappe.show_alert({
+                            message: 'Failed to remove attachment',
+                            indicator: 'red'
+                        });
+                    }
+                });
+            } else {
+                // No file to remove, just clear the display
+                this.record_data[fieldName] = '';
+                const hiddenInput = document.querySelector(`input[name="${fieldName}"]`);
+                if (hiddenInput) {
+                    hiddenInput.value = '';
+                }
+                this.refresh_attachment_display(fieldName, '');
+                frappe.show_alert({
+                    message: 'Field cleared',
+                    indicator: 'green'
+                });
             }
-            
-            // Refresh the attachment display
-            this.refresh_attachment_display(fieldName, '');
-            
-            frappe.show_alert({
-                message: 'Attachment removed',
-                indicator: 'green'
-            });
         });
     }
     
