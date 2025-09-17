@@ -71,7 +71,7 @@ def remove_attachment(doctype, name, fieldname, file_url):
 '''
 
         # Write the API method
-        api_file_path = "/home/ubuntu/frappe-bench/apps/flansa/flansa/flansa_core/api/attachment_handler.py"
+        api_file_path = "/home/frappe/frappe-bench/apps/flansa/flansa/flansa_core/api/attachment_handler.py"
         with open(api_file_path, "w") as f:
             f.write(api_content)
 

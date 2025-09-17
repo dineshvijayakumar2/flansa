@@ -226,10 +226,7 @@ class FlansaRecordViewer {
             return `
                 <div class="action-dropdown">
                     <button class="sleek-btn primary" id="save-record">
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z" />
-                            <path d="M3 14a1 1 0 011-1h1V9a1 1 0 012 0v4h4V9a1 1 0 012 0v4h1a1 1 0 110 2H4a1 1 0 01-1-1z" />
-                        </svg>
+                        <i class="fa fa-save"></i>
                         <span>Save</span>
                     </button>
                 </div>
@@ -245,10 +242,7 @@ class FlansaRecordViewer {
             return `
                 <div class="action-dropdown">
                     <button class="sleek-btn primary" id="save-record">
-                        <svg width="16" height="16" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M7.707 10.293a1 1 0 10-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 11.586V6a1 1 0 10-2 0v5.586l-1.293-1.293z" />
-                            <path d="M3 14a1 1 0 011-1h1V9a1 1 0 012 0v4h4V9a1 1 0 012 0v4h1a1 1 0 110 2H4a1 1 0 01-1-1z" />
-                        </svg>
+                        <i class="fa fa-save"></i>
                         <span>Save</span>
                     </button>
                 </div>
@@ -2885,7 +2879,7 @@ class FlansaRecordViewer {
         const isImage = field.fieldtype === 'Attach Image';
         
         // Re-render the preview area
-        previewArea.innerHTML = this.render_attachment_current(newValue, isImage);
+        previewArea.innerHTML = this.render_attachment_current(newValue);
         
         // Update controls (show/hide Remove button)
         const hasFile = newValue && newValue.trim() !== '';
@@ -2928,60 +2922,39 @@ class FlansaRecordViewer {
         if (!value) {
             return '<div class="text-muted">No attachment</div>';
         }
-        
-        const isImage = field.fieldtype === 'Attach Image' || this.isImageFile(value);
+
         const fileName = this.getFileNameFromUrl(value);
-        
-        if (isImage) {
-            return `
-                <div class="attachment-view-container">
-                    <div class="attachment-preview" style="margin-bottom: 10px;">
-                        <img src="${value}" alt="${fileName}" 
-                             style="max-width: 300px; max-height: 200px; border-radius: 4px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); cursor: pointer;"
-                             title="Click to view full size">
-                    </div>
-                    <div class="attachment-info" style="font-size: 12px; color: #6c757d;">
-                        <i class="fa fa-image"></i> ${fileName}
-                        <a href="${value}" target="_blank" class="btn btn-xs btn-default" style="margin-left: 8px;">
-                            <i class="fa fa-external-link"></i> Open
-                        </a>
+
+        // Unified attachment display with paper clip icon
+        return `
+            <div class="attachment-view-container">
+                <div class="attachment-file" style="padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center;">
+                    <i class="fa fa-paperclip" style="font-size: 24px; color: #6c757d; margin-right: 12px;"></i>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 500;">${fileName}</div>
+                        <div style="font-size: 11px; color: #6c757d;">Click to download</div>
                     </div>
                 </div>
-            `;
-        } else {
-            return `
-                <div class="attachment-view-container">
-                    <div class="attachment-file" style="padding: 12px; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; display: flex; align-items: center;">
-                        <i class="fa fa-file-o" style="font-size: 24px; color: #6c757d; margin-right: 12px;"></i>
-                        <div>
-                            <div style="font-weight: 500;">${fileName}</div>
-                            <div style="font-size: 11px; color: #6c757d;">Click to download</div>
-                        </div>
-                    </div>
-                    <div class="attachment-actions" style="margin-top: 8px;">
-                        <a href="${value}" target="_blank" class="btn btn-sm btn-primary">
-                            <i class="fa fa-download"></i> Download
-                        </a>
-                        <a href="${value}" target="_blank" class="btn btn-sm btn-default">
-                            <i class="fa fa-external-link"></i> Open
-                        </a>
-                    </div>
+                <div class="attachment-actions" style="margin-top: 8px;">
+                    <a href="${value}" download="${fileName}" class="btn btn-sm btn-primary">
+                        <i class="fa fa-download"></i> Download
+                    </a>
+                    <a href="${value}" target="_blank" class="btn btn-sm btn-default">
+                        <i class="fa fa-external-link"></i> Open
+                    </a>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
     
     render_attachment_edit(value, fieldName, field) {
-        const isImage = field.fieldtype === 'Attach Image';
-        const acceptTypes = isImage ? 'image/*' : '*';
         const currentFile = value ? this.getFileNameFromUrl(value) : null;
-        const isImageCurrent = value && this.isImageFile(value);
-        
+
         let html = `
             <div class="attachment-edit-container" data-field-name="${fieldName}">
                 <div class="attachment-controls" style="margin-bottom: 15px;">
                     <button type="button" class="btn btn-sm btn-primary upload-attachment">
-                        <i class="fa fa-upload"></i> ${currentFile ? 'Change' : 'Upload'} ${isImage ? 'Image' : 'File'}
+                        <i class="fa fa-upload"></i> ${currentFile ? 'Change' : 'Upload'} File
                     </button>
                     ${currentFile ? `
                         <button type="button" class="btn btn-sm btn-secondary clear-attachment">
@@ -2989,66 +2962,51 @@ class FlansaRecordViewer {
                         </button>
                     ` : ''}
                     <small class="text-muted" style="margin-left: 10px;">
-                        ${isImage ? 'JPG, PNG, GIF supported' : 'Any file type supported'} • Max 25MB
+                        Any file type supported • Max 25MB
                     </small>
                 </div>
-                
+
                 <div class="attachment-preview-area">
-                    ${this.render_attachment_current(value, isImage)}
+                    ${this.render_attachment_current(value)}
                 </div>
-                
+
                 <input type="hidden" name="${fieldName}" value="${this.escapeHtml(value || '')}">
-                <input type="file" class="attachment-file-input" accept="${acceptTypes}" style="display: none;">
+                <input type="file" class="attachment-file-input" accept="*" style="display: none;">
             </div>
         `;
-        
+
         return html;
     }
     
-    render_attachment_current(value, isImage) {
+    render_attachment_current(value) {
         if (!value) {
             return `
                 <div class="attachment-placeholder" style="padding: 40px; text-align: center; border: 2px dashed #ddd; border-radius: 8px; background: #fafafa; color: #6c757d;">
-                    <i class="fa fa-${isImage ? 'image' : 'file-o'}" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
-                    <div>No ${isImage ? 'image' : 'file'} selected</div>
-                    <div style="font-size: 12px; margin-top: 5px;">Click "${isImage ? 'Upload Image' : 'Upload File'}" to select</div>
+                    <i class="fa fa-paperclip" style="font-size: 48px; margin-bottom: 15px; opacity: 0.5;"></i>
+                    <div>No file selected</div>
+                    <div style="font-size: 12px; margin-top: 5px;">Click "Upload File" to select</div>
                 </div>
             `;
         }
-        
+
         const fileName = this.getFileNameFromUrl(value);
-        const isImageFile = this.isImageFile(value);
-        
-        if (isImage && isImageFile) {
-            return `
-                <div class="attachment-current-container" style="padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background: white;">
-                    <div class="current-image-preview" style="text-align: center; margin-bottom: 10px;">
-                        <img src="${value}" alt="${fileName}" 
-                             style="max-width: 250px; max-height: 150px; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer;"
-                             title="Click to view full size">
-                    </div>
-                    <div class="current-file-info" style="text-align: center; font-size: 12px; color: #6c757d;">
-                        <i class="fa fa-image"></i> ${fileName}
-                    </div>
-                </div>
-            `;
-        } else {
-            return `
-                <div class="attachment-current-container" style="padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background: white;">
-                    <div class="current-file-display" style="display: flex; align-items: center;">
-                        <i class="fa fa-file-o" style="font-size: 32px; color: #6c757d; margin-right: 15px;"></i>
-                        <div>
-                            <div style="font-weight: 500; margin-bottom: 4px;">${fileName}</div>
-                            <div style="font-size: 11px; color: #6c757d;">
-                                <a href="${value}" target="_blank" style="color: #007bff; text-decoration: none;">
-                                    <i class="fa fa-external-link"></i> View file
-                                </a>
-                            </div>
+
+        // Unified file display without image previews
+        return `
+            <div class="attachment-current-container" style="padding: 15px; border: 1px solid #dee2e6; border-radius: 8px; background: white;">
+                <div class="current-file-display" style="display: flex; align-items: center;">
+                    <i class="fa fa-paperclip" style="font-size: 32px; color: #6c757d; margin-right: 15px;"></i>
+                    <div>
+                        <div style="font-weight: 500; margin-bottom: 4px;">${fileName}</div>
+                        <div style="font-size: 11px; color: #6c757d;">
+                            <a href="${value}" target="_blank" style="color: #007bff; text-decoration: none;">
+                                <i class="fa fa-external-link"></i> View file
+                            </a>
                         </div>
                     </div>
                 </div>
-            `;
-        }
+            </div>
+        `;
     }
     
     // Utility methods for attachment handling
@@ -3062,7 +3020,59 @@ class FlansaRecordViewer {
         if (!url) return '';
         return url.split('/').pop().split('?')[0] || 'Unknown file';
     }
-    
+
+    getFileIcon(fileName) {
+        if (!fileName) return 'fa-file-o';
+
+        const ext = fileName.split('.').pop().toLowerCase();
+
+        // Map file extensions to Font Awesome icons
+        const iconMap = {
+            // Documents
+            'pdf': 'fa-file-pdf-o',
+            'doc': 'fa-file-word-o',
+            'docx': 'fa-file-word-o',
+            'xls': 'fa-file-excel-o',
+            'xlsx': 'fa-file-excel-o',
+            'ppt': 'fa-file-powerpoint-o',
+            'pptx': 'fa-file-powerpoint-o',
+            'txt': 'fa-file-text-o',
+            'csv': 'fa-file-text-o',
+
+            // Images
+            'jpg': 'fa-file-image-o',
+            'jpeg': 'fa-file-image-o',
+            'png': 'fa-file-image-o',
+            'gif': 'fa-file-image-o',
+            'svg': 'fa-file-image-o',
+            'bmp': 'fa-file-image-o',
+
+            // Archives
+            'zip': 'fa-file-archive-o',
+            'rar': 'fa-file-archive-o',
+            '7z': 'fa-file-archive-o',
+            'tar': 'fa-file-archive-o',
+            'gz': 'fa-file-archive-o',
+
+            // Media
+            'mp4': 'fa-file-video-o',
+            'avi': 'fa-file-video-o',
+            'mov': 'fa-file-video-o',
+            'mp3': 'fa-file-audio-o',
+            'wav': 'fa-file-audio-o',
+
+            // Code
+            'js': 'fa-file-code-o',
+            'json': 'fa-file-code-o',
+            'html': 'fa-file-code-o',
+            'css': 'fa-file-code-o',
+            'py': 'fa-file-code-o',
+            'xml': 'fa-file-code-o'
+        };
+
+        return iconMap[ext] || 'fa-file-o';
+    }
+
 // Organize fields into sections using only form builder configuration
     organize_fields_into_sections(fields) {
         // If we have form builder sections, use only those fields
