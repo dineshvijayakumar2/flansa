@@ -21,8 +21,32 @@ class EnhancedFlansaTableBuilder {
         this.table_data = null;
         this.fields = [];
         this.view_mode = 'list'; // 'list' or 'tile'
-        
+        this.field_types_cache = null; // Cache for field types
+
         this.init();
+    }
+
+    // Fetch field types from API (single source of truth)
+    async get_field_types() {
+        if (this.field_types_cache) {
+            return this.field_types_cache;
+        }
+
+        const response = await frappe.call({
+            method: 'flansa.flansa_core.api.field_management.get_field_types',
+            args: {}
+        });
+
+        // Convert field types array to options string for Select fields
+        const field_types = response.message.field_types;
+        const options_string = field_types.map(ft => ft.value).join('\n');
+
+        this.field_types_cache = {
+            array: field_types,
+            options_string: options_string
+        };
+
+        return this.field_types_cache;
     }
     
     async init() {
@@ -1861,10 +1885,10 @@ class EnhancedFlansaTableBuilder {
         });
         
         // Add Field menu options
-        $container.on('click', '#add-standard-field', (e) => {
+        $container.on('click', '#add-standard-field', async (e) => {
             e.preventDefault();
             $container.find('#add-field-dropdown').removeClass('show');
-            this.show_standard_field_creation_dialog();
+            await this.show_standard_field_creation_dialog();
         });
         
         $container.on('click', '#add-logic-field', (e) => {
@@ -2728,50 +2752,48 @@ class EnhancedFlansaTableBuilder {
         });
     }
     
-    show_unified_field_dialog(table_id, field = null, template_hint = null) {
+    async show_unified_field_dialog(table_id, field = null, template_hint = null) {
         const is_edit_mode = !!field;
         
         if (is_edit_mode) {
             // For edit mode, first detect if it's a Logic Field and then create appropriate dialog
-            this.detect_and_show_field_dialog(table_id, field);
+            await this.detect_and_show_field_dialog(table_id, field);
         } else {
             // For create mode, check if we have a template hint for Logic Fields
             const is_logic_field = template_hint && ['link', 'fetch', 'formula', 'rollup'].includes(template_hint);
-            this.create_unified_dialog(table_id, field, is_logic_field, template_hint);
+            await this.create_unified_dialog(table_id, field, is_logic_field, template_hint);
         }
     }
     
-    detect_and_show_field_dialog(table_id, field) {
+    async detect_and_show_field_dialog(table_id, field) {
         // Check if this field has a corresponding Logic Field record using table_name and field_name
-        frappe.call({
+        const response = await frappe.call({
             method: 'frappe.client.get_value',
             args: {
                 doctype: 'Flansa Logic Field',
-                filters: { 
+                filters: {
                     table_name: table_id || this.table_id,
                     field_name: field.field_name
                 },
                 fieldname: ['name', 'logic_expression', 'logic_type', 'result_type']
-            },
-            callback: (r) => {
-                let is_logic_field = false;
-                let logic_field_template = null;
-                
-                if (r.message && (r.message.logic_expression || r.message.logic_type)) {
-                    is_logic_field = true;
-                    field.expression = r.message.logic_expression;
-                    field.result_type = r.message.result_type;
-                    
-                    // Map logic_type to template_type for consistent routing
-                    const logic_type = r.message.logic_type || 'Calculation';
-                    logic_field_template = this.map_logic_type_to_template(logic_type, field);
-
-                }
-                
-                // Now create the dialog with proper context
-                this.create_unified_dialog(table_id, field, is_logic_field, logic_field_template);
             }
         });
+
+        let is_logic_field = false;
+        let logic_field_template = null;
+
+        if (response.message && (response.message.logic_expression || response.message.logic_type)) {
+            is_logic_field = true;
+            field.expression = response.message.logic_expression;
+            field.result_type = response.message.result_type;
+
+            // Map logic_type to template_type for consistent routing
+            const logic_type = response.message.logic_type || 'Calculation';
+            logic_field_template = this.map_logic_type_to_template(logic_type, field);
+        }
+
+        // Now create the dialog with proper context
+        await this.create_unified_dialog(table_id, field, is_logic_field, logic_field_template);
     }
     
     // Helper function for consistent ID generation
@@ -2783,10 +2805,14 @@ class EnhancedFlansaTableBuilder {
             .replace(/^_|_$/g, '');         // Remove leading/trailing underscores
     }
 
-    create_unified_dialog(table_id, field, is_logic_field, logic_field_template) {
+    async create_unified_dialog(table_id, field, is_logic_field, logic_field_template) {
         const is_edit_mode = !!field;
         const dialog_title = is_edit_mode ? `Edit Field: ${field.field_name}` : 'Add New Field';
-        
+
+        // Fetch field types from API (single source of truth)
+        const field_types_data = await this.get_field_types();
+        const field_types_options = field_types_data.options_string;
+
         // Enhanced Link field detection for edit mode
         const is_link_field = is_edit_mode && (
             field.field_type === 'Link' || 
@@ -2860,7 +2886,7 @@ class EnhancedFlansaTableBuilder {
                     label: 'Field Type',
                     fieldname: 'field_type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nLink\nText Editor\nAttach\nButton',
+                    options: field_types_options,
                     default: is_edit_mode ? field.field_type : (logic_field_template === 'link' ? 'Link' : 'Data'),
                     reqd: 1,
                     read_only: (logic_field_template === 'link' || (is_edit_mode && is_link_field)) ? 1 : 0
@@ -4037,8 +4063,12 @@ class EnhancedFlansaTableBuilder {
         }, 100);
     }
 
-    // Show Standard Field Creation Dialog  
-    show_standard_field_creation_dialog() {
+    // Show Standard Field Creation Dialog
+    async show_standard_field_creation_dialog() {
+        // Fetch field types from API (single source of truth)
+        const field_types_data = await this.get_field_types();
+        const field_types_options = field_types_data.options_string;
+
         const dialog = new frappe.ui.Dialog({
             title: 'Add Standard Field',
             fields: [
@@ -4082,7 +4112,7 @@ class EnhancedFlansaTableBuilder {
                     fieldname: 'field_type',
                     label: 'Field Type',
                     fieldtype: 'Select',
-                    options: 'Data\nText\nInt\nFloat\nCurrency\nDate\nDatetime\nTime\nCheck\nSelect\nText Editor\nAttach\nButton',
+                    options: field_types_options,
                     default: 'Data',
                     reqd: 1,
                     description: 'Type of data this field will store'
