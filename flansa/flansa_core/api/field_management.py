@@ -553,7 +553,7 @@ def get_field_types():
         "success": True,
         "field_types": [
             {"value": "Data", "label": "Text"},
-            {"value": "Text", "label": "Text Area"}, 
+            {"value": "Text", "label": "Text Area"},
             {"value": "Long Text", "label": "Long Text"},
             {"value": "Int", "label": "Number"},
             {"value": "Float", "label": "Decimal"},
@@ -565,6 +565,7 @@ def get_field_types():
             {"value": "Check", "label": "Checkbox"},
             {"value": "Link", "label": "Link"},
             {"value": "Text Editor", "label": "Rich Text"},
+            {"value": "HTML", "label": "HTML"},
             {"value": "Code", "label": "Code"},
             {"value": "JSON", "label": "JSON"}
         ]
@@ -867,7 +868,7 @@ def map_field_type_safe(flansa_type):
     type_mapping = {
         "Text": "Data",
         "Data": "Data",
-        "Number": "Int", 
+        "Number": "Int",
         "Float": "Float",
         "Decimal": "Float",
         "Currency": "Currency",
@@ -883,7 +884,7 @@ def map_field_type_safe(flansa_type):
         "Text Area": "Text",
         "Textarea": "Text",
         "Long Text": "Long Text",
-        "HTML": "Text Editor",
+        "HTML": "HTML",  # Map HTML to HTML field type
         "Rich Text": "Text Editor",
         "Image": "Data",
         "File": "Data",
@@ -891,7 +892,7 @@ def map_field_type_safe(flansa_type):
         "JSON": "Long Text",
         "Code": "Code"
     }
-    
+
     mapped_type = type_mapping.get(flansa_type, "Data")
     print(f"Mapping {flansa_type} -> {mapped_type}")
     return mapped_type
@@ -1277,7 +1278,7 @@ def reverse_map_field_type(frappe_type):
     """Reverse map Frappe field types to Flansa types"""
     reverse_mapping = {
         "Data": "Text",
-        "Int": "Number", 
+        "Int": "Number",
         "Float": "Float",
         "Currency": "Currency",
         "Date": "Date",
@@ -1289,9 +1290,10 @@ def reverse_map_field_type(frappe_type):
         "Text": "Text Area",
         "Long Text": "Long Text",
         "Text Editor": "Rich Text",
+        "HTML": "HTML",  # Map HTML field type back to HTML
         "Code": "Code"
     }
-    
+
     return reverse_mapping.get(frappe_type, "Text")
 
 @frappe.whitelist()
